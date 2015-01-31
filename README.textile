@@ -12,3 +12,4 @@
 ** "AMD APP SDK":http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
 ** "Intel OpenCL SDK":https://software.intel.com/en-us/intel-opencl
 ** "NVIDIA CUDA SDK":https://developer.nvidia.com/cuda-downloads
+!https://raw.githubusercontent.com/a2flo/floor_examples/b3eb816a5c80f079aad4d63aeec2786afe5523d9/poc_spir_ptx/example_rendering.png(noise and streaks courtesy of the horrible random function that I'm using)!
