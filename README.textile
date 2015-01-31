@@ -6,7 +6,7 @@
 * build with "./build.sh" inside the folder
 * references:
 ** "Clang/LLVM 3.5":http://llvm.org/releases/download.html#3.5.0
-** "Khronos LLVM 3.5 -> LLVM/SPIR 3.2 encoder":https://github.com/KhronosGroup/SPIR-Tools/tree/master/spir-encoder/llvm_3.5_spir_encoder
+** "Khronos LLVM 3.5 to LLVM/SPIR 3.2 encoder":https://github.com/KhronosGroup/SPIR-Tools/tree/master/spir-encoder/llvm_3.5_spir_encoder
 ** "OpenCL/CUDA C++ patch for Clang/LLVM 3.5":https://github.com/a2flo/floor/blob/master/etc/clang_cuda_cl_cpp.patch
 ** "OpenCL/CUDA patch for libc++ 3.5":https://github.com/a2flo/floor/blob/master/etc/libcxx_cuda_cl_cpp.patch
 ** "AMD APP SDK":http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
