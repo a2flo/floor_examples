@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE config PUBLIC "-//FLOOR//DTD config 1.0//EN" "config.dtd">
+<config>
+	<!-- screen resolution and fullscreen/vsync settings (stereo serves no purpose right now) -->
+	<screen width="512" height="512" fullscreen="0" vsync="0" dpi="0" stereo="0"/>
+	<!--<screen width="1920" height="1080" fullscreen="1" vsync="1" dpi="0" stereo="0"/>-->
+	
+	<!-- openal audio options:
+	 disabled: if true, completely disables openal (doesn't initialize it + can't be used)
+	 music: music volume in [0, 1] (0.0 = muted, 1.0 = loudest)
+	 sound: sound volume in [0, 1]
+	 device: optional audio device name (empty = use the default device)
+	-->
+	<audio disabled="true" music="1.0" sound="1.0" device=""/>
+	
+	<!-- logging options (apply to both console and file logging)
+	 verbosity: 0 = none, 1 = +error, 2 = +warning, 3 = +debug, 4 = +msg, 5 = +undecorated output
+	 append_mode: boolean, if enabled, this will, for each logging operation, open the log file in append mode, write to it and close it again
+	 separate_msg_file: boolean, if enabled and verbosity >= 3, this will log msgs into a separate file
+	 log_filename: relative filename of the log file, relative to the current working directory
+	 msg_filename: relative filename of the msg log file, only used/created if separate_msg_file = true
+	-->
+	<logging verbosity="5" append_mode="false" separate_msg_file="false" log_filename="log.txt" msg_filename="msg.txt"/>
+
+	<!--
+	 anti_aliasing options: 0 - max MSAA value allowed by graphics card (8 is recommended)
+	-->
+	<gui anti_aliasing="0"/>
+
+	<!-- you might want to change the field of view, but near/far should remain at 1/1000 -->
+	<projection fov="72.0" near="0.1" far="1000.0"/>
+
+	<!-- there should be no need to change these -->
+	<input key_repeat="0" ldouble_click="10" mdouble_click="10" rdouble_click="10"/>
+
+	<!-- this will sleep the program for the specified amount of milliseconds after each rendered frame -->
+	<sleep time="0"/>
+
+	<!--
+	 filtering options: POINT, LINEAR, BILINEAR, TRILINEAR
+	 anisotropic options: 0 (disabled), 1 - 16
+	 anti_aliasing options: NONE, FXAA, 2xSSAA, 4/3xSSAA+FXAA, 2xSSAA+FXAA (others are currently unsupported)
+	-->
+	<graphic filtering="TRILINEAR" anisotropic="16" anti_aliasing="NONE"/>
+
+	<!--
+	 upscaling: sets the upscaling factor
+		e.g. a value of 2.0 with screen width/height set to 1280*720 will lead to rendering at 640*360 and then scaling it back up to 1280*720
+	 geometry_light_scaling: sets the additional scaling of the geometry and light buffer (note: it is not recommended to change this value!)
+		valid values are: 0.5, 0.625, 0.75, 0.875, 1.0 (anything above 1.0 has no effect, anything below 0.5 will lead to broken rendering)
+	-->
+	<inferred upscaling="1.0" geometry_light_scaling="1.0"/>
+
+	<!-- unless you know what you're doing, don't change the following settings
+	 opencl platform options: either the opencl platform index (starting by 0) or "cuda" on supported platforms (OS X and Linux only)
+	 opencl restrict options: if this is set to any of (or a list of) "CPU", "GPU" or "ACCELERATOR", only those kind/type of devices are used
+	-->
+	<graphic_device disabled_extensions="" force_device="" force_vendor=""/>
+
+	<!-- unless you know what you're doing, don't change the following settings
+	 opencl platform options: either the opencl platform index (starting with 0) or "cuda" on supported platforms (OS X and Linux only)
+	 opencl restrict options: if this is set to any of (or a list of) "CPU", "GPU" or "ACCELERATOR", only these type of devices are used
+	-->
+	<opencl platform="0" clear_cache="true" gl_sharing="false" log_binaries="false" restrict=""/>
+	
+	<!-- cuda specific options
+	 base_dir: the base directory where cuda is installed (usually /usr/local/cuda, but might be /opt/cuda on linux)
+	 debug: compile cuda code with debug information
+	 profiling: compile cuda code with profiling support
+	 keep_temp: keep temporary files that are generated during cuda code compilation
+	 keep_binaries: save generated/compiled ptx code to data/cache/
+	 use_cache: attempts to use generated/compiled ptx code from data/cache/
+	-->
+	<cuda base_dir="/usr/local/cuda" debug="false" profiling="false" keep_temp="false" keep_binaries="true" use_cache="true"/>
+</config>
