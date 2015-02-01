@@ -1,10 +1,5 @@
 
 #include <floor/floor/floor.hpp>
-#include <floor/math/vector_lib.hpp>
-#include <floor/compute/opencl/opencl_compute.hpp>
-#include <floor/compute/opencl/opencl_queue.hpp>
-#include <floor/compute/cuda/cuda_compute.hpp>
-#include <floor/compute/cuda/cuda_queue.hpp>
 
 #include "poc_spir_ptx.hpp"
 
@@ -12,12 +7,10 @@
 //#define DEBUG_HOST_EXEC 1
 
 int main(int, char* argv[]) {
-	floor::init(argv[0], "../../data/", false);
+	floor::init(argv[0], "../../data/"); // call path, data path
 	
-	// create and initialize the compute context (will be provided / done automatically later on)
-	auto compute_ctx = make_unique<opencl_compute>(); // or: cuda_compute for cuda
-	//auto compute_ctx = make_unique<cuda_compute>();
-	compute_ctx->init();
+	// get the compute context that has been automatically created (either opencl or cuda, depending on the config)
+	auto compute_ctx = floor::get_compute_context();
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
@@ -29,7 +22,7 @@ int main(int, char* argv[]) {
 	
 #if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
-	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../poc_spir_ptx/src/poc_spir_ptx.cpp"), "-I" + floor::data_path("../poc_spir_ptx/src")).lock();
+	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../poc_spir_ptx/src/poc_spir_ptx.cpp"), "-I" + floor::data_path("../poc_spir_ptx/src"));
 	if(path_tracer_prog == nullptr) return -1;
 	auto path_tracer_kernel = path_tracer_prog->get_kernel_fuzzy("path_trace"); // c++ name mangling is hard
 	if(path_tracer_kernel == nullptr) return -1;
@@ -52,16 +45,23 @@ int main(int, char* argv[]) {
 		}
 #else
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
-		dev_queue->execute(path_tracer_kernel, size1 { pixel_count }, size1 { fastest_device->max_work_group_size },
+		dev_queue->execute(path_tracer_kernel,
+						   // total amount of work:
+						   size1 { pixel_count },
+						   // work per work-group:
+						   size1 { fastest_device->max_work_group_size },
+						   // kernel arguments:
 						   img_buffer, iteration, core::rand<uint32_t>(), img_size);
 #endif
 
 		// draw every 10th frame (except for the first 10 frames)
 		if(iteration < 10 || iteration % 10 == 0) {
 #if !defined(DEBUG_HOST_EXEC)
+			// grab the current image buffer data ...
 			auto img_data = (float3*)img_buffer->map(dev_queue);
 #endif
 
+			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
 			const auto gamma_correct = [](const float3& color) {
 				static constexpr const float gamma { 2.2f };
 				float3 gamma_corrected {
@@ -73,12 +73,15 @@ int main(int, char* argv[]) {
 				return uchar3 { (uint8_t)gamma_corrected.x, (uint8_t)gamma_corrected.y, (uint8_t)gamma_corrected.z };
 			};
 			
+			// ... and blit it into the window
+			// (crude and I'd usually do this via GL, but this way it's not a requirement)
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
 			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)img_size.x;
 			uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels;
 			for(uint32_t y = 0, img_idx = 0; y < img_size.y; ++y) {
 				for(uint32_t x = 0; x < img_size.x; ++x, ++img_idx) {
+					// map and gamma correct each pixel according to the window format
 					const auto rgb = gamma_correct(img_data[img_idx]);
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, rgb.r, rgb.g, rgb.b);
 				}
