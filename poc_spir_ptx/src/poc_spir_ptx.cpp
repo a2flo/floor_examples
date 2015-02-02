@@ -148,9 +148,20 @@ protected:
 		const auto albedo_diffuse = mat.diffuse.dot(float3 { 0.222f, 0.7067f, 0.0713f });
 		const auto albedo_specular = mat.specular.dot(float3 { 0.222f, 0.7067f, 0.0713f });
 		
+		float3 radiance;
+		// c++14 generic lambdas work as well ;)
+		const auto radiance_recurse = [&radiance, &random_seed](const auto& albedo,
+																const auto& dir_and_prob,
+																const auto& point) {
+			// no need to recurse if the radiance is already 0
+			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
+				radiance *= compute_radiance<depth RECURSE>(ray { point, dir_and_prob.dir }, random_seed, false);
+				radiance /= (albedo * dir_and_prob.prob);
+			}
+		};
+		
 		// russian roulette with albedo and random value in [0, 1]
 		const auto rrr = rand_0_1(random_seed);
-		float3 radiance;
 		if(rrr < albedo_diffuse) {
 			const auto tb = get_local_system(normal);
 			const auto dir_and_prob = generate_cosine_weighted_direction(normal, tb.first, tb.second,
@@ -158,12 +169,7 @@ protected:
 			
 			radiance = mat.diffuse_reflectance;
 			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
-			
-			// no need to recurse if the radiance is already 0
-			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
-				radiance *= compute_radiance<depth RECURSE>(ray { p.hit_point, dir_and_prob.dir }, random_seed, false);
-				radiance /= (albedo_diffuse * dir_and_prob.prob);
-			}
+			radiance_recurse(albedo_diffuse, dir_and_prob, p.hit_point);
 		}
 		else if(rrr < (albedo_diffuse + albedo_specular)) {
 			const auto rnormal = float3::reflect(normal, r.direction).normalized();
@@ -180,12 +186,7 @@ protected:
 			radiance = mat.specular_reflectance;
 			radiance *= pow(std::max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular_exponent);
 			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
-			
-			// no need to recurse if the radiance is already 0
-			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
-				radiance *= compute_radiance<depth RECURSE>(ray { p.hit_point, dir_and_prob.dir }, random_seed, false);
-				radiance /= (albedo_specular * dir_and_prob.prob);
-			}
+			radiance_recurse(albedo_specular, dir_and_prob, p.hit_point);
 		}
 		// else: rrr is 1.0f and the contribution is 0
 		
