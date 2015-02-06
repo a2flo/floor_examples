@@ -90,14 +90,6 @@ public:
 	
 };
 
-#if defined(__SPIR_CLANG__)
-// opencl/spir doesn't allow recursion -> do template instantiation
-#define RECURSE + 1
-#else
-// else: cuda and host code can use recursion -> simply stay in case 0
-#define RECURSE
-#endif
-
 class simple_path_tracer {
 public:
 	enum : uint32_t { max_recursion_depth = 4 };
@@ -155,7 +147,7 @@ protected:
 																const auto& point) {
 			// no need to recurse if the radiance is already 0
 			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
-				radiance *= compute_radiance<depth RECURSE>(ray { point, dir_and_prob.dir }, random_seed, false);
+				radiance *= compute_radiance<depth + 1>(ray { point, dir_and_prob.dir }, random_seed, false);
 				radiance /= (albedo * dir_and_prob.prob);
 			}
 		};
@@ -355,6 +347,8 @@ kernel void path_trace(global float3* img,
 					   const uint32_t seed,
 					   const uint2 img_size) {
 	const auto idx = (uint32_t)get_global_id(0);
+	const uint2 pixel { idx % img_size.x, idx / img_size.y };
+	if(pixel.y >= img_size.y) return;
 	
 	// this is hard ... totally random
 	uint32_t random_seed {
@@ -364,7 +358,6 @@ kernel void path_trace(global float3* img,
 	};
 	
 	//
-	const uint2 pixel { idx % img_size.x, idx / img_size.y };
 	const float2 pixel_sample { float2(pixel) + float2(rand_0_1(random_seed), rand_0_1(random_seed)) };
 	
 	//

@@ -17,18 +17,25 @@ int main(int, char* argv[]) {
 	auto dev_queue = compute_ctx->create_queue(fastest_device);
 	
 	//
-	static constexpr const uint2 img_size { 512, 512 }; // TODO: handle/use window size
-	static constexpr const uint32_t pixel_count { img_size.x * img_size.y };
+	//static const uint2 img_size { floor::get_width(), floor::get_height() };
+	static const uint2 img_size { 512, 512 }; // fixed for now, b/c random function makes this look horrible at higher res
+	static const uint32_t pixel_count { img_size.x * img_size.y };
 	
 #if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
 	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../poc_spir_ptx/src/poc_spir_ptx.cpp"), "-I" + floor::data_path("../poc_spir_ptx/src"));
-	if(path_tracer_prog == nullptr) return -1;
+	if(path_tracer_prog == nullptr) {
+		log_error("program compilation failed");
+		return -1;
+	}
 	auto path_tracer_kernel = path_tracer_prog->get_kernel_fuzzy("path_trace"); // c++ name mangling is hard
-	if(path_tracer_kernel == nullptr) return -1;
+	if(path_tracer_kernel == nullptr) {
+		log_error("failed to retrieve kernel from program");
+		return -1;
+	}
 	
 	// create the image buffer on the device, map it to host accessible memory and initialize it
-	auto img_buffer = compute_ctx->create_buffer(sizeof(float3) * pixel_count);
+	auto img_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * pixel_count);
 	auto mapped_img_data = img_buffer->map(dev_queue);
 	fill_n((float3*)mapped_img_data, pixel_count, float3 { 0.0f });
 	img_buffer->unmap(dev_queue, mapped_img_data);
