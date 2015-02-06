@@ -369,18 +369,11 @@ kernel void path_trace(global float3* img,
 		.origin = cam.point,
 		.direction = cam.screen_origin + pixel_sample.x * cam.step_x + pixel_sample.y * cam.step_y
 	};
-	float3 color = simple_path_tracer::compute_radiance(r, random_seed, true);
+	float3 color = simple_path_tracer::compute_radiance(r, random_seed, true).clamp(0.0f, 1.0f);
 
 	// red test strip, so that I know if the output is working at all
 	//if(idx < img_size.x) color.x = 1.0f;
 	
-	// merge with previous frames
-	if(iteration == 0) img[idx] = color;
-	else {
-		// re-weight
-		const auto new_weight = 1.0f / float(iteration + 1);
-		const auto old_weight = 1.0f - new_weight;
-		float3 old_color = img[idx];
-		img[idx] = old_color * old_weight + color * new_weight;
-	}
+	// merge with previous frames (re-weight)
+	img[idx].store(iteration == 0 ? color : img[idx].load().interpolate(color, 1.0f / float(iteration + 1)));
 }

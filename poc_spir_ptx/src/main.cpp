@@ -34,11 +34,8 @@ int main(int, char* argv[]) {
 		return -1;
 	}
 	
-	// create the image buffer on the device, map it to host accessible memory and initialize it
+	// create the image buffer on the device
 	auto img_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * pixel_count);
-	auto mapped_img_data = img_buffer->map(dev_queue);
-	fill_n((float3*)mapped_img_data, pixel_count, float3 { 0.0f });
-	img_buffer->unmap(dev_queue, mapped_img_data);
 #endif
 	
 	bool done = false;
