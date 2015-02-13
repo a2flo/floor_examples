@@ -61,8 +61,8 @@ int main(int, char* argv[]) {
 		// draw every 10th frame (except for the first 10 frames)
 		if(iteration < 10 || iteration % 10 == 0) {
 #if !defined(DEBUG_HOST_EXEC)
-			// grab the current image buffer data ...
-			auto img_data = (float3*)img_buffer->map(dev_queue);
+			// grab the current image buffer data (read-only + blocking) ...
+			auto img_data = (float3*)img_buffer->map(dev_queue, COMPUTE_BUFFER_MAP_FLAG::READ | COMPUTE_BUFFER_MAP_FLAG::BLOCK);
 #endif
 
 			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
