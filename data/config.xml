@@ -17,10 +17,12 @@
 	 verbosity: 0 = none, 1 = +error, 2 = +warning, 3 = +debug, 4 = +msg, 5 = +undecorated output
 	 append_mode: boolean, if enabled, this will, for each logging operation, open the log file in append mode, write to it and close it again
 	 separate_msg_file: boolean, if enabled and verbosity >= 3, this will log msgs into a separate file
-	 log_filename: relative filename of the log file, relative to the current working directory
-	 msg_filename: relative filename of the msg log file, only used/created if separate_msg_file = true
+	 use_time: boolean, if enabled prints the current time in each log msg (format: [%H:%M:%S.usecs])
+	 use_color: boolean, if enabled prints the log type in color (error = red, debug = green, ...)
+	 log_filename: relative filename of the log file, relative to the current working directory (default: log.txt)
+	 msg_filename: relative filename of the msg log file, only used/created if separate_msg_file = true (default: msg.txt)
 	-->
-	<logging verbosity="5" append_mode="false" separate_msg_file="false" log_filename="log.txt" msg_filename="msg.txt"/>
+	<logging verbosity="5" append_mode="false" separate_msg_file="false" use_time="true" use_color="true" log_filename="" msg_filename=""/>
 
 	<!--
 	 anti_aliasing options: 0 - max MSAA value allowed by graphics card (8 is recommended)

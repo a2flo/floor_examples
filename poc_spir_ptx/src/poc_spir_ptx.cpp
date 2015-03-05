@@ -11,20 +11,6 @@ void reset_counter() {
 }
 #endif
 
-// not the best random, but simple and good enough
-// ref: http://iquilezles.org/www/articles/sfrand/sfrand.htm
-//! returns a random value in [0, 1]
-static float rand_0_1(uint32_t& seed) {
-#if 1
-	float res;
-	seed *= 16807u;
-	*((uint32_t*)&res) = (seed >> 9u) | 0x3F800000u;
-	return (res - 1.0f);
-#else
-	return core::rand(0.0f, 1.0f);
-#endif
-}
-
 struct ray {
 	float3 origin;
 	float3 direction;
@@ -94,11 +80,29 @@ class simple_path_tracer {
 public:
 	enum : uint32_t { max_recursion_depth = 4 };
 	
+	simple_path_tracer(const uint32_t& random_seed) : seed(random_seed) {}
+	
+	// not the best random, but simple and good enough
+	// ref: http://iquilezles.org/www/articles/sfrand/sfrand.htm
+	//! returns a random value in [0, 1]
+	float rand_0_1() {
+		float res;
+#if defined(__METAL_CLANG__)
+		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
+		// so do a software 32-bit * 16-bit multiply instead
+		uint32_t low = (seed & 0xFFFFu) * 16807u;
+		uint32_t high = ((seed >> 16u) & 0xFFFFu) * 16807u;
+		seed = (high << 16u) + low;
+#else
+		seed *= 16807u;
+#endif
+		*((uint32_t*)&res) = (seed >> 9u) | 0x3F800000u;
+		return (res - 1.0f);
+	}
+	
 	// if you can't do normal recursion, do some template recursion instead! (at the cost of code bloat)
 	template <uint32_t depth = 0, enable_if_t<depth < max_recursion_depth, int> = 0>
-	static float3 compute_radiance(const ray& r,
-								   uint32_t& random_seed,
-								   const bool sample_emission) {
+	float3 compute_radiance(const ray& r, const bool sample_emission) {
 		// intersect
 		const auto p = simple_intersector::intersect(r);
 		if(p.object >= CORNELL_OBJECT::__OBJECT_COUNT) return {};
@@ -111,28 +115,29 @@ public:
 		if(sample_emission) radiance += mat.emission;
 		
 		// compute direct illumination at given point
-		radiance += compute_direct_illumination(-r.direction, p, mat, random_seed);
+		radiance += compute_direct_illumination(-r.direction, p, mat);
 		
 		// indirect
-		radiance += compute_indirect_illumination<depth>(r, p, mat, random_seed);
+		radiance += compute_indirect_illumination<depth>(r, p, mat);
 		
 		return radiance;
 	}
 	
 	// terminator
 	template <uint32_t depth, enable_if_t<depth >= max_recursion_depth, int> = 0>
-	static float3 compute_radiance(const ray&, uint32_t&, const bool) {
+	float3 compute_radiance(const ray&, const bool) {
 		return {};
 	}
 	
 protected:
+	uint32_t seed;
+	
 	typedef struct { const float3 dir; const float prob; } hemisphere_dir_type;
 	
 	template <uint32_t depth>
-	static float3 compute_indirect_illumination(const ray& r,
-												const simple_intersector::intersection& p,
-												const material& mat,
-												uint32_t& random_seed) {
+	float3 compute_indirect_illumination(const ray& r,
+										 const simple_intersector::intersection& p,
+										 const material& mat) {
 		// get the normal (check if it has to be flipped - rarely happens, but it does)
 		const auto normal = (p.normal.dot(r.direction) > 0.0f ? -p.normal : p.normal);
 		
@@ -142,22 +147,22 @@ protected:
 		
 		float3 radiance;
 		// c++14 generic lambdas work as well ;)
-		const auto radiance_recurse = [&radiance, &random_seed](const auto& albedo,
-																const auto& dir_and_prob,
-																const auto& point) {
+		const auto radiance_recurse = [this, &radiance](const auto& albedo,
+														const auto& dir_and_prob,
+														const auto& point) {
 			// no need to recurse if the radiance is already 0
 			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
-				radiance *= compute_radiance<depth + 1>(ray { point, dir_and_prob.dir }, random_seed, false);
+				radiance *= compute_radiance<depth + 1>(ray { point, dir_and_prob.dir }, false);
 				radiance /= (albedo * dir_and_prob.prob);
 			}
 		};
 		
 		// russian roulette with albedo and random value in [0, 1]
-		const auto rrr = rand_0_1(random_seed);
+		const auto rrr = rand_0_1();
 		if(rrr < albedo_diffuse) {
 			const auto tb = get_local_system(normal);
 			const auto dir_and_prob = generate_cosine_weighted_direction(normal, tb.first, tb.second,
-																		 { rand_0_1(random_seed), rand_0_1(random_seed) });
+																		 { rand_0_1(), rand_0_1() });
 			
 			radiance = mat.diffuse_reflectance;
 			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
@@ -167,7 +172,7 @@ protected:
 			const auto rnormal = float3::reflect(normal, r.direction).normalized();
 			const auto tb = get_local_system(rnormal);
 			const auto dir_and_prob = generate_power_cosine_weighted_direction(rnormal, tb.first, tb.second,
-																			   { rand_0_1(random_seed), rand_0_1(random_seed) },
+																			   { rand_0_1(), rand_0_1() },
 																			   mat.specular_exponent);
 			
 			// "reject directions below the surface" (or in it)
@@ -186,10 +191,9 @@ protected:
 		return radiance;
 	}
 	
-	static float3 compute_direct_illumination(const float3& eye_direction,
-											  const simple_intersector::intersection& p,
-											  const material& mat,
-											  uint32_t& random_seed) {
+	float3 compute_direct_illumination(const float3& eye_direction,
+									   const simple_intersector::intersection& p,
+									   const material& mat) {
 		float3 retval;
 		
 		const auto norm_surface = p.normal.normalized();
@@ -212,7 +216,7 @@ protected:
 		} light {};
 		{
 			// generate a random position on the lightsource
-			const auto sample_point = light.get_point(float2 { rand_0_1(random_seed), rand_0_1(random_seed) });
+			const auto sample_point = light.get_point(float2 { rand_0_1(), rand_0_1() });
 			
 			// cast shadow ray towards the light
 			const auto dir = sample_point - p.hit_point;
@@ -342,39 +346,40 @@ struct camera {
 	}
 };
 
-kernel void path_trace(global float3* img,
-					   const uint32_t iteration,
-					   const uint32_t seed,
-					   const uint2 img_size) {
+kernel void path_trace(buffer<float3> img,
+					   param<uint32_t> iteration,
+					   param<uint32_t> seed,
+					   param<uint2> img_size) {
 	const auto idx = (uint32_t)get_global_id(0);
-	const uint2 pixel { idx % img_size.x, idx / img_size.y };
-	if(pixel.y >= img_size.y) return;
+	const uint2 pixel { idx % img_size->x, idx / img_size->y };
+	if(pixel.y >= img_size->y) return;
 	
 	// this is hard ... totally random
-	uint32_t random_seed {
-		seed +
-		(seed ^ (idx << (seed & ((idx + iteration) & 0x1F)))) +
-		((idx + seed) * img_size.x * img_size.y) ^ 0x52FBD9EC
+	uint32_t random_seed = *seed;
+	random_seed += {
+		(random_seed ^ (idx << (random_seed & ((idx + *iteration) & 0x1F)))) +
+		((idx + random_seed) * img_size->x * img_size->y) ^ 0x52FBD9EC
 	};
+	simple_path_tracer pt(random_seed);
 	
 	//
-	const float2 pixel_sample { float2(pixel) + float2(rand_0_1(random_seed), rand_0_1(random_seed)) };
+	const float2 pixel_sample { float2(pixel) + float2(pt.rand_0_1(), pt.rand_0_1()) };
 	
 	//
 	camera cam;
-	cam.init(float2(img_size));
+	cam.init(float2(*img_size));
 	
 	//
 	ray r {
 		.origin = cam.point,
 		.direction = cam.screen_origin + pixel_sample.x * cam.step_x + pixel_sample.y * cam.step_y
 	};
-	float3 color = simple_path_tracer::compute_radiance(r, random_seed, true);
+	float3 color = pt.compute_radiance(r, true);
 
 	// red test strip, so that I know if the output is working at all
-	//if(idx < img_size.x) color.x = 1.0f;
+	//if(idx < img_size->x) color = float3 { 1.0f, 0.0f, 0.0f };
 	
 	// merge with previous frames (re-weight)
-	if(iteration == 0) img[idx] = color;
-	else img[idx] = img[idx].interpolate(color, 1.0f / float(iteration + 1));
+	if(*iteration == 0) *img[idx] = color;
+	else img[idx] = img[idx]->interpolate(color, 1.0f / float(*iteration + 1));
 }

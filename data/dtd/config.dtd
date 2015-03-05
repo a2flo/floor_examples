@@ -20,6 +20,8 @@
 	verbosity CDATA #REQUIRED
 	separate_msg_file CDATA #REQUIRED
 	append_mode CDATA #REQUIRED
+	use_time CDATA #REQUIRED
+	use_color CDATA #REQUIRED
 	log_filename CDATA #REQUIRED
 	msg_filename CDATA #REQUIRED
 >

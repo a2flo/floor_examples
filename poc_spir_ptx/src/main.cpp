@@ -1,5 +1,6 @@
 
 #include <floor/floor/floor.hpp>
+#include <floor/ios/ios_helper.hpp>
 
 #include "poc_spir_ptx.hpp"
 
@@ -7,7 +8,11 @@
 //#define DEBUG_HOST_EXEC 1
 
 int main(int, char* argv[]) {
-	floor::init(argv[0], "../../data/"); // call path, data path
+#if !defined(FLOOR_IOS)
+	floor::init(argv[0], (const char*)"../../data/"); // call path, data path
+#else
+	floor::init(argv[0], (const char*)"data/");
+#endif
 	
 	// get the compute context that has been automatically created (either opencl or cuda, depending on the config)
 	auto compute_ctx = floor::get_compute_context();
@@ -23,7 +28,20 @@ int main(int, char* argv[]) {
 	
 #if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
+#if !defined(FLOOR_IOS)
 	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../poc_spir_ptx/src/poc_spir_ptx.cpp"), "-I" + floor::data_path("../poc_spir_ptx/src"));
+#else
+	// for now: use a precompiled metal lib instead of compiling at runtime
+	const vector<llvm_compute::kernel_info> kernel_infos {
+		{
+			"path_trace",
+			{ 12, 4, 4, 8 },
+			{ llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT,
+				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT }
+		}
+	};
+	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("poc_spir_ptx.metallib"), kernel_infos);
+#endif
 	if(path_tracer_prog == nullptr) {
 		log_error("program compilation failed");
 		return -1;
@@ -41,11 +59,11 @@ int main(int, char* argv[]) {
 	bool done = false;
 	static constexpr const uint32_t iteration_count { 16384 };
 #if defined(DEBUG_HOST_EXEC)
-	array<float3, pixel_count> img_data;
+	vector<float3> img_data(pixel_count);
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
 		reset_counter(); // necessary workaround for now
 		for(uint32_t i = 0; i < pixel_count; ++i) {
-			path_trace(img_data.data(), iteration, core::rand<uint32_t>(), img_size);
+			path_trace((buffer<float3>)img_data.data(), iteration, core::rand<uint32_t>(), img_size);
 		}
 #else
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {

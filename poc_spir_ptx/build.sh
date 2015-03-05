@@ -61,6 +61,7 @@ BUILD_JOB_COUNT=0
 BUILD_CONF_OPENCL=1
 BUILD_CONF_CUDA=1
 BUILD_CONF_OPENAL=1
+BUILD_CONF_METAL=1
 BUILD_CONF_NO_CL_PROFILING=1
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
@@ -408,7 +409,10 @@ else
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -framework OpenALSoft"
 	fi
-	
+	if [ ${BUILD_CONF_METAL} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -framework Metal"
+	fi
+
 	# system frameworks
 	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework OpenGL"
 	if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
@@ -513,7 +517,7 @@ if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "osx" ]; then
 		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.9"
 	else
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=7.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=8.0"
 	fi
 fi
 
@@ -540,7 +544,8 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 fi
 
 # hard-mode c++ ;) TODO: clean this up + explanations
-WARNINGS="${WARNINGS} -Weverything -Wno-gnu -Wno-c++98-compat"
+WARNINGS="${WARNINGS} -Weverything -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
+WARNINGS="${WARNINGS} -Wno-gnu -Wno-c++98-compat"
 WARNINGS="${WARNINGS} -Wno-c++98-compat-pedantic -Wno-c99-extensions"
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation"
 WARNINGS="${WARNINGS} -Wno-system-headers -Wno-global-constructors -Wno-padded"
