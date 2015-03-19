@@ -8,7 +8,7 @@
 // keywords in certain places, which the host compiler doesn't understand.
 // -> add a cheap workaround for now
 // (note that proper source compat is still wip)
-#if !defined(FLOOR_LLVM_COMPUTE)
+#if !defined(FLOOR_COMPUTE)
 #define kernel
 #define global
 #define constant

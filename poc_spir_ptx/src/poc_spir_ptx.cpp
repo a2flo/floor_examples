@@ -4,7 +4,7 @@
 // to keep things simple in here, the cornell box model and material data is located in another file
 #include "cornell_box.hpp"
 
-#if !defined(FLOOR_LLVM_COMPUTE)
+#if !defined(FLOOR_COMPUTE)
 #include <floor/core/core.hpp>
 void reset_counter() {
 	global_id_counter = 0;
@@ -87,7 +87,7 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(__METAL_CLANG__)
+#if defined(FLOOR_COMPUTE_METAL)
 		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
 		// so do a software 32-bit * 16-bit multiply instead
 		uint32_t low = (seed & 0xFFFFu) * 16807u;
