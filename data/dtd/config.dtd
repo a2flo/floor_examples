@@ -1,4 +1,4 @@
-<!ELEMENT config (#PCDATA | screen | audio | logging | gui | projection | input | sleep | graphic | graphic_device | inferred | opencl | cuda)*>
+<!ELEMENT config (#PCDATA | screen | audio | logging | gui | projection | input | sleep | graphic | graphic_device | inferred | compute | opencl | cuda | metal | host)*>
 <!ELEMENT screen (#PCDATA)*>
 <!ATTLIST screen
 	width CDATA #REQUIRED
@@ -63,20 +63,44 @@
 	upscaling CDATA #REQUIRED
 	geometry_light_scaling CDATA #REQUIRED
 >
-<!ELEMENT opencl (#PCDATA)*>
-<!ATTLIST opencl
+<!ELEMENT compute (#PCDATA)*>
+<!ATTLIST compute
 	platform CDATA #REQUIRED
-	clear_cache CDATA #REQUIRED
 	gl_sharing CDATA #REQUIRED
-	log_binaries CDATA #REQUIRED
-	restrict CDATA #REQUIRED
->
-<!ELEMENT cuda (#PCDATA)*>
-<!ATTLIST cuda
-	base_dir CDATA #REQUIRED
 	debug CDATA #REQUIRED
 	profiling CDATA #REQUIRED
+	log_binaries CDATA #REQUIRED
 	keep_temp CDATA #REQUIRED
 	keep_binaries CDATA #REQUIRED
 	use_cache CDATA #REQUIRED
+>
+<!ELEMENT opencl (#PCDATA)*>
+<!ATTLIST opencl
+	platform CDATA #REQUIRED
+	restrict CDATA #REQUIRED
+	compiler CDATA #REQUIRED
+	llc CDATA #REQUIRED
+	libcxx CDATA #REQUIRED
+	clang CDATA #REQUIRED
+>
+<!ELEMENT cuda (#PCDATA)*>
+<!ATTLIST cuda
+	compiler CDATA #REQUIRED
+	llc CDATA #REQUIRED
+	libcxx CDATA #REQUIRED
+	clang CDATA #REQUIRED
+>
+<!ELEMENT metal (#PCDATA)*>
+<!ATTLIST metal
+	compiler CDATA #REQUIRED
+	llc CDATA #REQUIRED
+	libcxx CDATA #REQUIRED
+	clang CDATA #REQUIRED
+>
+<!ELEMENT host (#PCDATA)*>
+<!ATTLIST host
+	compiler CDATA #REQUIRED
+	llc CDATA #REQUIRED
+	libcxx CDATA #REQUIRED
+	clang CDATA #REQUIRED
 >

@@ -59,19 +59,49 @@
 	-->
 	<graphic_device disabled_extensions="" force_device="" force_vendor=""/>
 
-	<!-- unless you know what you're doing, don't change the following settings
-	 opencl platform options: either the opencl platform index (starting with 0) or "cuda" on supported platforms (OS X and Linux only)
-	 opencl restrict options: if this is set to any of (or a list of) "CPU", "GPU" or "ACCELERATOR", only these type of devices are used
+	<!--
+	 platform: opencl, cuda, metal or host (NOTE: defaults to opencl if possible and main platform fails to init)
+	 gl_sharing: if true, enables opengl sharing (only affects opencl right now)
+	 debug: compile code with debug information
+	 profiling: compile code with profiling support
+	 log_binaries: dumps compiled program binaries (opencl-only right now)
+	 keep_temp: keep temporary files that are generated during code compilation
+	 keep_binaries: save generated/compiled code to data/cache/
+	 use_cache: attempts to use generated/compiled code from data/cache/
 	-->
-	<opencl platform="0" clear_cache="true" gl_sharing="false" log_binaries="false" restrict=""/>
+	<compute platform="opencl" gl_sharing="false" debug="false" profiling="false" log_binaries="false" keep_temp="false" keep_binaries="true" use_cache="true" />
 	
-	<!-- cuda specific options
-	 base_dir: the base directory where cuda is installed (usually /usr/local/cuda, but might be /opt/cuda on linux)
-	 debug: compile cuda code with debug information
-	 profiling: compile cuda code with profiling support
-	 keep_temp: keep temporary files that are generated during cuda code compilation
-	 keep_binaries: save generated/compiled ptx code to data/cache/
-	 use_cache: attempts to use generated/compiled ptx code from data/cache/
-	-->
-	<cuda base_dir="/usr/local/cuda" debug="false" profiling="false" keep_temp="false" keep_binaries="true" use_cache="true"/>
+	<!-- opencl toolchain settings
+	 platform: the opencl platform index
+	 restricts: if this is set to any of (or a list of) "CPU", "GPU" or "ACCELERATOR", only these type of devices are used
+	 compiler: the compute clang binary name (must be in $PATH)
+	 llc: the compute llc binary name (must be in $PATH)
+	 libcxx: path to the libc++ include folder
+	 clang: path to the clang include folder
+	 -->
+	<opencl platform="0" restrict="" compiler="compute_clang" llc="compute_llc" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	
+	<!-- cuda toolchain settings
+	 compiler: the compute clang binary name (must be in $PATH)
+	 llc: the compute llc binary name (must be in $PATH)
+	 libcxx: path to the libc++ include folder
+	 clang: path to the clang include folder
+	 -->
+	<cuda compiler="compute_clang" llc="compute_llc" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	
+	<!-- metal toolchain settings
+	 compiler: the compute clang binary name (must be in $PATH)
+	 llc: the compute llc binary name (must be in $PATH)
+	 libcxx: path to the libc++ include folder
+	 clang: path to the clang include folder
+	 -->
+	<metal compiler="compute_clang" llc="compute_llc" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	
+	<!-- host toolchain settings
+	 compiler: the compute clang binary name (must be in $PATH)
+	 llc: the compute llc binary name (must be in $PATH)
+	 libcxx: path to the libc++ include folder
+	 clang: path to the clang include folder
+	 -->
+	<host compiler="compute_clang" llc="compute_llc" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
 </config>
