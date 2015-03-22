@@ -89,6 +89,8 @@
 	llc CDATA #REQUIRED
 	libcxx CDATA #REQUIRED
 	clang CDATA #REQUIRED
+	force_driver_sm CDATA #REQUIRED
+	force_compile_sm CDATA #REQUIRED
 >
 <!ELEMENT metal (#PCDATA)*>
 <!ATTLIST metal
