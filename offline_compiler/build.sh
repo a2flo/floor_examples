@@ -56,12 +56,16 @@ BUILD_MODE="release"
 BUILD_VERBOSE=0
 BUILD_JOB_COUNT=0
 
-# TODO: read floor_conf.hpp to know which libraries are necessary (i.e. if no opencl/cuda/openal should be used)
-# for now, assume all are used:
-BUILD_CONF_OPENCL=1
-BUILD_CONF_CUDA=1
-BUILD_CONF_OPENAL=1
-BUILD_CONF_NO_CL_PROFILING=1
+# read/evaluate floor_conf.hpp to know which build configuration should be used (must match the floor one!)
+eval $(printf "" | ${CXX} -E -dM -isystem /usr/include -isystem /usr/local/include -include floor/floor/floor_conf.hpp - 2>&1 | grep -E "define FLOOR_" | sed -E "s/.*define (.*) [\"]*([^ \"]*)[\"]*/export \1=\2/g")
+BUILD_CONF_OPENCL=$((1 - $((${FLOOR_NO_OPENCL}))))
+BUILD_CONF_CUDA=$((1 - $((${FLOOR_NO_CUDA}))))
+BUILD_CONF_OPENAL=$((1 - $((${FLOOR_NO_OPENAL}))))
+BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
+BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
+BUILD_CONF_LANG=$((1 - $((${FLOOR_NO_LANG}))))
+BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
+BUILD_CONF_NO_CL_PROFILING=$((1 - $((${FLOOR_CL_PROFILING}))))
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
 
@@ -143,6 +147,16 @@ for arg in "$@"; do
 	esac
 done
 
+# sanity check
+if [ ${BUILD_CONF_EXCEPTIONS} -eq 0 ]; then
+	if [ ${BUILD_CONF_NET} -gt 0 ]; then
+		error "when building without exceptions, network support must be disabled as well! (./build.sh no-exceptions no-net no-lang)"
+	fi
+	if [ ${BUILD_CONF_LANG} -gt 0 ]; then
+		error "when building without exceptions, language support must be disabled as well! (./build.sh no-exceptions no-net no-lang)"
+	fi
+fi
+
 ##########################################
 # target and build environment setup
 
@@ -212,6 +226,11 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 fi
 # all else: no file ending
 
+# disable metal support on non-iOS targets
+if [ $BUILD_OS != "ios" ]; then
+	BUILD_CONF_METAL=0
+fi
+
 ##########################################
 # directory setup
 # note that all paths are relative
@@ -277,8 +296,11 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	COMMON_FLAGS="${COMMON_FLAGS} -fPIC"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
-	PACKAGES="sdl2 SDL2_image libcrypto libssl libxml-2.0"
+	PACKAGES="sdl2 SDL2_image libxml-2.0"
 	PACKAGES_OPT=""
+	if [ ${BUILD_CONF_NET} -gt 0 ]; then
+		PACKAGES_OPT="${PACKAGES_OPT} libcrypto libssl"
+	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		PACKAGES_OPT="${PACKAGES_OPT} openal"
 	fi
@@ -325,16 +347,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# windows/mingw opencl and cuda handling
 	if [ $BUILD_OS == "mingw" ]; then
 		if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
-			if [ ! -z "${INTELOCLSDKROOT}" ]; then
-				# use intel opencl sdk
-				INTELOCLSDKROOT_FIXED=$(echo ${INTELOCLSDKROOT} | sed -E "s/\\\\/\//g")
-				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x86"
-				else
-					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x64"
-				fi
-				INCLUDES="${INCLUDES} -isystem \"${INTELOCLSDKROOT_FIXED}include\""
-			elif [ ! -z "${AMDAPPSDKROOT}" ]; then
+			if [ ! -z "${AMDAPPSDKROOT}" ]; then
 				# use amd opencl sdk
 				AMDAPPSDKROOT_FIXED=$(echo ${AMDAPPSDKROOT} | sed -E "s/\\\\/\//g")
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
@@ -343,6 +356,15 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 					OPENCL_LIB_PATH="${AMDAPPSDKROOT_FIXED}lib/x86_64"
 				fi
 				INCLUDES="${INCLUDES} -isystem \"${AMDAPPSDKROOT_FIXED}include\""
+			elif [ ! -z "${INTELOCLSDKROOT}" ]; then
+				# use intel opencl sdk
+				INTELOCLSDKROOT_FIXED=$(echo ${INTELOCLSDKROOT} | sed -E "s/\\\\/\//g")
+				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
+					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x86"
+				else
+					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x64"
+				fi
+				INCLUDES="${INCLUDES} -isystem \"${INTELOCLSDKROOT_FIXED}include\""
 			elif [ ! -z "${CUDA_PATH}" ]; then
 				# use nvidia opencl/cuda sdk
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
@@ -382,12 +404,17 @@ else
 	# on osx/ios: assume everything is installed, pkg-config doesn't really exist
 	INCLUDES="${INCLUDES} -isystem /opt/X11/include"
 	INCLUDES="${INCLUDES} -isystem /usr/include/libxml2"
-	INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
+	if [ ${BUILD_CONF_NET} -gt 0 ]; then
+		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
+	fi
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
 	# additional lib paths
-	LDFLAGS="${LDFLAGS} -L/opt/X11/lib -L/usr/local/opt/openssl/lib"
-	
+	LDFLAGS="${LDFLAGS} -L/opt/X11/lib"
+	if [ ${BUILD_CONF_NET} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openssl/lib"
+	fi
+
 	# rpath voodoo
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/lib"
@@ -400,19 +427,24 @@ else
 	
 	# frameworks and libs
 	LDFLAGS="${LDFLAGS} -framework SDL2 -framework SDL2_image"
-	LDFLAGS="${LDFLAGS} -lcrypto -lssl"
 	LDFLAGS="${LDFLAGS} -lxml2"
+	if [ ${BUILD_CONF_NET} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
+	fi
 	if [ ${BUILD_CONF_CUDA} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -weak_framework CUDA"
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -framework OpenALSoft"
 	fi
-	
+
 	# system frameworks
 	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework OpenGL"
 	if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -framework OpenCL"
+	fi
+	if [ ${BUILD_CONF_METAL} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -framework Metal"
 	fi
 fi
 
@@ -449,6 +481,11 @@ else
 	CXXFLAGS="${CXXFLAGS} -stdlib=libc++"
 fi
 CFLAGS="${CFLAGS} -std=gnu11"
+
+# disable exception support
+if [ ${BUILD_CONF_EXCEPTIONS} -eq 0 ]; then
+	CXXFLAGS="${CXXFLAGS} -fno-exceptions"
+fi
 
 # arch handling (use -arch on osx/ios and -m32/-m64 everywhere else, except for mingw)
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
@@ -512,7 +549,7 @@ if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "osx" ]; then
 		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.9"
 	else
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=7.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=8.0"
 	fi
 fi
 
@@ -539,7 +576,8 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 fi
 
 # hard-mode c++ ;) TODO: clean this up + explanations
-WARNINGS="${WARNINGS} -Weverything -Wno-gnu -Wno-c++98-compat"
+WARNINGS="${WARNINGS} -Weverything -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
+WARNINGS="${WARNINGS} -Wno-gnu -Wno-c++98-compat"
 WARNINGS="${WARNINGS} -Wno-c++98-compat-pedantic -Wno-c99-extensions"
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation"
 WARNINGS="${WARNINGS} -Wno-system-headers -Wno-global-constructors -Wno-padded"
