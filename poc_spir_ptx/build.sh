@@ -281,9 +281,17 @@ fi
 
 # link against floor (note: floor debug lib is suffixed by "d")
 if [ $BUILD_MODE == "debug" ]; then
-	LDFLAGS="${LDFLAGS} -lfloord"
+	if [ $BUILD_OS == "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -lfloord_static"
+	else
+		LDFLAGS="${LDFLAGS} -lfloord"
+	fi
 else
-	LDFLAGS="${LDFLAGS} -lfloor"
+	if [ $BUILD_OS == "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -lfloor_static"
+	else
+		LDFLAGS="${LDFLAGS} -lfloor"
+	fi
 fi
 
 # use pkg-config (and some manual libs/includes) on all platforms except osx/ios
