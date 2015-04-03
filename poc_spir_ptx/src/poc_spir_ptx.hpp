@@ -9,6 +9,7 @@
 // -> add a cheap workaround for now
 // (note that proper source compat is still wip)
 #if !defined(FLOOR_COMPUTE)
+#include <floor/core/cpp_headers.hpp>
 #define kernel
 #define global
 #define constant
