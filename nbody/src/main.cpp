@@ -549,7 +549,7 @@ int main(int, char* argv[]) {
 		const auto compute_gflops = [](const long double& iter_time_in_ms, const bool use_fma) {
 			if(!use_fma) {
 				const size_t flops_per_body { 19 };
-				const size_t flops_per_iter { nbody_state.body_count * nbody_state.body_count * flops_per_body };
+				const size_t flops_per_iter { size_t(nbody_state.body_count) * size_t(nbody_state.body_count) * flops_per_body };
 				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter) / 1'000'000'000.0L;
 			}
 			else {
@@ -557,7 +557,7 @@ int main(int, char* argv[]) {
 				// one single gpu/cpu cycle actually perform 2 flops instead of 1, so we can account for that to
 				// compute some kind of "actual ops/flops done" metric
 				const size_t flops_per_body_fma { 13 };
-				const size_t flops_per_iter_fma { nbody_state.body_count * nbody_state.body_count * flops_per_body_fma };
+				const size_t flops_per_iter_fma { size_t(nbody_state.body_count) * size_t(nbody_state.body_count) * flops_per_body_fma };
 				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter_fma) / 1'000'000'000.0L;
 			}
 		};
