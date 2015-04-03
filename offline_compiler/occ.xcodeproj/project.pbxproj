@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5CF040B81A97C4E500D93EE3 /* option_handler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF040B61A97C4E500D93EE3 /* option_handler.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -30,8 +29,6 @@
 		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		5CF040B61A97C4E500D93EE3 /* option_handler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = option_handler.cpp; sourceTree = "<group>"; };
-		5CF040B71A97C4E500D93EE3 /* option_handler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = option_handler.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -77,8 +74,6 @@
 			isa = PBXGroup;
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
-				5CF040B61A97C4E500D93EE3 /* option_handler.cpp */,
-				5CF040B71A97C4E500D93EE3 /* option_handler.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -162,7 +157,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */,
-				5CF040B81A97C4E500D93EE3 /* option_handler.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

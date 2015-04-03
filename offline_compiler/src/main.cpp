@@ -22,7 +22,71 @@
 #include <floor/compute/opencl/opencl_device.hpp>
 #include <floor/compute/cuda/cuda_device.hpp>
 #include <floor/compute/metal/metal_device.hpp>
-#include "option_handler.hpp"
+#include <floor/core/option_handler.hpp>
+
+struct option_context {
+	string filename { "" };
+	llvm_compute::TARGET target { llvm_compute::TARGET::SPIR };
+	string sub_target;
+	bool double_support { true };
+	string additional_options { "" };
+};
+typedef option_handler<option_context> occ_opt_handler;
+
+//! option -> function map
+template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handler::options {
+	// already add all static options
+	{ "--help", [](option_context&, char**&) {
+		// TODO:
+		log_undecorated("command line options:\n"
+						"\t--src <file>: the source file that should be compiled\n"
+						"\t--target [spir|ptx|air]: sets the compile target to OpenCL SPIR, CUDA PTX or Metal Apple-IR\n"
+						"\t--subtarget <id>: sets the target specific sub-target\n"
+						"\t--no-double: explicitly disables double support (only SPIR)\n"
+						"\t--: end of occ options, everything beyond this point is piped through to the compiler");
+	}},
+	{ "--src", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			log_error("invalid argument!");
+			return;
+		}
+		ctx.filename = *arg_ptr;
+	}},
+	{ "--target", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			log_error("invalid argument!");
+			return;
+		}
+		
+		const string target = *arg_ptr;
+		if(target == "spir") {
+			ctx.target = llvm_compute::TARGET::SPIR;
+		}
+		else if(target == "ptx") {
+			ctx.target = llvm_compute::TARGET::PTX;
+		}
+		else if(target == "air") {
+			ctx.target = llvm_compute::TARGET::AIR;
+		}
+		else {
+			log_error("invalid target: %s", target);
+			return;
+		}
+	}},
+	{ "--subtarget", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			log_error("invalid argument!");
+			return;
+		}
+		ctx.sub_target = *arg_ptr;
+	}},
+	{ "--no-double", [](option_context& ctx, char**&) {
+		ctx.double_support = false;
+	}},
+};
 
 int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
@@ -33,7 +97,7 @@ int main(int, char* argv[]) {
 	
 	// handle options
 	option_context option_ctx;
-	option_handler::parse_options(argv + 1, option_ctx);
+	occ_opt_handler::parse_options(argv + 1, option_ctx);
 	
 	// post-checking
 	if(option_ctx.filename.empty()) {
@@ -60,7 +124,7 @@ int main(int, char* argv[]) {
 	device->double_support = option_ctx.double_support;
 	
 	// compile
-	auto program_data = llvm_compute::compile_program_file(device, option_ctx.filename, "", option_ctx.target);
+	auto program_data = llvm_compute::compile_program_file(device, option_ctx.filename, option_ctx.additional_options, option_ctx.target);
 	for(const auto& info : program_data.second) {
 		string sizes_str = "";
 		for(size_t i = 0, count = info.arg_sizes.size(); i < count; ++i) {

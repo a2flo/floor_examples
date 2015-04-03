@@ -4,7 +4,7 @@
 
 #include "poc_spir_ptx.hpp"
 
-// uncomment this to enable host execution (instead of using opencl/cuda)
+// uncomment this to enable host execution
 //#define DEBUG_HOST_EXEC 1
 
 int main(int, char* argv[]) {
@@ -14,7 +14,7 @@ int main(int, char* argv[]) {
 	floor::init(argv[0], (const char*)"data/");
 #endif
 	
-	// get the compute context that has been automatically created (either opencl or cuda, depending on the config)
+	// get the compute context that has been automatically created (opencl/cuda/metal/host, depending on the config)
 	auto compute_ctx = floor::get_compute_context();
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context

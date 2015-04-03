@@ -380,6 +380,6 @@ kernel void path_trace(buffer<float3> img,
 	//if(idx < img_size->x) color = float3 { 1.0f, 0.0f, 0.0f };
 	
 	// merge with previous frames (re-weight)
-	if(*iteration == 0) *img[idx] = color;
+	if(*iteration == 0) img[idx] = color;
 	else img[idx] = img[idx]->interpolate(color, 1.0f / float(*iteration + 1));
 }
