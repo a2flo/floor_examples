@@ -76,6 +76,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\t--softening <softening>: sets the simulation softening (default: " << nbody_state.softening << ")" << endl;
 		cout << "\t--damping <damping>: sets the simulation damping (default: " << nbody_state.damping << ")" << endl;
 		cout << "\t--no-opengl: disables opengl rendering (uses s/w rendering instead)" << endl;
+		cout << "\t--no-fma: disables use of explicit fma instructions or s/w emulation thereof (use this with non-fma cpus)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: pseudo-galaxy)" << endl;
 		for(const auto& desc : nbody_setup_desc) {
@@ -171,6 +172,10 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 	{ "--no-opengl", [](nbody_option_context&, char**&) {
 		nbody_state.no_opengl = true;
 		cout << "opengl disabled" << endl;
+	}},
+	{ "--no-fma", [](nbody_option_context&, char**&) {
+		nbody_state.no_fma = true;
+		cout << "fma disabled" << endl;
 	}},
 	{ "--benchmark", [](nbody_option_context&, char**&) {
 		nbody_state.no_opengl = true; // also disable opengl
@@ -446,7 +451,8 @@ int main(int, char* argv[]) {
 													"-I" + floor::data_path("../nbody/src") +
 													" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 													" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f");
+													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" +
+													(nbody_state.no_fma ? " -DNBODY_NO_FMA" : ""));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
