@@ -100,6 +100,18 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		}
 		cout << ")" << endl;
 		cout << endl;
+		
+		// performance stats
+		cout << "expected performace (with --benchmark):" << endl;
+		cout << "\tGTX 970:      ~2600 gflop/s (--count 131072 --tile-size 256)" << endl;
+		cout << "\tGTX 780:      ~2100 gflop/s (--count 131072 --tile-size 512)" << endl;
+		cout << "\tGT 650M:      ~340 gflop/s (--count 65536 --tile-size 512)" << endl;
+		cout << "\ti7-5820K:     ~105 gflop/s (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-4770:      ~76 gflop/s (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-3615QM:    ~38 gflop/s (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-950:       ~29 gflop/s (--count 32768 --tile-size 4 --no-fma)" << endl;
+		cout << "\tiPad A7:      ~18 gflop/s (--count 8192 --tile-size 512)" << endl;
+		cout << endl;
 	}},
 	{ "--count", [](nbody_option_context&, char**& arg_ptr) {
 		++arg_ptr;
