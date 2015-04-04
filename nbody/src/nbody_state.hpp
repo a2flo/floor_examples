@@ -26,7 +26,6 @@ struct nbody_state_struct {
 	
 	// NOTE on iOS: this must be the same variable as used during the kernel compilation (-> build step)
 	uint32_t tile_size { 512 };
-	//uint32_t tile_size { 1 }; // TODO: figure out why this is required by intel cpu
 	
 	float time_step { 0.001f };
 	float2 mass_minmax { 0.05f, 10.0f };

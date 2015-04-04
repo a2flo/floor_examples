@@ -328,7 +328,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src nbody.cpp --target air -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.00125f -DNBODY_DAMPING=0.99995f\nmetal-as -o=nbody.air air_processed.ll\nmetal-ar r nbody.a nbody.air\nmetallib -o ../../data/nbody.metallib nbody.a\n";
+			shellScript = "cd src\nocc --src nbody.cpp --target air -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\nmetal-as -o=nbody.air air_processed.ll\nmetal-ar r nbody.a nbody.air\nmetallib -o ../../data/nbody.metallib nbody.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

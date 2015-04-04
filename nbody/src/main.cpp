@@ -405,6 +405,9 @@ int main(int, char* argv[]) {
 				nbody_state.benchmark ^ true); // use opengl 3.2+ core
 #else
 	floor::init(argv[0], (const char*)"data/");
+	nbody_state.no_opengl = true;
+	nbody_state.time_step = 0.02f;
+	nbody_state.body_count = 4096;
 #endif
 	floor::set_caption("nbody");
 	
@@ -420,6 +423,7 @@ int main(int, char* argv[]) {
 												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
 												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
 	
+#if !defined(FLOOR_IOS)
 	if(!nbody_state.no_opengl) {
 		// setup renderer
 		if(!gl_renderer::init()) {
@@ -427,6 +431,7 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 	}
+#endif
 	
 	// get the compute context that has been automatically created (opencl/cuda/metal/host)
 	auto compute_ctx = floor::get_compute_context();
@@ -652,7 +657,9 @@ int main(int, char* argv[]) {
 		// opengl rendering
 		else if(!nbody_state.no_opengl) {
 			floor::start_draw();
+#if !defined(FLOOR_IOS)
 			gl_renderer::render(dev_queue, position_buffers[cur_buffer]);
+#endif
 			floor::stop_draw();
 		}
 	}

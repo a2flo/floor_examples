@@ -6,11 +6,11 @@
 // ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
 
 #if !defined(NBODY_SOFTENING)
-#define NBODY_SOFTENING 0.00125f
+#define NBODY_SOFTENING 0.001f
 #endif
 
 #if !defined(NBODY_DAMPING)
-#define NBODY_DAMPING 0.99995f
+#define NBODY_DAMPING 0.999f
 #endif
 
 static void compute_body_interaction(const float4& shared_body,
