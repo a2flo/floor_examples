@@ -35,13 +35,11 @@ typedef option_handler<option_context> occ_opt_handler;
 
 //! option -> function map
 template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handler::options {
-	// already add all static options
 	{ "--help", [](option_context&, char**&) {
-		// TODO:
 		log_undecorated("command line options:\n"
 						"\t--src <file>: the source file that should be compiled\n"
 						"\t--target [spir|ptx|air]: sets the compile target to OpenCL SPIR, CUDA PTX or Metal Apple-IR\n"
-						"\t--subtarget <id>: sets the target specific sub-target\n"
+						"\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
 						"\t--no-double: explicitly disables double support (only SPIR)\n"
 						"\t--: end of occ options, everything beyond this point is piped through to the compiler");
 	}},
@@ -75,7 +73,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 			return;
 		}
 	}},
-	{ "--subtarget", [](option_context& ctx, char**& arg_ptr) {
+	{ "--sub-target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
 			log_error("invalid argument!");
@@ -113,8 +111,20 @@ int main(int, char* argv[]) {
 			device = make_shared<opencl_device>();
 			break;
 		case llvm_compute::TARGET::PTX:
-			log_debug("compiling to PTX ...");
 			device = make_shared<cuda_device>();
+			if(option_ctx.sub_target != "") {
+				const auto sm_pos = option_ctx.sub_target.find("sm_");
+				if(sm_pos == string::npos) {
+					log_error("invalid PTX sub-target: %s", option_ctx.sub_target);
+				}
+				else {
+					const string sm_version = option_ctx.sub_target.substr(sm_pos + 3, option_ctx.sub_target.length() - sm_pos - 3);
+					const auto sm_version_int = stoul(sm_version);
+					((cuda_device*)device.get())->sm.x = (uint32_t)sm_version_int / 10u;
+					((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
+				}
+			}
+			log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 			break;
 		case llvm_compute::TARGET::AIR:
 			log_debug("compiling to AIR ...");
