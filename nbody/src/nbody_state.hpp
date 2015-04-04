@@ -28,14 +28,14 @@ struct nbody_state_struct {
 	uint32_t tile_size { 512 };
 	//uint32_t tile_size { 1 }; // TODO: figure out why this is required by intel cpu
 	
-	float time_step { 0.01f };
-	float2 mass_minmax { 0.05f, 2.0f };
-	float softening { 0.0001f };
+	float time_step { 0.001f };
+	float2 mass_minmax { 0.05f, 10.0f };
+	float softening { 0.01f }; // 0.1 is also interesting
 	float damping { 0.999f };
 	
 	quaternionf cam_rotation;
 	bool enable_cam_rotate { false }, enable_cam_move { false };
-	float distance { 100.0f };
+	float distance { 50.0f };
 	const float max_distance { 2500.0f };
 	
 	bool render_sprites { true };

@@ -39,7 +39,7 @@ enum class NBODY_SETUP : uint32_t {
 	RING,
 	__MAX_NBODY_SETUP
 };
-static NBODY_SETUP nbody_setup { NBODY_SETUP::PSEUDO_GALAXY };
+static NBODY_SETUP nbody_setup { NBODY_SETUP::ON_SPHERE };
 static constexpr const array<const char*, (size_t)NBODY_SETUP::__MAX_NBODY_SETUP> nbody_setup_desc {{
 	"pseudo-galaxy: spawns bodies in a round pseudo galaxy with body height ~= log(total-radius - body-distance + 1)",
 	"cube: spawns bodies randomly inside a cube (uniform distribution)",
@@ -78,7 +78,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\t--no-opengl: disables opengl rendering (uses s/w rendering instead)" << endl;
 		cout << "\t--no-fma: disables use of explicit fma instructions or s/w emulation thereof (use this with non-fma cpus)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
-		cout << "\t--type <type>: sets the initial nbody setup (default: pseudo-galaxy)" << endl;
+		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		for(const auto& desc : nbody_setup_desc) {
 			cout << "\t\t" << desc << endl;
 		}
