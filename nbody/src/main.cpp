@@ -576,9 +576,8 @@ int main(int, char* argv[]) {
 				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter) / 1'000'000'000.0L;
 			}
 			else {
-				// so, these aren't really gflop/s here, it's the same 19 flops, but fma instructions that run in
-				// one single gpu/cpu cycle actually perform 2 flops instead of 1, so we can account for that to
-				// compute some kind of "actual ops/flops done" metric
+				// NOTE: GPUs and recent CPUs support fma instructions, thus performing 2 floating point operations
+				// in 1 cycle instead of 2 -> to account for that, compute some kind of "actual ops done" metric
 				const size_t flops_per_body_fma { 13 };
 				const size_t flops_per_iter_fma { size_t(nbody_state.body_count) * size_t(nbody_state.body_count) * flops_per_body_fma };
 				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter_fma) / 1'000'000'000.0L;
@@ -596,10 +595,8 @@ int main(int, char* argv[]) {
 			sim_time_sum += ((long double)delta.count()) / (time_den / 1000.0L);
 			
 			if(iteration == 99) {
-				log_debug("avg of 100 iterations: %fms ### fma \"gflop/s\": %s ### non-fma gflop/s: %s",
-						  sim_time_sum / 100.0L,
-						  compute_gflops(sim_time_sum / 100.0L, true),
-						  compute_gflops(sim_time_sum / 100.0L, false));
+				log_debug("avg of 100 iterations: %fms ### %s gflop/s",
+						  sim_time_sum / 100.0L, compute_gflops(sim_time_sum / 100.0L, false));
 				floor::set_caption("nbody / " + to_string(nbody_state.body_count) + " bodies / " +
 								   to_string(compute_gflops(sim_time_sum / 100.0L, false)) + " gflop/s");
 				iteration = 0;
