@@ -1,4 +1,4 @@
-<!ELEMENT config (#PCDATA | screen | audio | logging | gui | projection | input | sleep | graphic | graphic_device | inferred | compute | opencl | cuda | metal | host)*>
+<!ELEMENT config (#PCDATA | screen | audio | logging | input | sleep | compute | opencl | cuda | metal | host)*>
 <!ELEMENT screen (#PCDATA)*>
 <!ATTLIST screen
 	width CDATA #REQUIRED
@@ -25,16 +25,6 @@
 	log_filename CDATA #REQUIRED
 	msg_filename CDATA #REQUIRED
 >
-<!ELEMENT gui (#PCDATA)*>
-<!ATTLIST gui
-	anti_aliasing CDATA #REQUIRED
->
-<!ELEMENT projection (#PCDATA)*>
-<!ATTLIST projection
-	fov CDATA #REQUIRED
-	near CDATA #REQUIRED
-	far CDATA #REQUIRED
->
 <!ELEMENT input (#PCDATA)*>
 <!ATTLIST input
 	key_repeat CDATA #REQUIRED
@@ -45,23 +35,6 @@
 <!ELEMENT sleep (#PCDATA)*>
 <!ATTLIST sleep
 	time CDATA #REQUIRED
->
-<!ELEMENT graphic (#PCDATA)*>
-<!ATTLIST graphic
-	filtering CDATA #REQUIRED
-	anisotropic CDATA #REQUIRED
-	anti_aliasing CDATA #REQUIRED
->
-<!ELEMENT graphic_device (#PCDATA)*>
-<!ATTLIST graphic_device
-	disabled_extensions CDATA #REQUIRED
-	force_device CDATA #REQUIRED
-	force_vendor CDATA #REQUIRED
->
-<!ELEMENT inferred (#PCDATA)*>
-<!ATTLIST inferred
-	upscaling CDATA #REQUIRED
-	geometry_light_scaling CDATA #REQUIRED
 >
 <!ELEMENT compute (#PCDATA)*>
 <!ATTLIST compute

@@ -24,40 +24,11 @@
 	-->
 	<logging verbosity="5" append_mode="false" separate_msg_file="false" use_time="true" use_color="true" log_filename="" msg_filename=""/>
 
-	<!--
-	 anti_aliasing options: 0 - max MSAA value allowed by graphics card (8 is recommended)
-	-->
-	<gui anti_aliasing="0"/>
-
-	<!-- you might want to change the field of view, but near/far should remain at 1/1000 -->
-	<projection fov="72.0" near="0.1" far="1000.0"/>
-
 	<!-- there should be no need to change these -->
 	<input key_repeat="0" ldouble_click="10" mdouble_click="10" rdouble_click="10"/>
 
 	<!-- this will sleep the program for the specified amount of milliseconds after each rendered frame -->
 	<sleep time="0"/>
-
-	<!--
-	 filtering options: POINT, LINEAR, BILINEAR, TRILINEAR
-	 anisotropic options: 0 (disabled), 1 - 16
-	 anti_aliasing options: NONE, FXAA, 2xSSAA, 4/3xSSAA+FXAA, 2xSSAA+FXAA (others are currently unsupported)
-	-->
-	<graphic filtering="TRILINEAR" anisotropic="16" anti_aliasing="NONE"/>
-
-	<!--
-	 upscaling: sets the upscaling factor
-		e.g. a value of 2.0 with screen width/height set to 1280*720 will lead to rendering at 640*360 and then scaling it back up to 1280*720
-	 geometry_light_scaling: sets the additional scaling of the geometry and light buffer (note: it is not recommended to change this value!)
-		valid values are: 0.5, 0.625, 0.75, 0.875, 1.0 (anything above 1.0 has no effect, anything below 0.5 will lead to broken rendering)
-	-->
-	<inferred upscaling="1.0" geometry_light_scaling="1.0"/>
-
-	<!-- unless you know what you're doing, don't change the following settings
-	 opencl platform options: either the opencl platform index (starting by 0) or "cuda" on supported platforms (OS X and Linux only)
-	 opencl restrict options: if this is set to any of (or a list of) "CPU", "GPU" or "ACCELERATOR", only those kind/type of devices are used
-	-->
-	<graphic_device disabled_extensions="" force_device="" force_vendor=""/>
 
 	<!--
 	 platform: opencl, cuda, metal or host (NOTE: defaults to opencl if possible and main platform fails to init)

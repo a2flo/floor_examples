@@ -24,8 +24,8 @@
 #include "nbody_state.hpp"
 nbody_state_struct nbody_state;
 
-// unused
 struct nbody_option_context {
+	// unused
 	string additional_options { "" };
 };
 typedef option_handler<nbody_option_context> nbody_opt_handler;
@@ -58,9 +58,9 @@ static array<shared_ptr<compute_buffer>, pos_buffer_count> position_buffers;
 static shared_ptr<compute_buffer> velocity_buffer;
 // iterates over [0, pos_buffer_count - 1] (-> currently active position buffer)
 static size_t buffer_flip_flop { 0 };
-// current iteration number (used to track/compute gflop/s, resets every 100 iterations)
+// current iteration number (used to track/compute gflops, resets every 100 iterations)
 static size_t iteration { 0 };
-// used to track/compute gflop/s, resets every 100 iterations
+// used to track/compute gflops, resets every 100 iterations
 static long double sim_time_sum { 0.0L };
 // initializes (or resets) the current nbody system
 static void init_system();
@@ -103,14 +103,14 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		
 		// performance stats
 		cout << "expected performace (with --benchmark):" << endl;
-		cout << "\tGTX 970:      ~2600 gflop/s (--count 131072 --tile-size 256)" << endl;
-		cout << "\tGTX 780:      ~2100 gflop/s (--count 131072 --tile-size 512)" << endl;
-		cout << "\tGT 650M:      ~340 gflop/s (--count 65536 --tile-size 512)" << endl;
-		cout << "\ti7-5820K:     ~105 gflop/s (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-4770:      ~76 gflop/s (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-3615QM:    ~38 gflop/s (--count 32768 --tile-size 8 --no-fma)" << endl;
-		cout << "\ti7-950:       ~29 gflop/s (--count 32768 --tile-size 4 --no-fma)" << endl;
-		cout << "\tiPad A7:      ~18 gflop/s (--count 8192 --tile-size 512)" << endl;
+		cout << "\tGTX 970:      ~2600 gflops (--count 131072 --tile-size 256)" << endl;
+		cout << "\tGTX 780:      ~2100 gflops (--count 131072 --tile-size 512)" << endl;
+		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8 --no-fma)" << endl;
+		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4 --no-fma)" << endl;
+		cout << "\tiPad A7:      ~18 gflops (--count 8192 --tile-size 512)" << endl;
 		cout << endl;
 	}},
 	{ "--count", [](nbody_option_context&, char**& arg_ptr) {
@@ -306,10 +306,15 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			return true;
 		}
 		
+#if !defined(FLOOR_IOS)
 		const auto& move_evt = (shared_ptr<mouse_move_event>&)obj;
 		
 		// "normalize"/transform delta position according to screen size
 		float2 delta { float2(move_evt->move) / float2 { floor::get_width(), floor::get_height() } };
+#else
+		const auto& move_evt = (shared_ptr<finger_move_event>&)obj;
+		float2 delta { move_evt->normalized_move }; // already normalized
+#endif
 		
 		if(nbody_state.enable_cam_rotate) {
 			// multiply by desired rotation speed
@@ -568,7 +573,7 @@ int main(int, char* argv[]) {
 		auto delta = now - time_keeper;
 		time_keeper = now;
 		
-		// simple iteration time -> gflop/s mapping function (note that flops per interaction is a fixed number)
+		// simple iteration time -> gflops mapping function (note that flops per interaction is a fixed number)
 		const auto compute_gflops = [](const long double& iter_time_in_ms, const bool use_fma) {
 			if(!use_fma) {
 				const size_t flops_per_body { 19 };
@@ -588,17 +593,17 @@ int main(int, char* argv[]) {
 		const size_t cur_buffer = buffer_flip_flop;
 		const size_t next_buffer = (buffer_flip_flop + 1) % pos_buffer_count;
 		if(!nbody_state.stop) {
-			//log_debug("delta: %fms /// %f gflop/s", 1000.0f * float(((long double)delta.count()) / time_den),
+			//log_debug("delta: %fms /// %f gflops", 1000.0f * float(((long double)delta.count()) / time_den),
 			//		  compute_gflops(1000.0L * (((long double)delta.count()) / time_den), false));
 			
 			// in ms
 			sim_time_sum += ((long double)delta.count()) / (time_den / 1000.0L);
 			
 			if(iteration == 99) {
-				log_debug("avg of 100 iterations: %fms ### %s gflop/s",
+				log_debug("avg of 100 iterations: %fms ### %s gflops",
 						  sim_time_sum / 100.0L, compute_gflops(sim_time_sum / 100.0L, false));
 				floor::set_caption("nbody / " + to_string(nbody_state.body_count) + " bodies / " +
-								   to_string(compute_gflops(sim_time_sum / 100.0L, false)) + " gflop/s");
+								   to_string(compute_gflops(sim_time_sum / 100.0L, false)) + " gflops");
 				iteration = 0;
 				sim_time_sum = 0.0L;
 				
