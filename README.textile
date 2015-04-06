@@ -5,6 +5,7 @@
 * N-body simulation to demonstrate local/shared memory buffers, local memory barriers, OpenGL buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
 * build with "./build.sh" inside the folder
 * ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
+* video:
 "!http://img.youtube.com/vi/DoLe1c-eokI/0.jpg!":https://www.youtube.com/watch?v=DoLe1c-eokI
 
 *poc_spir_ptx:*
