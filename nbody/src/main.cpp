@@ -684,9 +684,11 @@ int main(int, char* argv[]) {
 	
 	if(!nbody_state.no_opengl) {
 		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
+		floor::acquire_context();
 		for(size_t i = 0; i < pos_buffer_count; ++i) {
 			position_buffers[i] = nullptr;
 		}
+		floor::release_context();
 	}
 	
 	// kthxbye
