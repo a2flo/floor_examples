@@ -28,7 +28,8 @@ struct nbody_state_struct {
 	uint32_t tile_size { 512 };
 	
 	float time_step { 0.001f };
-	float2 mass_minmax { 0.05f, 10.0f };
+	float2 mass_minmax_default { 0.05f, 10.0f };
+	float2 mass_minmax { mass_minmax_default };
 	float softening { 0.01f }; // 0.1 is also interesting
 	float damping { 0.999f };
 	

@@ -27,9 +27,10 @@
 		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
-		5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C7467151A5828D000999E78 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
-		5C7C93951AC6F12100C93E7C /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
+		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
+		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
+		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -55,19 +56,9 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5C6F6ED11A5824B30050C5AC /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C00718C1A91507900F4711D /* nbodyd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = nbodyd; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071911A91EF7E00F4711D /* nbody.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbody.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
@@ -92,6 +83,9 @@
 		5C7467141A5828D000999E78 /* nbody.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = nbody.hpp; sourceTree = "<group>"; };
 		5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
 		5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_renderer.hpp; sourceTree = "<group>"; };
+		5C8FD0941AD3366800215230 /* nbodyd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
+		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = nbody_state.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -117,7 +111,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5C6F6ED01A5824B30050C5AC /* Frameworks */ = {
+		5C8FD0911AD3366800215230 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -168,6 +162,15 @@
 			name = dtd;
 			sourceTree = "<group>";
 		};
+		5C8FD0B91AD3392500215230 /* osx */ = {
+			isa = PBXGroup;
+			children = (
+				5C8FD0BA1AD3393700215230 /* Images.xcassets */,
+				5C8FD0BC1AD3393700215230 /* Info.plist */,
+			);
+			name = osx;
+			sourceTree = "<group>";
+		};
 		5CD2174419E924A20049D6AE = {
 			isa = PBXGroup;
 			children = (
@@ -175,8 +178,9 @@
 				5CD2175019E924E80049D6AE /* src */,
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
-				5C00718C1A91507900F4711D /* nbodyd */,
+				5C8FD0B91AD3392500215230 /* osx */,
 				5C0071911A91EF7E00F4711D /* nbody.app */,
+				5C8FD0941AD3366800215230 /* nbodyd.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -234,22 +238,22 @@
 			productReference = 5C0071911A91EF7E00F4711D /* nbody.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5C6F6ED21A5824B30050C5AC /* nbody */ = {
+		5C8FD0931AD3366800215230 /* nbody_osx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "nbody" */;
+			buildConfigurationList = 5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "nbody_osx" */;
 			buildPhases = (
-				5C6F6ECF1A5824B30050C5AC /* Sources */,
-				5C6F6ED01A5824B30050C5AC /* Frameworks */,
-				5C6F6ED11A5824B30050C5AC /* CopyFiles */,
+				5C8FD0901AD3366800215230 /* Sources */,
+				5C8FD0911AD3366800215230 /* Frameworks */,
+				5C8FD0921AD3366800215230 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = nbody;
-			productName = nbody;
-			productReference = 5C00718C1A91507900F4711D /* nbodyd */;
-			productType = "com.apple.product-type.tool";
+			name = nbody_osx;
+			productName = nbody_osx;
+			productReference = 5C8FD0941AD3366800215230 /* nbodyd.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -263,8 +267,8 @@
 					5C0071901A91EF7E00F4711D = {
 						CreatedOnToolsVersion = 6.3;
 					};
-					5C6F6ED21A5824B30050C5AC = {
-						CreatedOnToolsVersion = 6.2;
+					5C8FD0931AD3366800215230 = {
+						CreatedOnToolsVersion = 6.3;
 					};
 					5CD2174919E924A20049D6AE = {
 						CreatedOnToolsVersion = 6.1;
@@ -284,7 +288,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				5C6F6ED21A5824B30050C5AC /* nbody */,
+				5C8FD0931AD3366800215230 /* nbody_osx */,
 				5C0071901A91EF7E00F4711D /* nbody_ios */,
 				5CD2174919E924A20049D6AE /* nbody_build.sh */,
 			);
@@ -298,6 +302,14 @@
 			files = (
 				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
 				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8FD0921AD3366800215230 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,13 +354,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		5C6F6ECF1A5824B30050C5AC /* Sources */ = {
+		5C8FD0901AD3366800215230 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C7C93951AC6F12100C93E7C /* gl_renderer.cpp in Sources */,
-				5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */,
-				5C7467151A5828D000999E78 /* nbody.cpp in Sources */,
+				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
+				5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */,
+				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,7 +372,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -441,7 +452,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
@@ -514,20 +524,21 @@
 			};
 			name = Release;
 		};
-		5C6F6ED81A5824B30050C5AC /* Debug */ = {
+		5C8FD0AE1AD3366900215230 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FLOOR_DEBUG=1",
@@ -550,6 +561,8 @@
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
 					/usr/local/include,
 				);
+				INFOPLIST_FILE = src/osx/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
@@ -576,11 +589,6 @@
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-fno-elide-type",
-					"-fdiagnostics-show-template-tree",
-				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
@@ -596,25 +604,26 @@
 					"-framework",
 					OpenGL,
 				);
-				PRODUCT_NAME = "$(TARGET_NAME)d";
+				PRODUCT_NAME = nbodyd;
 				VALID_ARCHS = x86_64;
 			};
 			name = Debug;
 		};
-		5C6F6ED91A5824B30050C5AC /* Release */ = {
+		5C8FD0AF1AD3366900215230 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -633,6 +642,8 @@
 					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
 					/usr/local/include,
 				);
+				INFOPLIST_FILE = src/osx/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
@@ -659,11 +670,6 @@
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-fno-elide-type",
-					"-fdiagnostics-show-template-tree",
-				);
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
@@ -679,7 +685,7 @@
 					"-framework",
 					OpenGL,
 				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = nbody;
 				VALID_ARCHS = x86_64;
 			};
 			name = Release;
@@ -688,7 +694,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -703,7 +709,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -757,7 +763,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -774,7 +780,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -849,11 +855,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "nbody" */ = {
+		5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "nbody_osx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				5C6F6ED81A5824B30050C5AC /* Debug */,
-				5C6F6ED91A5824B30050C5AC /* Release */,
+				5C8FD0AE1AD3366900215230 /* Debug */,
+				5C8FD0AF1AD3366900215230 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

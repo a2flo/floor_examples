@@ -37,6 +37,7 @@ enum class NBODY_SETUP : uint32_t {
 	ON_SPHERE,
 	IN_SPHERE,
 	RING,
+	STAR_COLLAPSE,
 	__MAX_NBODY_SETUP
 };
 static NBODY_SETUP nbody_setup { NBODY_SETUP::ON_SPHERE };
@@ -45,7 +46,8 @@ static constexpr const array<const char*, (size_t)NBODY_SETUP::__MAX_NBODY_SETUP
 	"cube: spawns bodies randomly inside a cube (uniform distribution)",
 	"on-sphere: spawns bodies randomly on a sphere (uniform distribution)",
 	"in-sphere: spawns bodies randomly inside a sphere (uniform distribution)",
-	"ring: spawns bodies in a ring (uniform distribution)"
+	"ring: spawns bodies in a ring (uniform distribution)",
+	"star-collapse: pseudo star collapse (multiple spherical shells of varying mass)",
 }};
 
 // device compute/command queue
@@ -72,7 +74,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\t--count <count>: specify the amount of bodies (default: " << nbody_state.body_count << ")" << endl;
 		cout << "\t--tile-size <count>: sets the tile size / work-group size, thus also the amount of used local memory and unrolling (default: " << nbody_state.tile_size << ")" << endl;
 		cout << "\t--time-step <step-size>: sets the time step size (default: " << nbody_state.time_step << ")" << endl;
-		cout << "\t--mass <min> <max>: sets the random mass interval (default: " << nbody_state.mass_minmax << ")" << endl;
+		cout << "\t--mass <min> <max>: sets the random mass interval (default: " << nbody_state.mass_minmax_default << ")" << endl;
 		cout << "\t--softening <softening>: sets the simulation softening (default: " << nbody_state.softening << ")" << endl;
 		cout << "\t--damping <damping>: sets the simulation damping (default: " << nbody_state.damping << ")" << endl;
 		cout << "\t--no-opengl: disables opengl rendering (uses s/w rendering instead)" << endl;
@@ -150,7 +152,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 			nbody_state.done = true;
 			return;
 		}
-		nbody_state.mass_minmax.x = strtof(*arg_ptr, nullptr);
+		nbody_state.mass_minmax_default.x = strtof(*arg_ptr, nullptr);
 		
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
@@ -158,8 +160,8 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 			nbody_state.done = true;
 			return;
 		}
-		nbody_state.mass_minmax.y = strtof(*arg_ptr, nullptr);
-		cout << "mass set to: " << nbody_state.mass_minmax << endl;
+		nbody_state.mass_minmax_default.y = strtof(*arg_ptr, nullptr);
+		cout << "mass set to: " << nbody_state.mass_minmax_default << endl;
 	}},
 	{ "--softening", [](nbody_option_context&, char**& arg_ptr) {
 		++arg_ptr;
@@ -257,6 +259,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				nbody_setup = NBODY_SETUP::RING;
 				init_system();
 				break;
+			case SDLK_6:
+				nbody_setup = NBODY_SETUP::STAR_COLLAPSE;
+				init_system();
+				break;
 			default: break;
 		}
 		return true;
@@ -344,6 +350,12 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 void init_system() {
 	auto positions = (float4*)position_buffers[0]->map(dev_queue);
 	auto velocities = (float3*)velocity_buffer->map(dev_queue);
+	if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {
+		nbody_state.mass_minmax = nbody_state.mass_minmax_default;
+	}
+	else {
+		nbody_state.mass_minmax = float2 { 1.008f, 55.845f };
+	}
 	for(size_t i = 0; i < nbody_state.body_count; ++i) {
 		constexpr const float sphere_scale { 10.0f };
 		switch(nbody_setup) {
@@ -395,10 +407,34 @@ void init_system() {
 				positions[i].xyz = float3 { cos(theta) * sphere_scale, sin(theta) * sphere_scale, 0.0f };
 				velocities[i] = -positions[i].xyz * 0.1f;
 			} break;
+			case NBODY_SETUP::STAR_COLLAPSE: {
+				static constexpr const size_t shell_count { 7 };
+				static constexpr const float rad_per_shell { 1.0f / float(shell_count) };
+				static constexpr const array<float, shell_count> shell_masses {{
+					1.008f, 4.002602f, 12.011f, 20.1797f, 15.999f, 28.085f, 55.845f,
+				}};
+				const auto shell = core::rand(shell_count);
+				positions[i].w = shell_masses[shell];
+				
+				const auto theta = core::rand(const_math::PI_MUL_2<float>);
+				const auto xi_y = core::rand(-1.0f, 1.0f);
+				const auto sqrt_term = sqrt(1.0f - xi_y * xi_y);
+				const auto rad = (core::rand(rad_per_shell * float(shell), rad_per_shell * float(shell + 1)) *
+								  (core::rand(0, 16) % 2 == 0 ? 1.0f : -1.0f));
+				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0 ? -1.0f : 1.0f);
+				positions[i].xyz = {
+					cos(theta) * rnd_rad * sqrt_term,
+					sin(theta) * rnd_rad * sqrt_term,
+					rnd_rad * xi_y
+				};
+				velocities[i] = -positions[i].xyz * 5.0f;
+			} break;
 			default: floor_unreachable();
 		}
 		
-		positions[i].w = core::rand(nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
+		if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {
+			positions[i].w = core::rand(nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
+		}
 	}
 	position_buffers[0]->unmap(dev_queue, positions);
 	velocity_buffer->unmap(dev_queue, velocities);
