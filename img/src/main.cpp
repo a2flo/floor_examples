@@ -438,7 +438,7 @@ int main(int, char* argv[]) {
 	
 	// create images
 	static constexpr const size_t img_count { 2 };
-	array<uchar4, img_size.x * img_size.y> img_data;
+	auto img_data = make_unique<uchar4[]>(img_size.x * img_size.y); // allocated at runtime so it doesn't kill the stack
 	array<shared_ptr<compute_image>, img_count> imgs;
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
 		if(img_idx == 0) {
