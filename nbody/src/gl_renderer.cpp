@@ -306,7 +306,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 #endif
 	
 	//
-	position_buffer->acquire_opengl_buffer(dev_queue);
+	position_buffer->acquire_opengl_object(dev_queue);
 	
 	const auto shd = (nbody_state.render_sprites ?
 					  (nbody_state.alpha_mask ? shader_objects["SPRITE_DISCARD"] : shader_objects["SPRITE"]) :
@@ -325,7 +325,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	
 	glUniform2f((GLint)shd->program.uniforms["mass_minmax"].location, nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
 	
-	glBindBuffer(GL_ARRAY_BUFFER, position_buffer->get_opengl_buffer());
+	glBindBuffer(GL_ARRAY_BUFFER, position_buffer->get_opengl_object());
 	const GLuint vertices_location = (GLuint)shd->program.attributes["in_vertex"].location;
 	glEnableVertexAttribArray(vertices_location);
 	glVertexAttribPointer(vertices_location, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
@@ -333,7 +333,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	glDrawArrays(GL_POINTS, 0, (GLsizei)nbody_state.body_count);
 	glUseProgram(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	position_buffer->release_opengl_buffer(dev_queue);
+	position_buffer->release_opengl_object(dev_queue);
 }
 
 bool gl_renderer::compile_shaders() {

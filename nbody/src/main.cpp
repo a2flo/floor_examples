@@ -550,23 +550,19 @@ int main(int, char* argv[]) {
 		return -1;
 	}
 	
-	// create device buffers
-	const COMPUTE_BUFFER_FLAG position_buffer_flags {
-		// will be reading and writing from the kernel
-		COMPUTE_BUFFER_FLAG::READ_WRITE
-		// host will read and write data
-		| COMPUTE_BUFFER_FLAG::HOST_READ_WRITE
-		
-		// will be using the buffer with opengl
-		| (!nbody_state.no_opengl ? COMPUTE_BUFFER_FLAG::OPENGL_SHARING : COMPUTE_BUFFER_FLAG::NONE)
-		// automatic defaults when using OPENGL_SHARING:
-		// OPENGL_READ_WRITE: again, will be reading and writing in the kernel
-		// OPENGL_ARRAY_BUFFER: this is a GL_ARRAY_BUFFER buffer
-	};
-	
 	// create nbody position and velocity buffers
 	for(size_t i = 0; i < pos_buffer_count; ++i) {
-		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, position_buffer_flags);
+		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, {
+			// will be reading and writing from the kernel
+			COMPUTE_MEMORY_FLAG::READ_WRITE
+			// host will read and write data
+			| COMPUTE_MEMORY_FLAG::HOST_READ_WRITE
+			
+			// will be using the buffer with opengl
+			| (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
+			// automatic defaults when using OPENGL_SHARING:
+			// OPENGL_READ_WRITE: again, will be reading and writing in the kernel
+		}, (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
 	}
 	velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count);
 	
@@ -576,9 +572,9 @@ int main(int, char* argv[]) {
 	if(nbody_state.no_opengl && !nbody_state.benchmark) {
 		img_buffers = {{
 			compute_ctx->create_buffer(fastest_device, sizeof(float3) * floor::get_width() * floor::get_height(),
-									   COMPUTE_BUFFER_FLAG::READ_WRITE | COMPUTE_BUFFER_FLAG::HOST_READ),
+									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
 			compute_ctx->create_buffer(fastest_device, sizeof(float3) * floor::get_width() * floor::get_height(),
-									   COMPUTE_BUFFER_FLAG::READ_WRITE | COMPUTE_BUFFER_FLAG::HOST_READ),
+									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
 		}};
 		img_buffers[0]->zero(dev_queue);
 		img_buffers[1]->zero(dev_queue);
@@ -685,7 +681,7 @@ int main(int, char* argv[]) {
 							   /* mview: */				mview);
 			
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float3*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_BUFFER_MAP_FLAG::READ | COMPUTE_BUFFER_MAP_FLAG::BLOCK);
+			auto img_data = (float3*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
