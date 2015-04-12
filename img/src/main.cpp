@@ -30,18 +30,37 @@ typedef option_handler<img_option_context> img_opt_handler;
 static bool done { false };
 static bool no_opengl { false };
 static uint32_t cur_image { 0 };
+static uint2 image_size { 2048 };
 
 //! option -> function map
 template<> unordered_map<string, img_opt_handler::option_function> img_opt_handler::options {
 	{ "--help", [](img_option_context&, char**&) {
 		cout << "command line options:" << endl;
-		cout << "\t--none: TODO" << endl;
+		cout << "\t--dim <width> <height>: image width * height in px (default: " << image_size << ")" << endl;
 		
 		cout << endl;
 		cout << "controls:" << endl;
 		cout << "\tq: quit" << endl;
 		cout << endl;
 		done = true;
+	}},
+	{ "--dim", [](img_option_context&, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after --dim!" << endl;
+			done = true;
+			return;
+		}
+		image_size.x = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after second --dim parameter!" << endl;
+			done = true;
+			return;
+		}
+		image_size.y = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		cout << "image size set to: " << image_size << endl;
 	}},
 };
 
@@ -397,15 +416,14 @@ int main(int, char* argv[]) {
 	auto dev_queue = compute_ctx->create_queue(fastest_device);
 	
 	// compile the program and get the kernel functions
-	static constexpr const uint2 img_size { 1024 };
 	static constexpr const uint32_t tap_count { 17u };
 	static_assert(tap_count % 2u == 1u, "tap count must be an odd number!");
 	static constexpr const uint32_t overlap { tap_count / 2u };
 	static constexpr const uint32_t inner_tile_size { 16u }; // -> effective tile size
 	static constexpr const uint32_t tile_size { inner_tile_size + overlap * 2u };
-	static constexpr const uint2 global_size { (img_size / inner_tile_size) * tile_size };
+	static const uint2 global_size { (image_size / inner_tile_size) * tile_size };
 	log_debug("running blur kernel on an %v image, with a tap count of %u, inner tile size of %v and work-group tile size of %v -> global work size: %v -> %u texture fetches",
-			  img_size, tap_count, inner_tile_size, tile_size, global_size, global_size.x * global_size.y);
+			  image_size, tap_count, inner_tile_size, tile_size, global_size, global_size.x * global_size.y);
 #if !defined(FLOOR_IOS)
 	auto img_prog = compute_ctx->add_program_file(floor::data_path("../img/src/img_kernels.cpp"),
 												  "-I" + floor::data_path("../img/src") +
@@ -438,38 +456,41 @@ int main(int, char* argv[]) {
 	
 	// create images
 	static constexpr const size_t img_count { 2 };
-	auto img_data = make_unique<uchar4[]>(img_size.x * img_size.y); // allocated at runtime so it doesn't kill the stack
+	auto img_data = make_unique<uchar4[]>(image_size.x * image_size.y); // allocated at runtime so it doesn't kill the stack
 	array<shared_ptr<compute_image>, img_count> imgs;
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
 		if(img_idx == 0) {
-			for(uint32_t i = 0, count = img_size.x * img_size.y; i < count; ++i) {
+			for(uint32_t i = 0, count = image_size.x * image_size.y; i < count; ++i) {
 				img_data[i] = { uchar3::random(), 255u };
-				//img_data[i] = { 255u };
 			}
 		}
 		imgs[img_idx] = compute_ctx->create_image(fastest_device,
 												  // using a uint2 here, although parameter is actually a uint4 to support 3D/cube-maps/arrays/etc.,
 												  // conversion happens automatically
-												  img_size,
-												  // this is a simple 2D image and we don't require a sampler (will be directly reading pixels)
-												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::FLAG_NO_SAMPLER,
+												  image_size,
+												  // this is a simple 2D image
+												  COMPUTE_IMAGE_TYPE::IMAGE_2D |
 												  // each channel is an unsigned 8-bit value
-												  COMPUTE_IMAGE_STORAGE_TYPE::UINT_8,
-												  // use 4 channels
-												  4,
+												  COMPUTE_IMAGE_TYPE::UINT | COMPUTE_IMAGE_TYPE::FORMAT_8 |
+												  // use 4 channels (could also use ::RGBA)
+												  COMPUTE_IMAGE_TYPE::CHANNELS_4 |
+												  // first image: might need/want a sampler, second image: only writing, doesn't need one
+												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::NONE : COMPUTE_IMAGE_TYPE::FLAG_NO_SAMPLER),
 												  // init image with our random data
 												  (img_idx == 0 ? &img_data[0] : nullptr),
-												  // kernel will read+write, host will read+write and we want to use it with opengl
-												  COMPUTE_MEMORY_FLAG::READ_WRITE |
-												  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-												  COMPUTE_MEMORY_FLAG::OPENGL_SHARING,
+												  // kernel will read from the first image and write to the second
+												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::WRITE) |
+												  // host will write
+												  COMPUTE_MEMORY_FLAG::HOST_WRITE |
+												  // we want to render the second image, so enable opengl sharing
+												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
 												  // when using opengl sharing: appropriate texture target must be set
 												  GL_TEXTURE_2D);
 	}
 	
 	glFlush(); glFinish();
 	dev_queue->finish();
-	const auto start1 = floor_timer2::start();
+	const auto blur_start = floor_timer2::start();
 	dev_queue->execute(image_blur,
 					   // total amount of work:
 					   size2 { global_size },
@@ -478,19 +499,9 @@ int main(int, char* argv[]) {
 					   // kernel arguments:
 					   imgs[0], imgs[1]);
 	dev_queue->finish();
-	const auto end1 = floor_timer2::stop<chrono::microseconds>(start1);
-	const auto start2 = floor_timer2::start();
-	dev_queue->execute(image_blur,
-					   // total amount of work:
-					   size2 { global_size },
-					   // work per work-group:
-					   size2 { tile_size, tile_size },
-					   // kernel arguments:
-					   imgs[1], imgs[0]);
-	dev_queue->finish();
-	const auto end2 = floor_timer2::stop<chrono::microseconds>(start2);
-	log_debug("blur run in %fms (1st run) and %fms (2nd run)", double(end1) / 1000.0, double(end2) / 1000.0);
-	cur_image = 0;
+	const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
+	log_debug("blur run in %fms", double(blur_end) / 1000.0);
+	cur_image = 1;
 	
 	// init done, release context
 	floor::release_context();

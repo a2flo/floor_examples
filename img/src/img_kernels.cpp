@@ -1,8 +1,6 @@
 
 #if defined(FLOOR_COMPUTE)
 
-#include <floor/math/vector_lib.hpp>
-
 typedef uint64_t image;
 
 floor_inline_always uchar4 read_surf_2d(image img_handle, uint2 tex_coord) {
@@ -17,6 +15,13 @@ floor_inline_always uchar4 read_surf_2d(image img_handle, int2 tex_coord) {
 	asm("suld.b.2d.v4.b8.clamp { %0, %1, %2, %3 }, [%4, { %5, %6 }];" :
 		"=r"(ret.x), "=r"(ret.y), "=r"(ret.z), "=r"(ret.w) :
 		"l"(img_handle), "r"(tex_coord.x * 4), "r"(tex_coord.y));
+	return ret;
+}
+floor_inline_always float4 read_tex_2d(image img_handle, int2 tex_coord) {
+	float4 ret;
+	asm("tex.2d.v4.f32.s32 { %0, %1, %2, %3 }, [%4, { %5, %6 }];" :
+		"=f"(ret.x), "=f"(ret.y), "=f"(ret.z), "=f"(ret.w) :
+		"l"(img_handle), "r"(tex_coord.x), "r"(tex_coord.y));
 	return ret;
 }
 
@@ -72,7 +77,11 @@ kernel void image_blur(image in_img, image out_img) {
 	// map from the global work size to the actual image size
 	const int2 img_coord = (gid / TILE_SIZE) * INNER_TILE_SIZE + (lid - overlap);
 	// read the input pixel and store it in the local buffer/"cache" (note: out-of-bound access is clamped)
+#if 0
 	samples[lin_lid] = float4(read_surf_2d(in_img, img_coord));
+#else
+	samples[lin_lid] = read_tex_2d(in_img, img_coord);
+#endif
 	local_barrier();
 	
 	// horizontal blur:
@@ -106,7 +115,11 @@ kernel void image_blur(image in_img, image out_img) {
 		}
 		
 		// write out
+#if 0
 		write_surf_2d(out_img, img_coord, uchar4(v_color));
+#else
+		write_surf_2d(out_img, img_coord, uchar4(v_color * 255.0f));
+#endif
 	}
 }
 
