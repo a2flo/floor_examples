@@ -136,24 +136,91 @@ int main(int, char* argv[]) {
 	// compile
 	auto program_data = llvm_compute::compile_program_file(device, option_ctx.filename, option_ctx.additional_options, option_ctx.target);
 	for(const auto& info : program_data.second) {
-		string sizes_str = "";
-		for(size_t i = 0, count = info.arg_sizes.size(); i < count; ++i) {
-			switch(info.arg_address_spaces[i]) {
+		string info_str = "";
+		for(size_t i = 0, count = info.args.size(); i < count; ++i) {
+			switch(info.args[i].address_space) {
 				case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL:
-					sizes_str += "global ";
+					info_str += "global ";
 					break;
 				case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::LOCAL:
-					sizes_str += "local ";
+					info_str += "local ";
 					break;
 				case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT:
-					sizes_str += "constant ";
+					info_str += "constant ";
+					break;
+				case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE:
+					info_str += "image ";
 					break;
 				default: break;
 			}
-			sizes_str += to_string(info.arg_sizes[i]) + (i + 1 < count ? "," : "") + " ";
+			
+			if(info.args[i].address_space != llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE) {
+				info_str += to_string(info.args[i].size);
+			}
+			else {
+				switch(info.args[i].image_access) {
+					case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::READ:
+						info_str += "read_only ";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::WRITE:
+						info_str += "write_only ";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::READ_WRITE:
+						info_str += "read_write ";
+						break;
+					default:
+						info_str += "no_access? "; // shouldn't happen ...
+						log_error("kernel image argument #%u has no access qualifier (%X)!", i, info.args[i].image_access);
+						break;
+				}
+				
+				switch(info.args[i].image_type) {
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D:
+						info_str += "1D";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+						info_str += "1D array";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+						info_str += "1D buffer";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D:
+						info_str += "2D";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+						info_str += "2D array";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+						info_str += "2D depth";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+						info_str += "2D array depth";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+						info_str += "2D msaa";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+						info_str += "2D array msaa";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+						info_str += "2D msaa depth";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+						info_str += "2D array msaa depth";
+						break;
+					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_3D:
+						info_str += "3D";
+						break;
+					default:
+						info_str += "unknown_type";
+						log_error("kernel image argument #%u has no type or an unknown type (%X)!", i, info.args[i].image_type);
+						break;
+				}
+			}
+			info_str += (i + 1 < count ? ", " : " ");
 		}
-		sizes_str = core::trim(sizes_str);
-		log_msg("compiled kernel: %s (%s)", info.name, sizes_str);
+		info_str = core::trim(info_str);
+		log_msg("compiled kernel: %s (%s)", info.name, info_str);
 	}
 	
 	// kthxbye

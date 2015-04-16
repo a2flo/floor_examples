@@ -30,13 +30,14 @@ typedef option_handler<img_option_context> img_opt_handler;
 static bool done { false };
 static bool no_opengl { false };
 static uint32_t cur_image { 0 };
-static uint2 image_size { 2048 };
+static uint2 image_size { 1024 };
 
 //! option -> function map
 template<> unordered_map<string, img_opt_handler::option_function> img_opt_handler::options {
 	{ "--help", [](img_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--dim <width> <height>: image width * height in px (default: " << image_size << ")" << endl;
+		cout << "\t--no-opengl: disables opengl rendering and sharing (uses s/w rendering instead)" << endl;
 		
 		cout << endl;
 		cout << "controls:" << endl;
@@ -61,6 +62,10 @@ template<> unordered_map<string, img_opt_handler::option_function> img_opt_handl
 		}
 		image_size.y = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
 		cout << "image size set to: " << image_size << endl;
+	}},
+	{ "--no-opengl", [](img_option_context&, char**&) {
+		no_opengl = true;
+		cout << "opengl disabled" << endl;
 	}},
 };
 
@@ -297,17 +302,11 @@ static bool compile_shader(img_shader_object& shd, const char* vs_text, const ch
 	return true;
 }
 
-static void gl_render(shared_ptr<compute_queue> dev_queue, shared_ptr<compute_image> img) {
+static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
 	// draws ogl stuff
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	glBindVertexArray(global_vao);
-	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
+	// don't need to clear, drawing the complete screen
 	
-	glClear(GL_COLOR_BUFFER_BIT);
-	
-	//
-	img->acquire_opengl_object(dev_queue);
+	//img->acquire_opengl_object(dev_queue);
 	
 	const auto shd = shader_objects["IMG_DRAW"];
 	glUseProgram(shd->program.program);
@@ -325,7 +324,7 @@ static void gl_render(shared_ptr<compute_queue> dev_queue, shared_ptr<compute_im
 	
 	glUseProgram(0);
 	
-	img->release_opengl_object(dev_queue);
+	//img->release_opengl_object(dev_queue);
 }
 
 static bool compile_shaders() {
@@ -365,6 +364,8 @@ static bool gl_init() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
 	glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float2), fullscreen_triangle, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	
+	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
 	
 	//
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -429,7 +430,9 @@ int main(int, char* argv[]) {
 												  "-I" + floor::data_path("../img/src") +
 												  " -DTAP_COUNT=" + to_string(tap_count) +
 												  " -DTILE_SIZE=" + to_string(tile_size) +
-												  " -DINNER_TILE_SIZE=" + to_string(inner_tile_size));
+												  " -DINNER_TILE_SIZE=" + to_string(inner_tile_size) +
+												  // TODO: add option
+												  " -DDOUBLE_CACHE=1");
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
@@ -461,7 +464,13 @@ int main(int, char* argv[]) {
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
 		if(img_idx == 0) {
 			for(uint32_t i = 0, count = image_size.x * image_size.y; i < count; ++i) {
-				img_data[i] = { uchar3::random(), 255u };
+				//img_data[i] = { uchar3::random(), 255u };
+				img_data[i] = {
+					uchar3(uint8_t(i * (image_size.x / 2) % 255u),
+						   uint8_t((i * 255u) / count),
+						   uint8_t(((i % image_size.x) * 255u) / image_size.x)),
+					255u
+				};
 			}
 		}
 		imgs[img_idx] = compute_ctx->create_image(fastest_device,
@@ -474,16 +483,16 @@ int main(int, char* argv[]) {
 												  COMPUTE_IMAGE_TYPE::UINT | COMPUTE_IMAGE_TYPE::FORMAT_8 |
 												  // use 4 channels (could also use ::RGBA)
 												  COMPUTE_IMAGE_TYPE::CHANNELS_4 |
-												  // first image: might need/want a sampler, second image: only writing, doesn't need one
-												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::NONE : COMPUTE_IMAGE_TYPE::FLAG_NO_SAMPLER),
+												  // first image: read only, second image: write only (also sets NO_SAMPLER flag)
+												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : COMPUTE_IMAGE_TYPE::WRITE),
 												  // init image with our random data
 												  (img_idx == 0 ? &img_data[0] : nullptr),
 												  // kernel will read from the first image and write to the second
 												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::WRITE) |
-												  // host will write
-												  COMPUTE_MEMORY_FLAG::HOST_WRITE |
-												  // we want to render the second image, so enable opengl sharing
-												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
+												  // w/ opengl: host will only write, w/o opengl: host will read and write
+												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
+												  // we want to render the images, so enable opengl sharing
+												  (no_opengl ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
 												  // when using opengl sharing: appropriate texture target must be set
 												  GL_TEXTURE_2D);
 	}
@@ -503,6 +512,11 @@ int main(int, char* argv[]) {
 	log_debug("blur run in %fms", double(blur_end) / 1000.0);
 	cur_image = 1;
 	
+	// acquire for opengl use
+	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
+		imgs[img_idx]->acquire_opengl_object(dev_queue);
+	}
+	
 	// init done, release context
 	floor::release_context();
 	
@@ -516,25 +530,24 @@ int main(int, char* argv[]) {
 		
 		// TODO: s/w rendering
 		if(no_opengl) {
-			/*// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float3*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			// grab the current image buffer data (read-only + blocking) ...
+			auto render_img = (uchar4*)imgs[cur_image]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
-			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)img_size.x;
+			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)image_size.x;
 			uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels;
-			for(uint32_t y = 0, img_idx = 0; y < img_size.y; ++y) {
-				for(uint32_t x = 0; x < img_size.x; ++x, ++img_idx) {
-					const auto rgb = img_data[img_idx] * 255.0f;
-					*px_ptr++ = SDL_MapRGB(wnd_surface->format, uint8_t(rgb.x), uint8_t(rgb.y), uint8_t(rgb.z));
+			for(uint32_t y = 0, img_idx = 0; y < image_size.y; ++y) {
+				for(uint32_t x = 0; x < image_size.x; ++x, ++img_idx) {
+					*px_ptr++ = SDL_MapRGB(wnd_surface->format, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
 				}
 				px_ptr += pitch_offset;
 			}
-			img_buffers[img_buffer_flip_flop]->unmap(dev_queue, img_data);
+			imgs[cur_image]->unmap(dev_queue, render_img);
 			
 			SDL_UnlockSurface(wnd_surface);
-			SDL_UpdateWindowSurface(floor::get_window());*/
+			SDL_UpdateWindowSurface(floor::get_window());
 		}
 		// opengl rendering
 		else if(!no_opengl) {

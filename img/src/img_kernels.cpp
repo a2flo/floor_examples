@@ -1,41 +1,6 @@
 
 #if defined(FLOOR_COMPUTE)
 
-typedef uint64_t image;
-
-floor_inline_always uchar4 read_surf_2d(image img_handle, uint2 tex_coord) {
-	uchar4 ret;
-	asm("suld.b.2d.v4.b8.clamp { %0, %1, %2, %3 }, [%4, { %5, %6 }];" :
-		"=r"(ret.x), "=r"(ret.y), "=r"(ret.z), "=r"(ret.w) :
-		"l"(img_handle), "r"(tex_coord.x * 4), "r"(tex_coord.y));
-	return ret;
-}
-floor_inline_always uchar4 read_surf_2d(image img_handle, int2 tex_coord) {
-	uchar4 ret;
-	asm("suld.b.2d.v4.b8.clamp { %0, %1, %2, %3 }, [%4, { %5, %6 }];" :
-		"=r"(ret.x), "=r"(ret.y), "=r"(ret.z), "=r"(ret.w) :
-		"l"(img_handle), "r"(tex_coord.x * 4), "r"(tex_coord.y));
-	return ret;
-}
-floor_inline_always float4 read_tex_2d(image img_handle, int2 tex_coord) {
-	float4 ret;
-	asm("tex.2d.v4.f32.s32 { %0, %1, %2, %3 }, [%4, { %5, %6 }];" :
-		"=f"(ret.x), "=f"(ret.y), "=f"(ret.z), "=f"(ret.w) :
-		"l"(img_handle), "r"(tex_coord.x), "r"(tex_coord.y));
-	return ret;
-}
-
-floor_inline_always void write_surf_2d(image img_handle, uint2 tex_coord, uchar4 data) {
-	asm("sust.b.2d.v4.b8.clamp [%0, { %1, %2 }], { %3, %4, %5, %6 };" : :
-		"l"(img_handle), "r"(tex_coord.x * 4), "r"(tex_coord.y),
-		"r"(data.x), "r"(data.y), "r"(data.z), "r"(data.w));
-}
-floor_inline_always void write_surf_2d(image img_handle, int2 tex_coord, uchar4 data) {
-	asm("sust.b.2d.v4.b8.clamp [%0, { %1, %2 }], { %3, %4, %5, %6 };" : :
-		"l"(img_handle), "r"(tex_coord.x * 4), "r"(tex_coord.y),
-		"r"(data.x), "r"(data.y), "r"(data.z), "r"(data.w));
-}
-
 // computes the blur coefficients for the specified tap count (at compile-time)
 template <uint32_t tap_count>
 constexpr auto compute_coefficients() {
@@ -57,8 +22,10 @@ constexpr auto compute_coefficients() {
 // TAP_COUNT: kernel width, -> N*N filter
 // TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
 // INNER_TILE_SIZE: the image portion that will actually be computed + output in here
+// DOUBLE_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
-kernel void image_blur(image in_img, image out_img) {
+kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
+					   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
 	const int2 gid { get_global_id(0), get_global_id(1) };
 	const int2 lid { get_local_id(0), get_local_id(1) };
 	const int lin_lid { lid.y * TILE_SIZE + lid.x };
@@ -77,49 +44,131 @@ kernel void image_blur(image in_img, image out_img) {
 	// map from the global work size to the actual image size
 	const int2 img_coord = (gid / TILE_SIZE) * INNER_TILE_SIZE + (lid - overlap);
 	// read the input pixel and store it in the local buffer/"cache" (note: out-of-bound access is clamped)
-#if 0
-	samples[lin_lid] = float4(read_surf_2d(in_img, img_coord));
-#else
-	samples[lin_lid] = read_tex_2d(in_img, img_coord);
-#endif
+	samples[lin_lid] = read(in_img, img_coord);
 	local_barrier();
 	
-	// horizontal blur:
-	// this must be done for the inner tile and the vertical overlapping part (necessary for the vertical blur)
-	// also note that doing this branch is faster than clamping idx to [0, TILE_SIZE - 1]
-	if(lid.x >= overlap && lid.x < (TILE_SIZE - overlap)) {
-		float4 h_color;
-		int idx = lid.y * TILE_SIZE + lid.x - overlap;
-#pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i) {
-			// note that this will be optimized to an fma instruction if possible
-			h_color += samples[idx] * coeffs[overlap + i];
-			++idx;
-		}
-		// and write the sample back to the local cache
-		samples[lin_lid] = h_color;
-	}
-	local_barrier();
+	// the blur is now computed using a separable filter, i.e. one vertical pass and one horizontal pass.
+	// the vertical pass is done before the horizontal pass to increase occupancy
+	//  -> if the horizontal pass would be computed first, the middle part of a warp/sub-group/SIMD-unit
+	//     would do the blur computation, but the outer parts would simply idle
+	//  -> if the vertical pass is done first, all horizontal lines either have to be computed completely
+	//     or don't have to be computed at all
+	//
+	//      horizontal first
+	//  ------------------------
+	//  |       |xxxxxx|       | // all lines active
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  |       |-x-x-x|       |
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  |       |-x-x-x|       |
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  |       |xxxxxx|       |
+	//  ------------------------
+	//
+	//       vertical first
+	//  ------------------------
+	//  |                      | // can "skip" empty lines
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  |xxxxxxx|x-x-x-|xxxxxxx|
+	//  |xxxxxxx|xxxxxx|xxxxxxx|
+	//  |xxxxxxx|xxxxxx|xxxxxxx|
+	//  |xxxxxxx|x-x-x-|xxxxxxx|
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  ------------------------
+	//
+	// NOTE: of course this is simply a matter of mapping ids to execution order, so if "lid" was reversed,
+	//       the other way around would be more efficient. also, there is no guarantee that ids/work-items
+	//       are properly mapped to warps/sub-groups/SIMD-units (0-31 warp #0, 32-63 warp #1, ...), but in
+	//       practice, this is usually the case (true for nvidia gpus and intel cpus).
+	
+	// when using an additional sample cache, only one sync point is necessary after the first pass
+#if defined(DOUBLE_CACHE)
+	local_buffer<float4, TILE_SIZE * INNER_TILE_SIZE> samples_2;
+#endif
 	
 	// vertical blur:
-	// this must only be done for the inner tile
-	// again, branch so we don't have to clamp in here
-	if(lid.x >= overlap && lid.x < (TILE_SIZE - overlap) &&
-	   lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
-		float4 v_color;
+	// this must be done for the inner tile and the horizontal overlapping part (necessary for the horizontal blur)
+	// also note that doing this branch is faster than clamping idx to [0, TILE_SIZE - 1]
+	float4 v_color;
+	if(lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
 		int idx = (lid.y - overlap) * TILE_SIZE + lid.x;
 #pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i) {
-			v_color += samples[idx] * coeffs[overlap + i];
-			idx += TILE_SIZE;
+		for(int i = -overlap; i <= overlap; ++i, idx += TILE_SIZE) {
+			// note that this will be optimized to an fma instruction if possible
+			v_color += coeffs[overlap + i] * samples[idx];
+		}
+		
+#if defined(DOUBLE_CACHE)
+		// TODO
+		samples_2[(lid.y - overlap) * TILE_SIZE + lid.x] = v_color;
+		
+		// this is always executed by all threads in a warp (on nvidia h/w) if the tile size is <= 32.
+		// uncertain about other h/w, so don't do it (TODO: need a get_simd_width() function or SIMD_WIDTH macro)
+#if defined(FLOOR_COMPUTE_CUDA) && TILE_SIZE <= 32
+		local_barrier();
+#endif
+#endif
+	}
+	
+#if defined(DOUBLE_CACHE) && !defined(FLOOR_COMPUTE_CUDA)
+	// else case from above (aka "the safe route"):
+	// barriers/fences must always be executed by all work-items in a work-group (technically sub-group/warp)
+	local_barrier();
+#endif
+	
+#if !defined(DOUBLE_CACHE)
+	// make sure all read accesses have completed (in the loop)
+	local_barrier();
+	// write the sample back to the local cache
+	if(lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
+		samples[lin_lid] = v_color;
+	}
+	// make sure everything has been updated
+	local_barrier();
+#endif
+	
+	// horizontal blur:
+	//  ------------------------
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  |       |x-x-x-|       |
+	//  |       |x-x-x-|       |
+	//  |       |x-x-x-|       |
+	//  |       |x-x-x-|       |
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  |                      |
+	//  ------------------------
+	if(lid.x >= overlap && lid.x < (TILE_SIZE - overlap) &&
+	   lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
+		float4 h_color;
+#if defined(DOUBLE_CACHE)
+		int idx = (lid.y - overlap) * TILE_SIZE + lid.x - overlap;
+#else
+		int idx = lid.y * TILE_SIZE + lid.x - overlap;
+#define samples_2 samples
+#endif
+#pragma clang loop unroll_count(TAP_COUNT)
+		for(int i = -overlap; i <= overlap; ++i, ++idx) {
+			// note that this will be optimized to an fma instruction if possible
+			h_color += coeffs[overlap + i] * samples_2[idx];
 		}
 		
 		// write out
-#if 0
-		write_surf_2d(out_img, img_coord, uchar4(v_color));
-#else
-		write_surf_2d(out_img, img_coord, uchar4(v_color * 255.0f));
-#endif
+		write(out_img, img_coord, h_color);
 	}
 }
 
