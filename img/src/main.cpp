@@ -528,7 +528,7 @@ int main(int, char* argv[]) {
 			floor::set_caption("img | FPS: " + to_string(floor::get_fps()));
 		}
 		
-		// TODO: s/w rendering
+		// s/w rendering
 		if(no_opengl) {
 			// grab the current image buffer data (read-only + blocking) ...
 			auto render_img = (uchar4*)imgs[cur_image]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);

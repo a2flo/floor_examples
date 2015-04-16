@@ -109,7 +109,7 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 		}
 		
 #if defined(DOUBLE_CACHE)
-		// TODO
+		// write results to the second cache
 		samples_2[(lid.y - overlap) * TILE_SIZE + lid.x] = v_color;
 		
 		// this is always executed by all threads in a warp (on nvidia h/w) if the tile size is <= 32.
