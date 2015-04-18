@@ -174,47 +174,53 @@ int main(int, char* argv[]) {
 						break;
 				}
 				
-				switch(info.args[i].image_type) {
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D:
-						info_str += "1D";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
-						info_str += "1D array";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
-						info_str += "1D buffer";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D:
-						info_str += "2D";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
-						info_str += "2D array";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
-						info_str += "2D depth";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
-						info_str += "2D array depth";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
-						info_str += "2D msaa";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
-						info_str += "2D array msaa";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
-						info_str += "2D msaa depth";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
-						info_str += "2D array msaa depth";
-						break;
-					case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_3D:
-						info_str += "3D";
-						break;
-					default:
-						info_str += "unknown_type";
-						log_error("kernel image argument #%u has no type or an unknown type (%X)!", i, info.args[i].image_type);
-						break;
+				if(option_ctx.target == llvm_compute::TARGET::PTX) {
+					// image type is not stored for ptx
+					info_str += to_string(info.args[i].size);
+				}
+				else {
+					switch(info.args[i].image_type) {
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D:
+							info_str += "1D";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+							info_str += "1D array";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+							info_str += "1D buffer";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D:
+							info_str += "2D";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+							info_str += "2D array";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+							info_str += "2D depth";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+							info_str += "2D array depth";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+							info_str += "2D msaa";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+							info_str += "2D array msaa";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+							info_str += "2D msaa depth";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+							info_str += "2D array msaa depth";
+							break;
+						case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_3D:
+							info_str += "3D";
+							break;
+						default:
+							info_str += "unknown_type";
+							log_error("kernel image argument #%u has no type or an unknown type (%X)!", i, info.args[i].image_type);
+							break;
+					}
 				}
 			}
 			info_str += (i + 1 < count ? ", " : " ");

@@ -24,8 +24,8 @@ constexpr auto compute_coefficients() {
 // INNER_TILE_SIZE: the image portion that will actually be computed + output in here
 // SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
-kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
-					   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
+									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
 	const int2 gid { get_global_id(0), get_global_id(1) };
 	const int2 lid { get_local_id(0), get_local_id(1) };
 	const int lin_lid { lid.y * TILE_SIZE + lid.x };
@@ -172,6 +172,49 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 		// write out
 		write(out_img, img_coord, h_color);
 	}
+}
+
+// this is the dumb version of the blur, that processes a horizontal or vertical line of 32px (inner tile + 2 * overlap) per work-group
+static_assert(TILE_SIZE == 32, "tile size must be 32 for now");
+template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
+floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
+												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+	const int2 gid { get_global_id(0), get_global_id(1) };
+	const int lin_lid = get_local_id(direction);
+	
+	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
+	constexpr const int overlap = TAP_COUNT / 2;
+	
+	local_buffer<float4, TILE_SIZE> samples;
+	
+	const int2 img_coord = {
+		// either coord is fixed
+		direction == 0 ? ((gid.x / TILE_SIZE) * INNER_TILE_SIZE + (lin_lid - overlap)) : gid.x,
+		direction == 0 ? gid.y : ((gid.y / TILE_SIZE) * INNER_TILE_SIZE + (lin_lid - overlap))
+	};
+	samples[lin_lid] = read(in_img, img_coord);
+	local_barrier();
+	
+	if(lin_lid >= overlap && lin_lid < (TILE_SIZE - overlap)) {
+		float4 color;
+		int idx = lin_lid - overlap;
+#pragma clang loop unroll_count(TAP_COUNT)
+		for(int i = -overlap; i <= overlap; ++i, ++idx) {
+			color += coeffs[overlap + i] * samples[idx];
+		}
+		
+		write(out_img, img_coord, color);
+	}
+}
+
+kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
+									   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+	image_blur_dumb<0>(in_img, out_img);
+}
+
+kernel void image_blur_dumb_vertical(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
+									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+	image_blur_dumb<1>(in_img, out_img);
 }
 
 #endif

@@ -19,7 +19,7 @@
 #include "gl_blur.hpp"
 
 static shared_ptr<img_shader_object> h_blur_shd, v_blur_shd;
-static GLuint rtt_fbo { 0u }, rtt_tmp_tex { 0u };
+static GLuint rtt_fbo { 0u };
 
 bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 	if(tap_count != 17) {
@@ -99,20 +99,9 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 		return false;
 	}
 	
-	// create fbo and the intermediate/temp texture
+	// create fbo
 	glGenFramebuffers(1, &rtt_fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, rtt_fbo);
-
-	glGenTextures(1, &rtt_tmp_tex);
-	glBindTexture(GL_TEXTURE_2D, rtt_tmp_tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, GLsizei(dim.x), GLsizei(dim.y), 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-	
-	// attach it as the first destination texture (what we will render into in the first pass)
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rtt_tmp_tex, 0);
 	
 	// set correct render size
 	glViewport(0, 0, GLsizei(dim.x), GLsizei(dim.y));
@@ -120,9 +109,14 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 	return true;
 }
 
-void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& vbo_fullscreen_triangle) {
-	// NOTE: rtt_fbo + rtt_tmp_tex still bound from before (init)
+void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& tex_tmp,
+				   const GLuint& vbo_fullscreen_triangle) {
+	// NOTE: rtt_fbo still bound from before (init)
 	
+	// attach tmp texture as the first destination texture (what we will render into in the first pass)
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_tmp, 0);
+	
+	// will be rendering a fullscreen triangle
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 	glEnableVertexAttribArray(0);
@@ -146,7 +140,7 @@ void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& v
 		
 		// bind/set source texture
 		glUniform1i((GLint)v_blur_shd->program.uniforms["tex"].location, 0);
-		glBindTexture(GL_TEXTURE_2D, rtt_tmp_tex);
+		glBindTexture(GL_TEXTURE_2D, tex_tmp);
 		
 		// and go
 		glDrawArrays(GL_TRIANGLES, 0, 3);

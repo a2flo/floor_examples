@@ -33,6 +33,7 @@ static bool done { false };
 static bool no_opengl { false };
 static bool run_gl_blur { false };
 static bool second_cache { true };
+static bool dumb { false };
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { 17u };
@@ -45,6 +46,7 @@ template<> unordered_map<string, img_opt_handler::option_function> img_opt_handl
 		cout << "\t--no-opengl: disables opengl rendering and sharing (uses s/w rendering instead)" << endl;
 		cout << "\t--gl-blur: runs the opengl/glsl blur shader instead of the compute one" << endl;
 		cout << "\t--no-second-cache: disables the use of a second (smaller) local memory cache in the kernel" << endl;
+		cout << "\t--dumb: runs the dumb version of the compute kernel (process 1 line per work-group)" << endl;
 		
 		cout << endl;
 		cout << "controls:" << endl;
@@ -83,6 +85,10 @@ template<> unordered_map<string, img_opt_handler::option_function> img_opt_handl
 	{ "--no-second-cache", [](img_option_context&, char**&) {
 		second_cache = false;
 		cout << "disabled second cache" << endl;
+	}},
+	{ "--dumb", [](img_option_context&, char**&) {
+		dumb = true;
+		cout << "running dumb kernels" << endl;
 	}},
 };
 
@@ -267,14 +273,18 @@ int main(int, char* argv[]) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto image_blur = img_prog->get_kernel_fuzzy("image_blur");
-	if(image_blur == nullptr) {
+	auto image_blur = img_prog->get_kernel_fuzzy("image_blur_single_stage");
+	auto image_blur_dumb_v = img_prog->get_kernel_fuzzy("image_blur_dumb_vertical");
+	auto image_blur_dumb_h = img_prog->get_kernel_fuzzy("image_blur_dumb_horizontal");
+	if(image_blur == nullptr ||
+	   image_blur_dumb_v == nullptr ||
+	   image_blur_dumb_h == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
 	
 	// create images
-	static constexpr const size_t img_count { 2 };
+	static constexpr const size_t img_count { 3 };
 	auto img_data = make_unique<uchar4[]>(image_size.x * image_size.y); // allocated at runtime so it doesn't kill the stack
 	array<shared_ptr<compute_image>, img_count> imgs;
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
@@ -293,18 +303,14 @@ int main(int, char* argv[]) {
 												  // using a uint2 here, although parameter is actually a uint4 to support 3D/cube-maps/arrays/etc.,
 												  // conversion happens automatically
 												  image_size,
-												  // this is a simple 2D image
-												  COMPUTE_IMAGE_TYPE::IMAGE_2D |
-												  // each channel is an unsigned 8-bit value
-												  COMPUTE_IMAGE_TYPE::UINT | COMPUTE_IMAGE_TYPE::FORMAT_8 |
-												  // use 4 channels (could also use ::RGBA)
-												  COMPUTE_IMAGE_TYPE::CHANNELS_4 |
-												  // first image: read only, second image: write only (also sets NO_SAMPLER flag)
-												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : COMPUTE_IMAGE_TYPE::WRITE),
-												  // init image with our random data
+												  // this is a simple 2D image, using 4 channels (CHANNELS_4), unsigned int data (UINT) and 8-bit per channel (FORMAT_8)
+												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI |
+												  // first image: read only, second image: write only (also sets NO_SAMPLER flag), third image: read/write
+												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
+												  // init image with our random data, or nothing
 												  (img_idx == 0 ? &img_data[0] : nullptr),
-												  // kernel will read from the first image and write to the second
-												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : COMPUTE_MEMORY_FLAG::WRITE) |
+												  // kernel will read from the first image and write to the second, read+write for the third
+												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : (img_idx == 1 ? COMPUTE_MEMORY_FLAG::WRITE : COMPUTE_MEMORY_FLAG::READ_WRITE)) |
 												  // w/ opengl: host will only write, w/o opengl: host will read and write
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
 												  // we want to render the images, so enable opengl sharing
@@ -319,17 +325,43 @@ int main(int, char* argv[]) {
 	
 	// -> compute blur
 	if(!run_gl_blur) {
-		const auto blur_start = floor_timer2::start();
-		dev_queue->execute(image_blur,
-						   // total amount of work:
-						   size2 { global_size },
-						   // work per work-group:
-						   size2 { tile_size, tile_size },
-						   // kernel arguments:
-						   imgs[0], imgs[1]);
-		dev_queue->finish();
-		const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
-		log_debug("blur run in %fms", double(blur_end) / 1000.0);
+		if(!dumb) {
+			log_debug("running compute blur ...");
+			
+			const auto blur_start = floor_timer2::start();
+			dev_queue->execute(image_blur,
+							   // total amount of work:
+							   size2 { global_size },
+							   // work per work-group:
+							   size2 { tile_size, tile_size },
+							   // kernel arguments:
+							   imgs[0], imgs[1]);
+			dev_queue->finish();
+			const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
+			log_debug("blur run in %fms", double(blur_end) / 1000.0);
+		}
+		else {
+			log_debug("running dumb compute blur ...");
+			
+			const auto blur_start = floor_timer2::start();
+			dev_queue->execute(image_blur_dumb_h,
+							   // total amount of work:
+							   size2 { global_size.x, image_size.y },
+							   // work per work-group:
+							   size2 { tile_size, 1 },
+							   // kernel arguments:
+							   imgs[0], imgs[2]);
+			dev_queue->execute(image_blur_dumb_v,
+							   // total amount of work:
+							   size2 { image_size.x, global_size.y },
+							   // work per work-group:
+							   size2 { 1, tile_size },
+							   // kernel arguments:
+							   imgs[2], imgs[1]);
+			dev_queue->finish();
+			const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
+			log_debug("dumb blur run in %fms", double(blur_end) / 1000.0);
+		}
 	}
 	
 	// acquire for opengl use
@@ -343,12 +375,16 @@ int main(int, char* argv[]) {
 		dev_queue->finish();
 		glFlush(); glFinish();
 		
+		log_debug("running gl blur ...");
+		
 		const auto gl_blur_start = floor_timer2::start();
-		gl_blur::blur(imgs[0]->get_opengl_object(), imgs[1]->get_opengl_object(), vbo_fullscreen_triangle);
+		gl_blur::blur(imgs[0]->get_opengl_object(), imgs[1]->get_opengl_object(), imgs[2]->get_opengl_object(), vbo_fullscreen_triangle);
 		glFlush(); glFinish();
 		const auto gl_blur_end = floor_timer2::stop<chrono::microseconds>(gl_blur_start);
 		log_debug("blur run in %fms", double(gl_blur_end) / 1000.0);
 	}
+	
+	// render output image by default
 	cur_image = 1;
 	
 	// init done, release context
