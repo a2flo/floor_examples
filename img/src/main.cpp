@@ -35,6 +35,7 @@ static bool run_gl_blur { false };
 static bool second_cache { true };
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
+static constexpr const uint32_t tap_count { 17u };
 
 //! option -> function map
 template<> unordered_map<string, img_opt_handler::option_function> img_opt_handler::options {
@@ -121,6 +122,7 @@ static unordered_map<string, shared_ptr<img_shader_object>> shader_objects;
 static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
 	// draws ogl stuff
 	// don't need to clear, drawing the complete screen
+	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
 	
 	//img->acquire_opengl_object(dev_queue);
 	
@@ -180,8 +182,6 @@ static bool gl_init() {
 	glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float2), fullscreen_triangle, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
-	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
-	
 	//
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -216,7 +216,7 @@ int main(int, char* argv[]) {
 	
 	if(!no_opengl) {
 		if(!gl_init()) return -1;
-		if(run_gl_blur && !gl_blur::init()) return -1;
+		if(run_gl_blur && !gl_blur::init(image_size, tap_count)) return -1;
 	}
 	
 	// add event handlers
@@ -235,7 +235,6 @@ int main(int, char* argv[]) {
 	auto dev_queue = compute_ctx->create_queue(fastest_device);
 	
 	// compile the program and get the kernel functions
-	static constexpr const uint32_t tap_count { 17u };
 	static_assert(tap_count % 2u == 1u, "tap count must be an odd number!");
 	static constexpr const uint32_t overlap { tap_count / 2u };
 	static constexpr const uint32_t inner_tile_size { 16u }; // -> effective tile size

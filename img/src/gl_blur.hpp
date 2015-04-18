@@ -24,7 +24,7 @@
 #include "gl_shader.hpp"
 
 struct gl_blur {
-	static bool init();
+	static bool init(const uint2& dim, const uint32_t& tap_count);
 	
 	static void blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& vbo_fullscreen_triangle);
 	
