@@ -111,7 +111,8 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 
 void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& tex_tmp,
 				   const GLuint& vbo_fullscreen_triangle) {
-	// NOTE: rtt_fbo still bound from before (init)
+	// bind our rtt framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, rtt_fbo);
 	
 	// attach tmp texture as the first destination texture (what we will render into in the first pass)
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_tmp, 0);
