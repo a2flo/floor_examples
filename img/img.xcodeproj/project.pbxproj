@@ -30,6 +30,8 @@
 		5C54774E1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
+		5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */; };
+		5CD5AEB71AE1BDFD00E1891C /* gl_shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -85,6 +87,10 @@
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_blur.cpp; sourceTree = "<group>"; };
+		5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_blur.hpp; sourceTree = "<group>"; };
+		5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_shader.cpp; sourceTree = "<group>"; };
+		5CD5AEB61AE1BDFD00E1891C /* gl_shader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_shader.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -186,6 +192,10 @@
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5C54774B1AD645AF00F55003 /* img_kernels.cpp */,
 				5C54774C1AD645AF00F55003 /* img_kernels.hpp */,
+				5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */,
+				5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */,
+				5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */,
+				5CD5AEB61AE1BDFD00E1891C /* gl_shader.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -352,7 +362,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */,
+				5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
+				5CD5AEB71AE1BDFD00E1891C /* gl_shader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

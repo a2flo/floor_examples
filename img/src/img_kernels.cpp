@@ -22,7 +22,7 @@ constexpr auto compute_coefficients() {
 // TAP_COUNT: kernel width, -> N*N filter
 // TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
 // INNER_TILE_SIZE: the image portion that will actually be computed + output in here
-// DOUBLE_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
+// SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
 kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
 					   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
@@ -32,12 +32,12 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	
 	// awesome constexpr magic
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
-	// aka half kernel width or radius
+	// aka half kernel width or radius, but also the part that "protrudes" out of the inner tile
 	constexpr const int overlap = TAP_COUNT / 2;
 	
 	// this uses local memory as a sample + compute cache
 	// note that using a float4 instead of a uchar4 requires more storage, but computation using float4s
-	// is _a lot_ faster than integer math or doing int->float conversions + float math
+	// is _a_lot_ faster than integer math or doing int->float conversions + float math
 	constexpr const auto sample_count = TILE_SIZE * TILE_SIZE;
 	local_buffer<float4, sample_count> samples;
 	
@@ -45,6 +45,7 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	const int2 img_coord = (gid / TILE_SIZE) * INNER_TILE_SIZE + (lid - overlap);
 	// read the input pixel and store it in the local buffer/"cache" (note: out-of-bound access is clamped)
 	samples[lin_lid] = read(in_img, img_coord);
+	// make sure the complete tile has been read and stored
 	local_barrier();
 	
 	// the blur is now computed using a separable filter, i.e. one vertical pass and one horizontal pass.
@@ -56,7 +57,7 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	//
 	//      horizontal first
 	//  ------------------------
-	//  |       |xxxxxx|       | // all lines active
+	//  |       |xxxxxx|       | // all lines have active work-items
 	//  |       |xxxxxx|       |
 	//  |       |xxxxxx|       |
 	//  |       |xxxxxx|       |
@@ -72,7 +73,7 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	//
 	//       vertical first
 	//  ------------------------
-	//  |                      | // can "skip" empty lines
+	//  |                      | // can skip "empty" lines w/o work-items
 	//  |                      |
 	//  |                      |
 	//  |                      |
@@ -91,8 +92,8 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	//       are properly mapped to warps/sub-groups/SIMD-units (0-31 warp #0, 32-63 warp #1, ...), but in
 	//       practice, this is usually the case (true for nvidia gpus and intel cpus).
 	
-	// when using an additional sample cache, only one sync point is necessary after the first pass
-#if defined(DOUBLE_CACHE)
+	// note for later: when using an additional sample cache, only one sync point is necessary after the first pass
+#if defined(SECOND_CACHE)
 	local_buffer<float4, TILE_SIZE * INNER_TILE_SIZE> samples_2;
 #endif
 	
@@ -108,7 +109,7 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 			v_color += coeffs[overlap + i] * samples[idx];
 		}
 		
-#if defined(DOUBLE_CACHE)
+#if defined(SECOND_CACHE)
 		// write results to the second cache
 		samples_2[(lid.y - overlap) * TILE_SIZE + lid.x] = v_color;
 		
@@ -120,13 +121,13 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 #endif
 	}
 	
-#if defined(DOUBLE_CACHE) && !defined(FLOOR_COMPUTE_CUDA)
+#if defined(SECOND_CACHE) && !defined(FLOOR_COMPUTE_CUDA)
 	// else case from above (aka "the safe route"):
-	// barriers/fences must always be executed by all work-items in a work-group (technically sub-group/warp)
+	// barriers/fences must always be executed by all work-items in a work-group (technically warp/sub-group)
 	local_barrier();
 #endif
 	
-#if !defined(DOUBLE_CACHE)
+#if !defined(SECOND_CACHE)
 	// make sure all read accesses have completed (in the loop)
 	local_barrier();
 	// write the sample back to the local cache
@@ -155,15 +156,16 @@ kernel void image_blur(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYP
 	if(lid.x >= overlap && lid.x < (TILE_SIZE - overlap) &&
 	   lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
 		float4 h_color;
-#if defined(DOUBLE_CACHE)
+		
+#if defined(SECOND_CACHE)
 		int idx = (lid.y - overlap) * TILE_SIZE + lid.x - overlap;
 #else
 		int idx = lid.y * TILE_SIZE + lid.x - overlap;
 #define samples_2 samples
 #endif
+		
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i, ++idx) {
-			// note that this will be optimized to an fma instruction if possible
 			h_color += coeffs[overlap + i] * samples_2[idx];
 		}
 		
