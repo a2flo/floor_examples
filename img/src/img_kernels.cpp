@@ -206,7 +206,8 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 	}
 }
 
-// this is the dumb version of the blur, that processes a horizontal or vertical line of 32px (inner tile + 2 * overlap) per work-group
+// this is the dumb version of the blur, processing a horizontal or vertical line w/o manual caching
+// NOTE: this is practically the same as the opengl/glsl shader
 static_assert(TILE_SIZE == 32, "tile size must be 32 for now");
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
 floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
