@@ -1,29 +1,61 @@
 
 #if defined(FLOOR_COMPUTE)
 
+// sample pattern must be: <even number> <middle> <even number>
+static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
+// a tap count of 21 results in an effictive tap count of 63 (31px radius), due to the fact that 8-bit values
+// multiplied with the resp. binomial coefficient have no contribution (or almost none) to the final image
+// 3 -> 3, 5 -> 5, 7 -> 7, 9 -> 11, 11 -> 15, 13 -> 21, 15 -> 29, 17 -> 39, 19 -> 51, 21 -> 63
+// also: math at that range gets very wonky, so 21 is a good cutoff choice
+static_assert(TAP_COUNT >= 3u && TAP_COUNT <= 21, "tap count must be a value between 3 and 21!");
+
+template <uint32_t tap_count>
+static constexpr uint32_t find_effective_n() {
+	// minimal contribution a fully white pixel must have to effect the blur result
+	// (ignoring the fact that 0.5 gets rounded up to 1 and that multiple outer pixels combined can produce values > 1)
+	constexpr const auto min_multiple = 1.0L / 255.0L;
+	
+	// start at the wanted tap count and go up by 2 "taps" if the row is unusable (and no point going beyond 64)
+	for(uint32_t count = tap_count; count < 64u; count += 2) {
+		// / 2^N for this row
+		const long double sum_div = 1.0L / (long double)const_math::pow(2ull, (int)(count - 1));
+		for(uint32_t i = 0u; i <= count; ++i) {
+			const auto coeff = const_math::binomial(count - 1u, i);
+			// is the coefficient large enough to produce a visible result?
+			if((sum_div * (long double)coeff) > min_multiple) {
+				// if so, check how many usable values this row has now (should be == tap count)
+				if(i >= 1 && (count - (i) * 2) < tap_count) {
+					break;
+				}
+				return count;
+			}
+		}
+	}
+	return 0;
+}
+
 // computes the blur coefficients for the specified tap count (at compile-time)
 template <uint32_t tap_count>
-constexpr auto compute_coefficients() {
+static constexpr auto compute_coefficients() {
 	array<float, tap_count> ret {};
 	
-	// compute binomial coefficients and divide them by 2^(tap count - 1)
-	const float sum_div = const_math::pow(2u, tap_count - 1u);
-	for(uint32_t i = 0u; i < tap_count; ++i) {
-		// n! / (k! * (n - k)!)
-		const auto coeff = (const_math::factorial(tap_count - 1u) / (const_math::factorial(i) * const_math::factorial(tap_count - 1u - i)));
-		// / 2^N
-		ret[i] = float(coeff) / sum_div;
+	// compute binomial coefficients and divide them by 2^(effective tap count - 1)
+	// this is basically computing a row in pascal's triangle, using all values (or the middle part) as coefficients
+	const auto effective_n = find_effective_n<tap_count>();
+	const long double sum_div = 1.0L / (long double)const_math::pow(2ull, (int)(effective_n - 1));
+	for(uint32_t i = 0u, k = (effective_n - tap_count) / 2u; i < tap_count; ++i, ++k) {
+		// coefficient_i = (n choose k) / 2^n
+		ret[i] = float(sum_div * (long double)const_math::binomial(effective_n - 1, k));
 	}
 	
 	return ret;
 }
 
 // defined during compilation:
-// TAP_COUNT: kernel width, -> N*N filter
+// TAP_COUNT: kernel width, -> N*N filter (effective N computed above)
 // TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
 // INNER_TILE_SIZE: the image portion that will actually be computed + output in here
 // SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
-static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
 kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
 									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
 	const int2 gid { get_global_id(0), get_global_id(1) };
@@ -179,32 +211,21 @@ static_assert(TILE_SIZE == 32, "tile size must be 32 for now");
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
 floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
 												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
-	const int2 gid { get_global_id(0), get_global_id(1) };
-	const int lin_lid = get_local_id(direction);
+	const int2 img_coord { get_global_id(0), get_global_id(1) };
 	
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
 	constexpr const int overlap = TAP_COUNT / 2;
 	
-	local_buffer<float4, TILE_SIZE> samples;
-	
-	const int2 img_coord = {
-		// either coord is fixed
-		direction == 0 ? ((gid.x / TILE_SIZE) * INNER_TILE_SIZE + (lin_lid - overlap)) : gid.x,
-		direction == 0 ? gid.y : ((gid.y / TILE_SIZE) * INNER_TILE_SIZE + (lin_lid - overlap))
-	};
-	samples[lin_lid] = read(in_img, img_coord);
-	local_barrier();
-	
-	if(lin_lid >= overlap && lin_lid < (TILE_SIZE - overlap)) {
-		float4 color;
-		int idx = lin_lid - overlap;
+	float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i, ++idx) {
-			color += coeffs[overlap + i] * samples[idx];
-		}
-		
-		write(out_img, img_coord, color);
+	for(int i = -overlap; i <= overlap; ++i) {
+		color += coeffs[overlap + i] * read(in_img, img_coord + int2 {
+			direction == 0 ? i : 0,
+			direction == 0 ? 0 : i,
+		});
 	}
+	
+	write(out_img, img_coord, color);
 }
 
 kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,

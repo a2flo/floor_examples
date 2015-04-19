@@ -46,13 +46,14 @@ template<> unordered_map<string, img_opt_handler::option_function> img_opt_handl
 		cout << "\t--no-opengl: disables opengl rendering and sharing (uses s/w rendering instead)" << endl;
 		cout << "\t--gl-blur: runs the opengl/glsl blur shader instead of the compute one" << endl;
 		cout << "\t--no-second-cache: disables the use of a second (smaller) local memory cache in the kernel" << endl;
-		cout << "\t--dumb: runs the dumb version of the compute kernel (process 1 line per work-group)" << endl;
+		cout << "\t--dumb: runs the \"dumb\" version of the compute kernel (no caching)" << endl;
 		
 		cout << endl;
 		cout << "controls:" << endl;
 		cout << "\tq: quit" << endl;
 		cout << "\t1: show original image" << endl;
 		cout << "\t2: show blurred image" << endl;
+		cout << "\t3: show intermediate image" << endl;
 		cout << endl;
 		done = true;
 	}},
@@ -108,8 +109,11 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_2:
 				cur_image = 1;
 				break;
+			case SDLK_3:
+				cur_image = 2;
+				break;
 			case SDLK_w:
-				cur_image = 1 - cur_image;
+				cur_image = (cur_image + 1) % 3;
 				break;
 			default: break;
 		}
@@ -193,6 +197,7 @@ static bool gl_init() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glDisable(GL_BLEND);
+	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glFrontFace(GL_CW);
 	
@@ -291,11 +296,17 @@ int main(int, char* argv[]) {
 		if(img_idx == 0) {
 			for(uint32_t i = 0, count = image_size.x * image_size.y; i < count; ++i) {
 				//img_data[i] = { uchar3::random(), 255u };
-				img_data[i] = {
+				/*img_data[i] = {
 					uchar3(uint8_t(i * (image_size.x / 2) % 255u),
 						   uint8_t((i * 255u) / count),
 						   uint8_t(((i % image_size.x) * 255u) / image_size.x)),
 					255u
+				};*/
+				img_data[i] = {
+					uchar4(uint8_t(i * (image_size.x / 2) % 255u),
+						   uint8_t((i * 255u) / count),
+						   uint8_t(((i % image_size.x) * 255u) / image_size.x),
+						   uint8_t(core::rand(0, 255)))
 				};
 			}
 		}
@@ -306,11 +317,11 @@ int main(int, char* argv[]) {
 												  // this is a simple 2D image, using 4 channels (CHANNELS_4), unsigned int data (UINT) and 8-bit per channel (FORMAT_8)
 												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI |
 												  // first image: read only, second image: write only (also sets NO_SAMPLER flag), third image: read/write
-												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
+												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::READ_WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
 												  // init image with our random data, or nothing
 												  (img_idx == 0 ? &img_data[0] : nullptr),
 												  // kernel will read from the first image and write to the second, read+write for the third
-												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : (img_idx == 1 ? COMPUTE_MEMORY_FLAG::WRITE : COMPUTE_MEMORY_FLAG::READ_WRITE)) |
+												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : (img_idx == 1 ? COMPUTE_MEMORY_FLAG::READ_WRITE : COMPUTE_MEMORY_FLAG::READ_WRITE)) |
 												  // w/ opengl: host will only write, w/o opengl: host will read and write
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
 												  // we want to render the images, so enable opengl sharing
@@ -350,16 +361,16 @@ int main(int, char* argv[]) {
 				const auto blur_start = floor_timer2::start();
 				dev_queue->execute(image_blur_dumb_h,
 								   // total amount of work:
-								   size2 { global_size.x, image_size.y },
+								   size2 { image_size },
 								   // work per work-group:
-								   size2 { tile_size, 1 },
+								   size2 { tile_size },
 								   // kernel arguments:
 								   imgs[0], imgs[2]);
 				dev_queue->execute(image_blur_dumb_v,
 								   // total amount of work:
-								   size2 { image_size.x, global_size.y },
+								   size2 { image_size },
 								   // work per work-group:
-								   size2 { 1, tile_size },
+								   size2 { tile_size },
 								   // kernel arguments:
 								   imgs[2], imgs[1]);
 				dev_queue->finish();
