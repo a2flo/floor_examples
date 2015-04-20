@@ -19,7 +19,7 @@ template <uint32_t tap_count>
 static constexpr uint32_t find_effective_n() {
 	// minimal contribution a fully white pixel must have to effect the blur result
 	// (ignoring the fact that 0.5 gets rounded up to 1 and that multiple outer pixels combined can produce values > 1)
-	constexpr const auto min_multiple = 1.0L / 255.0L;
+	constexpr const auto min_contribution = 1.0L / 255.0L;
 	
 	// start at the wanted tap count and go up by 2 "taps" if the row is unusable (and no point going beyond 64)
 	for(uint32_t count = tap_count; count < 64u; count += 2) {
@@ -28,9 +28,9 @@ static constexpr uint32_t find_effective_n() {
 		for(uint32_t i = 0u; i <= count; ++i) {
 			const auto coeff = const_math::binomial(count - 1u, i);
 			// is the coefficient large enough to produce a visible result?
-			if((sum_div * (long double)coeff) > min_multiple) {
+			if((sum_div * (long double)coeff) > min_contribution) {
 				// if so, check how many usable values this row has now (should be == tap count)
-				if(i >= 1 && (count - (i) * 2) < tap_count) {
+				if((count - i * 2) < tap_count) {
 					break;
 				}
 				return count;
