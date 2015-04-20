@@ -1,6 +1,12 @@
 
 #if defined(FLOOR_COMPUTE)
 
+// defined during compilation:
+// TAP_COUNT: kernel width, -> N*N filter (effective N computed below)
+// TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
+// INNER_TILE_SIZE: the image portion that will actually be computed + output in here
+// SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
+
 // sample pattern must be: <even number> <middle> <even number>
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
 // a tap count of 21 results in an effictive tap count of 63 (31px radius), due to the fact that 8-bit values
@@ -51,11 +57,6 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-// defined during compilation:
-// TAP_COUNT: kernel width, -> N*N filter (effective N computed above)
-// TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
-// INNER_TILE_SIZE: the image portion that will actually be computed + output in here
-// SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
 kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
 									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
 	const int2 gid { get_global_id(0), get_global_id(1) };
@@ -208,7 +209,6 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 
 // this is the dumb version of the blur, processing a horizontal or vertical line w/o manual caching
 // NOTE: this is practically the same as the opengl/glsl shader
-static_assert(TILE_SIZE == 32, "tile size must be 32 for now");
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
 floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
 												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
