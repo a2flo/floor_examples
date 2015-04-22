@@ -303,6 +303,7 @@ int main(int, char* argv[]) {
 					binary_length = binary_str.size();
 					binary_ptr = (const unsigned char*)binary_str.data();
 				}
+				logger::flush();
 				
 				// create the program object ...
 				cl_int create_err = CL_SUCCESS;
