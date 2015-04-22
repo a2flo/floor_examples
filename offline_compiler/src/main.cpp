@@ -138,14 +138,14 @@ int main(int, char* argv[]) {
 	occ_opt_handler::parse_options(argv + 1, option_ctx);
 	if(option_ctx.done) return 0;
 	
-	// post-checking
-	if(option_ctx.filename.empty()) {
-		log_error("no source file set!");
-		return -1;
-	}
-	
 	pair<string, vector<llvm_compute::kernel_info>> program_data;
 	if(!option_ctx.test_bin) {
+		// post-checking
+		if(option_ctx.filename.empty()) {
+			log_error("no source file set!");
+			return -1;
+		}
+		
 		// create target specific device
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
