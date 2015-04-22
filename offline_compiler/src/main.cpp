@@ -28,6 +28,7 @@ struct option_context {
 	string filename { "" };
 	llvm_compute::TARGET target { llvm_compute::TARGET::SPIR };
 	string sub_target;
+	uint32_t bitness { 64 };
 	bool double_support { true };
 	string additional_options { "" };
 };
@@ -40,6 +41,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 						"\t--src <file>: the source file that should be compiled\n"
 						"\t--target [spir|ptx|air]: sets the compile target to OpenCL SPIR, CUDA PTX or Metal Apple-IR\n"
 						"\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
+						"\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 						"\t--no-double: explicitly disables double support (only SPIR)\n"
 						"\t--: end of occ options, everything beyond this point is piped through to the compiler");
 	}},
@@ -80,6 +82,14 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 			return;
 		}
 		ctx.sub_target = *arg_ptr;
+	}},
+	{ "--bitness", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			log_error("invalid argument!");
+			return;
+		}
+		ctx.bitness = stou(*arg_ptr);
 	}},
 	{ "--no-double", [](option_context& ctx, char**&) {
 		ctx.double_support = false;
@@ -131,6 +141,7 @@ int main(int, char* argv[]) {
 			device = make_shared<metal_device>();
 			break;
 	}
+	device->bitness = option_ctx.bitness;
 	device->double_support = option_ctx.double_support;
 	
 	// compile
