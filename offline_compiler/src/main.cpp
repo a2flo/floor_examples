@@ -289,13 +289,13 @@ int main(int, char* argv[]) {
 				// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
 				size_t binary_length;
 				const unsigned char* binary_ptr;
+				string binary_str = "";
 				cl_int status = CL_SUCCESS;
 				if(!option_ctx.test_bin) {
 					binary_length = program_data.first.size();
 					binary_ptr = (const unsigned char*)program_data.first.data();
 				}
 				else {
-					string binary_str = "";
 					if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
 						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
 						break;
