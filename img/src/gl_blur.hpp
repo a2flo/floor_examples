@@ -21,7 +21,7 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_base.hpp>
-#include "gl_shader.hpp"
+#include <floor/core/gl_shader.hpp>
 
 struct gl_blur {
 	static bool init(const uint2& dim, const uint32_t& tap_count);

@@ -31,7 +31,6 @@
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */; };
-		5CD5AEB71AE1BDFD00E1891C /* gl_shader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -81,7 +80,6 @@
 		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* img.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = img.metallib; path = ../data/img.metallib; sourceTree = "<group>"; };
 		5C54774B1AD645AF00F55003 /* img_kernels.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = img_kernels.cpp; sourceTree = "<group>"; };
-		5C54774C1AD645AF00F55003 /* img_kernels.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = img_kernels.hpp; sourceTree = "<group>"; };
 		5C8FD0941AD3366800215230 /* imgd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imgd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
@@ -89,8 +87,6 @@
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_blur.cpp; sourceTree = "<group>"; };
 		5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_blur.hpp; sourceTree = "<group>"; };
-		5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_shader.cpp; sourceTree = "<group>"; };
-		5CD5AEB61AE1BDFD00E1891C /* gl_shader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_shader.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -173,11 +169,19 @@
 			name = osx;
 			sourceTree = "<group>";
 		};
+		5CC330C71AEA0D6100836CC4 /* common */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = common;
+			sourceTree = "<group>";
+		};
 		5CD2174419E924A20049D6AE = {
 			isa = PBXGroup;
 			children = (
 				5CD2174F19E924E80049D6AE /* build.sh */,
 				5CD2175019E924E80049D6AE /* src */,
+				5CC330C71AEA0D6100836CC4 /* common */,
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
 				5C8FD0B91AD3392500215230 /* osx */,
@@ -191,11 +195,8 @@
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5C54774B1AD645AF00F55003 /* img_kernels.cpp */,
-				5C54774C1AD645AF00F55003 /* img_kernels.hpp */,
 				5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */,
 				5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */,
-				5CD5AEB51AE1BDFD00E1891C /* gl_shader.cpp */,
-				5CD5AEB61AE1BDFD00E1891C /* gl_shader.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -364,7 +365,6 @@
 				5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */,
 				5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
-				5CD5AEB71AE1BDFD00E1891C /* gl_shader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

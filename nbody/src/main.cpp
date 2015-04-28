@@ -686,14 +686,14 @@ int main(int, char* argv[]) {
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
-			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)img_size.x;
-			uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels;
-			for(uint32_t y = 0, img_idx = 0; y < img_size.y; ++y) {
-				for(uint32_t x = 0; x < img_size.x; ++x, ++img_idx) {
+			const uint2 render_dim = img_size.minned(uint2 { floor::get_width(), floor::get_height() });
+			for(uint32_t y = 0; y < render_dim.y; ++y) {
+				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
+				uint32_t img_idx = img_size.x * y;
+				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
 					const auto rgb = img_data[img_idx] * 255.0f;
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, uint8_t(rgb.x), uint8_t(rgb.y), uint8_t(rgb.z));
 				}
-				px_ptr += pitch_offset;
 			}
 			img_buffers[img_buffer_flip_flop]->unmap(dev_queue, img_data);
 			

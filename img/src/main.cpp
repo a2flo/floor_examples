@@ -20,7 +20,7 @@
 #include <floor/ios/ios_helper.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/timer.hpp>
-#include "gl_shader.hpp"
+#include <floor/core/gl_shader.hpp>
 #include "gl_blur.hpp"
 
 struct img_option_context {
@@ -124,10 +124,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 
 /////////////////
 // TODO: creata a common header/source file ...
-		
+
 static GLuint vbo_fullscreen_triangle { 0 };
 static uint32_t global_vao { 0 };
-static unordered_map<string, shared_ptr<img_shader_object>> shader_objects;
+static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
 
 static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
 	// draws ogl stuff
@@ -173,8 +173,8 @@ static bool compile_shaders() {
 	)RAWSTR" };
 	
 	{
-		auto shd = make_shared<img_shader_object>("IMG_DRAW");
-		if(!compile_shader(*shd.get(), &img_vs_text[0], &img_fs_text[0])) return false;
+		auto shd = make_shared<floor_shader_object>("IMG_DRAW");
+		if(!floor_compile_shader(*shd.get(), &img_vs_text[0], &img_fs_text[0])) return false;
 		shader_objects.emplace(shd->name, shd);
 	}
 	return true;
@@ -420,13 +420,13 @@ int main(int, char* argv[]) {
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
-			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)image_size.x;
-			uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels;
-			for(uint32_t y = 0, img_idx = 0; y < image_size.y; ++y) {
-				for(uint32_t x = 0; x < image_size.x; ++x, ++img_idx) {
+			const uint2 render_dim = image_size.minned(uint2 { floor::get_width(), floor::get_height() });
+			for(uint32_t y = 0; y < render_dim.y; ++y) {
+				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
+				uint32_t img_idx = image_size.x * y;
+				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
 				}
-				px_ptr += pitch_offset;
 			}
 			imgs[cur_image]->unmap(dev_queue, render_img);
 			

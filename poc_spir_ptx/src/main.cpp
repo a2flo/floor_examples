@@ -99,15 +99,15 @@ int main(int, char* argv[]) {
 			// (crude and I'd usually do this via GL, but this way it's not a requirement)
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
-			const auto pitch_offset = ((size_t)wnd_surface->pitch / sizeof(uint32_t)) - (size_t)img_size.x;
-			uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels;
-			for(uint32_t y = 0, img_idx = 0; y < img_size.y; ++y) {
-				for(uint32_t x = 0; x < img_size.x; ++x, ++img_idx) {
+			const uint2 render_dim = img_size.minned(uint2 { floor::get_width(), floor::get_height() });
+			for(uint32_t y = 0; y < render_dim.y; ++y) {
+				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
+				uint32_t img_idx = img_size.x * y;
+				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
 					// map and gamma correct each pixel according to the window format
 					const auto rgb = gamma_correct(img_data[img_idx]);
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, rgb.r, rgb.g, rgb.b);
 				}
-				px_ptr += pitch_offset;
 			}
 #if !defined(DEBUG_HOST_EXEC)
 			img_buffer->unmap(dev_queue, img_data);

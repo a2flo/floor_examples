@@ -18,7 +18,7 @@
 
 #include "gl_blur.hpp"
 
-static shared_ptr<img_shader_object> h_blur_shd, v_blur_shd;
+static shared_ptr<floor_shader_object> h_blur_shd, v_blur_shd;
 static GLuint rtt_fbo { 0u };
 
 bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
@@ -89,11 +89,11 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 		}
 	)RAWSTR" };
 
-	h_blur_shd = make_shared<img_shader_object>("BLUR_HORIZONTAL");
-	if(!compile_shader(*h_blur_shd.get(), &blur_vs_text[0], blur_h_fs_text.c_str())) return false;
+	h_blur_shd = make_shared<floor_shader_object>("BLUR_HORIZONTAL");
+	if(!floor_compile_shader(*h_blur_shd.get(), &blur_vs_text[0], blur_h_fs_text.c_str())) return false;
 	
-	v_blur_shd = make_shared<img_shader_object>("BLUR_VERTICAL");
-	if(!compile_shader(*v_blur_shd.get(), &blur_vs_text[0], blur_v_fs_text.c_str())) return false;
+	v_blur_shd = make_shared<floor_shader_object>("BLUR_VERTICAL");
+	if(!floor_compile_shader(*v_blur_shd.get(), &blur_vs_text[0], blur_v_fs_text.c_str())) return false;
 
 	if(h_blur_shd == nullptr || v_blur_shd == nullptr) {
 		return false;
