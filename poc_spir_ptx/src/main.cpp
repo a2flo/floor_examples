@@ -2,7 +2,9 @@
 #include <floor/floor/floor.hpp>
 #include <floor/ios/ios_helper.hpp>
 
+#if !defined(_MSC_VER) // too broken right now
 #include "poc_spir_ptx.hpp"
+#endif
 
 // uncomment this to enable host execution
 //#define DEBUG_HOST_EXEC 1
@@ -22,9 +24,9 @@ int main(int, char* argv[]) {
 	auto dev_queue = compute_ctx->create_queue(fastest_device);
 	
 	//
-	//static const uint2 img_size { floor::get_width(), floor::get_height() };
 	static const uint2 img_size { 512, 512 }; // fixed for now, b/c random function makes this look horrible at higher res
 	static const uint32_t pixel_count { img_size.x * img_size.y };
+	floor::set_screen_size(img_size);
 	
 #if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
@@ -124,6 +126,15 @@ int main(int, char* argv[]) {
 			if(event_handle.type == SDL_QUIT) {
 				done = true;
 				break;
+			}
+			else if(event_handle.type == SDL_KEYDOWN) {
+				switch(event_handle.key.keysym.sym) {
+					case SDLK_q:
+					case SDLK_ESCAPE:
+						done = true;
+						break;
+					default: break;
+				}
 			}
 		}
 		if(done) break;
