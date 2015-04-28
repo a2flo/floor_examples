@@ -552,7 +552,7 @@ int main(int, char* argv[]) {
 	
 	// create nbody position and velocity buffers
 	for(size_t i = 0; i < pos_buffer_count; ++i) {
-		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, {
+		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, (
 			// will be reading and writing from the kernel
 			COMPUTE_MEMORY_FLAG::READ_WRITE
 			// host will read and write data
@@ -562,7 +562,7 @@ int main(int, char* argv[]) {
 			| (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
 			// automatic defaults when using OPENGL_SHARING:
 			// OPENGL_READ_WRITE: again, will be reading and writing in the kernel
-		}, (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
+		), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
 	}
 	velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count);
 	

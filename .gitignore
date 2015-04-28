@@ -14,7 +14,6 @@
 *.so
 *.dylib
 *.dll
-*.sln
 *.suo
 Makefile
 *.make
@@ -32,3 +31,5 @@ config.xml.local
 *.png
 *.dat
 *.raw
+*.sdf
+*.opensdf
