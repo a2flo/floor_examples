@@ -432,7 +432,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
-					"-lSDL2_image",
 					"-lcrypto",
 					"-lssl",
 					"-lfreetype",
@@ -508,7 +507,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
-					"-lSDL2_image",
 					"-lcrypto",
 					"-lssl",
 					"-lfreetype",
@@ -596,8 +594,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-framework",
-					SDL2_image,
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",
@@ -677,8 +673,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-framework",
-					SDL2_image,
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",

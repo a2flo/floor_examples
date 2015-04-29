@@ -33,3 +33,10 @@ config.xml.local
 *.raw
 *.sdf
 *.opensdf
+*.ll
+*.bc
+*.ptx
+*.cubin
+*.s
+*.air
+*.metallib
