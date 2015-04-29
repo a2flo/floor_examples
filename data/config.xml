@@ -52,7 +52,7 @@
 	 libcxx: path to the libc++ include folder
 	 clang: path to the clang include folder
 	 -->
-	<opencl platform="0" restrict="" compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	<opencl platform="0" restrict="" compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" />
 	
 	<!-- cuda toolchain settings
 	 compiler: the compute clang binary name (must be in $PATH)
@@ -64,7 +64,7 @@
 	 force_driver_sm: forces the sm target to sm_xy when compiling/jitting/running ptx code in the driver
 	 force_compile_sm: forces the sm target to sm_xy when compiling to ptx
 	 -->
-	<cuda compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" force_driver_sm="" force_compile_sm="" />
+	<cuda compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" force_driver_sm="" force_compile_sm="" />
 	
 	<!-- metal toolchain settings
 	 compiler: the compute clang binary name (must be in $PATH)
@@ -74,7 +74,7 @@
 	 libcxx: path to the libc++ include folder
 	 clang: path to the clang include folder
 	 -->
-	<metal compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	<metal compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" />
 	
 	<!-- host toolchain settings
 	 compiler: the compute clang binary name (must be in $PATH)
@@ -84,5 +84,5 @@
 	 libcxx: path to the libc++ include folder
 	 clang: path to the clang include folder
 	 -->
-	<host compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/local/include/floor/libcxx/include" clang="/usr/local/include/floor/libcxx/clang" />
+	<host compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" />
 </config>
