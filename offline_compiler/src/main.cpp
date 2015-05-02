@@ -285,6 +285,7 @@ int main(int, char* argv[]) {
 				auto cl_ctx = ctx->get_opencl_context();
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				auto cl_dev = ((opencl_device*)dev.get())->device_id;
+				log_debug("using device: %s", dev->name);
 				
 				// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
 				size_t binary_length;
