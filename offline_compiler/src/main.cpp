@@ -54,10 +54,10 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--help", [](option_context& ctx, char**&) {
 		log_undecorated("command line options:\n"
 						"\t--src <file>: the source file that should be compiled\n"
-						"\t--target [spir|ptx|air]: sets the compile target to OpenCL SPIR, CUDA PTX or Metal Apple-IR\n"
+						"\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
 						"\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
 						"\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
-						"\t--no-double: explicitly disables double support (only SPIR)\n"
+						"\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 						"\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 						"\t--test-bin <file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 						"\t--: end of occ options, everything beyond this point is piped through to the compiler");
@@ -87,6 +87,9 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 		}
 		else if(target == "air") {
 			ctx.target = llvm_compute::TARGET::AIR;
+		}
+		else if(target == "applecl") {
+			ctx.target = llvm_compute::TARGET::APPLECL;
 		}
 		else {
 			log_error("invalid target: %s", target);
@@ -172,6 +175,10 @@ int main(int, char* argv[]) {
 			case llvm_compute::TARGET::AIR:
 				log_debug("compiling to AIR ...");
 				device = make_shared<metal_device>();
+				break;
+			case llvm_compute::TARGET::APPLECL:
+				log_debug("compiling to APPLECL ...");
+				device = make_shared<opencl_device>();
 				break;
 		}
 		device->bitness = option_ctx.bitness;
@@ -277,7 +284,8 @@ int main(int, char* argv[]) {
 	// test the compiled binary (if this was specified)
 	if(option_ctx.test || option_ctx.test_bin) {
 		switch(option_ctx.target) {
-			case llvm_compute::TARGET::SPIR: {
+			case llvm_compute::TARGET::SPIR:
+			case llvm_compute::TARGET::APPLECL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
 				auto ctx = make_shared<opencl_compute>();
@@ -318,12 +326,18 @@ int main(int, char* argv[]) {
 				else log_debug("successfully created opencl program!");
 				
 				// ... and build it
-				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 0, nullptr, option_ctx.additional_options.c_str(), nullptr, nullptr),
+				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, option_ctx.additional_options.c_str(), nullptr, nullptr),
 									  build_err, "failed to build opencl program", {});
+				log_debug("check"); logger::flush();
 				
 				
 				// print out build log
 				log_debug("build log: %s", cl_get_info<CL_PROGRAM_BUILD_LOG>(program, cl_dev));
+				
+				// print kernel info
+				const auto kernel_count = cl_get_info<CL_PROGRAM_NUM_KERNELS>(program);
+				const auto kernel_names_str = cl_get_info<CL_PROGRAM_KERNEL_NAMES>(program);
+				log_debug("got %u kernels in program: %s", kernel_count, kernel_names_str);
 				
 				// retrieve the compiled binaries again
 				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(program);
