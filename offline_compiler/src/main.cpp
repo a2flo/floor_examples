@@ -37,6 +37,7 @@
 
 struct option_context {
 	string filename { "" };
+	string output_filename { "" };
 	llvm_compute::TARGET target { llvm_compute::TARGET::SPIR };
 	string sub_target;
 	uint32_t bitness { 64 };
@@ -54,6 +55,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--help", [](option_context& ctx, char**&) {
 		log_undecorated("command line options:\n"
 						"\t--src <file>: the source file that should be compiled\n"
+						"\t--out <file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
 						"\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
 						"\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
 						"\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
@@ -70,6 +72,14 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 			return;
 		}
 		ctx.filename = *arg_ptr;
+	}},
+	{ "--out", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			log_error("invalid argument!");
+			return;
+		}
+		ctx.output_filename = *arg_ptr;
 	}},
 	{ "--target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -279,6 +289,18 @@ int main(int, char* argv[]) {
 			info_str = core::trim(info_str);
 			log_msg("compiled kernel: %s (%s)", info.name, info_str);
 		}
+		
+		// output
+		if(option_ctx.output_filename == "") {
+			option_ctx.output_filename = "unknown.bin";
+			switch(option_ctx.target) {
+				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
+				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
+				case llvm_compute::TARGET::AIR: option_ctx.output_filename = "metal.ll"; break;
+				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
+			}
+		}
+		file_io::string_to_file(option_ctx.output_filename, program_data.first);
 	}
 
 	// test the compiled binary (if this was specified)
