@@ -1,6 +1,6 @@
 
-#ifndef __CORNELL_BOX_HPP__
-#define __CORNELL_BOX_HPP__
+#ifndef __FLOOR_CORNELL_BOX_HPP__
+#define __FLOOR_CORNELL_BOX_HPP__
 
 // ref: http://www.graphics.cornell.edu/online/box/data.html
 

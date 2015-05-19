@@ -1,5 +1,5 @@
 
-#include "poc_spir_ptx.hpp"
+#include "path_tracer.hpp"
 
 // to keep things simple in here, the cornell box model and material data is located in another file
 #include "cornell_box.hpp"

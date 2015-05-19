@@ -1,6 +1,6 @@
 
-#ifndef __POC_SPIR_PTX_HPP__
-#define __POC_SPIR_PTX_HPP__
+#ifndef __FLOOR_PATH_TRACER_HPP__
+#define __FLOOR_PATH_TRACER_HPP__
 
 #include <floor/math/vector_lib.hpp>
 

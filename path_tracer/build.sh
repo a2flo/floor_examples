@@ -161,7 +161,7 @@ fi
 # target and build environment setup
 
 # name of the target (part of the binary name)
-TARGET_NAME=poc
+TARGET_NAME=path_tracer
 
 # check on which platform we're compiling + check how many h/w threads can be used (logical cpus)
 BUILD_PLATFORM=$(uname | tr [:upper:] [:lower:])

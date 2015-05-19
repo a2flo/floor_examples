@@ -10,7 +10,7 @@
 		5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
 		5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
 		5C0071C11A91F2BD00F4711D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C0071C21A91F2BD00F4711D /* poc_spir_ptx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* poc_spir_ptx.cpp */; };
+		5C0071C21A91F2BD00F4711D /* path_tracer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* path_tracer.cpp */; };
 		5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
 		5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
 		5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
@@ -26,9 +26,9 @@
 		5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DC1A9200CE00F4711D /* config.xml.local */; };
 		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
-		5C30CAA51AA625F5008986B1 /* poc_spir_ptx.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* poc_spir_ptx.metallib */; };
+		5C30CAA51AA625F5008986B1 /* path_tracer.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* path_tracer.metallib */; };
 		5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C7467151A5828D000999E78 /* poc_spir_ptx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* poc_spir_ptx.cpp */; };
+		5C7467151A5828D000999E78 /* path_tracer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* path_tracer.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -38,7 +38,7 @@
 			dstPath = data;
 			dstSubfolderSpec = 7;
 			files = (
-				5C30CAA51AA625F5008986B1 /* poc_spir_ptx.metallib in CopyFiles */,
+				5C30CAA51AA625F5008986B1 /* path_tracer.metallib in CopyFiles */,
 				5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */,
 				5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */,
 			);
@@ -66,8 +66,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C00718C1A91507900F4711D /* pocd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pocd; sourceTree = BUILT_PRODUCTS_DIR; };
-		5C0071911A91EF7E00F4711D /* poc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = poc.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C00718C1A91507900F4711D /* path_tracerd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = path_tracerd; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071911A91EF7E00F4711D /* path_tracer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = path_tracer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
 		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
@@ -86,9 +86,9 @@
 		5C0071DC1A9200CE00F4711D /* config.xml.local */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml.local; path = ../data/config.xml.local; sourceTree = "<group>"; };
 		5C0071DD1A9200CE00F4711D /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../data/config.xml; sourceTree = "<group>"; };
 		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
-		5C30CAA31AA625DC008986B1 /* poc_spir_ptx.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = poc_spir_ptx.metallib; path = ../data/poc_spir_ptx.metallib; sourceTree = "<group>"; };
-		5C7467131A5828D000999E78 /* poc_spir_ptx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = poc_spir_ptx.cpp; sourceTree = "<group>"; };
-		5C7467141A5828D000999E78 /* poc_spir_ptx.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = poc_spir_ptx.hpp; sourceTree = "<group>"; };
+		5C30CAA31AA625DC008986B1 /* path_tracer.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = path_tracer.metallib; path = ../data/path_tracer.metallib; sourceTree = "<group>"; };
+		5C7467131A5828D000999E78 /* path_tracer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = path_tracer.cpp; sourceTree = "<group>"; };
+		5C7467141A5828D000999E78 /* path_tracer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = path_tracer.hpp; sourceTree = "<group>"; };
 		5C7467161A58532500999E78 /* cornell_box.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = cornell_box.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -149,7 +149,7 @@
 		5C0071E01A9200D400F4711D /* data */ = {
 			isa = PBXGroup;
 			children = (
-				5C30CAA31AA625DC008986B1 /* poc_spir_ptx.metallib */,
+				5C30CAA31AA625DC008986B1 /* path_tracer.metallib */,
 				5C0071DD1A9200CE00F4711D /* config.xml */,
 				5C0071DC1A9200CE00F4711D /* config.xml.local */,
 				5C0071E41A92010800F4711D /* dtd */,
@@ -172,8 +172,8 @@
 				5CD2175019E924E80049D6AE /* src */,
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
-				5C00718C1A91507900F4711D /* pocd */,
-				5C0071911A91EF7E00F4711D /* poc.app */,
+				5C00718C1A91507900F4711D /* path_tracerd */,
+				5C0071911A91EF7E00F4711D /* path_tracer.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -181,8 +181,8 @@
 			isa = PBXGroup;
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
-				5C7467131A5828D000999E78 /* poc_spir_ptx.cpp */,
-				5C7467141A5828D000999E78 /* poc_spir_ptx.hpp */,
+				5C7467131A5828D000999E78 /* path_tracer.cpp */,
+				5C7467141A5828D000999E78 /* path_tracer.hpp */,
 				5C7467161A58532500999E78 /* cornell_box.hpp */,
 			);
 			path = src;
@@ -190,27 +190,10 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		5CD2174919E924A20049D6AE /* poc_spir_ptx */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-v";
-			buildConfigurationList = 5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "poc_spir_ptx" */;
-			buildPhases = (
-			);
-			buildToolPath = ./build.sh;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = poc_spir_ptx;
-			passBuildSettingsInEnvironment = 0;
-			productName = poc_spir_ptx;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
-		5C0071901A91EF7E00F4711D /* poc_ios */ = {
+		5C0071901A91EF7E00F4711D /* path_tracer_ios */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "poc_ios" */;
+			buildConfigurationList = 5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "path_tracer_ios" */;
 			buildPhases = (
 				5C30CAA61AA7058D008986B1 /* ShellScript */,
 				5C00718D1A91EF7E00F4711D /* Sources */,
@@ -224,14 +207,14 @@
 			);
 			dependencies = (
 			);
-			name = poc_ios;
-			productName = poc_ios;
-			productReference = 5C0071911A91EF7E00F4711D /* poc.app */;
+			name = path_tracer_ios;
+			productName = path_tracer_ios;
+			productReference = 5C0071911A91EF7E00F4711D /* path_tracer.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5C6F6ED21A5824B30050C5AC /* poc */ = {
+		5C6F6ED21A5824B30050C5AC /* path_tracer */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "poc" */;
+			buildConfigurationList = 5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "path_tracer" */;
 			buildPhases = (
 				5C6F6ECF1A5824B30050C5AC /* Sources */,
 				5C6F6ED01A5824B30050C5AC /* Frameworks */,
@@ -241,9 +224,9 @@
 			);
 			dependencies = (
 			);
-			name = poc;
-			productName = poc;
-			productReference = 5C00718C1A91507900F4711D /* pocd */;
+			name = path_tracer;
+			productName = path_tracer;
+			productReference = 5C00718C1A91507900F4711D /* path_tracerd */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -261,12 +244,9 @@
 					5C6F6ED21A5824B30050C5AC = {
 						CreatedOnToolsVersion = 6.2;
 					};
-					5CD2174919E924A20049D6AE = {
-						CreatedOnToolsVersion = 6.1;
-					};
 				};
 			};
-			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "poc_spir_ptx" */;
+			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "path_tracer" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
@@ -279,9 +259,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				5C6F6ED21A5824B30050C5AC /* poc */,
-				5C0071901A91EF7E00F4711D /* poc_ios */,
-				5CD2174919E924A20049D6AE /* poc_spir_ptx */,
+				5C6F6ED21A5824B30050C5AC /* path_tracer */,
+				5C0071901A91EF7E00F4711D /* path_tracer_ios */,
 			);
 		};
 /* End PBXProject section */
@@ -323,7 +302,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src poc_spir_ptx.cpp --target air\nmetal-as -o=poc_spir_ptx.air air_processed.ll\nmetal-ar r poc_spir_ptx.a poc_spir_ptx.air\nmetallib -o ../../data/poc_spir_ptx.metallib poc_spir_ptx.a\n";
+			shellScript = "cd src\nocc --src path_tracer.cpp --target air\nmetal-as -o=path_tracer.air air_processed.ll\nmetal-ar r path_tracer.a path_tracer.air\nmetallib -o ../../data/path_tracer.metallib path_tracer.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -333,7 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
-				5C0071C21A91F2BD00F4711D /* poc_spir_ptx.cpp in Sources */,
+				5C0071C21A91F2BD00F4711D /* path_tracer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -342,7 +321,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */,
-				5C7467151A5828D000999E78 /* poc_spir_ptx.cpp in Sources */,
+				5C7467151A5828D000999E78 /* path_tracer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,7 +401,7 @@
 					"$(inherited)",
 					"-lfloord_static",
 				);
-				PRODUCT_NAME = poc;
+				PRODUCT_NAME = path_tracer;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALID_ARCHS = "arm64 armv7 armv7s x86_64";
@@ -498,7 +477,7 @@
 					"$(inherited)",
 					"-lfloor_static",
 				);
-				PRODUCT_NAME = poc;
+				PRODUCT_NAME = path_tracer;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -806,31 +785,10 @@
 			};
 			name = Release;
 		};
-		5CD2174D19E924A20049D6AE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		5CD2174E19E924A20049D6AE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "poc_ios" */ = {
+		5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "path_tracer_ios" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5C0071B11A91EF7E00F4711D /* Debug */,
@@ -839,7 +797,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "poc" */ = {
+		5C6F6EDA1A5824B30050C5AC /* Build configuration list for PBXNativeTarget "path_tracer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5C6F6ED81A5824B30050C5AC /* Debug */,
@@ -848,20 +806,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "poc_spir_ptx" */ = {
+		5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "path_tracer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				5CD2174A19E924A20049D6AE /* Debug */,
 				5CD2174B19E924A20049D6AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "poc_spir_ptx" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5CD2174D19E924A20049D6AE /* Debug */,
-				5CD2174E19E924A20049D6AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

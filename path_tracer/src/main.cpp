@@ -3,7 +3,7 @@
 #include <floor/ios/ios_helper.hpp>
 
 #if !defined(_MSC_VER) // too broken right now
-#include "poc_spir_ptx.hpp"
+#include "path_tracer.hpp"
 #endif
 
 // uncomment this to enable host execution
@@ -31,7 +31,7 @@ int main(int, char* argv[]) {
 #if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
-	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../poc_spir_ptx/src/poc_spir_ptx.cpp"), "-I" + floor::data_path("../poc_spir_ptx/src"));
+	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"), "-I" + floor::data_path("../path_tracer/src"));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
@@ -42,7 +42,7 @@ int main(int, char* argv[]) {
 				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT }
 		}
 	};
-	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("poc_spir_ptx.metallib"), kernel_infos);
+	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("path_tracer.metallib"), kernel_infos);
 #endif
 	if(path_tracer_prog == nullptr) {
 		log_error("program compilation failed");

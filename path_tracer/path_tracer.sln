@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.22609.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "poc", "poc.vcxproj", "{3347F94F-5939-425D-B525-1C4C4C4832FC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "path_tracer", "path_tracer.vcxproj", "{3347F94F-5939-425D-B525-1C4C4C4832FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
