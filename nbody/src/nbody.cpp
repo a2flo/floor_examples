@@ -137,7 +137,7 @@ kernel void nbody_raster(buffer<float4> positions,
 			(uint32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
 		};
 		pixel.clamp(0, img_size->x - 1);
-		img[pixel.y * img_size->x + pixel.x] = *img[pixel.y * img_size->x + pixel.x] + float3 { 0.25f };
+		img[pixel.y * img_size->x + pixel.x] = float3 { 0.25f } + img[pixel.y * img_size->x + pixel.x];
 	}
 }
 
