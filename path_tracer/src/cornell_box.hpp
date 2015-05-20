@@ -8,7 +8,7 @@
 // * scaled by 0.1 (do avoid fp imprecision)
 // * fixed x coordinates (should be the same / connect up everywhere)
 // * light moved down a little bit to avoid "z-fighting"
-static constant constexpr const const_array<float3, 64> cornell_vertices {
+static constexpr const const_array<float3, 64> cornell_vertices {
 	// floor / 0
 	float3 { 55.00f, 0.0f, 0.0f },
 	float3 { 0.0f, 0.0f, 0.0f },
@@ -98,7 +98,7 @@ static constant constexpr const const_array<float3, 64> cornell_vertices {
 	float3 { 42.30f, 0.0f, 24.70f }, // 63
 };
 
-static constant constexpr const const_array<uint3, size(cornell_vertices) / 2> cornell_indices {
+static constexpr const const_array<uint3, size(cornell_vertices) / 2> cornell_indices {
 	// floor
 	uint3 { 0, 1, 2 },
 	uint3 { 0, 2, 3 },
@@ -159,7 +159,7 @@ enum class CORNELL_OBJECT : uint32_t {
 	TALL_BLOCK,
 	__OBJECT_COUNT,
 };
-static constant constexpr const const_array<CORNELL_OBJECT, size(cornell_indices)> cornell_object_map {
+static constexpr const const_array<CORNELL_OBJECT, size(cornell_indices)> cornell_object_map {
 	CORNELL_OBJECT::FLOOR,
 	CORNELL_OBJECT::FLOOR,
 	CORNELL_OBJECT::LIGHT,
@@ -202,7 +202,7 @@ struct material {
 	const float3 diffuse_reflectance { float3(diffuse) * float(const_math::_1_DIV_PI<float>) };
 	const float3 specular_reflectance { float3(specular) * ((float(specular_exponent) + 2.0f) * const_math::_1_DIV_2PI<float>) };
 };
-static constant constexpr const const_array<material, (size_t)CORNELL_OBJECT::__OBJECT_COUNT> cornell_materials {
+static constexpr const const_array<material, (size_t)CORNELL_OBJECT::__OBJECT_COUNT> cornell_materials {
 	// floor
 	material {
 		.diffuse = { 0.407843f },
