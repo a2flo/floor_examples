@@ -50,7 +50,7 @@
 <!ELEMENT opencl (#PCDATA)*>
 <!ATTLIST opencl
 	platform CDATA #REQUIRED
-	restrict CDATA #REQUIRED
+	whitelist CDATA #REQUIRED
 	compiler CDATA #REQUIRED
 	llc CDATA #REQUIRED
 	as CDATA #REQUIRED
@@ -60,6 +60,7 @@
 >
 <!ELEMENT cuda (#PCDATA)*>
 <!ATTLIST cuda
+	whitelist CDATA #REQUIRED
 	compiler CDATA #REQUIRED
 	llc CDATA #REQUIRED
 	as CDATA #REQUIRED
@@ -71,6 +72,7 @@
 >
 <!ELEMENT metal (#PCDATA)*>
 <!ATTLIST metal
+	whitelist CDATA #REQUIRED
 	compiler CDATA #REQUIRED
 	llc CDATA #REQUIRED
 	as CDATA #REQUIRED
@@ -80,6 +82,7 @@
 >
 <!ELEMENT host (#PCDATA)*>
 <!ATTLIST host
+	whitelist CDATA #REQUIRED
 	compiler CDATA #REQUIRED
 	llc CDATA #REQUIRED
 	as CDATA #REQUIRED
