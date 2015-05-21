@@ -49,6 +49,7 @@ struct option_context {
 	string test_bin_filename { "" };
 	string additional_options { "" };
 	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
+	string config_path { "../../data/" };
 	bool done { false };
 };
 typedef option_handler<option_context> occ_opt_handler;
@@ -68,6 +69,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
+				 "\t--config <path>: the path where config.xml is located (defaults to \"../../data/\")\n"
 				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
 		ctx.done = true;
 	}},
@@ -158,6 +160,14 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "-vv", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::UNDECORATED;
 	}},
+	{ "--config", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.config_path = *arg_ptr;
+	}},
 };
 
 int main(int, char* argv[]) {
@@ -170,7 +180,7 @@ int main(int, char* argv[]) {
 	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
 	
 #if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", true); // call path, data path, console-only
+	floor::init(argv[0], option_ctx.config_path.c_str(), true); // call path, data path, console-only
 #else
 	floor::init(argv[0], (const char*)"data/", true);
 #endif
