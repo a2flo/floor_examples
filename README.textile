@@ -17,11 +17,16 @@
 * small program to demonstrate image functionality by doing a gaussian blur (implemented with manual local memory caching as well as a "dumb" version, running the same code as the also provided GLSL implementation)
 * build with "./build.sh" inside the folder
 
+*occ:*
+* offline-compute-compiler, compiles compute C++ code to SPIR/PTX/Metal/AppleCL code/binaries (see "--help":https://github.com/a2flo/floor_examples/blob/master/offline_compiler/src/main.cpp#L59 for all options)
+* build with "./build.sh" inside the folder
+
 *references:*
 * "Clang/LLVM 3.5":http://llvm.org/releases/download.html#3.5.1
 * "Khronos LLVM 3.5 to LLVM/SPIR 3.2 encoder":https://github.com/KhronosGroup/SPIR-Tools/tree/master/spir-encoder/llvm_3.5_spir_encoder
-* "OpenCL/CUDA C++ patch for Clang/LLVM 3.5":https://github.com/a2flo/floor/blob/master/etc/clang_cuda_cl_cpp.patch
-* "OpenCL/CUDA patch for libc++ 3.5":https://github.com/a2flo/floor/blob/master/etc/libcxx_cuda_cl_cpp.patch
+* "LLVM 3.5 to LLVM/AppleCL 3.2 encoder":https://github.com/a2flo/applecl-encoder
+* "OpenCL/CUDA/Metal/AppleCL C++ patch for Clang/LLVM 3.5":https://github.com/a2flo/floor/blob/master/etc/llvm35/350_clang_llvm.patch
+* "OpenCL/CUDA/Metal/AppleCL patch for libc++ 3.5":https://github.com/a2flo/floor/blob/master/etc/llvm35/350_libcxx.patch
 * "AMD APP SDK":http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/
 * "Intel OpenCL SDK":https://software.intel.com/en-us/intel-opencl
 * "NVIDIA CUDA SDK":https://developer.nvidia.com/cuda-downloads
