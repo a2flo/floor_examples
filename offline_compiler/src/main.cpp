@@ -44,8 +44,11 @@ struct option_context {
 	bool double_support { true };
 	bool test { false };
 	bool test_bin { false };
+	bool cuda_sass { false };
+	string cuda_sass_filename { "" };
 	string test_bin_filename { "" };
 	string additional_options { "" };
+	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
 	bool done { false };
 };
 typedef option_handler<option_context> occ_opt_handler;
@@ -53,22 +56,25 @@ typedef option_handler<option_context> occ_opt_handler;
 //! option -> function map
 template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handler::options {
 	{ "--help", [](option_context& ctx, char**&) {
-		log_undecorated("command line options:\n"
-						"\t--src <file>: the source file that should be compiled\n"
-						"\t--out <file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
-						"\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
-						"\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
-						"\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
-						"\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
-						"\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
-						"\t--test-bin <file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
-						"\t--: end of occ options, everything beyond this point is piped through to the compiler");
+		cout << ("command line options:\n"
+				 "\t--src <input-file>: the source file that should be compiled\n"
+				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
+				 "\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
+				 "\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
+				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
+				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
+				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
+				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
+				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
+				 "\t-v: verbose output (DBG level)\n"
+				 "\t-vv: very verbose output (MSG level)\n"
+				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
 		ctx.done = true;
 	}},
 	{ "--src", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		ctx.filename = *arg_ptr;
@@ -76,7 +82,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--out", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		ctx.output_filename = *arg_ptr;
@@ -84,7 +90,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		
@@ -102,14 +108,14 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 			ctx.target = llvm_compute::TARGET::APPLECL;
 		}
 		else {
-			log_error("invalid target: %s", target);
+			cerr << "invalid target: " << target << endl;
 			return;
 		}
 	}},
 	{ "--sub-target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		ctx.sub_target = *arg_ptr;
@@ -117,7 +123,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--bitness", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		ctx.bitness = stou(*arg_ptr);
@@ -131,25 +137,43 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--test-bin", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			log_error("invalid argument!");
+			cerr << "invalid argument!" << endl;
 			return;
 		}
 		ctx.test_bin_filename = *arg_ptr;
 		ctx.test_bin = true;
 	}},
+	{ "--cuda-sass", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.cuda_sass_filename = *arg_ptr;
+		ctx.cuda_sass = true;
+	}},
+	{ "-v", [](option_context& ctx, char**&) {
+		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
+	}},
+	{ "-vv", [](option_context& ctx, char**&) {
+		ctx.verbosity = (size_t)logger::LOG_TYPE::UNDECORATED;
+	}},
 };
 
 int main(int, char* argv[]) {
+	// handle options
+	option_context option_ctx;
+	occ_opt_handler::parse_options(argv + 1, option_ctx);
+	if(option_ctx.done) return 0;
+			
+	// preempt floor logger init
+	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
+	
 #if !defined(FLOOR_IOS)
 	floor::init(argv[0], (const char*)"../../data/", true); // call path, data path, console-only
 #else
 	floor::init(argv[0], (const char*)"data/", true);
 #endif
-	
-	// handle options
-	option_context option_ctx;
-	occ_opt_handler::parse_options(argv + 1, option_ctx);
-	if(option_ctx.done) return 0;
 	
 	pair<string, vector<llvm_compute::kernel_info>> program_data;
 	if(!option_ctx.test_bin) {
@@ -172,6 +196,7 @@ int main(int, char* argv[]) {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
 					if(sm_pos == string::npos) {
 						log_error("invalid PTX sub-target: %s", option_ctx.sub_target);
+						return -2;
 					}
 					else {
 						const string sm_version = option_ctx.sub_target.substr(sm_pos + 3, option_ctx.sub_target.length() - sm_pos - 3);
@@ -301,6 +326,32 @@ int main(int, char* argv[]) {
 			}
 		}
 		file_io::string_to_file(option_ctx.output_filename, program_data.first);
+	}
+	
+	// handle cuda sass generation
+	if(option_ctx.cuda_sass) {
+		const auto dot_pos = option_ctx.output_filename.rfind(".");
+		string cubin_filename = "";
+		if(dot_pos != string::npos) cubin_filename = option_ctx.output_filename.substr(0, dot_pos);
+		else cubin_filename = option_ctx.output_filename;
+		
+		const string ptxas_cmd {
+			"ptxas -O3"s +
+			(option_ctx.verbosity >= (size_t)logger::LOG_TYPE::DEBUG_MSG ? " -v" : "") +
+			" -m" + (option_ctx.bitness == 32 ? "32" : "64") +
+			" -arch " + option_ctx.sub_target +
+			" -o " + cubin_filename + ".cubin " +
+			option_ctx.output_filename
+		};
+		const string cuobjdump_cmd {
+			"cuobjdump --dump-sass " + cubin_filename + ".cubin" +
+			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
+		};
+		string ptxas_output = "", cuobjdump_output = "";
+		core::system(ptxas_cmd, ptxas_output);
+		cout << ptxas_output << endl;
+		core::system(cuobjdump_cmd, cuobjdump_output);
+		cout << cuobjdump_output << endl;
 	}
 
 	// test the compiled binary (if this was specified)
