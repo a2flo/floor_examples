@@ -387,7 +387,7 @@ void gl_renderer::render_kernels(const camera& cam,
 								  scene_fbo.dim_multiple,
 								  size2 { 32, 32 },
 								  compute_scene_color, compute_scene_depth, compute_scene_motion, compute_color,
-								  delta / render_delta, mproj,
+								  delta / render_delta,
 								  (!warp_state.is_single_frame ?
 								   float4 { -1.0f } :
 								   float4 { cam.get_single_frame_direction(), 1.0f }

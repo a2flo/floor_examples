@@ -29,7 +29,6 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA32F> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
-								param<matrix4f> pm,
 								param<float4> motion_override) {
 	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
 	
@@ -54,7 +53,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto motion_dst = (motion_override.w < 0.0f ? *relative_delta : 1.0f) * motion;
 	const auto new_pos = reconstructed_pos + motion_dst;
 	// project 3D position back into 2D
-	const auto proj_dst_coord = (new_pos * *pm).xy / -new_pos.z; // TODO: don't do full matrix multiply!
+	const auto proj_dst_coord = (new_pos.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -new_pos.z;
 	const auto dst_coord = ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
 	
 	// only write if new projected screen position is actually inside the screen
