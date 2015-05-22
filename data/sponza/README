@@ -1,0 +1,7 @@
+original sponza model and textures from: http://www.crytek.com/cryengine/cryengine3/downloads/
+
+changes:
+ * converted all textures to .png
+ * fixed material file: use existing textures everywhere / fixed map_* entries
+ * removed unused stuff
+ * added sponza_curtain_spec
