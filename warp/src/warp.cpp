@@ -31,6 +31,8 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 								param<matrix4f> pm,
 								param<float4> motion_override) {
+	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	
 	const int2 coord { global_id.xy };
 	auto color = read(img_color, coord);
 	const auto linear_depth = read(img_depth, coord).x; // depth is already linear with z/w in shader
@@ -52,7 +54,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto motion_dst = (motion_override.w < 0.0f ? *relative_delta : 1.0f) * motion;
 	const auto new_pos = reconstructed_pos + motion_dst;
 	// project 3D position back into 2D
-	const auto proj_dst_coord = (new_pos * *pm).xy / -new_pos.z;
+	const auto proj_dst_coord = (new_pos * *pm).xy / -new_pos.z; // TODO: don't do full matrix multiply!
 	const auto dst_coord = ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
 	
 	// only write if new projected screen position is actually inside the screen
@@ -74,6 +76,8 @@ kernel void single_px_fixup(
 							wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> warp_img_out
 #endif
 							) {
+	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	
 	const int2 coord { global_id.xy };
 	const float4 color = read(warp_img_in, coord);
 	
@@ -104,7 +108,8 @@ kernel void single_px_fixup(
 
 kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img,
 					  param<float4> clear_color) {
-	write(img, int2 { get_global_id(0), get_global_id(1) }, float4 { (*clear_color).xyz, 0.0f });
+	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	write(img, int2 { global_id.xy }, float4 { (*clear_color).xyz, 0.0f });
 }
 
 #endif

@@ -215,23 +215,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		5CD2174919E924A20049D6AE /* warp_build.sh */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-v";
-			buildConfigurationList = 5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "warp_build.sh" */;
-			buildPhases = (
-			);
-			buildToolPath = ./build.sh;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = warp_build.sh;
-			passBuildSettingsInEnvironment = 0;
-			productName = warp;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		5C0071901A91EF7E00F4711D /* warp_ios */ = {
 			isa = PBXNativeTarget;
@@ -286,9 +269,6 @@
 					5C8FD0931AD3366800215230 = {
 						CreatedOnToolsVersion = 6.3;
 					};
-					5CD2174919E924A20049D6AE = {
-						CreatedOnToolsVersion = 6.1;
-					};
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "warp" */;
@@ -306,7 +286,6 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* warp_osx */,
 				5C0071901A91EF7E00F4711D /* warp_ios */,
-				5CD2174919E924A20049D6AE /* warp_build.sh */,
 			);
 		};
 /* End PBXProject section */
@@ -861,27 +840,6 @@
 			};
 			name = Release;
 		};
-		5CD2174D19E924A20049D6AE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		5CD2174E19E924A20049D6AE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -908,15 +866,6 @@
 			buildConfigurations = (
 				5CD2174A19E924A20049D6AE /* Debug */,
 				5CD2174B19E924A20049D6AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "warp_build.sh" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5CD2174D19E924A20049D6AE /* Debug */,
-				5CD2174E19E924A20049D6AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

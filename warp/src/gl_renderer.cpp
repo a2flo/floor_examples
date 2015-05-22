@@ -21,7 +21,6 @@
 #include <floor/core/timer.hpp>
 
 static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
-static GLuint dummy_texture { 0u };
 static GLuint vbo_fullscreen_triangle { 0 };
 static struct {
 	GLuint fbo { 0u };
@@ -34,6 +33,7 @@ static struct {
 	GLuint compute_color { 0u };
 	
 	int2 dim;
+	size2 dim_multiple;
 } scene_fbo;
 static struct {
 	GLuint fbo { 0u };
@@ -49,43 +49,57 @@ static float3 light_pos;
 static shared_ptr<compute_image> compute_color, compute_scene_color, compute_scene_depth, compute_scene_motion;
 static matrix4f prev_mvm, prev_imvm, prev_mvpm, cur_imvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
+static bool first_frame { true };
 
-static void create_textures() {
-	// create/generate an opengl texture and bind it
-	glGenTextures(1, &dummy_texture);
-	{
-		glBindTexture(GL_TEXTURE_2D, dummy_texture);
-		
-		// texture parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		
-		// create texture
-		static constexpr uint2 texture_size { 64, 64 };
-		static constexpr float2 texture_sizef { texture_size };
-		array<uint32_t, texture_size.x * texture_size.y> pixel_data;
-		for(uint32_t y = 0; y < texture_size.y; ++y) {
-			for(uint32_t x = 0; x < texture_size.x; ++x) {
-				float2 dir = (float2(x, y) / texture_sizef) * 2.0f - 1.0f;
-				float fval = dir.dot();
-				uint32_t val = 255u - uint8_t(const_math::clamp(fval, 0.0f, 1.0f) * 255.0f);
-				pixel_data[y * texture_size.x + x] = val + (val << 8u) + (val << 16u) + (val << 24u);
-			}
-		}
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texture_size.x, texture_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, &pixel_data[0]);
-		
-		// build mipmaps
-		glGenerateMipmap(GL_TEXTURE_2D);
+static void destroy_textures() {
+	// kill old shared/wrapped compute images (also makes sure these don't access the gl objects any more)
+	compute_color = nullptr;
+	compute_scene_color = nullptr;
+	compute_scene_depth = nullptr;
+	compute_scene_motion = nullptr;
+	
+	// kill gl stuff
+	if(scene_fbo.fbo > 0) {
+		glDeleteFramebuffers(1, &scene_fbo.fbo);
+		scene_fbo.fbo = 0;
+	}
+	if(scene_fbo.color > 0) {
+		glDeleteTextures(1, &scene_fbo.color);
+		scene_fbo.color = 0;
+	}
+	if(scene_fbo.depth_as_color > 0) {
+		glDeleteTextures(1, &scene_fbo.depth_as_color);
+		scene_fbo.depth_as_color = 0;
+	}
+	if(scene_fbo.motion > 0) {
+		glDeleteTextures(1, &scene_fbo.motion);
+		scene_fbo.motion = 0;
+	}
+	if(scene_fbo.depth > 0) {
+		glDeleteTextures(1, &scene_fbo.depth);
+		scene_fbo.depth = 0;
 	}
 	
-	// create scene fbo (TODO: resizable)
+	if(scene_fbo.compute_fbo > 0) {
+		glDeleteFramebuffers(1, &scene_fbo.compute_fbo);
+		scene_fbo.compute_fbo = 0;
+	}
+	if(scene_fbo.compute_color > 0) {
+		glDeleteTextures(1, &scene_fbo.compute_color);
+		scene_fbo.compute_color = 0;
+	}
+}
+
+static void create_textures() {
+	// create scene fbo
 	{
 		glGenFramebuffers(1, &scene_fbo.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
 		
 		scene_fbo.dim = { int(floor::get_width()), int(floor::get_height()) };
+		
+		// kernel work-group size is { 32, 32 } -> round global size to a multiple of it
+		scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(32);
 		
 		glGenTextures(1, &scene_fbo.color);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.color);
@@ -144,7 +158,7 @@ static void create_textures() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	
-	// create compute scene fbo (TODO: resizable)
+	// create compute scene fbo
 	{
 		glGenFramebuffers(1, &scene_fbo.compute_fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.compute_fbo);
@@ -170,6 +184,45 @@ static void create_textures() {
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
+	
+	compute_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.compute_color, GL_TEXTURE_2D,
+											   COMPUTE_MEMORY_FLAG::READ_WRITE |
+											   COMPUTE_MEMORY_FLAG::OPENGL_READ_WRITE);
+	compute_scene_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color, GL_TEXTURE_2D,
+													 COMPUTE_MEMORY_FLAG::READ |
+													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
+	compute_scene_depth = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth_as_color, GL_TEXTURE_2D,
+													 COMPUTE_MEMORY_FLAG::READ |
+													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
+	compute_scene_motion = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion, GL_TEXTURE_2D,
+													  COMPUTE_MEMORY_FLAG::READ |
+													  COMPUTE_MEMORY_FLAG::OPENGL_READ);
+}
+
+static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
+	if(type == EVENT_TYPE::WINDOW_RESIZE) {
+		destroy_textures();
+		create_textures();
+		first_frame = true;
+		return true;
+	}
+	return false;
+}
+static event::handler resize_handler_fnctr(&resize_handler);
+
+static uint32_t global_vao { 0 };
+bool gl_renderer::init() {
+	floor::init_gl();
+	glFrontFace(GL_CCW);
+	glGenVertexArrays(1, &global_vao);
+	glBindVertexArray(global_vao);
+	
+	// create fullscreen triangle/quad vbo
+	static constexpr const float fullscreen_triangle[6] { 1.0f, 1.0f, 1.0f, -3.0f, -3.0f, 1.0f };
+	glGenBuffers(1, &vbo_fullscreen_triangle);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
+	glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float2), fullscreen_triangle, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	// create shadow map fbo/tex
 	{
@@ -200,35 +253,9 @@ static void create_textures() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-}
-
-static uint32_t global_vao { 0 };
-bool gl_renderer::init() {
-	floor::init_gl();
-	glFrontFace(GL_CCW);
-	glGenVertexArrays(1, &global_vao);
-	glBindVertexArray(global_vao);
 	
-	// create fullscreen triangle/quad vbo
-	static constexpr const float fullscreen_triangle[6] { 1.0f, 1.0f, 1.0f, -3.0f, -3.0f, 1.0f };
-	glGenBuffers(1, &vbo_fullscreen_triangle);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
-	glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float2), fullscreen_triangle, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
+	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 	create_textures();
-	compute_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.compute_color, GL_TEXTURE_2D,
-											   COMPUTE_MEMORY_FLAG::READ_WRITE |
-											   COMPUTE_MEMORY_FLAG::OPENGL_READ_WRITE);
-	compute_scene_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ |
-													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
-	compute_scene_depth = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth_as_color, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ |
-													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
-	compute_scene_motion = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion, GL_TEXTURE_2D,
-													  COMPUTE_MEMORY_FLAG::READ |
-													  COMPUTE_MEMORY_FLAG::OPENGL_READ);
 	
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -251,11 +278,7 @@ bool gl_renderer::init() {
 }
 
 void gl_renderer::destroy() {
-	// only kill compute buffers here, let the driver/os handle the gl stuff
-	compute_color = nullptr;
-	compute_scene_color = nullptr;
-	compute_scene_depth = nullptr;
-	compute_scene_motion = nullptr;
+	destroy_textures();
 }
 
 bool gl_renderer::render(const obj_model& model,
@@ -291,7 +314,7 @@ bool gl_renderer::render(const obj_model& model,
 	//
 	static constexpr const float frame_limit { 1.0f / 10.0f };
 	static size_t warp_frame_num = 0;
-	if(deltaf < frame_limit) {
+	if(deltaf < frame_limit && !first_frame) {
 		if(warp_state.is_warping) {
 			render_kernels(cam, deltaf, render_delta, warp_frame_num);
 			blit(false);
@@ -301,6 +324,7 @@ bool gl_renderer::render(const obj_model& model,
 		return false;
 	}
 	else {
+		first_frame = false;
 		render_delta = deltaf;
 		time_keeper = now;
 		warp_frame_num = 0;
@@ -354,12 +378,13 @@ void gl_renderer::render_kernels(const camera& cam,
 	// clear if enabled + always clear the first frame
 	if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
 		warp_state.dev_queue->execute(warp_state.clear_kernel,
-									  size2 { scene_fbo.dim },
+									  scene_fbo.dim_multiple,
 									  size2 { 32, 32 },
 									  compute_color, clear_color);
 	}
+	
 	warp_state.dev_queue->execute(warp_state.warp_kernel,
-								  size2 { scene_fbo.dim },
+								  scene_fbo.dim_multiple,
 								  size2 { 32, 32 },
 								  compute_scene_color, compute_scene_depth, compute_scene_motion, compute_color,
 								  delta / render_delta, mproj,
@@ -367,16 +392,17 @@ void gl_renderer::render_kernels(const camera& cam,
 								   float4 { -1.0f } :
 								   float4 { cam.get_single_frame_direction(), 1.0f }
 								   ));
+	
 	if(warp_state.is_fixup) {
 		if(warp_state.ctx->get_compute_type() == COMPUTE_TYPE::CUDA) {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
-										  size2 { scene_fbo.dim },
+										  scene_fbo.dim_multiple,
 										  size2 { 32, 32 },
 										  compute_color);
 		}
 		else {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
-										  size2 { scene_fbo.dim },
+										  scene_fbo.dim_multiple,
 										  size2 { 32, 32 },
 										  compute_color, compute_color);
 		}
