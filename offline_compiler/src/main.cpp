@@ -83,7 +83,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	}},
 	{ "--out", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
-		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+		if(*arg_ptr == nullptr) {
 			cerr << "invalid argument!" << endl;
 			return;
 		}
@@ -326,7 +326,11 @@ int main(int, char* argv[]) {
 		}
 		
 		// output
-		if(option_ctx.output_filename == "") {
+		if(option_ctx.output_filename == "-") {
+			// print to console, as well as to file!
+			cout << program_data.first << endl;
+		}
+		if(option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
 			option_ctx.output_filename = "unknown.bin";
 			switch(option_ctx.target) {
 				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
