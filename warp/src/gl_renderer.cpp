@@ -127,8 +127,8 @@ static void create_textures() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RGBA, GL_FLOAT, nullptr);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+					 GL_RGB, GL_FLOAT, nullptr);
 		
 		glGenTextures(1, &scene_fbo.depth);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
@@ -602,7 +602,7 @@ bool gl_renderer::compile_shaders() {
 		in vec3 in_vertex;
 		
 		out vec2 tex_coord;
-		out vec4 motion;
+		out vec3 motion;
 		
 		void main() {
 			tex_coord = in_tex_coord;
@@ -612,16 +612,16 @@ bool gl_renderer::compile_shaders() {
 			
 			vec4 prev_pos = prev_mvm * vertex;
 			vec4 cur_pos = mvm * vertex;
-			motion = cur_pos - prev_pos;
+			motion = cur_pos.xyz - prev_pos.xyz;
 		}
 	)RAWSTR"};
 	static const char motion_only_fs_text[] { u8R"RAWSTR(#version 150 core
 		uniform sampler2D mask_tex;
 		
 		in vec2 tex_coord;
-		in vec4 motion;
+		in vec3 motion;
 		
-		out vec4 motion_color;
+		out vec3 motion_color;
 		
 		void main() {
 			// still need to properly handle this

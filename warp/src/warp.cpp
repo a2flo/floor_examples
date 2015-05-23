@@ -22,27 +22,36 @@
 // SCREEN_WIDTH: screen width in px
 // SCREEN_HEIGHT: screen height in px
 // SCREEN_FOV: camera/projection-matrix field of view
+#if !defined(SCREEN_WIDTH)
+#define SCREEN_WIDTH 1280
+#endif
+#if !defined(SCREEN_HEIGHT)
+#define SCREEN_HEIGHT 720
+#endif
+#if !defined(SCREEN_FOV)
+#define SCREEN_FOV 72.0f
+#endif
 
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img_color,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_depth,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA32F> img_motion,
+								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGB32F> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 								param<float4> motion_override) {
 	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
 	
-	const int2 coord { global_id.xy };
+	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
-	const auto linear_depth = read(img_depth, coord).x; // depth is already linear with z/w in shader
-	const auto motion = (motion_override.w < 0.0f ? read(img_motion, coord).xyz : motion_override.xyz);
+	const auto linear_depth = read(img_depth, coord); // depth is already linear with z/w in shader
+	const auto motion = (motion_override.w < 0.0f ? read(img_motion, coord) : motion_override.xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
 	constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
 	constexpr const float2 inv_screen_size { 1.0f / screen_size };
 	constexpr const float aspect_ratio { screen_size.x / screen_size.y };
-	constexpr const float up_vec = const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f);
-	constexpr const float right_vec = up_vec * aspect_ratio;
+	constexpr const float up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
+	constexpr const float right_vec { up_vec * aspect_ratio };
 	
 	const float3 reconstructed_pos {
 		(float2(coord) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
@@ -55,12 +64,13 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	// project 3D position back into 2D
 	const auto proj_dst_coord = (new_pos.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -new_pos.z;
 	const auto dst_coord = ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
+	const int2 idst_coord { dst_coord };
 	
 	// only write if new projected screen position is actually inside the screen
-	if(dst_coord.x >= 0.0f && dst_coord.x < screen_size.x &&
-	   dst_coord.y >= 0.0f && dst_coord.y < screen_size.y) {
+	if(idst_coord.x >= 0 && idst_coord.x < SCREEN_WIDTH &&
+	   idst_coord.y >= 0 && idst_coord.y < SCREEN_HEIGHT) {
 		color.w = 1.0f; // px fixup
-		write(img_out_color, int2 { int(dst_coord.x), int(dst_coord.y) }, color);
+		write(img_out_color, idst_coord, color);
 	}
 }
 
@@ -78,7 +88,7 @@ kernel void single_px_fixup(
 	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
 	
 	const int2 coord { global_id.xy };
-	const float4 color = read(warp_img_in, coord);
+	const auto color = read(warp_img_in, coord);
 	
 	// 0 if it hasn't been written (needs fixup), 1 if it has been written
 	if(color.w < 1.0f) {
