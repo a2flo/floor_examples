@@ -127,8 +127,8 @@ static void create_textures() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RGB, GL_FLOAT, nullptr);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+					 GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 		
 		glGenTextures(1, &scene_fbo.depth);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
@@ -366,9 +366,6 @@ void gl_renderer::blit(const bool full_scene) {
 void gl_renderer::render_kernels(const camera& cam,
 								 const float& delta, const float& render_delta,
 								 const size_t& warp_frame_num) {
-	const matrix4f mproj { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-												  0.5f, warp_state.view_distance) };
-	
 //#define WARP_TIMING
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
@@ -650,7 +647,7 @@ bool gl_renderer::compile_shaders() {
 		out vec4 shadow_coord;
 		out vec3 view_dir;
 		out vec3 light_dir;
-		out vec4 motion;
+		out vec3 motion;
 		
 		void main() {
 			tex_coord = in_tex_coord;
@@ -661,7 +658,7 @@ bool gl_renderer::compile_shaders() {
 			
 			vec4 prev_pos = prev_mvm * vertex;
 			vec4 cur_pos = mvm * vertex;
-			motion = cur_pos - prev_pos;
+			motion = cur_pos.xyz - prev_pos.xyz;
 			
 			vec3 vview = cam_pos - in_vertex;
 			view_dir.x = dot(vview, in_tangent);
@@ -674,7 +671,7 @@ bool gl_renderer::compile_shaders() {
 			light_dir.z = dot(vlight, in_normal);
 		}
 	)RAWSTR"};
-	static const char scene_fs_text[] { u8R"RAWSTR(#version 150 core
+	static const char scene_fs_text[] { u8R"RAWSTR(#version 410 core
 		uniform sampler2D diff_tex;
 		uniform sampler2D spec_tex;
 		uniform sampler2D norm_tex;
@@ -685,11 +682,30 @@ bool gl_renderer::compile_shaders() {
 		in vec4 shadow_coord;
 		in vec3 view_dir;
 		in vec3 light_dir;
-		in vec4 motion;
+		in vec3 motion;
 		
 		out vec4 frag_color;
 		out float frag_depth;
-		out vec4 motion_color;
+		
+		out uint motion_color;
+		
+		uint encode_motion(in vec3 motion) {
+			const float range = 64.0; // [-range, range]
+			vec3 signs = sign(motion);
+			vec3 cmotion = clamp(abs(motion), 0.0, range);
+			// use log2 scaling
+			cmotion = log2(cmotion + 1.0);
+			// encode x and z with 10-bit, y with 9-bit
+			cmotion *= 1.0 / log2(range + 1.0);
+			cmotion.xz *= 1024.0; // 2^10
+			cmotion.y *= 512.0; // 2^9
+			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
+					(signs.y < 0.0 ? 0x40000000u : 0u) |
+					(signs.z < 0.0 ? 0x20000000u : 0u) |
+					(clamp(uint(cmotion.x), 0u, 1023u) << 19u) |
+					(clamp(uint(cmotion.y), 0u, 511u) << 10u) |
+					(clamp(uint(cmotion.z), 0u, 1023u)));
+		}
 		
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
 		const vec2 poisson_disk[16] = vec2[](vec2(-0.94201624, -0.39906216),
@@ -762,8 +778,8 @@ bool gl_renderer::compile_shaders() {
 			frag_color = vec4(diff.xyz * lighting, 0.0);
 			//frag_depth = gl_FragCoord.z; // normalized depth
 			frag_depth = gl_FragCoord.z / gl_FragCoord.w; // linear depth
-			
-			motion_color = motion;
+
+			motion_color = encode_motion(motion);
 		}
 	)RAWSTR"};
 	static const char shadow_map_vs_text[] { u8R"RAWSTR(#version 150 core

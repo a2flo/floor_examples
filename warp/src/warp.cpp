@@ -32,10 +32,29 @@
 #define SCREEN_FOV 72.0f
 #endif
 
+static float3 decode_motion(const uint32_t& encoded_motion) {
+	const float3 signs {
+		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
+		(encoded_motion & 0x40000000u) != 0u ? -1.0f : 1.0f,
+		(encoded_motion & 0x20000000u) != 0u ? -1.0f : 1.0f
+	};
+	const uint3 shifted_motion {
+		(encoded_motion >> 19u) & 0x3FFu,
+		(encoded_motion >> 10u) & 0x1FFu,
+		encoded_motion & 0x3FFu
+	};
+	constexpr const float3 adjust {
+		const_math::log2(64.0f + 1.0f) / 1024.0f,
+		const_math::log2(64.0f + 1.0f) / 512.0f,
+		const_math::log2(64.0f + 1.0f) / 1024.0f
+	};
+	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
+}
+
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img_color,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_depth,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGB32F> img_motion,
+								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 								param<float4> motion_override) {
@@ -44,7 +63,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
 	const auto linear_depth = read(img_depth, coord); // depth is already linear with z/w in shader
-	const auto motion = (motion_override.w < 0.0f ? read(img_motion, coord) : motion_override.xyz);
+	const auto motion = (motion_override.w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override.xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
 	constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
