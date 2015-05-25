@@ -32,6 +32,27 @@
 #define SCREEN_FOV 72.0f
 #endif
 
+struct camera {
+	// TODO: remove ugliness due to opencl/address space handling
+#define screen_size (float2 { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) })
+#define inv_screen_size (1.0f / screen_size)
+#define aspect_ratio (screen_size.x / screen_size.y)
+#define up_vec const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f)
+#define right_vec (up_vec * aspect_ratio)
+	
+	static float3 reconstruct_position(const size2& coord, const float& linear_depth) {
+		return {
+			(float2(coord) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
+			-linear_depth
+		};
+	}
+	
+	static float2 reproject_position(const float3& position) {
+		const auto proj_dst_coord = (position.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -position.z;
+		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
+	}
+};
+
 static float3 decode_motion(const uint32_t& encoded_motion) {
 	const float3 signs {
 		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
@@ -66,24 +87,13 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto motion = (motion_override.w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override.xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
-	constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
-	constexpr const float2 inv_screen_size { 1.0f / screen_size };
-	constexpr const float aspect_ratio { screen_size.x / screen_size.y };
-	constexpr const float up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
-	constexpr const float right_vec { up_vec * aspect_ratio };
-	
-	const float3 reconstructed_pos {
-		(float2(coord) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
-		-linear_depth
-	};
+	const float3 reconstructed_pos = camera::reconstruct_position(coord, linear_depth);
 	
 	// predict/compute new 3D position from current motion and time
 	const auto motion_dst = (motion_override.w < 0.0f ? *relative_delta : 1.0f) * motion;
 	const auto new_pos = reconstructed_pos + motion_dst;
 	// project 3D position back into 2D
-	const auto proj_dst_coord = (new_pos.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -new_pos.z;
-	const auto dst_coord = ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
-	const int2 idst_coord { dst_coord };
+	const int2 idst_coord { camera::reproject_position(new_pos) };
 	
 	// only write if new projected screen position is actually inside the screen
 	if(idst_coord.x >= 0 && idst_coord.x < SCREEN_WIDTH &&
