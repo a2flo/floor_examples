@@ -108,7 +108,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 #endif
 	
 	//
-	position_buffer->acquire_opengl_object(dev_queue);
+	position_buffer->release_opengl_object(dev_queue);
 	
 	const auto shd = (nbody_state.render_sprites ?
 					  (nbody_state.alpha_mask ? shader_objects["SPRITE_DISCARD"] : shader_objects["SPRITE"]) :
@@ -135,7 +135,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	glDrawArrays(GL_POINTS, 0, (GLsizei)nbody_state.body_count);
 	glUseProgram(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	position_buffer->release_opengl_object(dev_queue);
+	position_buffer->acquire_opengl_object(dev_queue);
 }
 
 bool gl_renderer::compile_shaders() {

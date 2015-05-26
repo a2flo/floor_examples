@@ -134,7 +134,7 @@ static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_p
 	// don't need to clear, drawing the complete screen
 	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
 	
-	//img->acquire_opengl_object(dev_queue);
+	//img->release_opengl_object(dev_queue);
 	
 	const auto shd = shader_objects["IMG_DRAW"];
 	glUseProgram(shd->program.program);
@@ -152,7 +152,7 @@ static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_p
 	
 	glUseProgram(0);
 	
-	//img->release_opengl_object(dev_queue);
+	//img->acquire_opengl_object(dev_queue);
 }
 
 static bool compile_shaders() {
@@ -379,7 +379,7 @@ int main(int, char* argv[]) {
 	
 	// acquire for opengl use
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-		imgs[img_idx]->acquire_opengl_object(dev_queue);
+		imgs[img_idx]->release_opengl_object(dev_queue);
 	}
 	
 	// -> opengl/glsl blur

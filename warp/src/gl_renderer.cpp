@@ -329,15 +329,15 @@ bool gl_renderer::render(const obj_model& model,
 		time_keeper = now;
 		warp_frame_num = 0;
 		
-		compute_scene_color->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_depth->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion->acquire_opengl_object(warp_state.dev_queue);
-		
-		render_full_scene(model, cam);
-		
 		compute_scene_color->release_opengl_object(warp_state.dev_queue);
 		compute_scene_depth->release_opengl_object(warp_state.dev_queue);
 		compute_scene_motion->release_opengl_object(warp_state.dev_queue);
+		
+		render_full_scene(model, cam);
+		
+		compute_scene_color->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_depth->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion->acquire_opengl_object(warp_state.dev_queue);
 		
 		blit(warp_state.is_render_full);
 		return true;
@@ -353,13 +353,13 @@ void gl_renderer::blit(const bool full_scene) {
 						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
 	else {
-		compute_color->acquire_opengl_object(warp_state.dev_queue);
+		compute_color->release_opengl_object(warp_state.dev_queue);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		compute_color->release_opengl_object(warp_state.dev_queue);
+		compute_color->acquire_opengl_object(warp_state.dev_queue);
 	}
 }
 
