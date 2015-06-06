@@ -72,15 +72,15 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	const auto idx = (uint32_t)get_global_id(0);
 	const auto body_count = (uint32_t)get_global_size(0);
 	
-	float4 position = *in_positions[idx];
-	float3 velocity = *velocities[idx];
+	float4 position = in_positions[idx];
+	float3 velocity = velocities[idx];
 	float3 acceleration;
 	
 #if 1 // local/shared-memory caching + computation
 	const auto local_idx = (uint32_t)get_local_id(0);
 	local_buffer<float4, NBODY_TILE_SIZE> local_body_positions;
 	for(uint32_t i = 0, tile = 0, count = body_count; i < count; i += NBODY_TILE_SIZE, ++tile) {
-		local_body_positions[local_idx] = *in_positions[tile * NBODY_TILE_SIZE + local_idx];
+		local_body_positions[local_idx] = in_positions[tile * NBODY_TILE_SIZE + local_idx];
 		local_barrier();
 	
 #if !defined(FLOOR_COMPUTE_METAL)
@@ -95,7 +95,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	}
 #else // global memory only computation
 	for(uint32_t i = 0; i < body_count; ++i) {
-		compute_body_interaction(*in_positions[i], position, acceleration);
+		compute_body_interaction(in_positions[i], position, acceleration);
 	}
 #endif
 	
@@ -107,7 +107,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	velocities[idx] = velocity;
 }
 
-kernel void nbody_raster(buffer<float4> positions,
+kernel void nbody_raster(buffer<const float4> positions,
 						 buffer<float3> img,
 						 buffer<float3> img_old,
 						 param<uint2> img_size,
@@ -120,7 +120,7 @@ kernel void nbody_raster(buffer<float4> positions,
 		const matrix4f mproj { matrix4f().perspective(90.0f, float(img_size->x) / float(img_size->y), 0.25f, 2500.0f) };
 		
 		// transform vector (*TMVP)
-		const float3 position = (*positions[idx]).xyz;
+		const float3 position = positions[idx].xyz;
 		const float3 mview_vec = position * *mview;
 		float3 proj_vec = mview_vec * mproj;
 		
@@ -137,7 +137,7 @@ kernel void nbody_raster(buffer<float4> positions,
 			(uint32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
 		};
 		pixel.clamp(0, img_size->x - 1);
-		img[pixel.y * img_size->x + pixel.x] = *img[pixel.y * img_size->x + pixel.x] + 0.25f;
+		img[pixel.y * img_size->x + pixel.x] = 0.25f + img[pixel.y * img_size->x + pixel.x];
 	}
 }
 

@@ -34,11 +34,19 @@
 
 struct camera {
 	// TODO: remove ugliness due to opencl/address space handling
+#if 1
 #define screen_size (float2 { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) })
 #define inv_screen_size (1.0f / screen_size)
 #define aspect_ratio (screen_size.x / screen_size.y)
 #define up_vec const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f)
 #define right_vec (up_vec * aspect_ratio)
+#else
+	static constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
+	static constexpr const float2 inv_screen_size { 1.0f / screen_size };
+	static constexpr const float aspect_ratio { screen_size.x / screen_size.y };
+	static constexpr const float up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
+	static constexpr const float right_vec { up_vec * aspect_ratio };
+#endif
 	
 	static float3 reconstruct_position(const size2& coord, const float& linear_depth) {
 		return {

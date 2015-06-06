@@ -35,7 +35,7 @@ public:
 		float3 hit_point, normal;
 		float distance { numeric_limits<float>::infinity() };
 		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_COUNT };
-	
+
 		for(size_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
 			const auto& index = cornell_indices[triangle_idx];
 			const auto& v0 = cornell_vertices[index.x];
@@ -381,5 +381,5 @@ kernel void path_trace(buffer<float3> img,
 	
 	// merge with previous frames (re-weight)
 	if(*iteration == 0) img[idx] = color;
-	else img[idx] = img[idx]->interpolate(color, 1.0f / float(*iteration + 1));
+	else img[idx] = img[idx].interpolate(color, 1.0f / float(*iteration + 1));
 }

@@ -16,7 +16,7 @@
 #define opencl_constant
 #define device_constant
 static atomic<uint32_t> global_id_counter { 0 };
-template <class data_type, size_t array_size> using const_array = data_type[array_size];
+template <class data_type, size_t array_size> using constant_array = data_type[array_size];
 #define get_global_id(dim) (global_id_counter++)
 void reset_counter();
 
@@ -33,7 +33,6 @@ namespace floor_compute {
 		T& operator*() { return elem; }
 		const T* const operator->() const { return &elem; }
 		T* operator->() { return &elem; }
-		operator T() const { return elem; }
 	};
 	template <typename T> struct direct_type_wrapper : T {
 		using T::T;

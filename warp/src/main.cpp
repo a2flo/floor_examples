@@ -33,7 +33,7 @@ struct warp_option_context {
 typedef option_handler<warp_option_context> warp_opt_handler;
 
 static unique_ptr<camera> cam;
-static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.05f /* slower */ };
+static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.1f /* slower */ };
 
 //! option -> function map
 template<> unordered_map<string, warp_opt_handler::option_function> warp_opt_handler::options {

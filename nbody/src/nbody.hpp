@@ -29,7 +29,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 						  buffer<float3> velocities,
 						  param<float> delta);
 
-kernel void nbody_raster(buffer<float4> positions,
+kernel void nbody_raster(buffer<const float4> positions,
 						 buffer<float3> img,
 						 buffer<float3> img_old,
 						 param<uint2> img_size,
