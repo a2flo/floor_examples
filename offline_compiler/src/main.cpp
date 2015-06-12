@@ -26,14 +26,15 @@
 #include <floor/core/option_handler.hpp>
 
 #include <floor/compute/opencl/opencl_common.hpp>
-#include <floor/compute/opencl/opencl_device.hpp>
 #include <floor/compute/opencl/opencl_compute.hpp>
+#include <floor/compute/opencl/opencl_device.hpp>
 
-#include <floor/compute/cuda/cuda_device.hpp>
 #include <floor/compute/cuda/cuda_compute.hpp>
+#include <floor/compute/cuda/cuda_device.hpp>
 
-#include <floor/compute/metal/metal_device.hpp>
+#define FLOOR_NO_METAL // don't need any specifics and this disables the obj-c code
 #include <floor/compute/metal/metal_compute.hpp>
+#include <floor/compute/metal/metal_device.hpp>
 
 struct option_context {
 	string filename { "" };
@@ -61,7 +62,9 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 				 "\t--src <input-file>: the source file that should be compiled\n"
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
 				 "\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
-				 "\t--sub-target <name>: sets the target specific sub-target (only PTX: sm_20 - sm_53)\n"
+				 "\t--sub-target <name>: sets the target specific sub-target\n"
+				 "\t    PTX:        [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
+				 "\t    Metal/AIR:  [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
@@ -217,10 +220,25 @@ int main(int, char* argv[]) {
 				}
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
-			case llvm_compute::TARGET::AIR:
-				log_debug("compiling to AIR ...");
+			case llvm_compute::TARGET::AIR: {
 				device = make_shared<metal_device>();
-				break;
+				metal_device* dev = (metal_device*)device.get();
+				const auto family_pos = option_ctx.sub_target.rfind('_');
+				const uint32_t family = (family_pos != string::npos ? stou(option_ctx.sub_target.substr(family_pos + 1)) : 0u);
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios8") {
+					dev->family = (family == 0 ? 1 : family);
+					dev->family_version = 1;
+				}
+				else if(option_ctx.sub_target == "ios9") {
+					dev->family = (family == 0 ? 1 : family);
+					dev->family_version = 2;
+				}
+				else if(option_ctx.sub_target == "osx11") {
+					dev->family = (family == 0 ? 10000 : family);
+					dev->family_version = 1;
+				}
+				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
+			} break;
 			case llvm_compute::TARGET::APPLECL:
 				log_debug("compiling to APPLECL ...");
 				device = make_shared<opencl_device>();
