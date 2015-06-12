@@ -224,7 +224,12 @@ int main(int, char* argv[]) {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
 				const auto family_pos = option_ctx.sub_target.rfind('_');
-				const uint32_t family = (family_pos != string::npos ? stou(option_ctx.sub_target.substr(family_pos + 1)) : 0u);
+				uint32_t family = 0;
+				if(family_pos != string::npos) {
+					family = stou(option_ctx.sub_target.substr(family_pos + 1));
+					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
+				}
+				
 				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios8") {
 					dev->family = (family == 0 ? 1 : family);
 					dev->family_version = 1;
@@ -236,6 +241,10 @@ int main(int, char* argv[]) {
 				else if(option_ctx.sub_target == "osx11") {
 					dev->family = (family == 0 ? 10000 : family);
 					dev->family_version = 1;
+				}
+				else {
+					log_error("invalid AIR sub-target: %s", option_ctx.sub_target);
+					return -3;
 				}
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
