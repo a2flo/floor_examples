@@ -21,6 +21,7 @@
 #include <floor/core/option_handler.hpp>
 #include "nbody.hpp"
 #include "gl_renderer.hpp"
+#include "metal_renderer.hpp"
 #include "nbody_state.hpp"
 nbody_state_struct nbody_state;
 
@@ -78,6 +79,9 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\t--softening <softening>: sets the simulation softening (default: " << nbody_state.softening << ")" << endl;
 		cout << "\t--damping <damping>: sets the simulation damping (default: " << nbody_state.damping << ")" << endl;
 		cout << "\t--no-opengl: disables opengl rendering (uses s/w rendering instead)" << endl;
+#if defined(__APPLE__)
+		cout << "\t--no-metal: disables metal rendering (uses s/w rendering instead if --no-opengl as well)" << endl;
+#endif
 		cout << "\t--no-fma: disables use of explicit fma instructions or s/w emulation thereof (use this with non-fma cpus)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
@@ -187,12 +191,17 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		nbody_state.no_opengl = true;
 		cout << "opengl disabled" << endl;
 	}},
+	{ "--no-metal", [](nbody_option_context&, char**&) {
+		nbody_state.no_metal = true;
+		cout << "metal disabled" << endl;
+	}},
 	{ "--no-fma", [](nbody_option_context&, char**&) {
 		nbody_state.no_fma = true;
 		cout << "fma disabled" << endl;
 	}},
 	{ "--benchmark", [](nbody_option_context&, char**&) {
 		nbody_state.no_opengl = true; // also disable opengl
+		nbody_state.no_metal = true; // also disable metal
 		nbody_state.benchmark = true;
 		cout << "benchmark mode enabled" << endl;
 	}},
@@ -218,6 +227,8 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		}
 		cerr << "unknown nbody setup: " << arg_str << endl;
 	}},
+	// ignore xcode debug arg
+	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
 };
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
@@ -459,6 +470,7 @@ int main(int, char* argv[]) {
 #else
 	floor::init(argv[0], (const char*)"data/");
 	nbody_state.no_opengl = true;
+	nbody_state.no_metal = false;
 	nbody_state.time_step = 0.02f;
 	nbody_state.body_count = 4096;
 #endif
@@ -503,6 +515,16 @@ int main(int, char* argv[]) {
 		log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
 	}
 	
+#if defined(__APPLE__)
+	if(!nbody_state.no_metal && nbody_state.no_opengl) {
+		// setup renderer
+		if(!metal_renderer::init(fastest_device)) {
+			log_error("error during metal initialization!");
+			return -1;
+		}
+	}
+#endif
+	
 	// compile the program and get the kernel functions
 #if !defined(FLOOR_IOS)
 	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"),
@@ -516,26 +538,24 @@ int main(int, char* argv[]) {
 	const vector<llvm_compute::kernel_info> kernel_infos {
 		{
 			"nbody_compute",
-			{ 16, 16, 12, 4 },
 			{
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
-		{
+		/*{
 			"nbody_raster",
-			{ 16, 12, 12, 8, 4, 64 },
 			{
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 8, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 64, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
-		}
+		},*/
 	};
 	auto nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), kernel_infos);
 #endif
@@ -545,7 +565,11 @@ int main(int, char* argv[]) {
 	}
 	auto nbody_compute = nbody_prog->get_kernel_fuzzy("nbody_compute");
 	auto nbody_raster = nbody_prog->get_kernel_fuzzy("nbody_raster");
-	if(nbody_compute == nullptr || nbody_raster == nullptr) {
+	if(nbody_compute == nullptr
+#if 0
+	   || nbody_raster == nullptr
+#endif
+	) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
@@ -569,7 +593,7 @@ int main(int, char* argv[]) {
 	// image buffers (for s/w rendering only)
 	array<shared_ptr<compute_buffer>, 2> img_buffers;
 	size_t img_buffer_flip_flop { 0 };
-	if(nbody_state.no_opengl && !nbody_state.benchmark) {
+	if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 		img_buffers = {{
 			compute_ctx->create_buffer(fastest_device, sizeof(float3) * floor::get_width() * floor::get_height(),
 									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
@@ -664,7 +688,7 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if(nbody_state.no_opengl && !nbody_state.benchmark) {
+		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 			const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
 			if(!nbody_state.stop) img_buffer_flip_flop = 1 - img_buffer_flip_flop;
 			dev_queue->execute(nbody_raster,
@@ -708,6 +732,14 @@ int main(int, char* argv[]) {
 #endif
 			floor::stop_draw();
 		}
+#if defined(__APPLE__)
+		// metal rendering
+		else if(!nbody_state.no_metal && nbody_state.no_opengl) {
+			floor::start_draw();
+			metal_renderer::render(dev_queue, position_buffers[cur_buffer]);
+			floor::stop_draw();
+		}
+#endif
 	}
 	log_msg("done!");
 	

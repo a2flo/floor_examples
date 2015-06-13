@@ -83,7 +83,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 		local_body_positions[local_idx] = in_positions[tile * NBODY_TILE_SIZE + local_idx];
 		local_barrier();
 	
-#if !defined(FLOOR_COMPUTE_METAL)
+#if !defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_INFO_OS_OSX)
 #pragma clang loop unroll_count(NBODY_TILE_SIZE)
 #else
 #pragma clang loop unroll_count(4)
@@ -107,6 +107,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	velocities[idx] = velocity;
 }
 
+#if 1
 kernel void nbody_raster(buffer<const float4> positions,
 						 buffer<float3> img,
 						 buffer<float3> img_old,
@@ -140,5 +141,6 @@ kernel void nbody_raster(buffer<const float4> positions,
 		img[pixel.y * img_size->x + pixel.x] = 0.25f + img[pixel.y * img_size->x + pixel.x];
 	}
 }
+#endif
 
 #endif

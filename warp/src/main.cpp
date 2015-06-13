@@ -42,6 +42,8 @@ template<> unordered_map<string, warp_opt_handler::option_function> warp_opt_han
 		cout << "\t--TODO: TODO" << endl;
 		warp_state.done = true;
 	}},
+	// ignore xcode debug arg
+	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
 };
 static float3 last_cam_pos;
 static void cam_dump() {

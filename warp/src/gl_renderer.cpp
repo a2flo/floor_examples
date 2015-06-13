@@ -127,8 +127,13 @@ static void create_textures() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+#if 1
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, scene_fbo.dim.x, scene_fbo.dim.y, 0,
 					 GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+#else
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+					 GL_RGBA, GL_FLOAT, nullptr);
+#endif
 		
 		glGenTextures(1, &scene_fbo.depth);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
@@ -335,11 +340,12 @@ bool gl_renderer::render(const obj_model& model,
 		
 		render_full_scene(model, cam);
 		
+		blit(warp_state.is_render_full);
+		
 		compute_scene_color->acquire_opengl_object(warp_state.dev_queue);
 		compute_scene_depth->acquire_opengl_object(warp_state.dev_queue);
 		compute_scene_motion->acquire_opengl_object(warp_state.dev_queue);
 		
-		blit(warp_state.is_render_full);
 		return true;
 	}
 }
@@ -688,6 +694,7 @@ bool gl_renderer::compile_shaders() {
 		out float frag_depth;
 		
 		out uint motion_color;
+		//out vec4 motion_color;
 		
 		uint encode_motion(in vec3 motion) {
 			const float range = 64.0; // [-range, range]
@@ -780,6 +787,7 @@ bool gl_renderer::compile_shaders() {
 			frag_depth = gl_FragCoord.z / gl_FragCoord.w; // linear depth
 
 			motion_color = encode_motion(motion);
+			//motion_color = vec4(motion, 1.0);
 		}
 	)RAWSTR"};
 	static const char shadow_map_vs_text[] { u8R"RAWSTR(#version 150 core

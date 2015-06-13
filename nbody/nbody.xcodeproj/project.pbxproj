@@ -31,6 +31,8 @@
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
+		5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
+		5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -89,6 +91,8 @@
 		5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = nbody_state.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = metal_renderer.hpp; sourceTree = "<group>"; };
+		5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = metal_renderer.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -192,6 +196,8 @@
 				5C7467141A5828D000999E78 /* nbody.hpp */,
 				5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */,
 				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
+				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
+				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
 				5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */,
 			);
 			path = src;
@@ -350,6 +356,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
+				5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C0071C21A91F2BD00F4711D /* nbody.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -360,6 +367,7 @@
 			files = (
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
 				5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */,
+				5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -563,17 +571,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -586,8 +590,6 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
-					"-framework",
-					SDL2,
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",
@@ -597,6 +599,14 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL2,
 				);
 				PRODUCT_NAME = nbodyd;
 				VALID_ARCHS = x86_64;
@@ -640,17 +650,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -663,8 +669,6 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
-					"-framework",
-					SDL2,
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",
@@ -674,6 +678,14 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL2,
 				);
 				PRODUCT_NAME = nbody;
 				VALID_ARCHS = x86_64;
@@ -747,9 +759,10 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
 			};
 			name = Debug;
@@ -815,9 +828,10 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
 			};
 			name = Release;

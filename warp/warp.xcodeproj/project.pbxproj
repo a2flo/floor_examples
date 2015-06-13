@@ -572,17 +572,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -656,17 +652,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -765,9 +757,10 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
 			};
 			name = Debug;
@@ -833,9 +826,10 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
 			};
 			name = Release;

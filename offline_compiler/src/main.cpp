@@ -32,7 +32,9 @@
 #include <floor/compute/cuda/cuda_compute.hpp>
 #include <floor/compute/cuda/cuda_device.hpp>
 
+#if !defined(FLOOR_NO_METAL)
 #define FLOOR_NO_METAL // don't need any specifics and this disables the obj-c code
+#endif
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
 
