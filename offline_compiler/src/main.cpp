@@ -207,6 +207,7 @@ int main(int, char* argv[]) {
 				break;
 			case llvm_compute::TARGET::PTX:
 				device = make_shared<cuda_device>();
+				device->type = compute_device::TYPE::GPU;
 				if(option_ctx.sub_target != "") {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
 					if(sm_pos == string::npos) {
@@ -225,6 +226,7 @@ int main(int, char* argv[]) {
 			case llvm_compute::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
+				dev->type = compute_device::TYPE::GPU;
 				const auto family_pos = option_ctx.sub_target.rfind('_');
 				uint32_t family = 0;
 				if(family_pos != string::npos) {
