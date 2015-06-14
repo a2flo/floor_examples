@@ -22,11 +22,17 @@
 #include <floor/compute/metal/metal_device.hpp>
 #include <floor/compute/metal/metal_buffer.hpp>
 #include <floor/compute/metal/metal_queue.hpp>
+#if !defined(FLOOR_IOS)
 #import <AppKit/AppKit.h>
+#define UI_VIEW_CLASS NSView
+#else
+#import <UIKit/UIKit.h>
+#define UI_VIEW_CLASS UIView
+#endif
 #import <QuartzCore/CAMetalLayer.h>
 
 //
-@interface metal_view : NSView <NSCoding>
+@interface metal_view : UI_VIEW_CLASS <NSCoding>
 @property (nonatomic) CAMetalLayer* metal_layer;
 @end
 
@@ -47,12 +53,16 @@
 	self = [super initWithFrame:frame];
 	//log_debug("frame: %f %f, %f %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
 	if(self) {
+#if !defined(FLOOR_IOS)
 		[self setWantsLayer:true];
+#endif
 		_metal_layer = (CAMetalLayer*)self.layer;
 		_metal_layer.device = device;
 		_metal_layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-		//_metal_layer.opaque = true;
-		//_metal_layer.backgroundColor = nil;
+#if defined(FLOOR_IOS)
+		_metal_layer.opaque = true;
+		_metal_layer.backgroundColor = nil;
+#endif
 		_metal_layer.framebufferOnly = true; // note: must be false if used for compute processing
 		log_debug("render device: %s", [[device name] UTF8String]);
 	}
@@ -72,10 +82,17 @@ struct metal_shader_object {
 
 static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 
-static NSView* window_view { nullptr };
+static UI_VIEW_CLASS* window_view { nullptr };
 static metal_view* view { nullptr };
 static CAMetalLayer* layer { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
+
+struct uniforms_t {
+	matrix4f mvpm;
+	matrix4f mvm;
+	float2 mass_minmax;
+};
+static id <MTLBuffer> uniforms_buffer;
 
 static array<id <MTLTexture>, 2> body_textures {};
 static void create_textures(id <MTLDevice> device) {
@@ -108,9 +125,11 @@ static void create_textures(id <MTLDevice> device) {
 																							width:texture_size.x
 																						   height:texture_size.y
 																						mipmapped:true]; // breaks if false?
+#if !defined(FLOOR_IOS)
 		//tex_desc.resourceOptions = MTLResourceStorageModePrivate; // TODO: how to upload to gpu if enabled?
 		//tex_desc.storageMode = MTLStorageModePrivate;
 		tex_desc.textureUsage = MTLTextureUsageShaderRead;
+#endif
 		body_textures[i] = [device newTextureWithDescriptor:tex_desc];
 		[body_textures[i] replaceRegion:MTLRegionMake2D(0, 0, texture_size.x, texture_size.y)
 							mipmapLevel:0
@@ -123,6 +142,9 @@ bool metal_renderer::init(shared_ptr<compute_device> dev) {
 	auto device = ((metal_device*)dev.get())->device;
 	create_textures(device);
 	if(!compile_shaders(dev)) return false;
+	
+	//
+	uniforms_buffer = [device newBufferWithLength:sizeof(uniforms_t) options:MTLResourceCPUCacheModeWriteCombined];
 	
 	//
 	MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -162,8 +184,19 @@ bool metal_renderer::init(shared_ptr<compute_device> dev) {
 		return false;
 	}
 	CGRect frame { { 0.0f, 0.0f }, { float(floor::get_width()), float(floor::get_height()) } };
+#if !defined(FLOOR_IOS)
+	frame.size.width /= [[info.info.cocoa.window screen] backingScaleFactor];
+	frame.size.height /= [[info.info.cocoa.window screen] backingScaleFactor];
+#else
+	frame.size.width /= [[info.info.uikit.window screen] scale];
+	frame.size.height /= [[info.info.uikit.window screen] scale];
+#endif
 	view = [[metal_view alloc] initWithFrame:frame withDevice:device];
+#if !defined(FLOOR_IOS)
 	[[info.info.cocoa.window contentView] addSubview:view];
+#else
+	[info.info.uikit.window addSubview:view];
+#endif
 	
 	//
 	render_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -190,15 +223,12 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		const matrix4f mproj { matrix4f().perspective(90.0f, float(floor::get_width()) / float(floor::get_height()),
 													  0.25f, nbody_state.max_distance) };
 		const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
-		struct {
-			const matrix4f mvpm;
-			const matrix4f mvm;
-			const float2 mass_minmax;
-		} uniforms {
+		const uniforms_t uniforms {
 			.mvpm = mview * mproj,
 			.mvm = mview,
 			.mass_minmax = nbody_state.mass_minmax
 		};
+		memcpy([uniforms_buffer contents], &uniforms, sizeof(uniforms_t));
 		
 		//
 		auto mtl_queue = ((metal_queue*)dev_queue.get())->get_queue();
@@ -215,7 +245,7 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		[renderEncoder pushDebugGroup:@"bodies"];
 		[renderEncoder setRenderPipelineState:pipeline_state];
 		[renderEncoder setVertexBuffer:((metal_buffer*)position_buffer.get())->get_metal_buffer() offset:0 atIndex:0];
-		[renderEncoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:1];
+		[renderEncoder setVertexBuffer:uniforms_buffer offset:0 atIndex:1];
 		[renderEncoder setFragmentTexture:body_textures[0] atIndex:0];
 		
 		//
@@ -311,7 +341,9 @@ bool metal_renderer::compile_shaders(shared_ptr<compute_device> dev) {
 	id <MTLDevice> mtl_dev = ((metal_device*)dev.get())->device;
 	
 	MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
+#if !defined(FLOOR_IOS)
 	[options setLanguageVersion:MTLLanguageVersion1_1];
+#endif
 	
 	NSError* err = nullptr;
 	metal_shd_lib = [mtl_dev newLibraryWithSource:[NSString stringWithUTF8String:metal_test_shader]

@@ -116,7 +116,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8 --no-fma)" << endl;
 		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4 --no-fma)" << endl;
-		cout << "\tiPad A7:      ~18 gflops (--count 8192 --tile-size 512)" << endl;
+		cout << "\tiPad A7:      ~20 gflops (--count 16384 --tile-size 512)" << endl;
 		cout << endl;
 	}},
 	{ "--count", [](nbody_option_context&, char**& arg_ptr) {
@@ -471,8 +471,8 @@ int main(int, char* argv[]) {
 	floor::init(argv[0], (const char*)"data/");
 	nbody_state.no_opengl = true;
 	nbody_state.no_metal = false;
-	nbody_state.time_step = 0.02f;
-	nbody_state.body_count = 4096;
+	nbody_state.time_step = 0.005f;
+	nbody_state.body_count = 8192;
 #endif
 	floor::set_caption("nbody");
 	

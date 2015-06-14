@@ -346,7 +346,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src nbody.cpp --target air -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\nmetal-as -o=nbody.air air_processed.ll\nmetal-ar r nbody.a nbody.air\nmetallib -o ../../data/nbody.metallib nbody.a\n";
+			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios8 --out air_processed.ll --no-double -vv -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=nbody.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -383,6 +383,7 @@
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -411,8 +412,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/local/include/floor/bin,
-					/usr/local/include/floor/ios/deps/lib,
+					/usr/include/floor/bin,
+					/usr/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -428,11 +429,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/usr/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
@@ -462,6 +462,7 @@
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -486,8 +487,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/local/include/floor/bin,
-					/usr/local/include/floor/ios/deps/lib,
+					/usr/include/floor/bin,
+					/usr/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -503,11 +504,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/usr/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
