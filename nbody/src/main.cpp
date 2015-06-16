@@ -532,7 +532,8 @@ int main(int, char* argv[]) {
 													" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 													" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
 													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" +
-													(nbody_state.no_fma ? " -DNBODY_NO_FMA" : ""));
+													(nbody_state.no_fma ? " -DNBODY_NO_FMA" : "") /*+
+													" -gline-tables-only"*/);
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {

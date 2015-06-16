@@ -32,6 +32,18 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 //
+/*@protocol MTLFunctionSPI <MTLFunction>
+@property(readonly) long long lineNumber;
+@property(copy) NSString *filePath;
+@end
+
+@interface _MTLLibrary : NSObject <MTLLibrary> {
+	NSMutableDictionary *_functionDictionary;
+}
+@property(readonly, retain, nonatomic) NSMutableDictionary *functionDictionary;
+@end*/
+
+//
 @interface metal_view : UI_VIEW_CLASS <NSCoding>
 @property (nonatomic) CAMetalLayer* metal_layer;
 @end
@@ -179,6 +191,7 @@ bool metal_renderer::init(shared_ptr<compute_device> dev) {
 	
 	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
 	SDL_SysWMinfo info;
+	SDL_VERSION(&info.version);
 	if(!SDL_GetWindowWMInfo(floor::get_window(), &info)) {
 		log_error("failed to retrieve window info: %s", SDL_GetError());
 		return false;
@@ -262,97 +275,25 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 }
 
 bool metal_renderer::compile_shaders(shared_ptr<compute_device> dev) {
-	static const char metal_test_shader[] { u8R"RAWSTR(
-#include <metal_stdlib>
-#include <simd/simd.h>
-		using namespace metal;
-		
-		constant float4 gradients[4] {
-			float4(1.0, 0.2, 0.0, 1.0),
-			float4(1.0, 1.0, 0.0, 1.0),
-			float4(1.0, 1.0, 1.0, 1.0),
-			float4(0.5, 1.0, 1.0, 1.0)
-		};
-		
-		struct uniforms_t {
-			matrix_float4x4 mvpm;
-			matrix_float4x4 mvm;
-			float2 mass_minmax;
-		};
-		
-		struct vertex_t {
-			packed_float4 position;
-		};
-		
-		struct ShdInOut {
-			float4 position [[position]];
-			float size [[point_size]];
-			half4 color;
-		};
-		
-		static half4 compute_gradient(thread const float& interpolator) {
-			float4 color = float4(0.0);
-			// built-in step function can not be trusted -> branch instead ...
-			if(interpolator < 0.33333) {
-				float interp = smoothstep(0.0, 0.33333, interpolator);
-				color += mix(gradients[0], gradients[1], interp);
-			}
-			else if(interpolator < 0.66666) {
-				float interp = smoothstep(0.33333, 0.66666, interpolator);
-				color += mix(gradients[1], gradients[2], interp);
-			}
-			else if(interpolator <= 1.0) {
-				float interp = smoothstep(0.66666, 1.0, interpolator);
-				color += mix(gradients[2], gradients[3], interp);
-			}
-			return half4(color);
-		}
-		
-		vertex ShdInOut lighting_vertex(device const vertex_t* vertex_array [[buffer(0)]],
-										constant uniforms_t& uniforms [[buffer(1)]],
-										unsigned int vid [[vertex_id]]) {
-			ShdInOut out;
-			
-			const float4 in_vertex = vertex_array[vid].position;
-			float size = 128.0 / (1.0 - float3(uniforms.mvm * float4(in_vertex.xyz, 1.0)).z);
-			float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
-			mass_scale *= mass_scale; // ^2
-			//mass_scale *= mass_scale; // ^4
-			//mass_scale *= mass_scale; // ^8
-			size *= mass_scale;
-			out.size = clamp(size, 2.0, 255.0);
-			out.position = uniforms.mvpm * float4(in_vertex.xyz, 1.0);
-			out.color = compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x));
-			return out;
-		}
-		
-		fragment half4 lighting_fragment(ShdInOut in [[stage_in]],
-										 texture2d<half> tex [[texture(0)]],
-										 float2 coord [[point_coord]]) {
-			constexpr sampler smplr {
-				coord::normalized,
-				filter::linear,
-				address::clamp_to_edge,
-			};
-			return tex.sample(smplr, coord) * in.color;
-		}
-	)RAWSTR"};
-	
 	id <MTLDevice> mtl_dev = ((metal_device*)dev.get())->device;
-	
-	MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-#if !defined(FLOOR_IOS)
-	[options setLanguageVersion:MTLLanguageVersion1_1];
+#if defined(FLOOR_IOS)
+	metal_shd_lib = [mtl_dev newLibraryWithFile:@"default.metallib" error:nil];
+#else
+	metal_shd_lib = [mtl_dev newDefaultLibrary];
 #endif
-	
-	NSError* err = nullptr;
-	metal_shd_lib = [mtl_dev newLibraryWithSource:[NSString stringWithUTF8String:metal_test_shader]
-										  options:options
-											error:&err];
 	if(!metal_shd_lib) {
-		log_error("failed to create shader lib: %s", (err != nullptr ? [[err localizedDescription] UTF8String] : "unknown error"));
+		log_error("failed to load default shader lib!");
 		return false;
 	}
+	
+	/*auto path = [NSString stringWithUTF8String:"/Users/flo/sync/floor_examples/nbody/src/metal_shaders.metal"];
+	_MTLLibrary* lib = ([metal_shd_lib respondsToSelector:@selector(baseObject)] ?
+						[metal_shd_lib performSelector:@selector(baseObject)] :
+						metal_shd_lib);
+	for(id key in [lib functionDictionary]) {
+		id <MTLFunctionSPI> func = [[lib functionDictionary] objectForKey:key];
+		func.filePath = path;
+	}*/
 	
 	auto shd = make_shared<metal_shader_object>();
 	shd->vertex_program = [metal_shd_lib newFunctionWithName:@"lighting_vertex"];

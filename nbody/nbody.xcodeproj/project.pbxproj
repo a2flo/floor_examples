@@ -27,10 +27,12 @@
 		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
+		5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; settings = {COMPILER_FLAGS = "-gline-tables-only"; }; };
 		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
+		5CD1D7D31B2DE275005C43FB /* metal_shaders.metal in Resources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; };
 		5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 /* End PBXBuildFile section */
@@ -88,6 +90,7 @@
 		5C8FD0941AD3366800215230 /* nbodyd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
+		5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = metal_shaders.metal; sourceTree = "<group>"; };
 		5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = nbody_state.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -199,6 +202,7 @@
 				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
 				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
 				5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */,
+				5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -315,6 +319,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CD1D7D31B2DE275005C43FB /* metal_shaders.metal in Resources */,
 				5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -355,6 +360,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C0071C21A91F2BD00F4711D /* nbody.cpp in Sources */,
