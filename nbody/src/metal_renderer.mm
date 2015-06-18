@@ -22,14 +22,7 @@
 #include <floor/compute/metal/metal_device.hpp>
 #include <floor/compute/metal/metal_buffer.hpp>
 #include <floor/compute/metal/metal_queue.hpp>
-#if !defined(FLOOR_IOS)
-#import <AppKit/AppKit.h>
-#define UI_VIEW_CLASS NSView
-#else
-#import <UIKit/UIKit.h>
-#define UI_VIEW_CLASS UIView
-#endif
-#import <QuartzCore/CAMetalLayer.h>
+#include <floor/darwin/darwin_helper.hpp>
 
 //
 /*@protocol MTLFunctionSPI <MTLFunction>
@@ -43,45 +36,6 @@
 @property(readonly, retain, nonatomic) NSMutableDictionary *functionDictionary;
 @end*/
 
-//
-@interface metal_view : UI_VIEW_CLASS <NSCoding>
-@property (nonatomic) CAMetalLayer* metal_layer;
-@end
-
-@implementation metal_view
-@synthesize metal_layer = _metal_layer;
-
-// override to signal this is a CAMetalLayer
-+ (Class)layerClass {
-	return [CAMetalLayer class];
-}
-
-// override to signal this is a CAMetalLayer
-- (CALayer*)makeBackingLayer {
-	return [CAMetalLayer layer];
-}
-
-- (instancetype)initWithFrame:(CGRect)frame withDevice:(id <MTLDevice>)device {
-	self = [super initWithFrame:frame];
-	//log_debug("frame: %f %f, %f %f", frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
-	if(self) {
-#if !defined(FLOOR_IOS)
-		[self setWantsLayer:true];
-#endif
-		_metal_layer = (CAMetalLayer*)self.layer;
-		_metal_layer.device = device;
-		_metal_layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-#if defined(FLOOR_IOS)
-		_metal_layer.opaque = true;
-		_metal_layer.backgroundColor = nil;
-#endif
-		_metal_layer.framebufferOnly = true; // note: must be false if used for compute processing
-		log_debug("render device: %s", [[device name] UTF8String]);
-	}
-	return self;
-}
-@end
-
 // renderer
 static id <MTLRenderPipelineState> pipeline_state;
 static id <MTLDepthStencilState> depth_state;
@@ -94,9 +48,7 @@ struct metal_shader_object {
 
 static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 
-static UI_VIEW_CLASS* window_view { nullptr };
 static metal_view* view { nullptr };
-static CAMetalLayer* layer { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
 struct uniforms_t {
@@ -190,26 +142,11 @@ bool metal_renderer::init(shared_ptr<compute_device> dev) {
 	depth_state = [device newDepthStencilStateWithDescriptor:depthStateDesc];
 	
 	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	SDL_SysWMinfo info;
-	SDL_VERSION(&info.version);
-	if(!SDL_GetWindowWMInfo(floor::get_window(), &info)) {
-		log_error("failed to retrieve window info: %s", SDL_GetError());
+	view = darwin_helper::create_metal_view(floor::get_window(), device);
+	if(view == nullptr) {
+		log_error("failed to create metal view!");
 		return false;
 	}
-	CGRect frame { { 0.0f, 0.0f }, { float(floor::get_width()), float(floor::get_height()) } };
-#if !defined(FLOOR_IOS)
-	frame.size.width /= [[info.info.cocoa.window screen] backingScaleFactor];
-	frame.size.height /= [[info.info.cocoa.window screen] backingScaleFactor];
-#else
-	frame.size.width /= [[info.info.uikit.window screen] scale];
-	frame.size.height /= [[info.info.uikit.window screen] scale];
-#endif
-	view = [[metal_view alloc] initWithFrame:frame withDevice:device];
-#if !defined(FLOOR_IOS)
-	[[info.info.cocoa.window contentView] addSubview:view];
-#else
-	[info.info.uikit.window addSubview:view];
-#endif
 	
 	//
 	render_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -225,7 +162,7 @@ bool metal_renderer::init(shared_ptr<compute_device> dev) {
 void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 							shared_ptr<compute_buffer> position_buffer) {
 	@autoreleasepool {
-		auto drawable = [view.metal_layer nextDrawable];
+		auto drawable = darwin_helper::get_metal_next_drawable(view);
 		if(drawable == nil) {
 			log_error("drawable is nil!");
 			return;

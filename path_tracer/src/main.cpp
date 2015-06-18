@@ -1,6 +1,5 @@
 
 #include <floor/floor/floor.hpp>
-#include <floor/ios/ios_helper.hpp>
 
 #if !defined(_MSC_VER) // too broken right now
 #include "path_tracer.hpp"

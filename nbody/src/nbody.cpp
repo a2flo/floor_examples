@@ -33,7 +33,7 @@
 static void compute_body_interaction(const float4& shared_body,
 									 const float4& this_body,
 									 float3& acceleration) {
-#if defined(NBODY_NO_FMA) // (potentially!) non-fma version
+#if !defined(FLOOR_COMPUTE_INFO_HAS_FMA_1) // (potentially!) non-fma version
 	// 3 flops
 	const float3 r { shared_body.xyz - this_body.xyz };
 	// 5 flops + 1 flop = 6 flops

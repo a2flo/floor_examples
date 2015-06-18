@@ -17,7 +17,6 @@
  */
 
 #include <floor/floor/floor.hpp>
-#include <floor/ios/ios_helper.hpp>
 #include <floor/core/option_handler.hpp>
 #include "nbody.hpp"
 #include "gl_renderer.hpp"
@@ -82,7 +81,6 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 #if defined(__APPLE__)
 		cout << "\t--no-metal: disables metal rendering (uses s/w rendering instead if --no-opengl as well)" << endl;
 #endif
-		cout << "\t--no-fma: disables use of explicit fma instructions or s/w emulation thereof (use this with non-fma cpus)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		for(const auto& desc : nbody_setup_desc) {
@@ -110,12 +108,12 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		// performance stats
 		cout << "expected performace (with --benchmark):" << endl;
 		cout << "\tGTX 970:      ~2600 gflops (--count 131072 --tile-size 256)" << endl;
-		cout << "\tGTX 780:      ~2100 gflops (--count 131072 --tile-size 512)" << endl;
+		cout << "\tGTX 780:      ~2200 gflops (--count 98304 --tile-size 512)" << endl;
 		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8 --no-fma)" << endl;
-		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4 --no-fma)" << endl;
+		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4)" << endl;
 		cout << "\tiPad A7:      ~20 gflops (--count 16384 --tile-size 512)" << endl;
 		cout << endl;
 	}},
@@ -194,10 +192,6 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 	{ "--no-metal", [](nbody_option_context&, char**&) {
 		nbody_state.no_metal = true;
 		cout << "metal disabled" << endl;
-	}},
-	{ "--no-fma", [](nbody_option_context&, char**&) {
-		nbody_state.no_fma = true;
-		cout << "fma disabled" << endl;
 	}},
 	{ "--benchmark", [](nbody_option_context&, char**&) {
 		nbody_state.no_opengl = true; // also disable opengl
@@ -474,6 +468,11 @@ int main(int, char* argv[]) {
 	nbody_state.time_step = 0.005f;
 	nbody_state.body_count = 8192;
 #endif
+	// disable opengl renderer when using metal
+	if(!nbody_state.no_opengl) {
+		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	}
+	
 	floor::set_caption("nbody");
 	
 	// opengl and floor context handling
@@ -487,16 +486,6 @@ int main(int, char* argv[]) {
 												   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
 												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
 												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
-	
-#if !defined(FLOOR_IOS)
-	if(!nbody_state.no_opengl) {
-		// setup renderer
-		if(!gl_renderer::init()) {
-			log_error("error during opengl initialization!");
-			return -1;
-		}
-	}
-#endif
 	
 	// get the compute context that has been automatically created (opencl/cuda/metal/host)
 	auto compute_ctx = floor::get_compute_context();
@@ -515,6 +504,16 @@ int main(int, char* argv[]) {
 		log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
 	}
 	
+	// init renderers
+#if !defined(FLOOR_IOS)
+	if(!nbody_state.no_opengl) {
+		// setup renderer
+		if(!gl_renderer::init()) {
+			log_error("error during opengl initialization!");
+			return -1;
+		}
+	}
+#endif
 #if defined(__APPLE__)
 	if(!nbody_state.no_metal && nbody_state.no_opengl) {
 		// setup renderer
@@ -531,8 +530,7 @@ int main(int, char* argv[]) {
 													"-I" + floor::data_path("../nbody/src") +
 													" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 													" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" +
-													(nbody_state.no_fma ? " -DNBODY_NO_FMA" : "") /*+
+													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" /*+
 													" -gline-tables-only"*/);
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
