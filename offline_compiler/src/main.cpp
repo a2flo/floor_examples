@@ -65,8 +65,10 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
 				 "\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:        [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
-				 "\t    Metal/AIR:  [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
+				 "\t    SPIR:          [gpu|cpu], defaults to gpu"
+				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu"
+				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
@@ -202,8 +204,18 @@ int main(int, char* argv[]) {
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
-				log_debug("compiling to SPIR ...");
 				device = make_shared<opencl_device>();
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu") {
+					device->type = compute_device::TYPE::GPU;
+				}
+				else if(option_ctx.sub_target == "cpu") {
+					device->type = compute_device::TYPE::CPU;
+				}
+				else {
+					log_error("invalid SPIR sub-target: %s", option_ctx.sub_target);
+					return -4;
+				}
+				log_debug("compiling to SPIR (%s) ...", (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 				break;
 			case llvm_compute::TARGET::PTX:
 				device = make_shared<cuda_device>();
@@ -253,8 +265,18 @@ int main(int, char* argv[]) {
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
 			case llvm_compute::TARGET::APPLECL:
-				log_debug("compiling to APPLECL ...");
 				device = make_shared<opencl_device>();
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu") {
+					device->type = compute_device::TYPE::GPU;
+				}
+				else if(option_ctx.sub_target == "cpu") {
+					device->type = compute_device::TYPE::CPU;
+				}
+				else {
+					log_error("invalid APPLECL sub-target: %s", option_ctx.sub_target);
+					return -5;
+				}
+				log_debug("compiling to APPLECL (%s) ...", (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 				break;
 		}
 		device->bitness = option_ctx.bitness;
