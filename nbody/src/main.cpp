@@ -472,6 +472,10 @@ int main(int, char* argv[]) {
 	if(!nbody_state.no_opengl) {
 		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
 	}
+#if defined(FLOOR_NO_METAL)
+	// disable metal renderer if it's not available
+	nbody_state.no_metal = true;
+#endif
 	
 	floor::set_caption("nbody");
 	
