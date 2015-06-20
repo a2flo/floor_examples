@@ -17,6 +17,8 @@
  */
 
 #include "metal_renderer.hpp"
+
+#if !defined(FLOOR_NO_METAL)
 #include "nbody_state.hpp"
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
@@ -238,3 +240,5 @@ bool metal_renderer::compile_shaders(shared_ptr<compute_device> dev) {
 	shader_objects.emplace("SPRITE", shd);
 	return true;
 }
+
+#endif
