@@ -91,9 +91,9 @@ void camera::run() {
 				const float2 center_point(float2(floor::get_width(), floor::get_height()) * 0.5f);
 				SDL_WarpMouseInWindow(floor::get_window(), (int)roundf(center_point.x), (int)roundf(center_point.y));
 			}
-		}
 #endif
 ////////////////////////////////
+		}
 		
 		if(rotation_wrapping) {
 			// wrap around 360°
