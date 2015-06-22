@@ -203,23 +203,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		5CD2174919E924A20049D6AE /* img_build.sh */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-v";
-			buildConfigurationList = 5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "img_build.sh" */;
-			buildPhases = (
-			);
-			buildToolPath = ./build.sh;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = img_build.sh;
-			passBuildSettingsInEnvironment = 0;
-			productName = img;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		5C0071901A91EF7E00F4711D /* img_ios */ = {
 			isa = PBXNativeTarget;
@@ -274,9 +257,6 @@
 					5C8FD0931AD3366800215230 = {
 						CreatedOnToolsVersion = 6.3;
 					};
-					5CD2174919E924A20049D6AE = {
-						CreatedOnToolsVersion = 6.1;
-					};
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "img" */;
@@ -294,7 +274,6 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* img_osx */,
 				5C0071901A91EF7E00F4711D /* img_ios */,
-				5CD2174919E924A20049D6AE /* img_build.sh */,
 			);
 		};
 /* End PBXProject section */
@@ -567,17 +546,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -601,6 +576,8 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
 				);
 				PRODUCT_NAME = imgd;
 				VALID_ARCHS = x86_64;
@@ -644,17 +621,13 @@
 					/usr/include/floor/bin,
 				);
 				OTHER_CFLAGS = (
-					"-mllvm",
-					"-force-vector-width=4",
-					"-mllvm",
-					"-force-vector-unroll=4",
 					"-fparse-all-comments",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/include",
 					"-isystem",
 					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
 					"-isystem",
-					/usr/include/libxml2,
+					"$(SDK_DIR)/usr/include/libxml2",
 					"-isystem",
 					/opt/X11/include,
 					"-isystem",
@@ -678,6 +651,8 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
 				);
 				PRODUCT_NAME = img;
 				VALID_ARCHS = x86_64;
@@ -751,9 +726,10 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
 			};
 			name = Debug;
@@ -819,31 +795,11 @@
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
-					"-Wno-float-equal",
 					"-Wno-old-style-cast",
 					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
 				);
-			};
-			name = Release;
-		};
-		5CD2174D19E924A20049D6AE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		5CD2174E19E924A20049D6AE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -873,15 +829,6 @@
 			buildConfigurations = (
 				5CD2174A19E924A20049D6AE /* Debug */,
 				5CD2174B19E924A20049D6AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "img_build.sh" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5CD2174D19E924A20049D6AE /* Debug */,
-				5CD2174E19E924A20049D6AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

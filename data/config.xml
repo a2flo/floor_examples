@@ -39,8 +39,9 @@
 	 keep_temp: keep temporary files that are generated during code compilation
 	 keep_binaries: save generated/compiled code to data/cache/
 	 use_cache: attempts to use generated/compiled code from data/cache/
+	 log_commands: logs used compilation/toolchain commands
 	-->
-	<compute platform="opencl" gl_sharing="false" debug="false" profiling="false" log_binaries="false" keep_temp="false" keep_binaries="true" use_cache="true" />
+	<compute platform="opencl" gl_sharing="false" debug="false" profiling="false" log_binaries="false" keep_temp="false" keep_binaries="true" use_cache="true" log_commands="false" />
 	
 	<!-- opencl toolchain settings
 	 platform: the opencl platform index

@@ -604,6 +604,8 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
 				);
 				PRODUCT_NAME = warpd;
 				VALID_ARCHS = x86_64;
@@ -684,6 +686,8 @@
 					OpenCL,
 					"-framework",
 					OpenGL,
+					"-framework",
+					Metal,
 				);
 				PRODUCT_NAME = warp;
 				VALID_ARCHS = x86_64;

@@ -46,6 +46,7 @@
 	keep_temp CDATA #REQUIRED
 	keep_binaries CDATA #REQUIRED
 	use_cache CDATA #REQUIRED
+	log_commands CDATA #REQUIRED
 >
 <!ELEMENT opencl (#PCDATA)*>
 <!ATTLIST opencl

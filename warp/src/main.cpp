@@ -17,7 +17,6 @@
  */
 
 #include <floor/floor/floor.hpp>
-#include <floor/ios/ios_helper.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/gl_shader.hpp>
 #include "gl_renderer.hpp"
