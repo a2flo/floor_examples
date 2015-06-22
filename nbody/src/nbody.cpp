@@ -107,7 +107,6 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	velocities[idx] = velocity;
 }
 
-#if 1
 kernel void nbody_raster(buffer<const float4> positions,
 						 buffer<float3> img,
 						 buffer<float3> img_old,
@@ -125,22 +124,22 @@ kernel void nbody_raster(buffer<const float4> positions,
 		const float3 mview_vec = position * *mview;
 		float3 proj_vec = mview_vec * mproj;
 		
-		// check if point is behind cam
-		if(mview_vec.z >= 0.0f) {
-			proj_vec.x = 0.0f;
-			proj_vec.y = 0.0f;
+		// check if point is not behind cam
+		if(mview_vec.z < 0.0f) {
+			proj_vec *= -1.0f / mview_vec.z;
+			
+			// and finally: compute window position
+			int2 pixel {
+				(int32_t)(float(img_size->x) * (proj_vec.x * 0.5f + 0.5f)),
+				(int32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
+			};
+			
+			if(pixel.x >= 0 && pixel.x < img_size->x &&
+			   pixel.y >= 0 && pixel.y < img_size->y) {
+				img[pixel.y * img_size->x + pixel.x] += 0.25f;
+			}
 		}
-		else proj_vec *= -1.0f / mview_vec.z;
-		
-		// and finally: compute window position
-		uint2 pixel {
-			(uint32_t)(float(img_size->x) * (proj_vec.x * 0.5f + 0.5f)),
-			(uint32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
-		};
-		pixel.clamp(0, img_size->x - 1);
-		img[pixel.y * img_size->x + pixel.x] = 0.25f + img[pixel.y * img_size->x + pixel.x];
 	}
 }
-#endif
 
 #endif

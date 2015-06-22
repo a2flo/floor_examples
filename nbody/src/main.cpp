@@ -109,6 +109,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "expected performace (with --benchmark):" << endl;
 		cout << "\tGTX 970:      ~2600 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\tGTX 780:      ~2200 gflops (--count 98304 --tile-size 512)" << endl;
+		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
 		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
