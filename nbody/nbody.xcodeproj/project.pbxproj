@@ -209,23 +209,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		5CD2174919E924A20049D6AE /* nbody_build.sh */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-v";
-			buildConfigurationList = 5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "nbody_build.sh" */;
-			buildPhases = (
-			);
-			buildToolPath = ./build.sh;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = nbody_build.sh;
-			passBuildSettingsInEnvironment = 0;
-			productName = nbody;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		5C0071901A91EF7E00F4711D /* nbody_ios */ = {
 			isa = PBXNativeTarget;
@@ -280,9 +263,6 @@
 					5C8FD0931AD3366800215230 = {
 						CreatedOnToolsVersion = 6.3;
 					};
-					5CD2174919E924A20049D6AE = {
-						CreatedOnToolsVersion = 6.1;
-					};
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "nbody" */;
@@ -300,7 +280,6 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* nbody_osx */,
 				5C0071901A91EF7E00F4711D /* nbody_ios */,
-				5CD2174919E924A20049D6AE /* nbody_build.sh */,
 			);
 		};
 /* End PBXProject section */
@@ -415,7 +394,7 @@
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/usr/include/floor/bin,
@@ -490,7 +469,7 @@
 					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/usr/include/floor/bin,
@@ -842,27 +821,6 @@
 			};
 			name = Release;
 		};
-		5CD2174D19E924A20049D6AE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		5CD2174E19E924A20049D6AE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -889,15 +847,6 @@
 			buildConfigurations = (
 				5CD2174A19E924A20049D6AE /* Debug */,
 				5CD2174B19E924A20049D6AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "nbody_build.sh" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5CD2174D19E924A20049D6AE /* Debug */,
-				5CD2174E19E924A20049D6AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
