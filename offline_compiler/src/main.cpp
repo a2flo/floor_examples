@@ -45,6 +45,8 @@ struct option_context {
 	string sub_target;
 	uint32_t bitness { 64 };
 	bool double_support { true };
+	bool basic_64_atomics { false };
+	bool extended_64_atomics { false };
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
@@ -71,6 +73,8 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
+				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
+				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
@@ -140,6 +144,12 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 	{ "--no-double", [](option_context& ctx, char**&) {
 		ctx.double_support = false;
 	}},
+	{ "--64-bit-atomics", [](option_context& ctx, char**&) {
+		ctx.basic_64_atomics = true;
+	}},
+	{ "--ext-64-bit-atomics", [](option_context& ctx, char**&) {
+		ctx.extended_64_atomics = true;
+	}},
 	{ "--test", [](option_context& ctx, char**&) {
 		ctx.test = true;
 	}},
@@ -204,6 +214,8 @@ int main(int, char* argv[]) {
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
+			case llvm_compute::TARGET::APPLECL: {
+				const char* target_name = (option_ctx.target == llvm_compute::TARGET::SPIR ? "SPIR" : "APPLECL");
 				device = make_shared<opencl_device>();
 				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu") {
 					device->type = compute_device::TYPE::GPU;
@@ -212,11 +224,13 @@ int main(int, char* argv[]) {
 					device->type = compute_device::TYPE::CPU;
 				}
 				else {
-					log_error("invalid SPIR sub-target: %s", option_ctx.sub_target);
+					log_error("invalid %s sub-target: %s", target_name, option_ctx.sub_target);
 					return -4;
 				}
-				log_debug("compiling to SPIR (%s) ...", (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
-				break;
+				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
+				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
+				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
+			} break;
 			case llvm_compute::TARGET::PTX:
 				device = make_shared<cuda_device>();
 				device->type = compute_device::TYPE::GPU;
@@ -233,6 +247,9 @@ int main(int, char* argv[]) {
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
 					}
 				}
+				device->basic_64_bit_atomics_support = true;
+				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
+														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
 			case llvm_compute::TARGET::AIR: {
@@ -264,20 +281,6 @@ int main(int, char* argv[]) {
 				}
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
-			case llvm_compute::TARGET::APPLECL:
-				device = make_shared<opencl_device>();
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu") {
-					device->type = compute_device::TYPE::GPU;
-				}
-				else if(option_ctx.sub_target == "cpu") {
-					device->type = compute_device::TYPE::CPU;
-				}
-				else {
-					log_error("invalid APPLECL sub-target: %s", option_ctx.sub_target);
-					return -5;
-				}
-				log_debug("compiling to APPLECL (%s) ...", (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
-				break;
 		}
 		device->bitness = option_ctx.bitness;
 		device->double_support = option_ctx.double_support;
