@@ -68,6 +68,9 @@ fragment half4 lighting_fragment(ShdInOut in [[stage_in]],
 	constexpr sampler smplr {
 		coord::normalized,
 		filter::linear,
+		mip_filter::linear,
+		mag_filter::linear,
+		min_filter::linear,
 		address::clamp_to_edge,
 	};
 	return tex.sample(smplr, coord) * in.color;

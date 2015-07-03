@@ -53,15 +53,12 @@ static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 static metal_view* view { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
-struct uniforms_t {
-	matrix4f mvpm;
-	matrix4f mvm;
-	float2 mass_minmax;
-};
-static id <MTLBuffer> uniforms_buffer;
-
 static array<id <MTLTexture>, 2> body_textures {};
-static void create_textures(id <MTLDevice> device) {
+static void create_textures(id <MTLDevice> device,
+							shared_ptr<compute_queue> dev_queue) {
+	id <MTLCommandBuffer> cmd_buffer = ((metal_queue*)dev_queue.get())->make_command_buffer();
+	id <MTLBlitCommandEncoder> blit_encoder = [cmd_buffer blitCommandEncoder];
+	
 	// create/generate an opengl texture and bind it
 	for(size_t i = 0; i < body_textures.size(); ++i) {
 		// create texture
@@ -90,7 +87,7 @@ static void create_textures(id <MTLDevice> device) {
 		MTLTextureDescriptor* tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
 																							width:texture_size.x
 																						   height:texture_size.y
-																						mipmapped:true]; // breaks if false?
+																						mipmapped:true];
 #if !defined(FLOOR_IOS)
 		//tex_desc.resourceOptions = MTLResourceStorageModePrivate; // TODO: how to upload to gpu if enabled?
 		//tex_desc.storageMode = MTLStorageModePrivate;
@@ -101,16 +98,19 @@ static void create_textures(id <MTLDevice> device) {
 							mipmapLevel:0
 							  withBytes:&pixel_data[0]
 							bytesPerRow:texture_size.x * 4];
+		
+		[blit_encoder generateMipmapsForTexture:body_textures[i]];
 	}
+	[blit_encoder endEncoding];
+	[cmd_buffer commit];
+	[cmd_buffer waitUntilCompleted];
 }
 
-bool metal_renderer::init(shared_ptr<compute_device> dev) {
+bool metal_renderer::init(shared_ptr<compute_device> dev,
+						  shared_ptr<compute_queue> dev_queue) {
 	auto device = ((metal_device*)dev.get())->device;
-	create_textures(device);
+	create_textures(device, dev_queue);
 	if(!compile_shaders(dev)) return false;
-	
-	//
-	uniforms_buffer = [device newBufferWithLength:sizeof(uniforms_t) options:MTLResourceCPUCacheModeWriteCombined];
 	
 	//
 	MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -175,12 +175,15 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		const matrix4f mproj { matrix4f().perspective(90.0f, float(floor::get_width()) / float(floor::get_height()),
 													  0.25f, nbody_state.max_distance) };
 		const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
-		const uniforms_t uniforms {
+		const struct {
+			matrix4f mvpm;
+			matrix4f mvm;
+			float2 mass_minmax;
+		} uniforms {
 			.mvpm = mview * mproj,
 			.mvm = mview,
 			.mass_minmax = nbody_state.mass_minmax
 		};
-		memcpy([uniforms_buffer contents], &uniforms, sizeof(uniforms_t));
 		
 		//
 		auto mtl_queue = ((metal_queue*)dev_queue.get())->get_queue();
@@ -197,7 +200,7 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		[renderEncoder pushDebugGroup:@"bodies"];
 		[renderEncoder setRenderPipelineState:pipeline_state];
 		[renderEncoder setVertexBuffer:((metal_buffer*)position_buffer.get())->get_metal_buffer() offset:0 atIndex:0];
-		[renderEncoder setVertexBuffer:uniforms_buffer offset:0 atIndex:1];
+		[renderEncoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:1];
 		[renderEncoder setFragmentTexture:body_textures[0] atIndex:0];
 		
 		//
@@ -209,7 +212,6 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		
 		[commandBuffer presentDrawable:drawable];
 		[commandBuffer commit];
-		//[commandBuffer waitUntilCompleted];
 	}
 }
 

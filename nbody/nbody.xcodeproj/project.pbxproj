@@ -28,7 +28,7 @@
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
 		5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; settings = {COMPILER_FLAGS = "-gline-tables-only"; }; };
-		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
+		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
@@ -420,6 +420,7 @@
 					/usr/include,
 				);
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-lSDL2",
 					"-lcrypto",
 					"-lssl",
@@ -495,6 +496,7 @@
 					/usr/include,
 				);
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-lSDL2",
 					"-lcrypto",
 					"-lssl",
@@ -522,6 +524,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -575,6 +578,7 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",
@@ -605,6 +609,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -634,6 +639,7 @@
 					/usr/local/lib,
 					/usr/include/floor/bin,
 				);
+				LLVM_LTO = YES;
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
 					"-isystem",
@@ -654,6 +660,7 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
+					"$(inherited)",
 					"-weak_framework",
 					CUDA,
 					"-lcrypto",
@@ -698,12 +705,14 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_FAST_MATH = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -774,6 +783,9 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_FAST_MATH = YES;
+				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;

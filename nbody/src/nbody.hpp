@@ -19,9 +19,11 @@
 #ifndef __FLOOR_NBODY_NBODY_HPP__
 #define __FLOOR_NBODY_NBODY_HPP__
 
-#include <floor/math/vector_lib.hpp>
+#include <floor/core/essentials.hpp>
 
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_COMPUTE_HOST)
+#include "floor/compute/device/common.hpp"
+#endif
 
 // prototypes
 kernel void nbody_compute(buffer<const float4> in_positions,
@@ -30,12 +32,10 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 						  param<float> delta);
 
 kernel void nbody_raster(buffer<const float4> positions,
-						 buffer<float3> img,
-						 buffer<float3> img_old,
+						 buffer<uint32_t> img,
+						 buffer<uint32_t> img_old,
 						 param<uint2> img_size,
 						 param<uint32_t> body_count,
 						 param<matrix4f> mview);
-
-#endif
 
 #endif

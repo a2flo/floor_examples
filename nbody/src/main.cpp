@@ -354,8 +354,8 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 }
 
 void init_system() {
-	auto positions = (float4*)position_buffers[0]->map(dev_queue);
-	auto velocities = (float3*)velocity_buffer->map(dev_queue);
+	auto positions = (float4*)position_buffers[0]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+	auto velocities = (float3*)velocity_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 	if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {
 		nbody_state.mass_minmax = nbody_state.mass_minmax_default;
 	}
@@ -469,13 +469,18 @@ int main(int, char* argv[]) {
 	nbody_state.time_step = 0.005f;
 	nbody_state.body_count = 8192;
 #endif
-	// disable opengl renderer when using metal
+	// disable opengl renderer when using metal or host
 	if(!nbody_state.no_opengl) {
-		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+								 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST);
 	}
 #if defined(FLOOR_NO_METAL)
 	// disable metal renderer if it's not available
 	nbody_state.no_metal = true;
+#else
+	if(!nbody_state.no_metal) {
+		nbody_state.no_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST);
+	}
 #endif
 	
 	floor::set_caption("nbody");
@@ -522,7 +527,7 @@ int main(int, char* argv[]) {
 #if defined(__APPLE__)
 	if(!nbody_state.no_metal && nbody_state.no_opengl) {
 		// setup renderer
-		if(!metal_renderer::init(fastest_device)) {
+		if(!metal_renderer::init(fastest_device, dev_queue)) {
 			log_error("error during metal initialization!");
 			return -1;
 		}
@@ -567,13 +572,9 @@ int main(int, char* argv[]) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto nbody_compute = nbody_prog->get_kernel_fuzzy("nbody_compute");
-	auto nbody_raster = nbody_prog->get_kernel_fuzzy("nbody_raster");
-	if(nbody_compute == nullptr
-#if 0
-	   || nbody_raster == nullptr
-#endif
-	) {
+	auto nbody_compute = nbody_prog->get_kernel("nbody_compute");
+	auto nbody_raster = nbody_prog->get_kernel("nbody_raster");
+	if(nbody_compute == nullptr || nbody_raster == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
@@ -599,9 +600,9 @@ int main(int, char* argv[]) {
 	size_t img_buffer_flip_flop { 0 };
 	if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 		img_buffers = {{
-			compute_ctx->create_buffer(fastest_device, sizeof(float3) * floor::get_width() * floor::get_height(),
+			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * floor::get_width() * floor::get_height(),
 									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-			compute_ctx->create_buffer(fastest_device, sizeof(float3) * floor::get_width() * floor::get_height(),
+			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * floor::get_width() * floor::get_height(),
 									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
 		}};
 		img_buffers[0]->zero(dev_queue);
@@ -694,7 +695,7 @@ int main(int, char* argv[]) {
 		// s/w rendering
 		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 			const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
-			if(!nbody_state.stop) img_buffer_flip_flop = 1 - img_buffer_flip_flop;
+			img_buffer_flip_flop = 1 - img_buffer_flip_flop;
 			dev_queue->execute(nbody_raster,
 							   // total amount of work:
 							   size1 { img_size.x * img_size.y },
@@ -709,7 +710,7 @@ int main(int, char* argv[]) {
 							   /* mview: */				mview);
 			
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float3*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
@@ -719,8 +720,7 @@ int main(int, char* argv[]) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
 				uint32_t img_idx = img_size.x * y;
 				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
-					const auto rgb = img_data[img_idx] * 255.0f;
-					*px_ptr++ = SDL_MapRGB(wnd_surface->format, uint8_t(rgb.x), uint8_t(rgb.y), uint8_t(rgb.z));
+					*px_ptr++ = SDL_MapRGB(wnd_surface->format, img_data[img_idx].x, img_data[img_idx].y, img_data[img_idx].z);
 				}
 			}
 			img_buffers[img_buffer_flip_flop]->unmap(dev_queue, img_data);

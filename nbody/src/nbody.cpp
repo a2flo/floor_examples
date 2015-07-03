@@ -30,6 +30,10 @@
 #define NBODY_DAMPING 0.999f
 #endif
 
+#if !defined(NBODY_TILE_SIZE)
+#define NBODY_TILE_SIZE 8u
+#endif
+
 static void compute_body_interaction(const float4& shared_body,
 									 const float4& this_body,
 									 float3& acceleration) {
@@ -76,7 +80,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	float3 velocity = velocities[idx];
 	float3 acceleration;
 	
-#if 1 // local/shared-memory caching + computation
+#if !defined(FLOOR_COMPUTE_HOST) // local/shared-memory caching + computation
 	const auto local_idx = (uint32_t)get_local_id(0);
 	local_buffer<float4, NBODY_TILE_SIZE> local_body_positions;
 	for(uint32_t i = 0, tile = 0, count = body_count; i < count; i += NBODY_TILE_SIZE, ++tile) {
@@ -94,6 +98,8 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 		local_barrier();
 	}
 #else // global memory only computation
+//#pragma clang loop unroll_count(NBODY_TILE_SIZE)
+#pragma clang loop unroll(full) vectorize(enable) interleave(enable)
 	for(uint32_t i = 0; i < body_count; ++i) {
 		compute_body_interaction(in_positions[i], position, acceleration);
 	}
@@ -108,13 +114,13 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 }
 
 kernel void nbody_raster(buffer<const float4> positions,
-						 buffer<float3> img,
-						 buffer<float3> img_old,
+						 buffer<uint32_t> img,
+						 buffer<uint32_t> img_old,
 						 param<uint2> img_size,
 						 param<uint32_t> body_count,
 						 param<matrix4f> mview) {
 	const auto idx = (uint32_t)get_global_id(0);
-	img_old[idx] = float3 { 0.0f };
+	img_old[idx] = 0;
 	
 	if(idx < *body_count) {
 		const matrix4f mproj { matrix4f().perspective(90.0f, float(img_size->x) / float(img_size->y), 0.25f, 2500.0f) };
@@ -129,14 +135,24 @@ kernel void nbody_raster(buffer<const float4> positions,
 			proj_vec *= -1.0f / mview_vec.z;
 			
 			// and finally: compute window position
-			int2 pixel {
+			const int2 pixel {
 				(int32_t)(float(img_size->x) * (proj_vec.x * 0.5f + 0.5f)),
 				(int32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
 			};
+			if(pixel.x < 0 || pixel.y < 0) return;
 			
-			if(pixel.x >= 0 && pixel.x < img_size->x &&
-			   pixel.y >= 0 && pixel.y < img_size->y) {
-				img[pixel.y * img_size->x + pixel.x] += 0.25f;
+			const uint2 upixel { pixel };
+			if(upixel.x < img_size->x && upixel.y < img_size->y) {
+#if 0 // just add/override previous value, this will overflow of course
+				img[upixel.y * img_size->x + upixel.x] += 0x404040;
+#else // use atomics and max out at 0xFFFFFF
+				uint32_t color, cur_color;
+				do {
+					cur_color = img[upixel.y * img_size->x + upixel.x];
+					if(cur_color == 0xFFFFFF) break; // overflow
+					color = std::min(cur_color + 0x404040u, 0xFFFFFFu);
+				} while(atomic_cmpxchg(&img[upixel.y * img_size->x + upixel.x], cur_color, color) != cur_color);
+#endif
 			}
 		}
 	}
