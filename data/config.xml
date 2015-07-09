@@ -81,6 +81,7 @@
 	
 	<!-- host toolchain settings
 	 whitelist: if non-empty: only devices with names matching any of the names in this list will be used (separate with ';', capitalization is ignored, names can be partially matched)
+	 exec_model: single (single-threaded), mt-item (multi-threaded, 1 cpu : 1 work-item), mt-group (multi-threaded, 1 cpu : 1 group)
 	 compiler: the compute clang binary name (must be in $PATH)
 	 llc: the compute llc binary name (must be in $PATH)
 	 as: the compute llvm-as binary name (must be in $PATH)
@@ -88,5 +89,5 @@
 	 libcxx: path to the libc++ include folder
 	 clang: path to the clang include folder
 	 -->
-	<host whitelist="" compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" />
+	<host whitelist="" exec_model="mt-group" compiler="compute_clang" llc="compute_llc" as="compute_as" dis="compute_dis" libcxx="/usr/include/floor/libcxx/include" clang="/usr/include/floor/libcxx/clang" />
 </config>

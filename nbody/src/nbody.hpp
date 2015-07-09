@@ -22,8 +22,10 @@
 #include <floor/core/essentials.hpp>
 
 #if defined(FLOOR_COMPUTE_HOST)
-#include "floor/compute/device/common.hpp"
+#include <floor/compute/device/common.hpp>
 #endif
+
+#include "nbody_state.hpp"
 
 // prototypes
 kernel void nbody_compute(buffer<const float4> in_positions,

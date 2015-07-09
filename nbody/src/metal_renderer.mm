@@ -91,7 +91,7 @@ static void create_textures(id <MTLDevice> device,
 #if !defined(FLOOR_IOS)
 		//tex_desc.resourceOptions = MTLResourceStorageModePrivate; // TODO: how to upload to gpu if enabled?
 		//tex_desc.storageMode = MTLStorageModePrivate;
-		tex_desc.textureUsage = MTLTextureUsageShaderRead;
+		tex_desc.usage = MTLTextureUsageShaderRead;
 #endif
 		body_textures[i] = [device newTextureWithDescriptor:tex_desc];
 		[body_textures[i] replaceRegion:MTLRegionMake2D(0, 0, texture_size.x, texture_size.y)

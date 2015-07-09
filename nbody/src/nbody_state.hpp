@@ -21,17 +21,29 @@
 
 #include <floor/math/quaternion.hpp>
 
+#if !defined(NBODY_SOFTENING)
+#define NBODY_SOFTENING 0.01f
+#endif
+
+#if !defined(NBODY_DAMPING)
+#define NBODY_DAMPING 0.999f
+#endif
+
+#if !defined(NBODY_TILE_SIZE)
+#define NBODY_TILE_SIZE 512u
+#endif
+
 struct nbody_state_struct {
 	uint32_t body_count { 32768 };
 	
 	// NOTE on iOS: this must be the same variable as used during the kernel compilation (-> build step)
-	uint32_t tile_size { 512 };
+	uint32_t tile_size { NBODY_TILE_SIZE };
 	
 	float time_step { 0.001f };
 	float2 mass_minmax_default { 0.05f, 10.0f };
 	float2 mass_minmax { mass_minmax_default };
-	float softening { 0.01f }; // 0.1 is also interesting
-	float damping { 0.999f };
+	float softening { NBODY_SOFTENING }; // 0.1 is also interesting
+	float damping { NBODY_DAMPING };
 	
 	quaternionf cam_rotation;
 	bool enable_cam_rotate { false }, enable_cam_move { false };
@@ -51,6 +63,8 @@ struct nbody_state_struct {
 	bool benchmark { false };
 	
 };
+#if !defined(FLOOR_COMPUTE)
 extern nbody_state_struct nbody_state;
+#endif
 
 #endif

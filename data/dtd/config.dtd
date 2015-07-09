@@ -84,6 +84,7 @@
 <!ELEMENT host (#PCDATA)*>
 <!ATTLIST host
 	whitelist CDATA #REQUIRED
+	exec_model CDATA #REQUIRED
 	compiler CDATA #REQUIRED
 	llc CDATA #REQUIRED
 	as CDATA #REQUIRED

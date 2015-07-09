@@ -22,18 +22,6 @@
 
 // ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
 
-#if !defined(NBODY_SOFTENING)
-#define NBODY_SOFTENING 0.001f
-#endif
-
-#if !defined(NBODY_DAMPING)
-#define NBODY_DAMPING 0.999f
-#endif
-
-#if !defined(NBODY_TILE_SIZE)
-#define NBODY_TILE_SIZE 8u
-#endif
-
 static void compute_body_interaction(const float4& shared_body,
 									 const float4& this_body,
 									 float3& acceleration) {
@@ -80,17 +68,21 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	float3 velocity = velocities[idx];
 	float3 acceleration;
 	
-#if !defined(FLOOR_COMPUTE_HOST) // local/shared-memory caching + computation
+#if 1 // local/shared-memory caching + computation
 	const auto local_idx = (uint32_t)get_local_id(0);
 	local_buffer<float4, NBODY_TILE_SIZE> local_body_positions;
 	for(uint32_t i = 0, tile = 0, count = body_count; i < count; i += NBODY_TILE_SIZE, ++tile) {
 		local_body_positions[local_idx] = in_positions[tile * NBODY_TILE_SIZE + local_idx];
 		local_barrier();
-	
-#if !defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_INFO_OS_OSX)
+
+		// TODO: should probably add some kind of "max supported/good unroll count" define
+#if (!defined(FLOOR_COMPUTE_METAL) || (defined(FLOOR_COMPUTE_INFO_OS_OSX) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL))) \
+	&& !defined(FLOOR_COMPUTE_HOST)
 #pragma clang loop unroll_count(NBODY_TILE_SIZE)
-#else
+#elif defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL)
 #pragma clang loop unroll_count(4)
+#elif defined(FLOOR_COMPUTE_HOST)
+#pragma clang loop unroll_count(8) vectorize(enable) interleave(enable)
 #endif
 		for(uint32_t j = 0; j < NBODY_TILE_SIZE; ++j) {
 			compute_body_interaction(local_body_positions[j], position, acceleration);
@@ -98,8 +90,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 		local_barrier();
 	}
 #else // global memory only computation
-//#pragma clang loop unroll_count(NBODY_TILE_SIZE)
-#pragma clang loop unroll(full) vectorize(enable) interleave(enable)
+#pragma unroll // good enough
 	for(uint32_t i = 0; i < body_count; ++i) {
 		compute_body_interaction(in_positions[i], position, acceleration);
 	}
@@ -143,13 +134,13 @@ kernel void nbody_raster(buffer<const float4> positions,
 			
 			const uint2 upixel { pixel };
 			if(upixel.x < img_size->x && upixel.y < img_size->y) {
-#if 0 // just add/override previous value, this will overflow of course
+#if 1 // just add/override previous value, this will overflow of course
 				img[upixel.y * img_size->x + upixel.x] += 0x404040;
 #else // use atomics and max out at 0xFFFFFF
 				uint32_t color, cur_color;
 				do {
 					cur_color = img[upixel.y * img_size->x + upixel.x];
-					if(cur_color == 0xFFFFFF) break; // overflow
+					if(cur_color >= 0xFFFFFF) break; // overflow
 					color = std::min(cur_color + 0x404040u, 0xFFFFFFu);
 				} while(atomic_cmpxchg(&img[upixel.y * img_size->x + upixel.x], cur_color, color) != cur_color);
 #endif

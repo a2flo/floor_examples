@@ -28,7 +28,7 @@
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
 		5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; settings = {COMPILER_FLAGS = "-gline-tables-only"; }; };
-		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
+		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };

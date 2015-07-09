@@ -18,7 +18,6 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
-#include "nbody.hpp"
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "nbody_state.hpp"
@@ -112,6 +111,7 @@ template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_h
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
 		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\tHD 4000:      ~85 gflops (--count 32768 --tile-size 512)" << endl;
 		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4)" << endl;
@@ -464,9 +464,6 @@ int main(int, char* argv[]) {
 				nbody_state.benchmark ^ true); // use opengl 3.2+ core
 #else
 	floor::init(argv[0], (const char*)"data/");
-	nbody_state.no_opengl = true;
-	nbody_state.no_metal = false;
-	nbody_state.time_step = 0.005f;
 	nbody_state.body_count = 8192;
 #endif
 	// disable opengl renderer when using metal or host
@@ -513,6 +510,12 @@ int main(int, char* argv[]) {
 		nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
 		log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
 	}
+	if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
+	   nbody_state.tile_size != NBODY_TILE_SIZE) {
+		log_error("compiled NBODY_TILE_SIZE (%u) must match run-time tile-size when using host compute! - using it now",
+				  NBODY_TILE_SIZE);
+		nbody_state.tile_size = NBODY_TILE_SIZE;
+	}
 	
 	// init renderers
 #if !defined(FLOOR_IOS)
@@ -554,7 +557,7 @@ int main(int, char* argv[]) {
 				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
-		/*{
+		{
 			"nbody_raster",
 			{
 				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
@@ -564,7 +567,7 @@ int main(int, char* argv[]) {
 				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 				llvm_compute::kernel_info::kernel_arg_info { .size = 64, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
-		},*/
+		},
 	};
 	auto nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), kernel_infos);
 #endif
