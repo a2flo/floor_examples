@@ -63,7 +63,7 @@ struct nbody_state_struct {
 	bool benchmark { false };
 	
 };
-#if !defined(FLOOR_COMPUTE)
+#if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
 extern nbody_state_struct nbody_state;
 #endif
 

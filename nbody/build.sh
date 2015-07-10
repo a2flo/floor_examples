@@ -61,6 +61,7 @@ eval $(printf "" | ${CXX} -E -dM -isystem /usr/include -isystem /usr/local/inclu
 BUILD_CONF_OPENCL=$((1 - $((${FLOOR_NO_OPENCL}))))
 BUILD_CONF_CUDA=$((1 - $((${FLOOR_NO_CUDA}))))
 BUILD_CONF_OPENAL=$((1 - $((${FLOOR_NO_OPENAL}))))
+BUILD_CONF_HOST_COMPUTE=$((1 - $((${FLOOR_NO_HOST_COMPUTE}))))
 BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
 BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_LANG=$((1 - $((${FLOOR_NO_LANG}))))
@@ -90,20 +91,20 @@ for arg in "$@"; do
 			info "build script usage:"
 			echo ""
 			echo "build mode options:"
-			echo "	<default>	builds this project in release mode"
-			echo "	opt		builds this project in release mode + additional optimizations that take longer to compile (lto)"
-			echo "	debug		builds this project in debug mode"
-			echo "	clean		cleans all build binaries and intermediate build files"
+			echo "	<default>          builds this project in release mode"
+			echo "	opt                builds this project in release mode + additional optimizations that take longer to compile (lto)"
+			echo "	debug              builds this project in debug mode"
+			echo "	clean              cleans all build binaries and intermediate build files"
 			echo ""
 			echo "build configuration:"
-			#echo "	libstdc++	use the libstdc++ library instead of libc++ (unsupported)"
-			echo "	x32		build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
-			echo "	x64		build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
+			#echo "	libstdc++          use the libstdc++ library instead of libc++ (unsupported)"
+			echo "	x32                build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
+			echo "	x64                build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
 			echo ""
 			echo "misc flags:"
-			echo "	-v		verbose output (prints all executed compiler and linker commands, and some other information)"
-			echo "	-vv		very verbose output (same as -v + runs all compiler and linker commands with -v)"
-			echo "	-j#		explicitly use # amount of build jobs (instead of automatically using #logical-cpus jobs)"
+			echo "	-v                 verbose output (prints all executed compiler and linker commands, and some other information)"
+			echo "	-vv                very verbose output (same as -v + runs all compiler and linker commands with -v)"
+			echo "	-j#                explicitly use # amount of build jobs (instead of automatically using #logical-cpus jobs)"
 			echo ""
 			echo ""
 			echo "example:"
@@ -332,7 +333,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} OpenCL"
 	fi
 	if [ ${BUILD_CONF_CUDA} -gt 0 ]; then
-		UNCHECKED_LIBS="${UNCHECKED_LIBS} cuda cudart"
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} cuda"
 	fi
 
 	# add os specific libs
@@ -592,6 +593,7 @@ WARNINGS="${WARNINGS} -Wno-system-headers -Wno-global-constructors -Wno-padded"
 WARNINGS="${WARNINGS} -Wno-packed -Wno-switch-enum -Wno-exit-time-destructors"
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option -Wno-nested-anon-types"
 WARNINGS="${WARNINGS} -Wno-old-style-cast -Wno-date-time -Wno-reserved-id-macro"
+WARNINGS="${WARNINGS} -Wno-documentation-unknown-command"
 if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
 	# ignore warnings about required alignment increases on 32-bit platforms (won't and can't fix)
 	WARNINGS="${WARNINGS} -Wno-cast-align"

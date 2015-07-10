@@ -67,9 +67,9 @@ static bool compile_program() {
 		log_error("program compilation failed");
 		return false;
 	}
-	auto new_warp_kernel = new_warp_prog->get_kernel_fuzzy("warp_scatter_simple");
-	auto new_clear_kernel = new_warp_prog->get_kernel_fuzzy("img_clear");
-	auto new_fixup_kernel = new_warp_prog->get_kernel_fuzzy("single_px_fixup");
+	auto new_warp_kernel = new_warp_prog->get_kernel("warp_scatter_simple");
+	auto new_clear_kernel = new_warp_prog->get_kernel("img_clear");
+	auto new_fixup_kernel = new_warp_prog->get_kernel("single_px_fixup");
 	if(new_warp_kernel == nullptr || new_clear_kernel == nullptr || new_fixup_kernel == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return false;

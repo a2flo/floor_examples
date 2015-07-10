@@ -333,10 +333,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -362,11 +362,11 @@
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/local/include/floor/bin,
-					/usr/local/include/floor/ios/deps/lib,
+					/usr/include/floor/bin,
+					/usr/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -382,11 +382,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/usr/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
@@ -404,7 +403,7 @@
 				PRODUCT_NAME = path_tracer;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7 armv7s x86_64";
+				VALID_ARCHS = "arm64 armv7 armv7s";
 			};
 			name = Debug;
 		};
@@ -413,10 +412,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -438,11 +437,11 @@
 					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/local/include/floor/bin,
-					/usr/local/include/floor/ios/deps/lib,
+					/usr/include/floor/bin,
+					/usr/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -458,11 +457,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/usr/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
@@ -481,17 +479,17 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7 armv7s x86_64";
+				VALID_ARCHS = "arm64 armv7 armv7s";
 			};
 			name = Release;
 		};
 		5C6F6ED81A5824B30050C5AC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -565,10 +563,10 @@
 		5C6F6ED91A5824B30050C5AC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -639,7 +637,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -656,12 +654,14 @@
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_FAST_MATH = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -714,7 +714,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -732,6 +732,9 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_FAST_MATH = YES;
+				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -743,6 +746,7 @@
 					/usr/include,
 					/usr/local/include,
 				);
+				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CPLUSPLUSFLAGS = (

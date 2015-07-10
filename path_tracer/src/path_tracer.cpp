@@ -1,15 +1,10 @@
 
 #include "path_tracer.hpp"
 
+#if defined(FLOOR_COMPUTE)
+
 // to keep things simple in here, the cornell box model and material data is located in another file
 #include "cornell_box.hpp"
-
-#if !defined(FLOOR_COMPUTE)
-#include <floor/core/core.hpp>
-void reset_counter() {
-	global_id_counter = 0;
-}
-#endif
 
 struct ray {
 	float3 origin;
@@ -32,11 +27,12 @@ public:
 	// NOTE: will assume we're only intersecting the cornell box data here, so the vertices/indices
 	// don't have to be carried around the whole time (this will/should work with anything though)
 	static intersection intersect(const ray& r) {
-		float3 hit_point, normal;
+		float3 normal;
 		float distance { numeric_limits<float>::infinity() };
 		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_COUNT };
 
-		for(size_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
+		#pragma clang loop unroll_count(32)
+		for(uint32_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
 			const auto& index = cornell_indices[triangle_idx];
 			const auto& v0 = cornell_vertices[index.x];
 			const auto& v1 = cornell_vertices[index.y];
@@ -78,7 +74,7 @@ public:
 
 class simple_path_tracer {
 public:
-	enum : uint32_t { max_recursion_depth = 4 };
+	enum : uint32_t { max_recursion_depth = 2 };
 	
 	simple_path_tracer(const uint32_t& random_seed) : seed(random_seed) {}
 	
@@ -87,7 +83,7 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(FLOOR_COMPUTE_METAL)
+#if defined(FLOOR_COMPUTE_METAL) && 1
 		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
 		// so do a software 32-bit * 16-bit multiply instead
 		uint32_t low = (seed & 0xFFFFu) * 16807u;
@@ -334,19 +330,18 @@ struct camera {
 		constexpr const float3 forward { 0.0f, 0.0f, 1.0f };
 		constexpr const float3 right { forward.crossed(float3 { 0.0f, 1.0f, 0.0f } /* up */).normalized() };
 		constexpr const float3 up { -right.crossed(forward).normalized() };
+		constexpr const float3 right_vector = 2.0f * right * const_math::tan(rad_angle * 0.5f);
+		constexpr const float3 up_vector = 2.0f * up * const_math::tan(rad_angle * 0.5f);
 		
 		const float aspect_ratio = resolution.x / resolution.y;
-		
-		float3 row_vector = 2.0f * right * tan(rad_angle * 0.5f) * aspect_ratio;
-		float3 col_vector = 2.0f * up * tan(rad_angle * 0.5f);
-		
+		const float3 row_vector = right_vector * aspect_ratio;
 		step_x = row_vector / resolution.x;
-		step_y = col_vector / resolution.y;
-		screen_origin = forward - row_vector * 0.5f - col_vector * 0.5f;
+		step_y = up_vector / resolution.y;
+		screen_origin = forward - row_vector * 0.5f - up_vector * 0.5f;
 	}
 };
 
-kernel void path_trace(buffer<float3> img,
+kernel void path_trace(buffer<float4> img,
 					   param<uint32_t> iteration,
 					   param<uint32_t> seed,
 					   param<uint2> img_size) {
@@ -377,9 +372,11 @@ kernel void path_trace(buffer<float3> img,
 	float3 color = pt.compute_radiance(r, true);
 
 	// red test strip, so that I know if the output is working at all
-	//if(idx < img_size->x) color = float3 { 1.0f, 0.0f, 0.0f };
+	//if(idx % img_size->x == 0) color = { 1.0f, 0.0f, 0.0f };
 	
 	// merge with previous frames (re-weight)
 	if(*iteration == 0) img[idx] = color;
 	else img[idx] = img[idx].interpolate(color, 1.0f / float(*iteration + 1));
 }
+
+#endif

@@ -1,13 +1,6 @@
 
 #include <floor/floor/floor.hpp>
 
-#if !defined(_MSC_VER) // too broken right now
-#include "path_tracer.hpp"
-#endif
-
-// uncomment this to enable host execution
-//#define DEBUG_HOST_EXEC 1
-
 int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
 	floor::init(argv[0], (const char*)"../../data/"); // call path, data path
@@ -27,7 +20,6 @@ int main(int, char* argv[]) {
 	static const uint32_t pixel_count { img_size.x * img_size.y };
 	floor::set_screen_size(img_size);
 	
-#if !defined(DEBUG_HOST_EXEC)
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
 	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"), "-I" + floor::data_path("../path_tracer/src"));
@@ -36,9 +28,12 @@ int main(int, char* argv[]) {
 	const vector<llvm_compute::kernel_info> kernel_infos {
 		{
 			"path_trace",
-			{ 12, 4, 4, 8 },
-			{ llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT }
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 8, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
 		}
 	};
 	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("path_tracer.metallib"), kernel_infos);
@@ -47,26 +42,17 @@ int main(int, char* argv[]) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto path_tracer_kernel = path_tracer_prog->get_kernel_fuzzy("path_trace"); // c++ name mangling is hard
+	auto path_tracer_kernel = path_tracer_prog->get_kernel("path_trace");
 	if(path_tracer_kernel == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
 	
 	// create the image buffer on the device
-	auto img_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * pixel_count);
-#endif
+	auto img_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float4) * pixel_count);
 	
 	bool done = false;
 	static constexpr const uint32_t iteration_count { 16384 };
-#if defined(DEBUG_HOST_EXEC)
-	vector<float3> img_data(pixel_count);
-	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
-		reset_counter(); // necessary workaround for now
-		for(uint32_t i = 0; i < pixel_count; ++i) {
-			path_trace((buffer<float3>)img_data.data(), iteration, core::rand<uint32_t>(), img_size);
-		}
-#else
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
 		dev_queue->execute(path_tracer_kernel,
 						   // total amount of work:
@@ -75,14 +61,11 @@ int main(int, char* argv[]) {
 						   size1 { fastest_device->max_work_group_size },
 						   // kernel arguments:
 						   img_buffer, iteration, core::rand<uint32_t>(), img_size);
-#endif
 
 		// draw every 10th frame (except for the first 10 frames)
 		if(iteration < 10 || iteration % 10 == 0) {
-#if !defined(DEBUG_HOST_EXEC)
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float3*)img_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
-#endif
+			auto img_data = (float4*)img_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 
 			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
 			const auto gamma_correct = [](const float3& color) {
@@ -106,13 +89,11 @@ int main(int, char* argv[]) {
 				uint32_t img_idx = img_size.x * y;
 				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
 					// map and gamma correct each pixel according to the window format
-					const auto rgb = gamma_correct(img_data[img_idx]);
+					const auto rgb = gamma_correct(img_data[img_idx].xyz);
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, rgb.r, rgb.g, rgb.b);
 				}
 			}
-#if !defined(DEBUG_HOST_EXEC)
 			img_buffer->unmap(dev_queue, img_data);
-#endif
 			
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());

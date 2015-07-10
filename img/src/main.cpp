@@ -277,9 +277,9 @@ int main(int, char* argv[]) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto image_blur = img_prog->get_kernel_fuzzy("image_blur_single_stage");
-	auto image_blur_dumb_v = img_prog->get_kernel_fuzzy("image_blur_dumb_vertical");
-	auto image_blur_dumb_h = img_prog->get_kernel_fuzzy("image_blur_dumb_horizontal");
+	auto image_blur = img_prog->get_kernel("image_blur_single_stage");
+	auto image_blur_dumb_v = img_prog->get_kernel("image_blur_dumb_vertical");
+	auto image_blur_dumb_h = img_prog->get_kernel("image_blur_dumb_horizontal");
 	if(image_blur == nullptr ||
 	   image_blur_dumb_v == nullptr ||
 	   image_blur_dumb_h == nullptr) {

@@ -80,23 +80,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		5CD2174919E924A20049D6AE /* occ_external */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-v";
-			buildConfigurationList = 5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "occ_external" */;
-			buildPhases = (
-			);
-			buildToolPath = ./build.sh;
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = occ_external;
-			passBuildSettingsInEnvironment = 0;
-			productName = occ;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		5C6F6ED21A5824B30050C5AC /* occ */ = {
 			isa = PBXNativeTarget;
@@ -127,9 +110,6 @@
 					5C6F6ED21A5824B30050C5AC = {
 						CreatedOnToolsVersion = 6.2;
 					};
-					5CD2174919E924A20049D6AE = {
-						CreatedOnToolsVersion = 6.1;
-					};
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "occ" */;
@@ -146,7 +126,6 @@
 			projectRoot = "";
 			targets = (
 				5C6F6ED21A5824B30050C5AC /* occ */,
-				5CD2174919E924A20049D6AE /* occ_external */,
 			);
 		};
 /* End PBXProject section */
@@ -485,27 +464,6 @@
 			};
 			name = Release;
 		};
-		5CD2174D19E924A20049D6AE /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		5CD2174E19E924A20049D6AE /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -523,15 +481,6 @@
 			buildConfigurations = (
 				5CD2174A19E924A20049D6AE /* Debug */,
 				5CD2174B19E924A20049D6AE /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5CD2174C19E924A20049D6AE /* Build configuration list for PBXLegacyTarget "occ_external" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5CD2174D19E924A20049D6AE /* Debug */,
-				5CD2174E19E924A20049D6AE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
