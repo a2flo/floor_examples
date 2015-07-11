@@ -314,8 +314,9 @@ int main(int, char* argv[]) {
 												  // using a uint2 here, although parameter is actually a uint4 to support 3D/cube-maps/arrays/etc.,
 												  // conversion happens automatically
 												  image_size,
-												  // this is a simple 2D image, using 4 channels (CHANNELS_4), unsigned int data (UINT) and 8-bit per channel (FORMAT_8)
-												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI |
+												  // this is a simple 2D image, using 4 channels (CHANNELS_4), unsigned int data (UINT) and normalized 8-bit per channel (FLAG_NORMALIZED + FORMAT_8)
+												  // -> IMAGE_2D + convenience alias RGBA8UI_NORM which does the things specified above (or just RGBA8 for opengl compat)
+												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
 												  // first image: read only, second image: write only (also sets NO_SAMPLER flag), third image: read/write
 												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::READ_WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
 												  // init image with our random data, or nothing
