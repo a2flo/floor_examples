@@ -21,6 +21,7 @@
 #include <floor/core/timer.hpp>
 #include <floor/core/gl_shader.hpp>
 #include "gl_blur.hpp"
+#include "img_kernels.hpp"
 
 struct img_option_context {
 	// unused
@@ -35,7 +36,7 @@ static bool second_cache { true };
 static bool dumb { false };
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
-static constexpr const uint32_t tap_count { 17u };
+static constexpr const uint32_t tap_count { TAP_COUNT };
 
 //! option -> function map
 template<> unordered_map<string, img_opt_handler::option_function> img_opt_handler::options {
@@ -249,9 +250,9 @@ int main(int, char* argv[]) {
 	static constexpr const uint32_t overlap { tap_count / 2u };
 	static constexpr const uint32_t inner_tile_size { 16u }; // -> effective tile size
 	static constexpr const uint32_t tile_size { inner_tile_size + overlap * 2u };
-	static const uint2 global_size { (image_size / inner_tile_size) * tile_size };
+	static const uint2 img_global_size { (image_size / inner_tile_size) * tile_size };
 	log_debug("running blur kernel on an %v image, with a tap count of %u, inner tile size of %v and work-group tile size of %v -> global work size: %v -> %u texture fetches",
-			  image_size, tap_count, inner_tile_size, tile_size, global_size, global_size.x * global_size.y);
+			  image_size, tap_count, inner_tile_size, tile_size, img_global_size, img_global_size.x * img_global_size.y);
 #if !defined(FLOOR_IOS)
 	auto img_prog = compute_ctx->add_program_file(floor::data_path("../img/src/img_kernels.cpp"),
 												  "-I" + floor::data_path("../img/src") +
@@ -344,7 +345,7 @@ int main(int, char* argv[]) {
 				const auto blur_start = floor_timer2::start();
 				dev_queue->execute(image_blur,
 								   // total amount of work:
-								   size2 { global_size },
+								   size2 { img_global_size },
 								   // work per work-group:
 								   size2 { tile_size, tile_size },
 								   // kernel arguments:

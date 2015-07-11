@@ -83,6 +83,7 @@
 		5C8FD0941AD3366800215230 /* imgd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imgd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
+		5CB14EE31B5045AC007183C4 /* img_kernels.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = img_kernels.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_blur.cpp; sourceTree = "<group>"; };
@@ -195,6 +196,7 @@
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5C54774B1AD645AF00F55003 /* img_kernels.cpp */,
+				5CB14EE31B5045AC007183C4 /* img_kernels.hpp */,
 				5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */,
 				5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */,
 			);

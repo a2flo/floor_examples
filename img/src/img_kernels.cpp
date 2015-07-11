@@ -16,6 +16,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "img_kernels.hpp"
+
 #if defined(FLOOR_COMPUTE)
 
 // defined during compilation:
@@ -60,7 +62,7 @@ static constexpr uint32_t find_effective_n() {
 // computes the blur coefficients for the specified tap count (at compile-time)
 template <uint32_t tap_count>
 static constexpr auto compute_coefficients() {
-	array<float, tap_count> ret {};
+	const_array<float, tap_count> ret {};
 	
 	// compute binomial coefficients and divide them by 2^(effective tap count - 1)
 	// this is basically computing a row in pascal's triangle, using all values (or the middle part) as coefficients
@@ -74,11 +76,12 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
-									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
+									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
 	const int2 gid { get_global_id(0), get_global_id(1) };
 	const int2 lid { get_local_id(0), get_local_id(1) };
-	const int lin_lid { lid.y * TILE_SIZE + lid.x };
+	
+	const int lin_lid { lid.y * int(TILE_SIZE) + lid.x };
 	
 	// awesome constexpr magic
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
@@ -227,8 +230,8 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 // this is the dumb version of the blur, processing a horizontal or vertical line w/o manual caching
 // NOTE: this is practically the same as the opengl/glsl shader
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
-floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
-												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
+												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
 	const int2 img_coord { get_global_id(0), get_global_id(1) };
 	
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
@@ -246,13 +249,13 @@ floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMA
 	write(out_img, img_coord, color);
 }
 
-kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
-									   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
+									   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
 	image_blur_dumb<0>(in_img, out_img);
 }
 
-kernel void image_blur_dumb_vertical(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> in_img,
-									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI> out_img) {
+kernel void image_blur_dumb_vertical(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
+									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
 	image_blur_dumb<1>(in_img, out_img);
 }
 
