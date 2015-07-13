@@ -16,23 +16,11 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "warp.hpp"
+
 #if defined(FLOOR_COMPUTE)
 
-// compile time defines
-// SCREEN_WIDTH: screen width in px
-// SCREEN_HEIGHT: screen height in px
-// SCREEN_FOV: camera/projection-matrix field of view
-#if !defined(SCREEN_WIDTH)
-#define SCREEN_WIDTH 1280
-#endif
-#if !defined(SCREEN_HEIGHT)
-#define SCREEN_HEIGHT 720
-#endif
-#if !defined(SCREEN_FOV)
-#define SCREEN_FOV 72.0f
-#endif
-
-struct camera {
+namespace warp_camera {
 	static constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
 	static constexpr const float2 inv_screen_size { 1.0f / screen_size };
 	static constexpr const float aspect_ratio { screen_size.x / screen_size.y };
@@ -83,16 +71,16 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
 	const auto linear_depth = read(img_depth, coord); // depth is already linear with z/w in shader
-	const auto motion = (motion_override.w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override.xyz);
+	const auto motion = (motion_override->w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override->xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
-	const float3 reconstructed_pos = camera::reconstruct_position(coord, linear_depth);
+	const float3 reconstructed_pos = warp_camera::reconstruct_position(coord, linear_depth);
 	
 	// predict/compute new 3D position from current motion and time
-	const auto motion_dst = (motion_override.w < 0.0f ? *relative_delta : 1.0f) * motion;
+	const auto motion_dst = (motion_override->w < 0.0f ? *relative_delta : 1.0f) * motion;
 	const auto new_pos = reconstructed_pos + motion_dst;
 	// project 3D position back into 2D
-	const int2 idst_coord { camera::reproject_position(new_pos) };
+	const int2 idst_coord { warp_camera::reproject_position(new_pos) };
 	
 	// only write if new projected screen position is actually inside the screen
 	if(idst_coord.x >= 0 && idst_coord.x < SCREEN_WIDTH &&
@@ -104,7 +92,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 
 // NOTE: r/w image supported by cuda, not officially supported by opencl (works with cpu, doesn't with gpu)
 kernel void single_px_fixup(
-#if defined(FLOOR_COMPUTE_CUDA)
+#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST)
 							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img
 #define warp_img_in warp_img
 #define warp_img_out warp_img

@@ -26,7 +26,7 @@
 		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
 		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* img.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* img.metallib */; };
-		5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; };
+		5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C54774E1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };

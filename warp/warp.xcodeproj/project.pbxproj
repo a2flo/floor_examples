@@ -29,7 +29,7 @@
 		5C30CAA51AA625F5008986B1 /* warp.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* warp.metallib */; };
 		5C88A63B1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
 		5C88A63C1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
-		5C8FD0B41AD3389B00215230 /* warp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* warp.cpp */; };
+		5C8FD0B41AD3389B00215230 /* warp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* warp.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
@@ -100,6 +100,7 @@
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CD737F51B00123700D9815E /* warp_state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp_state.hpp; sourceTree = "<group>"; };
+		5CE49F1E1B53B9E00059ACC5 /* warp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -201,6 +202,7 @@
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5CD737F51B00123700D9815E /* warp_state.hpp */,
 				5C7467131A5828D000999E78 /* warp.cpp */,
+				5CE49F1E1B53B9E00059ACC5 /* warp.hpp */,
 				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
 				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
 				5CC330D31AEAC07C00836CC4 /* obj_loader.cpp */,
