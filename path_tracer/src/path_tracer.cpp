@@ -345,7 +345,7 @@ kernel void path_trace(buffer<float4> img,
 					   param<uint32_t> iteration,
 					   param<uint32_t> seed,
 					   param<uint2> img_size) {
-	const auto idx = (uint32_t)get_global_id(0);
+	const auto idx = global_id.x;
 	const uint2 pixel { idx % img_size->x, idx / img_size->y };
 	if(pixel.y >= img_size->y) return;
 	

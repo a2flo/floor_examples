@@ -26,9 +26,9 @@
 #endif
 
 #if !defined(TAP_COUNT)
-#define TAP_COUNT 17u
-#define INNER_TILE_SIZE 16u
-#define TILE_SIZE (INNER_TILE_SIZE + ((TAP_COUNT / 2u) * 2u))
+#define TAP_COUNT 17
+#define INNER_TILE_SIZE 16
+#define TILE_SIZE (INNER_TILE_SIZE + ((TAP_COUNT / 2) * 2))
 #endif
 
 

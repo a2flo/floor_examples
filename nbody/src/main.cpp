@@ -682,9 +682,9 @@ int main(int, char* argv[]) {
 			
 			dev_queue->execute(nbody_compute,
 							   // total amount of work:
-							   size1 { nbody_state.body_count },
+							   uint1 { nbody_state.body_count },
 							   // work per work-group:
-							   size1 { nbody_state.tile_size },
+							   uint1 { nbody_state.tile_size },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[cur_buffer],
 							   /* out_positions: */		position_buffers[next_buffer],
@@ -701,9 +701,9 @@ int main(int, char* argv[]) {
 			img_buffer_flip_flop = 1 - img_buffer_flip_flop;
 			dev_queue->execute(nbody_raster,
 							   // total amount of work:
-							   size1 { img_size.x * img_size.y },
+							   uint1 { img_size.x * img_size.y },
 							   // work per work-group:
-							   size1 { fastest_device->max_work_group_size },
+							   uint1 { fastest_device->max_work_group_size },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
 							   /* img: */				img_buffers[img_buffer_flip_flop],

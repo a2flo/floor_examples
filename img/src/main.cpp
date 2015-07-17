@@ -346,9 +346,9 @@ int main(int, char* argv[]) {
 				const auto blur_start = floor_timer2::start();
 				dev_queue->execute(image_blur,
 								   // total amount of work:
-								   size2 { img_global_size },
+								   img_global_size,
 								   // work per work-group:
-								   size2 { tile_size, tile_size },
+								   uint2 { tile_size, tile_size },
 								   // kernel arguments:
 								   imgs[0], imgs[1]);
 				dev_queue->finish();
@@ -359,16 +359,16 @@ int main(int, char* argv[]) {
 				const auto blur_start = floor_timer2::start();
 				dev_queue->execute(image_blur_dumb_h,
 								   // total amount of work:
-								   size2 { image_size },
+								   image_size,
 								   // work per work-group:
-								   size2 { tile_size * 4, 2 },
+								   uint2 { tile_size * 4, 2 },
 								   // kernel arguments:
 								   imgs[0], imgs[2]);
 				dev_queue->execute(image_blur_dumb_v,
 								   // total amount of work:
-								   size2 { image_size },
+								   image_size,
 								   // work per work-group:
-								   size2 { 2, tile_size * 4 },
+								   uint2 { 2, tile_size * 4 },
 								   // kernel arguments:
 								   imgs[2], imgs[1]);
 				dev_queue->finish();

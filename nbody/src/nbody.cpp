@@ -61,15 +61,15 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 						  buffer<float4> out_positions,
 						  buffer<float3> velocities,
 						  param<float> delta) {
-	const auto idx = (uint32_t)get_global_id(0);
-	const auto body_count = (uint32_t)get_global_size(0);
+	const auto idx = global_id.x;
+	const auto body_count = global_size.x;
 	
 	float4 position = in_positions[idx];
 	float3 velocity = velocities[idx];
 	float3 acceleration;
 	
 #if 1 // local/shared-memory caching + computation
-	const auto local_idx = (uint32_t)get_local_id(0);
+	const auto local_idx = local_id.x;
 	local_buffer<float4, NBODY_TILE_SIZE> local_body_positions;
 	for(uint32_t i = 0, tile = 0, count = body_count; i < count; i += NBODY_TILE_SIZE, ++tile) {
 		local_body_positions[local_idx] = in_positions[tile * NBODY_TILE_SIZE + local_idx];
@@ -110,7 +110,7 @@ kernel void nbody_raster(buffer<const float4> positions,
 						 param<uint2> img_size,
 						 param<uint32_t> body_count,
 						 param<matrix4f> mview) {
-	const auto idx = (uint32_t)get_global_id(0);
+	const auto idx = global_id.x;
 	img_old[idx] = 0;
 	
 	if(idx < *body_count) {
@@ -134,13 +134,13 @@ kernel void nbody_raster(buffer<const float4> positions,
 			
 			const uint2 upixel { pixel };
 			if(upixel.x < img_size->x && upixel.y < img_size->y) {
-#if 1 // just add/override previous value, this will overflow of course
+#if 0 // just add/override previous value, this will overflow of course
 				img[upixel.y * img_size->x + upixel.x] += 0x404040;
 #else // use atomics and max out at 0xFFFFFF
 				uint32_t color, cur_color;
 				do {
 					cur_color = img[upixel.y * img_size->x + upixel.x];
-					if(cur_color >= 0xFFFFFF) break; // overflow
+					if(cur_color >= 0xFFFFFFu) break; // overflow
 					color = std::min(cur_color + 0x404040u, 0xFFFFFFu);
 				} while(atomic_cmpxchg(&img[upixel.y * img_size->x + upixel.x], cur_color, color) != cur_color);
 #endif

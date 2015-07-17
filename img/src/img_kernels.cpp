@@ -78,8 +78,8 @@ static constexpr auto compute_coefficients() {
 
 kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
 									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
-	const int2 gid { get_global_id(0), get_global_id(1) };
-	const int2 lid { get_local_id(0), get_local_id(1) };
+	const int2 gid { global_id.xy };
+	const int2 lid { local_id.xy };
 	
 	const int lin_lid { lid.y * int(TILE_SIZE) + lid.x };
 	
@@ -159,7 +159,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i, idx += TILE_SIZE) {
 			// note that this will be optimized to an fma instruction if possible
-			v_color += coeffs[overlap + i] * samples[idx];
+			v_color += coeffs[size_t(overlap + i)] * samples[idx];
 		}
 		
 #if defined(SECOND_CACHE)
@@ -219,7 +219,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 		
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i, ++idx) {
-			h_color += coeffs[overlap + i] * samples_2[idx];
+			h_color += coeffs[size_t(overlap + i)] * samples_2[idx];
 		}
 		
 		// write out
@@ -232,7 +232,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
 floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
 												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
-	const int2 img_coord { get_global_id(0), get_global_id(1) };
+	const int2 img_coord { global_id.xy };
 	
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
 	constexpr const int overlap = TAP_COUNT / 2;
@@ -240,7 +240,7 @@ floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMA
 	float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
 	for(int i = -overlap; i <= overlap; ++i) {
-		color += coeffs[overlap + i] * read(in_img, img_coord + int2 {
+		color += coeffs[size_t(overlap + i)] * read(in_img, img_coord + int2 {
 			direction == 0 ? i : 0,
 			direction == 0 ? 0 : i,
 		});

@@ -56,9 +56,9 @@ int main(int, char* argv[]) {
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
 		dev_queue->execute(path_tracer_kernel,
 						   // total amount of work:
-						   size1 { pixel_count },
+						   uint1 { pixel_count },
 						   // work per work-group:
-						   size1 { fastest_device->max_work_group_size },
+						   uint1 { fastest_device->max_work_group_size },
 						   // kernel arguments:
 						   img_buffer, iteration, core::rand<uint32_t>(), img_size);
 

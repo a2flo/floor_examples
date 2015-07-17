@@ -33,7 +33,7 @@ static struct {
 	GLuint compute_color { 0u };
 	
 	int2 dim;
-	size2 dim_multiple;
+	uint2 dim_multiple;
 } scene_fbo;
 static struct {
 	GLuint fbo { 0u };
@@ -382,13 +382,13 @@ void gl_renderer::render_kernels(const camera& cam,
 	if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
 		warp_state.dev_queue->execute(warp_state.clear_kernel,
 									  scene_fbo.dim_multiple,
-									  size2 { 32, 32 },
+									  uint2 { 32, 32 },
 									  compute_color, clear_color);
 	}
 	
 	warp_state.dev_queue->execute(warp_state.warp_kernel,
 								  scene_fbo.dim_multiple,
-								  size2 { 32, 32 },
+								  uint2 { 32, 32 },
 								  compute_scene_color, compute_scene_depth, compute_scene_motion, compute_color,
 								  delta / render_delta,
 								  (!warp_state.is_single_frame ?
@@ -400,13 +400,13 @@ void gl_renderer::render_kernels(const camera& cam,
 		if(warp_state.ctx->get_compute_type() == COMPUTE_TYPE::CUDA) {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
 										  scene_fbo.dim_multiple,
-										  size2 { 32, 32 },
+										  uint2 { 32, 32 },
 										  compute_color);
 		}
 		else {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
 										  scene_fbo.dim_multiple,
-										  size2 { 32, 32 },
+										  uint2 { 32, 32 },
 										  compute_color, compute_color);
 		}
 	}
