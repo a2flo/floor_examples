@@ -468,8 +468,7 @@ int main(int, char* argv[]) {
 #endif
 	// disable opengl renderer when using metal or host
 	if(!nbody_state.no_opengl) {
-		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
-								 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST);
+		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
 	}
 #if defined(FLOOR_NO_METAL)
 	// disable metal renderer if it's not available
