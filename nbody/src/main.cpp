@@ -373,7 +373,7 @@ void init_system() {
 				positions[i].x = rnd_radius * sinf(rnd_dir);
 				positions[i].z = rnd_radius * cosf(rnd_dir);
 				const float ln_height = log(1.0f + const_math::PI_MUL_2<float> * (1.0f - (rnd_radius / disc_radius))); // ~[0, 2]
-				positions[i].y = core::rand(height_dev) * (ln_height * 0.5f) * (core::rand(0, 16) % 2 == 0 ? -1.0f : 1.0f);
+				positions[i].y = core::rand(height_dev) * (ln_height * 0.5f) * (core::rand(0, 15) % 2 == 0 ? -1.0f : 1.0f);
 				//const float2 vel = float2(positions[i].x, positions[i].z).perpendicular() * (rnd_radius * rnd_radius) * 0.001f;
 				const float2 vel = float2(positions[i].x, positions[i].z).perpendicular() * (rnd_radius * rnd_radius) * 0.1f;
 				velocities[i].x = vel.x;
@@ -419,14 +419,14 @@ void init_system() {
 				static constexpr const array<float, shell_count> shell_masses {{
 					1.008f, 4.002602f, 12.011f, 20.1797f, 15.999f, 28.085f, 55.845f,
 				}};
-				const auto shell = core::rand(shell_count);
+				const auto shell = core::rand(shell_count - 1);
 				positions[i].w = shell_masses[shell];
 				
 				const auto theta = core::rand(const_math::PI_MUL_2<float>);
 				const auto xi_y = core::rand(-1.0f, 1.0f);
 				const auto sqrt_term = sqrt(1.0f - xi_y * xi_y);
 				const auto rad = (core::rand(rad_per_shell * float(shell), rad_per_shell * float(shell + 1)) *
-								  (core::rand(0, 16) % 2 == 0 ? 1.0f : -1.0f));
+								  (core::rand(0, 15) % 2 == 0 ? 1.0f : -1.0f));
 				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0 ? -1.0f : 1.0f);
 				positions[i].xyz = {
 					cos(theta) * rnd_rad * sqrt_term,
