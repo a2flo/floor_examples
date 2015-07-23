@@ -23,10 +23,9 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DC1A9200CE00F4711D /* config.xml.local */; };
-		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
-		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* path_tracer.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* path_tracer.metallib */; };
+		5C5487881B608F000088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487861B608EE60088272A /* config.json */; };
+		5C5487891B608F000088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487871B608EE60088272A /* config.json.local */; };
 		5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C7467151A5828D000999E78 /* path_tracer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* path_tracer.cpp */; };
 /* End PBXBuildFile section */
@@ -38,19 +37,9 @@
 			dstPath = data;
 			dstSubfolderSpec = 7;
 			files = (
+				5C5487881B608F000088272A /* config.json in CopyFiles */,
+				5C5487891B608F000088272A /* config.json.local in CopyFiles */,
 				5C30CAA51AA625F5008986B1 /* path_tracer.metallib in CopyFiles */,
-				5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */,
-				5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C0071E11A9200F100F4711D /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data/dtd;
-			dstSubfolderSpec = 7;
-			files = (
-				5C0071E31A92010600F4711D /* config.dtd in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,10 +72,9 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
-		5C0071DC1A9200CE00F4711D /* config.xml.local */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml.local; path = ../data/config.xml.local; sourceTree = "<group>"; };
-		5C0071DD1A9200CE00F4711D /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../data/config.xml; sourceTree = "<group>"; };
-		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* path_tracer.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = path_tracer.metallib; path = ../data/path_tracer.metallib; sourceTree = "<group>"; };
+		5C5487861B608EE60088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
+		5C5487871B608EE60088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; };
 		5C7467131A5828D000999E78 /* path_tracer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = path_tracer.cpp; sourceTree = "<group>"; };
 		5C7467141A5828D000999E78 /* path_tracer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = path_tracer.hpp; sourceTree = "<group>"; };
 		5C7467161A58532500999E78 /* cornell_box.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = cornell_box.hpp; sourceTree = "<group>"; };
@@ -150,19 +138,10 @@
 			isa = PBXGroup;
 			children = (
 				5C30CAA31AA625DC008986B1 /* path_tracer.metallib */,
-				5C0071DD1A9200CE00F4711D /* config.xml */,
-				5C0071DC1A9200CE00F4711D /* config.xml.local */,
-				5C0071E41A92010800F4711D /* dtd */,
+				5C5487861B608EE60088272A /* config.json */,
+				5C5487871B608EE60088272A /* config.json.local */,
 			);
 			name = data;
-			sourceTree = "<group>";
-		};
-		5C0071E41A92010800F4711D /* dtd */ = {
-			isa = PBXGroup;
-			children = (
-				5C0071E21A92010600F4711D /* config.dtd */,
-			);
-			name = dtd;
 			sourceTree = "<group>";
 		};
 		5CD2174419E924A20049D6AE = {
@@ -201,7 +180,6 @@
 				5C00718F1A91EF7E00F4711D /* Resources */,
 				5C0071C01A91F1EF00F4711D /* ShellScript */,
 				5C0071DB1A9200B200F4711D /* CopyFiles */,
-				5C0071E11A9200F100F4711D /* CopyFiles */,
 			);
 			buildRules = (
 			);

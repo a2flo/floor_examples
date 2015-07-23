@@ -23,11 +23,10 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DC1A9200CE00F4711D /* config.xml.local */; };
-		5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071DD1A9200CE00F4711D /* config.xml */; };
-		5C0071E31A92010600F4711D /* config.dtd in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C0071E21A92010600F4711D /* config.dtd */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
 		5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; settings = {COMPILER_FLAGS = "-gline-tables-only"; }; };
+		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
+		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
@@ -44,19 +43,9 @@
 			dstPath = data;
 			dstSubfolderSpec = 7;
 			files = (
+				5C5487801B608DE40088272A /* config.json in CopyFiles */,
+				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
 				5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */,
-				5C0071DE1A9200CE00F4711D /* config.xml.local in CopyFiles */,
-				5C0071DF1A9200CE00F4711D /* config.xml in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C0071E11A9200F100F4711D /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data/dtd;
-			dstSubfolderSpec = 7;
-			files = (
-				5C0071E31A92010600F4711D /* config.dtd in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,10 +68,9 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
-		5C0071DC1A9200CE00F4711D /* config.xml.local */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml.local; path = ../data/config.xml.local; sourceTree = "<group>"; };
-		5C0071DD1A9200CE00F4711D /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../data/config.xml; sourceTree = "<group>"; };
-		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* nbody.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = nbody.metallib; path = ../data/nbody.metallib; sourceTree = "<group>"; };
+		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
+		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* nbody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = nbody.cpp; sourceTree = "<group>"; };
 		5C7467141A5828D000999E78 /* nbody.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = nbody.hpp; sourceTree = "<group>"; };
 		5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
@@ -154,19 +142,10 @@
 			isa = PBXGroup;
 			children = (
 				5C30CAA31AA625DC008986B1 /* nbody.metallib */,
-				5C0071DD1A9200CE00F4711D /* config.xml */,
-				5C0071DC1A9200CE00F4711D /* config.xml.local */,
-				5C0071E41A92010800F4711D /* dtd */,
+				5C54877E1B608CF50088272A /* config.json */,
+				5C54877F1B608CF50088272A /* config.json.local */,
 			);
 			name = data;
-			sourceTree = "<group>";
-		};
-		5C0071E41A92010800F4711D /* dtd */ = {
-			isa = PBXGroup;
-			children = (
-				5C0071E21A92010600F4711D /* config.dtd */,
-			);
-			name = dtd;
 			sourceTree = "<group>";
 		};
 		5C8FD0B91AD3392500215230 /* osx */ = {
@@ -220,7 +199,6 @@
 				5C00718F1A91EF7E00F4711D /* Resources */,
 				5C0071C01A91F1EF00F4711D /* ShellScript */,
 				5C0071DB1A9200B200F4711D /* CopyFiles */,
-				5C0071E11A9200F100F4711D /* CopyFiles */,
 			);
 			buildRules = (
 			);

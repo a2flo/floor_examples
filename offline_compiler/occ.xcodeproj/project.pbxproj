@@ -24,9 +24,8 @@
 
 /* Begin PBXFileReference section */
 		5C00718C1A91507900F4711D /* occd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = occd; sourceTree = BUILT_PRODUCTS_DIR; };
-		5C0071DC1A9200CE00F4711D /* config.xml.local */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml.local; path = ../data/config.xml.local; sourceTree = "<group>"; };
-		5C0071DD1A9200CE00F4711D /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.xml; path = ../data/config.xml; sourceTree = "<group>"; };
-		5C0071E21A92010600F4711D /* config.dtd */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = config.dtd; path = ../data/dtd/config.dtd; sourceTree = "<group>"; };
+		5C54878A1B608F560088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
+		5C54878B1B608F560088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -45,19 +44,10 @@
 		5C0071E01A9200D400F4711D /* data */ = {
 			isa = PBXGroup;
 			children = (
-				5C0071DD1A9200CE00F4711D /* config.xml */,
-				5C0071DC1A9200CE00F4711D /* config.xml.local */,
-				5C0071E41A92010800F4711D /* dtd */,
+				5C54878A1B608F560088272A /* config.json */,
+				5C54878B1B608F560088272A /* config.json.local */,
 			);
 			name = data;
-			sourceTree = "<group>";
-		};
-		5C0071E41A92010800F4711D /* dtd */ = {
-			isa = PBXGroup;
-			children = (
-				5C0071E21A92010600F4711D /* config.dtd */,
-			);
-			name = dtd;
 			sourceTree = "<group>";
 		};
 		5CD2174419E924A20049D6AE = {

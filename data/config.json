@@ -1,0 +1,122 @@
+{
+	// screen resolution and settings
+	"screen": {
+		"width": 1024,
+		"height": 1024,
+		"fullscreen": false,
+		"vsync": false,
+		// 0 = auto-detect, other values can be used to override the detected value
+		"dpi": 0,
+		// serves no purpose right now
+		"stereo": false
+	},
+	
+	// openal audio options
+	"audio": {
+		// if true, completely disables openal (doesn't initialize it + can't be used)
+		"disabled": true,
+		// music volume in [0, 1] (0.0 = muted, 1.0 = loudest)
+		"music": 1.0,
+		// sound volume in [0, 1]
+		"sound": 1.0,
+		// optional audio device name (empty = use the default device)
+		"device": ""
+	},
+	
+	// logging options (apply to both console and file logging)
+	"logging": {
+		// 0 = none, 1 = +error, 2 = +warning, 3 = +debug, 4 = +msg, 5 = +undecorated output
+		"verbosity": 5,
+		// if enabled, this will, for each logging operation, open the log file in append mode, write to it and close it again
+		"append_mode": false,
+		// if enabled and verbosity >= 3, this will log msgs into a separate file
+		"separate_msg_file": false,
+		// if enabled prints the current time in each log msg (format: [%H:%M:%S.usecs])
+		"use_time": true,
+		// boolean, if enabled prints the log type in color (error = red, debug = green, ...)
+		"use_color": true,
+		// relative filename of the log file, relative to the current working directory (default: log.txt)
+		"log_filename": "",
+		// relative filename of the msg log file, only used/created if separate_msg_file = true (default: msg.txt)
+		"msg_filename": ""
+	},
+
+	// general compute and compute toolchain settings, and specific backend settings further down
+	"compute": {
+		// opencl, cuda, metal or host (NOTE: defaults to opencl if possible and main platform fails to init)
+		"backend": "opencl",
+		// if true, creates an opengl sharing context (only affects opencl right now, opengl sharing is always enabled with cuda and host)
+		"gl_sharing": false,
+		// compile code with debug information
+		"debug": false,
+		// compile code with profiling support
+		"profiling": false,
+		// dumps compiled program binaries (opencl-only right now)
+		"log_binaries": false,
+		// keep temporary files that are generated during code compilation
+		"keep_temp": false,
+		// save generated/compiled code to data/cache/ (NOTE: not implemented yet)
+		"keep_binaries": true,
+		// attempts to use generated/compiled code from data/cache/ (NOTE: not implemented yet)
+		"use_cache": true,
+		// logs used compilation/toolchain commands
+		"log_commands": false,
+		
+		// general toolchain settings
+		// NOTE: these values can be overwritten on a per-backend basis by simply putting the key/value entry in the specific backend
+		"toolchain": {
+			// the compute clang binary name (must be in $PATH or a full path)
+			"compiler": "compute_clang",
+			// the compute llc binary name (must be in $PATH or a full path)
+			"llc": "compute_llc",
+			// the compute llvm-as binary name (must be in $PATH or a full path)
+			"as": "compute_as",
+			// the compute llvm-dis binary name (must be in $PATH or a full path)
+			"dis": "compute_dis",
+			// path to the libc++ include folder
+			"libcxx": "/usr/include/floor/libcxx/include",
+			// path to the clang include folder
+			"clang": "/usr/include/floor/libcxx/clang"
+		},
+		
+		// opencl backend settings
+		"opencl": {
+			// the opencl platform index
+			"platform": 0,
+			// if non-empty: only devices with names matching any of the names in this list will be used (separate with ';',
+			// capitalization is ignored, names can be partially matched), can also use "CPU", "GPU" or "ACCELERATOR" to only
+			// match these types of devices
+			"whitelist": ""
+			
+			// NOTE: as mentioned above, toolchain settings can be overwritten here, e.g.:
+			// "compiler": "some_other_clang_binary"
+		},
+		
+		// cuda backend settings
+		"cuda": {
+			// if non-empty: only devices with names matching any of the names in this list will be used (separate with ';',
+			// capitalization is ignored, names can be partially matched)
+			"whitelist": ""
+		},
+		
+		// metal backend settings
+		"metal": {
+			// forces the sm target to sm_xy when compiling/jitting/running ptx code in the driver
+			"force_driver_sm": "",
+			// forces the sm target to sm_xy when compiling to ptx
+			"force_compile_sm": "",
+			// if non-empty: only devices with names matching any of the names in this list will be used (separate with ';',
+			// capitalization is ignored, names can be partially matched)
+			"whitelist": ""
+		},
+		
+		// host backend settings
+		"host": {
+			// single (single-threaded), mt-item (multi-threaded, 1 cpu : 1 work-item), mt-group (multi-threaded, 1 cpu : 1 group)
+			"exec_model": "mt-group",
+			// if non-empty: only devices with names matching any of the names in this list will be used (separate with ';',
+			// capitalization is ignored, names can be partially matched)
+			"whitelist": ""
+		}
+	}
+}

@@ -68,7 +68,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;cuda.lib;OpenGL32.lib;libxml2.lib;iconv.lib;floord.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;cuda.lib;OpenGL32.lib;floord.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
@@ -94,7 +94,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;cuda.lib;OpenGL32.lib;libxml2.lib;iconv.lib;floor.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;cuda.lib;OpenGL32.lib;floor.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>

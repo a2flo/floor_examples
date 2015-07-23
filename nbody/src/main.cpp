@@ -460,7 +460,7 @@ int main(int, char* argv[]) {
 	// init floor
 #if !defined(FLOOR_IOS)
 	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				nbody_state.benchmark, "config.xml", // console-mode, config name
+				nbody_state.benchmark, "config.json", // console-mode, config name
 				nbody_state.benchmark ^ true); // use opengl 3.2+ core
 #else
 	floor::init(argv[0], (const char*)"data/");

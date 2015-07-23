@@ -111,7 +111,7 @@ void obj_lexer::lex(translation_unit& tu) {
 		char_iter != src_end;
 		/* NOTE: char_iter is incremented in the individual lex_* functions or whitespace case: */) {
 		switch(*char_iter) {
-				// keyword or identifier
+			// keyword or identifier
 			case '_':
 			case 'a': case 'b': case 'c': case 'd':
 			case 'e': case 'f': case 'g': case 'h':
@@ -135,7 +135,7 @@ void obj_lexer::lex(translation_unit& tu) {
 				break;
 			}
 				
-				// decimal constant
+			// decimal constant
 			case '-': case '.':
 			case '0': case '1': case '2': case '3':
 			case '4': case '5': case '6': case '7':
@@ -148,14 +148,14 @@ void obj_lexer::lex(translation_unit& tu) {
 				break;
 			}
 				
-				// '#' -> comment
+			// '#' -> comment
 			case '#': {
 				// comment
 				lex_comment(tu, char_iter, src_end);
 				break;
 			}
 				
-				// '/' -> separator/punctuator
+			// '/' -> separator/punctuator
 			case '/': {
 				source_range range { char_iter, char_iter + 1 };
 				++char_iter;
@@ -163,15 +163,15 @@ void obj_lexer::lex(translation_unit& tu) {
 				break;
 			}
 				
-				// whitespace
-				// "space, horizontal tab, new-line, vertical tab, and form-feed"
+			// whitespace
+			// "space, horizontal tab, new-line, vertical tab, and form-feed"
 			case ' ': case '\t': case '\n': case '\v':
 			case '\f':
 				// continue
 				++char_iter;
 				break;
 				
-				// invalid char
+			// invalid char
 			default: {
 				const string invalid_char = (is_printable_char(char_iter) ? string(1, *char_iter) : "<unprintable>");
 				handle_error(tu, char_iter, "invalid character \'" + invalid_char + "\' (" +

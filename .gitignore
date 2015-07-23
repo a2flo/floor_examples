@@ -24,7 +24,7 @@ bin/
 build/
 obj/
 log.txt
-config.xml.local
+config.json.local
 *.a2m
 *.bin
 *.hex
