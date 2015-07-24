@@ -72,7 +72,7 @@
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
 		5C30CAA31AA625DC008986B1 /* warp.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = warp.metallib; path = ../data/warp.metallib; sourceTree = "<group>"; };
 		5C5487821B608E110088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
-		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; };
+		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* warp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp.cpp; sourceTree = "<group>"; };
 		5C88A6391AEB82170061B84B /* camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = camera.cpp; sourceTree = "<group>"; };
 		5C88A63A1AEB82170061B84B /* camera.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = camera.hpp; sourceTree = "<group>"; };
