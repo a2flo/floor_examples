@@ -21,6 +21,8 @@
 
 #include <floor/core/essentials.hpp>
 
+#if defined(FLOOR_COMPUTE)
+
 #if defined(FLOOR_COMPUTE_HOST)
 #include <floor/compute/device/common.hpp>
 #endif
@@ -39,5 +41,7 @@ kernel void nbody_raster(buffer<const float4> positions,
 						 param<uint2> img_size,
 						 param<uint32_t> body_count,
 						 param<matrix4f> mview);
+
+#endif
 
 #endif

@@ -21,10 +21,6 @@
 
 #include <floor/core/essentials.hpp>
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
-#endif
-
 // compile time defines
 // SCREEN_WIDTH: screen width in px
 // SCREEN_HEIGHT: screen height in px
@@ -37,6 +33,12 @@
 #endif
 #if !defined(SCREEN_FOV)
 #define SCREEN_FOV 72.0f
+#endif
+
+#if defined(FLOOR_COMPUTE)
+
+#if defined(FLOOR_COMPUTE_HOST)
+#include <floor/compute/device/common.hpp>
 #endif
 
 // prototypes
@@ -58,5 +60,7 @@ kernel void single_px_fixup(
 
 kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img,
 					  param<float4> clear_color);
+
+#endif
 
 #endif
