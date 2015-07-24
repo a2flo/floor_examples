@@ -107,7 +107,7 @@ void obj_lexer::lex(translation_unit& tu) {
 	tu.tokens.reserve(tu.source.size() / 4);
 	
 	// lex
-	for(auto char_iter = tu.source.cbegin(), src_end = tu.source.cend();
+	for(auto src_begin = tu.source.data(), src_end = tu.source.data() + tu.source.size(), char_iter = src_begin;
 		char_iter != src_end;
 		/* NOTE: char_iter is incremented in the individual lex_* functions or whitespace case: */) {
 		switch(*char_iter) {
