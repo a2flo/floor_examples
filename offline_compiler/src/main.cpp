@@ -368,6 +368,18 @@ int main(int, char* argv[]) {
 							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_3D:
 								info_str += "3D";
 								break;
+							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
+								info_str += "cube";
+								break;
+							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
+								info_str += "cube array";
+								break;
+							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
+								info_str += "cube depth";
+								break;
+							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
+								info_str += "cube array depth";
+								break;
 							default:
 								info_str += "unknown_type";
 								log_error("kernel image argument #%u has no type or an unknown type (%X)!", i, info.args[i].image_type);
