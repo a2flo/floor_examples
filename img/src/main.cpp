@@ -340,7 +340,7 @@ int main(int, char* argv[]) {
 	
 	// -> compute blur
 	if(!run_gl_blur) {
-		log_debug("running %scompute blur ...", (dumb ? " dumb" : ""));
+		log_debug("running %scompute blur ...", (dumb ? "dumb " : ""));
 		for(size_t i = 0; i < run_count; ++i) {
 			if(!dumb) {
 				const auto blur_start = floor_timer2::start();
