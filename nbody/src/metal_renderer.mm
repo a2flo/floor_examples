@@ -23,6 +23,7 @@
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
 #include <floor/compute/metal/metal_buffer.hpp>
+#include <floor/compute/metal/metal_image.hpp>
 #include <floor/compute/metal/metal_queue.hpp>
 #include <floor/darwin/darwin_helper.hpp>
 
@@ -53,11 +54,9 @@ static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 static metal_view* view { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
-static array<id <MTLTexture>, 2> body_textures {};
-static void create_textures(id <MTLDevice> device,
-							shared_ptr<compute_queue> dev_queue) {
-	id <MTLCommandBuffer> cmd_buffer = ((metal_queue*)dev_queue.get())->make_command_buffer();
-	id <MTLBlitCommandEncoder> blit_encoder = [cmd_buffer blitCommandEncoder];
+static array<shared_ptr<metal_image>, 2> body_textures {};
+static void create_textures(shared_ptr<compute_device> dev) {
+	auto ctx = floor::get_compute_context();
 	
 	// create/generate an opengl texture and bind it
 	for(size_t i = 0; i < body_textures.size(); ++i) {
@@ -84,32 +83,19 @@ static void create_textures(id <MTLDevice> device,
 			}
 		}
 		
-		MTLTextureDescriptor* tex_desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-																							width:texture_size.x
-																						   height:texture_size.y
-																						mipmapped:true];
-#if !defined(FLOOR_IOS)
-		//tex_desc.resourceOptions = MTLResourceStorageModePrivate; // TODO: how to upload to gpu if enabled?
-		//tex_desc.storageMode = MTLStorageModePrivate;
-		tex_desc.usage = MTLTextureUsageShaderRead;
-#endif
-		body_textures[i] = [device newTextureWithDescriptor:tex_desc];
-		[body_textures[i] replaceRegion:MTLRegionMake2D(0, 0, texture_size.x, texture_size.y)
-							mipmapLevel:0
-							  withBytes:&pixel_data[0]
-							bytesPerRow:texture_size.x * 4];
-		
-		[blit_encoder generateMipmapsForTexture:body_textures[i]];
+		body_textures[i] = static_pointer_cast<metal_image>(ctx->create_image(dev, texture_size,
+																			  COMPUTE_IMAGE_TYPE::IMAGE_2D |
+																			  COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
+																			  COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
+																			  COMPUTE_IMAGE_TYPE::READ,
+																			  &pixel_data[0],
+																			  COMPUTE_MEMORY_FLAG::READ));
 	}
-	[blit_encoder endEncoding];
-	[cmd_buffer commit];
-	[cmd_buffer waitUntilCompleted];
 }
 
-bool metal_renderer::init(shared_ptr<compute_device> dev,
-						  shared_ptr<compute_queue> dev_queue) {
+bool metal_renderer::init(shared_ptr<compute_device> dev) {
 	auto device = ((metal_device*)dev.get())->device;
-	create_textures(device, dev_queue);
+	create_textures(dev);
 	if(!compile_shaders(dev)) return false;
 	
 	//
@@ -201,7 +187,7 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		[renderEncoder setRenderPipelineState:pipeline_state];
 		[renderEncoder setVertexBuffer:((metal_buffer*)position_buffer.get())->get_metal_buffer() offset:0 atIndex:0];
 		[renderEncoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:1];
-		[renderEncoder setFragmentTexture:body_textures[0] atIndex:0];
+		[renderEncoder setFragmentTexture:body_textures[0]->get_metal_image() atIndex:0];
 		
 		//
 		[renderEncoder drawPrimitives:MTLPrimitiveTypePoint vertexStart:0 vertexCount:nbody_state.body_count];

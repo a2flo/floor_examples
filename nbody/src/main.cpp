@@ -529,7 +529,7 @@ int main(int, char* argv[]) {
 #if defined(__APPLE__)
 	if(!nbody_state.no_metal && nbody_state.no_opengl) {
 		// setup renderer
-		if(!metal_renderer::init(fastest_device, dev_queue)) {
+		if(!metal_renderer::init(fastest_device)) {
 			log_error("error during metal initialization!");
 			return -1;
 		}
