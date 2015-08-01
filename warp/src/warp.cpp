@@ -27,7 +27,7 @@ namespace warp_camera {
 	static constexpr const float up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
 	static constexpr const float right_vec { up_vec * aspect_ratio };
 	
-	static float3 reconstruct_position(const size2& coord, const float& linear_depth) {
+	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {
 		return {
 			(float2(coord) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
 			-linear_depth
@@ -92,7 +92,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 
 // NOTE: r/w image supported by cuda, not officially supported by opencl (works with cpu, doesn't with gpu)
 kernel void single_px_fixup(
-#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST)
+#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST) || defined(FLOOR_COMPUTE_METAL)
 							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img
 #define warp_img_in warp_img
 #define warp_img_out warp_img

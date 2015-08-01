@@ -20,6 +20,7 @@
 #include <floor/core/option_handler.hpp>
 #include <floor/core/gl_shader.hpp>
 #include "gl_renderer.hpp"
+#include "metal_renderer.hpp"
 #include "obj_loader.hpp"
 #include "auto_cam.hpp"
 #include "warp_state.hpp"
@@ -222,14 +223,34 @@ int main(int, char* argv[]) {
 	}
 	
 	// setup renderer
-	if(!gl_renderer::init()) {
-		log_error("error during opengl initialization!");
-		return -1;
+	if(warp_state.ctx->get_compute_type() != COMPUTE_TYPE::METAL) {
+		if(warp_state.no_opengl) {
+			log_error("opengl renderer required!");
+			return -1;
+		}
+		warp_state.no_metal = true;
+		
+		if(!gl_renderer::init()) {
+			log_error("error during opengl initialization!");
+			return -1;
+		}
+	}
+	else {
+		if(warp_state.no_metal) {
+			log_error("metal renderer required!");
+			return -1;
+		}
+		warp_state.no_opengl = true;
+		
+		if(!metal_renderer::init()) {
+			log_error("error during metal initialization!");
+			return -1;
+		}
 	}
 	
 	//
 	bool model_success { false };
-	auto model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success);
+	auto model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success, !warp_state.no_opengl);
 	if(!model_success) {
 		return -1;
 	}
@@ -252,13 +273,16 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if(warp_state.no_opengl) {
+		if(warp_state.no_opengl && warp_state.no_metal) {
 			// nope
 		}
-		// opengl rendering
-		else if(!warp_state.no_opengl && !warp_state.stop) {
+		// opengl/metal rendering
+		else if((!warp_state.no_opengl || !warp_state.no_metal) && !warp_state.stop) {
 			floor::start_draw();
-			gl_renderer::render(model, *cam.get());
+			if(!warp_state.no_opengl) {
+				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
+			}
+			else metal_renderer::render((const metal_obj_model&)*model.get(), *cam.get());
 			floor::stop_draw();
 		}
 	}

@@ -23,6 +23,10 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C2F836E1B654EAE00B27BE3 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */; };
+		5C2F836F1B654EAE00B27BE3 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */; };
+		5C2F83711B654FF600B27BE3 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
+		5C2F83721B654FF600B27BE3 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
 		5C30CAA51AA625F5008986B1 /* warp.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* warp.metallib */; };
 		5C5487841B608E280088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487821B608E110088272A /* config.json */; };
 		5C5487851B608E280088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487831B608E110088272A /* config.json.local */; };
@@ -70,6 +74,9 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C2F836A1B654E8200B27BE3 /* metal_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = metal_renderer.hpp; sourceTree = "<group>"; };
+		5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = metal_renderer.mm; sourceTree = "<group>"; };
+		5C2F83701B654FF600B27BE3 /* metal_shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = metal_shaders.metal; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* warp.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = warp.metallib; path = ../data/warp.metallib; sourceTree = "<group>"; };
 		5C5487821B608E110088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
@@ -184,6 +191,9 @@
 				5CE49F1E1B53B9E00059ACC5 /* warp.hpp */,
 				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
 				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
+				5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */,
+				5C2F836A1B654E8200B27BE3 /* metal_renderer.hpp */,
+				5C2F83701B654FF600B27BE3 /* metal_shaders.metal */,
 				5CC330D31AEAC07C00836CC4 /* obj_loader.cpp */,
 				5CC330D41AEAC07C00836CC4 /* obj_loader.hpp */,
 				5C88A6391AEB82170061B84B /* camera.cpp */,
@@ -326,8 +336,10 @@
 			files = (
 				5C88A63C1AEB82180061B84B /* camera.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
+				5C2F83721B654FF600B27BE3 /* metal_shaders.metal in Sources */,
 				5C0071C21A91F2BD00F4711D /* warp.cpp in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
+				5C2F836F1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
 				5CC330D61AEAC07C00836CC4 /* obj_loader.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -336,7 +348,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C2F83711B654FF600B27BE3 /* metal_shaders.metal in Sources */,
 				5CC330D51AEAC07C00836CC4 /* obj_loader.cpp in Sources */,
+				5C2F836E1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
 				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,

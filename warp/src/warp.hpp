@@ -50,7 +50,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 								param<float4> motion_override);
 
 kernel void single_px_fixup(
-#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST)
+#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST) || defined(FLOOR_COMPUTE_METAL)
 							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img
 #else
 							ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img_in,

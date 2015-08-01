@@ -16,36 +16,27 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_WARP_STATE_HPP__
-#define __FLOOR_WARP_WARP_STATE_HPP__
+#ifndef __FLOOR_WARP_METAL_RENDERER_HPP__
+#define __FLOOR_WARP_METAL_RENDERER_HPP__
 
-struct warp_state_struct {
-	shared_ptr<compute_base> ctx;
-	shared_ptr<compute_queue> dev_queue;
-	shared_ptr<compute_device> dev;
+#include <floor/floor/floor.hpp>
+#include <floor/compute/compute_base.hpp>
+#include "obj_loader.hpp"
+#include "camera.hpp"
+#include "warp_state.hpp"
+
+struct metal_renderer {
+	static bool init();
+	static void destroy();
+	static bool render(const metal_obj_model& model, const camera& cam);
 	
-	shared_ptr<compute_program> warp_prog;
-	shared_ptr<compute_kernel> warp_kernel, clear_kernel, fixup_kernel;
-	
-	//
-	bool done { false };
-	bool stop { false };
-	bool no_opengl { false };
-	bool no_metal { false };
-	bool is_auto_cam { false };
-	bool is_single_frame { false };
-	
-	//
-	bool is_warping { true };
-	bool is_render_full { true };
-	bool is_clear_frame { true };
-	bool is_fixup { true };
-	
-	//
-	const float view_distance { 500.0f };
-	const float fov { 72.0f };
-	
+	// internal
+	static bool compile_shaders();
+	static void blit(const bool full_scene);
+	static void render_kernels(const camera& cam,
+							   const float& delta, const float& render_delta,
+							   const size_t& warp_frame_num);
+	static void render_full_scene(const metal_obj_model& model, const camera& cam);
 };
-extern warp_state_struct warp_state;
 
 #endif

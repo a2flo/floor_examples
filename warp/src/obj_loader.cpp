@@ -17,6 +17,7 @@
  */
 
 #include "obj_loader.hpp"
+#include "warp_state.hpp"
 
 //#define FLOOR_DEBUG_PARSER 1
 //#define FLOOR_DEBUG_PARSER_SET_NAMES 1
@@ -41,7 +42,8 @@
 #if !defined(GL_BGR8)
 #define GL_BGR8 GL_BGR
 #endif
-			
+
+// -> opengl
 #define __TEXTURE_FORMATS(F, src_surface, dst_internal_format, dst_format, dst_type) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 8, 0, 0, 0, 0) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 16, 0, 8, 0, 0) \
@@ -70,6 +72,35 @@ if(src_surface->format->Rshift == rshift && \
 
 #define check_format(surface, internal_format, format, texture_type) { \
 	__TEXTURE_FORMATS(__CHECK_FORMAT, surface, internal_format, format, texture_type); \
+}
+
+// -> floor (for use with metal)
+#define __FLOOR_TEXTURE_FORMATS(F, src_surface, dst_image_type) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 16, 8, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 16, 8, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 16, 8, 0, 24) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA16UI_NORM, 64, 0, 16, 32, 48)
+
+#define __FLOOR_CHECK_FORMAT(src_surface, dst_image_type, \
+					         floor_image_type, bpp, rshift, gshift, bshift, ashift) \
+if(src_surface->format->Rshift == rshift && \
+   src_surface->format->Gshift == gshift && \
+   src_surface->format->Bshift == bshift && \
+   src_surface->format->Ashift == ashift && \
+   src_surface->format->BitsPerPixel == bpp) { \
+	dst_image_type = floor_image_type; \
+}
+
+#define floor_check_format(surface, image_type) { \
+	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type); \
 }
 
 class obj_lexer final : public lexer {
@@ -423,10 +454,14 @@ struct mtl_grammar {
 };
 
 
-static void load_textures(// file name -> gl tex id
-						  unordered_map<string, uint32_t>& texture_filenames,
+static void load_textures(// file name -> <gl tex id, compute image ptr>
+						  unordered_map<string, pair<uint32_t, compute_image*>>& texture_filenames,
+						  // opengl or metal?
+						  const bool is_opengl,
 						  // gl tex ids
-						  vector<GLuint>& model_textures,
+						  vector<GLuint>* model_gl_textures,
+						  // metal tex objects
+						  vector<shared_ptr<compute_image>>* model_metal_textures,
 						  // path prefix
 						  const string& prefix) {
 	// load textures
@@ -500,42 +535,73 @@ static void load_textures(// file name -> gl tex id
 	}
 	log_debug("%u textures loaded to mem", surfaces.size());
 	
-	// create gl textures
-	model_textures.resize(surfaces.size());
-	glGenTextures((GLsizei)model_textures.size(), &model_textures[0]);
-	for(size_t i = 0, count = model_textures.size(); i < count; ++i) {
-		const SDL_Surface* surface = surfaces[i];
-		if(surface == nullptr) {
-			log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
-			continue;
+	if(is_opengl) {
+		// create gl textures
+		model_gl_textures->resize(surfaces.size());
+		glGenTextures((GLsizei)model_gl_textures->size(), &(*model_gl_textures)[0]);
+		for(size_t i = 0, count = model_gl_textures->size(); i < count; ++i) {
+			const SDL_Surface* surface = surfaces[i];
+			if(surface == nullptr) {
+				log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
+				continue;
+			}
+			
+			// assign gl tex id to tex filename
+			texture_filenames[filenames[i]].first = (*model_gl_textures)[i];
+			
+			// these values will be computed
+			GLint internal_format = 0;
+			GLenum format = 0;
+			GLenum type = 0;
+			check_format(surface, internal_format, format, type);
+			
+			//
+			glBindTexture(GL_TEXTURE_2D, (*model_gl_textures)[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16);
+			glTexImage2D(GL_TEXTURE_2D, 0, internal_format, surface->w, surface->h, 0, format, type, surface->pixels);
+			glGenerateMipmap(GL_TEXTURE_2D);
+			
+			// check for format problems
+			const auto gl_error = glGetError();
+			if(gl_error != 0) {
+				log_error("gl error in texture #%u: %X", i, gl_error);
+			}
 		}
-		
-		// assign gl tex id to tex filename
-		texture_filenames[filenames[i]] = model_textures[i];
-		
-		// these values will be computed
-		GLint internal_format = 0;
-		GLenum format = 0;
-		GLenum type = 0;
-		check_format(surface, internal_format, format, type);
-		
-		//
-		glBindTexture(GL_TEXTURE_2D, model_textures[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16);
-		glTexImage2D(GL_TEXTURE_2D, 0, internal_format, surface->w, surface->h, 0, format, type, surface->pixels);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		
-		// check for format problems
-		const auto gl_error = glGetError();
-		if(gl_error != 0) {
-			log_error("gl error in texture #%u: %X", i, gl_error);
-		}
+		log_debug("gl textures created");
 	}
-	log_debug("gl textures created");
+	else {
+		// create metal textures
+		model_metal_textures->resize(surfaces.size());
+		for(size_t i = 0, count = model_metal_textures->size(); i < count; ++i) {
+			const SDL_Surface* surface = surfaces[i];
+			if(surface == nullptr) {
+				log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
+				continue;
+			}
+			
+			COMPUTE_IMAGE_TYPE image_type;
+			floor_check_format(surface, image_type);
+			image_type |= COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED;
+			
+			(*model_metal_textures)[i] = warp_state.ctx->create_image(warp_state.dev,
+																	  uint2 {
+																		  uint32_t(surface->w),
+																		  uint32_t(surface->h)
+																	  },
+																	  image_type,
+																	  surface->pixels,
+																	  COMPUTE_MEMORY_FLAG::READ |
+																	  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+			
+			// assign tex ptr to tex filename
+			texture_filenames[filenames[i]].second = (*model_metal_textures)[i].get();
+		}
+		log_debug("metal textures created");
+	}
 }
 
 struct obj_grammar {
@@ -805,7 +871,7 @@ struct obj_grammar {
 		});
 	}
 	
-	obj_model parse(parser_context& ctx, bool& success) {
+	void parse(parser_context& ctx, bool& success, const bool is_opengl, shared_ptr<obj_model> model) {
 		// clear all
 		vertices.clear();
 		tex_coords.clear();
@@ -833,18 +899,17 @@ struct obj_grammar {
 			const auto line_and_column = obj_lexer::get_line_and_column_from_iter(ctx.tu, ctx.deepest_iter->second.begin);
 			log_error("%s:%u:%u: %s",
 					  ctx.tu.file_name, line_and_column.first, line_and_column.second, error_msg);
-			return {};
+			return;
 		}
 		log_debug("parsing done");
 		
 		// create proper model
-		obj_model model;
-		model.vertices.reserve(vertices.size());
-		model.tex_coords.reserve(vertices.size());
-		model.normals.reserve(vertices.size());
-		model.binormals.reserve(vertices.size());
-		model.tangents.reserve(vertices.size());
-		model.objects.reserve(sub_objects.size());
+		model->vertices.reserve(vertices.size());
+		model->tex_coords.reserve(vertices.size());
+		model->normals.reserve(vertices.size());
+		model->binormals.reserve(vertices.size());
+		model->tangents.reserve(vertices.size());
+		model->objects.reserve(sub_objects.size());
 		log_debug("alloc #0");
 		
 		struct reassign_entry {
@@ -889,11 +954,11 @@ struct obj_grammar {
 			
 			// not found, create a new target
 			const uint32_t dst = index_counter++;
-			model.vertices.push_back(vertices[v_idx - 1].xyz);
-			model.tex_coords.push_back(tex_coords[tc_idx - 1].xy);
-			model.normals.push_back(float3 {});
-			model.binormals.push_back(float3 {});
-			model.tangents.push_back(float3 {});
+			model->vertices.push_back(vertices[v_idx - 1].xyz);
+			model->tex_coords.push_back(tex_coords[tc_idx - 1].xy);
+			model->normals.push_back(float3 {});
+			model->binormals.push_back(float3 {});
+			model->tangents.push_back(float3 {});
 			entry.add(tc_idx, n_idx, dst);
 			return dst;
 		};
@@ -928,18 +993,18 @@ struct obj_grammar {
 				}
 			}
 			
-			model.objects.emplace_back(move(sobj));
+			model->objects.emplace_back(move(sobj));
 		}
 		log_debug("objects done");
 		log_debug("indices: %u -> %u", vertices.size(), index_counter);
 		
 		//
-		for(const auto& obj : model.objects) {
+		for(const auto& obj : model->objects) {
 			for(const auto& face : obj->indices) {
-				const auto delta_1 = model.tex_coords[face.y] - model.tex_coords[face.x];
-				const auto delta_2 = model.tex_coords[face.z] - model.tex_coords[face.x];
-				const float3 edge1 = model.vertices[face.y] - model.vertices[face.x];
-				const float3 edge2 = model.vertices[face.z] - model.vertices[face.x];
+				const auto delta_1 = model->tex_coords[face.y] - model->tex_coords[face.x];
+				const auto delta_2 = model->tex_coords[face.z] - model->tex_coords[face.x];
+				const float3 edge1 = model->vertices[face.y] - model->vertices[face.x];
+				const float3 edge2 = model->vertices[face.z] - model->vertices[face.x];
 				
 				float3 norm = edge1.crossed(edge2);
 				float3 binormal = (edge1 * delta_2.x) - (edge2 * delta_1.x);
@@ -951,21 +1016,21 @@ struct obj_grammar {
 				}
 				else binormal *= -1.0f;
 				
-				model.normals[face.x] += norm;
-				model.normals[face.y] += norm;
-				model.normals[face.z] += norm;
-				model.binormals[face.x] += binormal;
-				model.binormals[face.y] += binormal;
-				model.binormals[face.z] += binormal;
-				model.tangents[face.x] += tangent;
-				model.tangents[face.y] += tangent;
-				model.tangents[face.z] += tangent;
+				model->normals[face.x] += norm;
+				model->normals[face.y] += norm;
+				model->normals[face.z] += norm;
+				model->binormals[face.x] += binormal;
+				model->binormals[face.y] += binormal;
+				model->binormals[face.z] += binormal;
+				model->tangents[face.x] += tangent;
+				model->tangents[face.y] += tangent;
+				model->tangents[face.z] += tangent;
 			}
 		}
 		
-		for(auto& norm : model.normals) { norm.normalize(); }
-		for(auto& binormal : model.binormals) { binormal.normalize(); }
-		for(auto& tangent : model.tangents) { tangent.normalize(); }
+		for(auto& norm : model->normals) { norm.normalize(); }
+		for(auto& binormal : model->binormals) { binormal.normalize(); }
+		for(auto& tangent : model->tangents) { tangent.normalize(); }
 		
 		// process material
 		if(mat_filename != "") {
@@ -978,7 +1043,7 @@ struct obj_grammar {
 			string mat_data = "";
 			if(!file_io::file_to_string(prefix + mat_filename, mat_data)) {
 				log_error("failed to load .mtl file: %s", prefix + mat_filename);
-				return {};
+				return;
 			}
 			
 			auto mat_tu = make_unique<translation_unit>(mat_filename);
@@ -994,20 +1059,20 @@ struct obj_grammar {
 			auto mats = mtl_grammar_parser.parse(mtl_parser_ctx, success);
 			if(!success) {
 				log_error("mtl parsing failed");
-				return {};
+				return;
 			}
 			success = false; // reset for further processing
 			log_debug("mtl parsed");
 			
 			// create a map of all texture file names
 			// value: at first use count, later: gl tex id
-			unordered_map<string, uint32_t> texture_filenames;
+			unordered_map<string, pair<uint32_t, compute_image*>> texture_filenames;
 			for(const auto& mat : mats) {
-				texture_filenames.emplace(mat.second->ambient, 0);
-				texture_filenames.emplace(mat.second->diffuse, 0);
-				texture_filenames.emplace(mat.second->specular, 0);
-				texture_filenames.emplace(mat.second->normal, 0);
-				texture_filenames.emplace(mat.second->mask, 0);
+				texture_filenames.emplace(mat.second->ambient, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->diffuse, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->specular, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->normal, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->mask, pair<uint32_t, compute_image*> { 0, nullptr });
 			}
 			
 			// check use count
@@ -1018,11 +1083,11 @@ struct obj_grammar {
 							  obj->name, obj->mat);
 					continue;
 				}
-				++texture_filenames[mat_iter->second->ambient];
-				++texture_filenames[mat_iter->second->diffuse];
-				++texture_filenames[mat_iter->second->specular];
-				++texture_filenames[mat_iter->second->normal];
-				++texture_filenames[mat_iter->second->mask];
+				++texture_filenames[mat_iter->second->ambient].first;
+				++texture_filenames[mat_iter->second->diffuse].first;
+				++texture_filenames[mat_iter->second->specular].first;
+				++texture_filenames[mat_iter->second->normal].first;
+				++texture_filenames[mat_iter->second->mask].first;
 			}
 			
 			// kill empty string
@@ -1031,20 +1096,29 @@ struct obj_grammar {
 			
 			// kill unused
 			core::erase_if(texture_filenames, [](const auto& iter) -> bool {
-				if(iter->second == 0) {
+				if(iter->second.first == 0) {
 					log_debug("killing unused texture \"%s\"", iter->first);
 				}
-				return (iter->second == 0);
+				return (iter->second.first == 0);
 			});
 			
 			// add dummy textures for later
-			texture_filenames.emplace("black.png", 0);
-			texture_filenames.emplace("white.png", 0);
-			texture_filenames.emplace("up_normal.png", 0);
+			texture_filenames.emplace("black.png", pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace("white.png", pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace("up_normal.png", pair<uint32_t, compute_image*> { 0, nullptr });
 			
-			model.materials.resize(mats.size());
-			model.material_infos.resize(mats.size());
-			load_textures(texture_filenames, model.textures, prefix);
+			//
+			gl_obj_model* gl_model = (is_opengl ? (gl_obj_model*)model.get() : nullptr);
+			metal_obj_model* metal_model = (!is_opengl ? (metal_obj_model*)model.get() : nullptr);
+			if(is_opengl) {
+				gl_model->materials.resize(mats.size());
+			}
+			else metal_model->materials.resize(mats.size());
+			model->material_infos.resize(mats.size());
+			load_textures(texture_filenames, is_opengl,
+						  is_opengl ? &gl_model->textures : nullptr,
+						  !is_opengl ? &metal_model->textures : nullptr,
+						  prefix);
 			
 			// assign textures/materials
 			unordered_map<string, uint32_t> mat_map; // mat name -> mat idx in model
@@ -1053,8 +1127,7 @@ struct obj_grammar {
 				mat_map[mat.first] = mat_counter++;
 			}
 			for(const auto& mat : mats) {
-				auto& mdl_mat = model.materials[mat_map[mat.first]];
-				auto& mdl_mat_info = model.material_infos[mat_map[mat.first]];
+				auto& mdl_mat_info = model->material_infos[mat_map[mat.first]];
 				
 				mdl_mat_info.name = mat.first;
 				mdl_mat_info.diffuse_file_name = (mat.second->diffuse != "" ? mat.second->diffuse : "black.png");
@@ -1062,30 +1135,43 @@ struct obj_grammar {
 				mdl_mat_info.normal_file_name = (mat.second->normal != "" ? mat.second->normal : "up_normal.png");
 				mdl_mat_info.mask_file_name = (mat.second->mask != "" ? mat.second->mask : "white.png");
 				
-				mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name];
-				mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name];
-				mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name];
-				mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name];
+				if(is_opengl) {
+					auto& mdl_mat = gl_model->materials[mat_map[mat.first]];
+					mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name].first;
+					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].first;
+					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].first;
+					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].first;
+				}
+				else {
+					auto& mdl_mat = metal_model->materials[mat_map[mat.first]];
+					mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name].second;
+					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].second;
+					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].second;
+					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].second;
+				}
 			}
 			
 			// assign materials to sub-objects
 			for(size_t i = 0, count = sub_objects.size(); i < count; ++i) {
-				model.objects[i]->mat_idx = mat_map[sub_objects[i]->mat];
+				model->objects[i]->mat_idx = mat_map[sub_objects[i]->mat];
 			}
 			log_debug("materials assigned");
 		}
 		
 		// done
 		success = true;
-		return model;
 	}
 	
 };
 
-obj_model obj_loader::load(const string& file_name, bool& success) {
+shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, const bool is_opengl) {
 	success = false;
 	
-	obj_model model;
+	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
+	shared_ptr<metal_obj_model> metal_model = (!is_opengl ? make_shared<metal_obj_model>() : nullptr);
+	shared_ptr<obj_model> model = (is_opengl ?
+								   (shared_ptr<obj_model>)gl_model :
+								   (shared_ptr<obj_model>)metal_model);
 	static constexpr const uint32_t bin_obj_version { 1 };
 	
 	// -> load .obj
@@ -1107,7 +1193,7 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 		
 		parser_context parser_ctx { *tu };
 		obj_grammar obj_grammar_parser;
-		model = obj_grammar_parser.parse(parser_ctx, success);
+		obj_grammar_parser.parse(parser_ctx, success, is_opengl, model);
 		if(!success) {
 			log_error("obj parsing failed");
 			return {};
@@ -1116,7 +1202,7 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 		
 		// scale vertices
 		static constexpr const float scale_factor { 0.1f };
-		for(auto& vertex : model.vertices) {
+		for(auto& vertex : model->vertices) {
 			vertex *= scale_factor;
 		}
 		
@@ -1127,11 +1213,11 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 		}
 		else {
 			bin_file.write_uint(bin_obj_version);
-			bin_file.write_uint((uint32_t)model.vertices.size());
-			bin_file.write_uint((uint32_t)model.objects.size());
-			bin_file.write_uint((uint32_t)model.materials.size());
+			bin_file.write_uint((uint32_t)model->vertices.size());
+			bin_file.write_uint((uint32_t)model->objects.size());
+			bin_file.write_uint((uint32_t)(is_opengl ? gl_model->materials.size() : metal_model->materials.size()));
 			
-			for(const auto& mtl : model.material_infos) {
+			for(const auto& mtl : model->material_infos) {
 				bin_file.write_terminated_block(mtl.name, 0);
 				bin_file.write_terminated_block(mtl.diffuse_file_name, 0);
 				bin_file.write_terminated_block(mtl.specular_file_name, 0);
@@ -1139,7 +1225,7 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 				bin_file.write_terminated_block(mtl.mask_file_name, 0);
 			}
 			
-			for(const auto& obj : model.objects) {
+			for(const auto& obj : model->objects) {
 				bin_file.write_terminated_block(obj->name, 0);
 				bin_file.write_uint((uint32_t)obj->indices.size());
 				bin_file.write_uint(obj->mat_idx);
@@ -1150,26 +1236,26 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 				}
 			}
 			
-			for(const auto& vtx : model.vertices) {
+			for(const auto& vtx : model->vertices) {
 				bin_file.write_float(vtx.x);
 				bin_file.write_float(vtx.y);
 				bin_file.write_float(vtx.z);
 			}
-			for(const auto& tc : model.tex_coords) {
+			for(const auto& tc : model->tex_coords) {
 				bin_file.write_float(tc.x);
 				bin_file.write_float(tc.y);
 			}
-			for(const auto& nrm : model.normals) {
+			for(const auto& nrm : model->normals) {
 				bin_file.write_float(nrm.x);
 				bin_file.write_float(nrm.y);
 				bin_file.write_float(nrm.z);
 			}
-			for(const auto& bnm : model.binormals) {
+			for(const auto& bnm : model->binormals) {
 				bin_file.write_float(bnm.x);
 				bin_file.write_float(bnm.y);
 				bin_file.write_float(bnm.z);
 			}
-			for(const auto& tgt : model.tangents) {
+			for(const auto& tgt : model->tangents) {
 				bin_file.write_float(tgt.x);
 				bin_file.write_float(tgt.y);
 				bin_file.write_float(tgt.z);
@@ -1201,22 +1287,25 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 		const auto sub_object_count = bin_file.get_uint();
 		const auto mat_count = bin_file.get_uint();
 		
-		model.vertices.clear();
-		model.tex_coords.clear();
-		model.normals.clear();
-		model.binormals.clear();
-		model.tangents.clear();
-		model.vertices.reserve(vertex_count);
-		model.tex_coords.reserve(vertex_count);
-		model.normals.reserve(vertex_count);
-		model.binormals.reserve(vertex_count);
-		model.tangents.reserve(vertex_count);
-		model.materials.reserve(mat_count);
-		model.material_infos.reserve(mat_count);
-		model.objects.reserve(sub_object_count);
+		model->vertices.clear();
+		model->tex_coords.clear();
+		model->normals.clear();
+		model->binormals.clear();
+		model->tangents.clear();
+		model->vertices.reserve(vertex_count);
+		model->tex_coords.reserve(vertex_count);
+		model->normals.reserve(vertex_count);
+		model->binormals.reserve(vertex_count);
+		model->tangents.reserve(vertex_count);
+		if(is_opengl) {
+			gl_model->materials.reserve(mat_count);
+		}
+		else metal_model->materials.reserve(mat_count);
+		model->material_infos.reserve(mat_count);
+		model->objects.reserve(sub_object_count);
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
-			model.material_infos.emplace_back(obj_model::material_info {
+			model->material_infos.emplace_back(obj_model::material_info {
 				bin_file.get_terminated_block(0),
 				bin_file.get_terminated_block(0),
 				bin_file.get_terminated_block(0),
@@ -1225,23 +1314,36 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 			});
 		}
 		
-		unordered_map<string, uint32_t> texture_filenames;
-		for(const auto& mat : model.material_infos) {
-			texture_filenames.emplace(mat.diffuse_file_name, 0);
-			texture_filenames.emplace(mat.specular_file_name, 0);
-			texture_filenames.emplace(mat.normal_file_name, 0);
-			texture_filenames.emplace(mat.mask_file_name, 0);
+		unordered_map<string, pair<uint32_t, compute_image*>> texture_filenames;
+		for(const auto& mat : model->material_infos) {
+			texture_filenames.emplace(mat.diffuse_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.specular_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.normal_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.mask_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 		}
-		load_textures(texture_filenames, model.textures, prefix);
+		load_textures(texture_filenames, is_opengl,
+					  is_opengl ? &gl_model->textures : nullptr,
+					  !is_opengl ? &metal_model->textures : nullptr,
+					  prefix);
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
-			auto& mdl_mat_info = model.material_infos[i];
-			model.materials.emplace_back(obj_model::material {
-				texture_filenames[mdl_mat_info.diffuse_file_name],
-				texture_filenames[mdl_mat_info.specular_file_name],
-				texture_filenames[mdl_mat_info.normal_file_name],
-				texture_filenames[mdl_mat_info.mask_file_name]
-			});
+			auto& mdl_mat_info = model->material_infos[i];
+			if(is_opengl) {
+				gl_model->materials.emplace_back(gl_obj_model::material {
+					texture_filenames[mdl_mat_info.diffuse_file_name].first,
+					texture_filenames[mdl_mat_info.specular_file_name].first,
+					texture_filenames[mdl_mat_info.normal_file_name].first,
+					texture_filenames[mdl_mat_info.mask_file_name].first
+				});
+			}
+			else {
+				metal_model->materials.emplace_back(metal_obj_model::material {
+					texture_filenames[mdl_mat_info.diffuse_file_name].second,
+					texture_filenames[mdl_mat_info.specular_file_name].second,
+					texture_filenames[mdl_mat_info.normal_file_name].second,
+					texture_filenames[mdl_mat_info.mask_file_name].second
+				});
+			}
 		}
 		
 		for(uint32_t i = 0; i < sub_object_count; ++i) {
@@ -1261,39 +1363,39 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 				});
 			}
 			
-			model.objects.emplace_back(move(obj));
+			model->objects.emplace_back(move(obj));
 		}
 		log_debug("loaded sub-objects");
 		
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model.vertices.emplace_back(float3 {
+			model->vertices.emplace_back(float3 {
 				bin_file.get_float(),
 				bin_file.get_float(),
 				bin_file.get_float()
 			});
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model.tex_coords.emplace_back(float2 {
+			model->tex_coords.emplace_back(float2 {
 				bin_file.get_float(),
 				bin_file.get_float()
 			});
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model.normals.emplace_back(float3 {
-				bin_file.get_float(),
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
-		}
-		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model.binormals.emplace_back(float3 {
+			model->normals.emplace_back(float3 {
 				bin_file.get_float(),
 				bin_file.get_float(),
 				bin_file.get_float()
 			});
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model.tangents.emplace_back(float3 {
+			model->binormals.emplace_back(float3 {
+				bin_file.get_float(),
+				bin_file.get_float(),
+				bin_file.get_float()
+			});
+		}
+		for(uint32_t i = 0; i < vertex_count; ++i) {
+			model->tangents.emplace_back(float3 {
 				bin_file.get_float(),
 				bin_file.get_float(),
 				bin_file.get_float()
@@ -1304,41 +1406,61 @@ obj_model obj_loader::load(const string& file_name, bool& success) {
 		log_debug("loaded model data");
 	}
 	
-	//
-	glGenBuffers(1, &model.vertices_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, model.vertices_vbo);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(model.vertices.size() * sizeof(float3)), &model.vertices[0], GL_STATIC_DRAW);
-	glGenBuffers(1, &model.tex_coords_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, model.tex_coords_vbo);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(model.tex_coords.size() * sizeof(float2)), &model.tex_coords[0], GL_STATIC_DRAW);
-	glGenBuffers(1, &model.normals_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, model.normals_vbo);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(model.normals.size() * sizeof(float3)), &model.normals[0], GL_STATIC_DRAW);
-	glGenBuffers(1, &model.binormals_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, model.binormals_vbo);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(model.binormals.size() * sizeof(float3)), &model.binormals[0], GL_STATIC_DRAW);
-	glGenBuffers(1, &model.tangents_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, model.tangents_vbo);
-	glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(model.tangents.size() * sizeof(float3)), &model.tangents[0], GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	for(auto& obj : model.objects) {
-		glGenBuffers(1, &obj->indices_vbo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_vbo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->indices.size() * sizeof(uint3)), &obj->indices[0], GL_STATIC_DRAW);
-		obj->triangle_count = (GLsizei)(obj->indices.size() * 3);
+	// create model buffers
+	if(is_opengl) {
+		glGenBuffers(1, &gl_model->vertices_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, gl_model->vertices_vbo);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->vertices.size() * sizeof(float3)), &gl_model->vertices[0], GL_STATIC_DRAW);
+		glGenBuffers(1, &gl_model->tex_coords_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, gl_model->tex_coords_vbo);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tex_coords.size() * sizeof(float2)), &gl_model->tex_coords[0], GL_STATIC_DRAW);
+		glGenBuffers(1, &gl_model->normals_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, gl_model->normals_vbo);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->normals.size() * sizeof(float3)), &gl_model->normals[0], GL_STATIC_DRAW);
+		glGenBuffers(1, &gl_model->binormals_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, gl_model->binormals_vbo);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->binormals.size() * sizeof(float3)), &gl_model->binormals[0], GL_STATIC_DRAW);
+		glGenBuffers(1, &gl_model->tangents_vbo);
+		glBindBuffer(GL_ARRAY_BUFFER, gl_model->tangents_vbo);
+		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tangents.size() * sizeof(float3)), &gl_model->tangents[0], GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		
+		for(auto& obj : gl_model->objects) {
+			glGenBuffers(1, &obj->indices_gl_vbo);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->indices.size() * sizeof(uint3)), &obj->indices[0], GL_STATIC_DRAW);
+			obj->index_count = (GLsizei)(obj->indices.size() * 3);
+		}
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		
+		glFinish();
 	}
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	else {
+		auto ctx = floor::get_compute_context();
+		auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+		
+		const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
+								  COMPUTE_MEMORY_FLAG::HOST_WRITE);
+		metal_model->vertices_buffer = ctx->create_buffer(dev, metal_model->vertices, buffer_type);
+		metal_model->tex_coords_buffer = ctx->create_buffer(dev, metal_model->tex_coords, buffer_type);
+		metal_model->normals_buffer = ctx->create_buffer(dev, metal_model->normals, buffer_type);
+		metal_model->binormals_buffer = ctx->create_buffer(dev, metal_model->binormals, buffer_type);
+		metal_model->tangents_buffer = ctx->create_buffer(dev, metal_model->tangents, buffer_type);
+		
+		for(auto& obj : metal_model->objects) {
+			obj->indices_metal_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
+			obj->index_count = (GLsizei)(obj->indices.size() * 3);
+		}
+	}
 	
 	// clean up mem that isn't needed any more
-	glFinish();
-	model.vertices.clear();
-	model.tex_coords.clear();
-	model.normals.clear();
-	model.binormals.clear();
-	model.tangents.clear();
-	model.material_infos.clear();
-	for(auto& obj : model.objects) {
+	model->vertices.clear();
+	model->tex_coords.clear();
+	model->normals.clear();
+	model->binormals.clear();
+	model->tangents.clear();
+	model->material_infos.clear();
+	for(auto& obj : model->objects) {
 		obj->indices.clear();
 	}
 	

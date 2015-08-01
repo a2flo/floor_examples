@@ -28,7 +28,7 @@
 struct gl_renderer {
 	static bool init();
 	static void destroy();
-	static bool render(const obj_model& model, const camera& cam);
+	static bool render(const gl_obj_model& model, const camera& cam);
 	
 	// internal
 	static bool compile_shaders();
@@ -36,7 +36,7 @@ struct gl_renderer {
 	static void render_kernels(const camera& cam,
 							   const float& delta, const float& render_delta,
 							   const size_t& warp_frame_num);
-	static void render_full_scene(const obj_model& model, const camera& cam);
+	static void render_full_scene(const gl_obj_model& model, const camera& cam);
 };
 
 #endif

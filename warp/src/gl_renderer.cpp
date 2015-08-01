@@ -47,7 +47,7 @@ static struct {
 } shadow_map;
 static float3 light_pos;
 static shared_ptr<compute_image> compute_color, compute_scene_color, compute_scene_depth, compute_scene_motion;
-static matrix4f prev_mvm, prev_imvm, prev_mvpm, cur_imvm;
+static matrix4f prev_mvm, prev_imvm, cur_imvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
@@ -271,13 +271,7 @@ bool gl_renderer::init() {
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	
-#if 0
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // pre-mul
-	//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR); // add
-#else
 	glDisable(GL_BLEND);
-#endif
 	
 	return compile_shaders();
 }
@@ -286,7 +280,7 @@ void gl_renderer::destroy() {
 	destroy_textures();
 }
 
-bool gl_renderer::render(const obj_model& model,
+bool gl_renderer::render(const gl_obj_model& model,
 						 const camera& cam) {
 	// time keeping
 	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
@@ -417,7 +411,7 @@ void gl_renderer::render_kernels(const camera& cam,
 #endif
 }
 
-void gl_renderer::render_full_scene(const obj_model& model, const camera& cam) {
+void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam) {
 	//
 	glBindVertexArray(global_vao);
 	
@@ -455,8 +449,8 @@ void gl_renderer::render_full_scene(const obj_model& model, const camera& cam) {
 		glVertexAttribPointer(shdw_vertices_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 		
 		for(auto& obj : model.objects) {
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_vbo);
-			glDrawElements(GL_TRIANGLES, obj->triangle_count, GL_UNSIGNED_INT, nullptr);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
+			glDrawElements(GL_TRIANGLES, obj->index_count, GL_UNSIGNED_INT, nullptr);
 		}
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -509,7 +503,6 @@ void gl_renderer::render_full_scene(const obj_model& model, const camera& cam) {
 	prev_imvm = mview;
 	prev_imvm.invert();
 	const matrix4f mvpm { mview * mproj };
-	prev_mvpm = mvpm;
 	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
 	
 	if(!warp_state.is_single_frame) {
@@ -584,8 +577,8 @@ void gl_renderer::render_full_scene(const obj_model& model, const camera& cam) {
 		glActiveTexture((GLenum)(GL_TEXTURE0 + mask_num));
 		glBindTexture(GL_TEXTURE_2D, model.materials[obj->mat_idx].mask);
 		
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_vbo);
-		glDrawElements(GL_TRIANGLES, obj->triangle_count, GL_UNSIGNED_INT, nullptr);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
+		glDrawElements(GL_TRIANGLES, obj->index_count, GL_UNSIGNED_INT, nullptr);
 	}
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -638,7 +631,6 @@ bool gl_renderer::compile_shaders() {
 		uniform mat4 mvpm;
 		uniform mat4 mvm;
 		uniform mat4 prev_mvm;
-		uniform mat4 prev_mvpm;
 		uniform mat4 light_bias_mvpm;
 		uniform vec3 cam_pos;
 		uniform vec3 light_pos;

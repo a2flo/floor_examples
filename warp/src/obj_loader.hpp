@@ -20,6 +20,8 @@
 #define __FLOOR_OBJ_LOADER_HPP__
 
 #include <floor/floor/floor.hpp>
+#include <floor/compute/compute_buffer.hpp>
+#include <floor/compute/compute_image.hpp>
 
 struct obj_model {
 	vector<float3> vertices { float3 { 0.0f } };
@@ -27,6 +29,29 @@ struct obj_model {
 	vector<float3> normals { float3 { 0.0f, 1.0f, 0.0f } };
 	vector<float3> binormals { float3 { 1.0f, 0.0f, 0.0f } };
 	vector<float3> tangents { float3 { 0.0f, 0.0f, -1.0f } };
+	
+	struct material_info {
+		string name;
+		string diffuse_file_name;
+		string specular_file_name;
+		string normal_file_name;
+		string mask_file_name;
+	};
+	vector<material_info> material_infos;
+	
+	struct sub_object {
+		const string name;
+		vector<uint3> indices;
+		GLsizei index_count { 0u };
+		uint32_t mat_idx { 0u };
+		// not going to put this separately just for that
+		GLuint indices_gl_vbo { 0u };
+		shared_ptr<compute_buffer> indices_metal_vbo;
+	};
+	vector<unique_ptr<sub_object>> objects;
+};
+
+struct gl_obj_model : obj_model {
 	GLuint vertices_vbo { 0u };
 	GLuint tex_coords_vbo { 0u };
 	GLuint normals_vbo { 0u };
@@ -41,30 +66,28 @@ struct obj_model {
 	};
 	vector<material> materials;
 	vector<GLuint> textures;
+};
+
+struct metal_obj_model : obj_model {
+	shared_ptr<compute_buffer> vertices_buffer;
+	shared_ptr<compute_buffer> tex_coords_buffer;
+	shared_ptr<compute_buffer> normals_buffer;
+	shared_ptr<compute_buffer> binormals_buffer;
+	shared_ptr<compute_buffer> tangents_buffer;
 	
-	struct material_info {
-		string name;
-		string diffuse_file_name;
-		string specular_file_name;
-		string normal_file_name;
-		string mask_file_name;
+	struct material {
+		compute_image* diffuse;
+		compute_image* specular;
+		compute_image* normal;
+		compute_image* mask;
 	};
-	vector<material_info> material_infos;
-	
-	struct sub_object {
-		const string name;
-		vector<uint3> indices;
-		GLsizei triangle_count { 0u };
-		GLuint indices_vbo { 0u };
-		uint32_t mat_idx { 0u };
-	};
-	vector<unique_ptr<sub_object>> objects;
-	
+	vector<material> materials;
+	vector<shared_ptr<compute_image>> textures;
 };
 
 class obj_loader {
 public:
-	static obj_model load(const string& file_name, bool& success);
+	static shared_ptr<obj_model> load(const string& file_name, bool& success, const bool is_opengl);
 	
 protected:
 	// static class
