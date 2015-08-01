@@ -16,10 +16,6 @@ struct uniforms_t {
 	float2 mass_minmax;
 };
 
-struct vertex_t {
-	packed_float4 position;
-};
-
 struct ShdInOut {
 	float4 position [[position]];
 	float size [[point_size]];
@@ -44,12 +40,12 @@ static half4 compute_gradient(thread const float& interpolator) {
 	return half4(color);
 }
 
-vertex ShdInOut lighting_vertex(device const vertex_t* vertex_array [[buffer(0)]],
+vertex ShdInOut lighting_vertex(device const float4* vertex_array [[buffer(0)]],
 								constant uniforms_t& uniforms [[buffer(1)]],
 								unsigned int vid [[vertex_id]]) {
 	ShdInOut out;
 	
-	const float4 in_vertex = vertex_array[vid].position;
+	const float4 in_vertex = vertex_array[vid];
 	float size = 128.0 / (1.0 - float3(uniforms.mvm * float4(in_vertex.xyz, 1.0)).z);
 	float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
 	mass_scale *= mass_scale; // ^2

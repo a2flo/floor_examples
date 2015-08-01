@@ -89,7 +89,8 @@ static void create_textures(shared_ptr<compute_device> dev) {
 																			  COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
 																			  COMPUTE_IMAGE_TYPE::READ,
 																			  &pixel_data[0],
-																			  COMPUTE_MEMORY_FLAG::READ));
+																			  COMPUTE_MEMORY_FLAG::READ |
+																			  COMPUTE_MEMORY_FLAG::HOST_WRITE));
 	}
 }
 
