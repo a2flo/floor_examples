@@ -21,25 +21,58 @@
 #if defined(FLOOR_COMPUTE)
 
 namespace warp_camera {
+	// sceen size in fp
 	static constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
+	// 1 / screen size in fp
 	static constexpr const float2 inv_screen_size { 1.0f / screen_size };
+	// screen width / height aspect ratio
 	static constexpr const float aspect_ratio { screen_size.x / screen_size.y };
-	static constexpr const float up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
-	static constexpr const float right_vec { up_vec * aspect_ratio };
+	// projection up vector
+	static constexpr const float _up_vec { const_math::tan(const_math::deg_to_rad(SCREEN_FOV) * 0.5f) };
+	// projection right vector
+	static constexpr const float right_vec { _up_vec * aspect_ratio };
+#if defined(SCREEN_ORIGIN_LEFT_BOTTOM)
+	static constexpr const float up_vec { _up_vec };
+#else // flip up vector for "left top" origin
+	static constexpr const float up_vec { -_up_vec };
+#endif
+	// [near, far] plane, needed for depth correction
+	constexpr const float2 near_far_plane { 0.5f, 500.0f };
 	
+	// reconstructs a 3D position from a 2D screen coordinate and its associated real world depth
 	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {
 		return {
-			(float2(coord) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
+			((float2(coord) + 0.5f) * 2.0f * inv_screen_size - 1.0f) * float2(right_vec, up_vec) * linear_depth,
 			-linear_depth
 		};
 	}
 	
+	// reprojects a 3D position back to 2D
 	static float2 reproject_position(const float3& position) {
 		const auto proj_dst_coord = (position.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -position.z;
-		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size).round();
+		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size).floor();
+	}
+	
+	// linearizes the input depth value according to the depth type and returns the real world depth value
+	static float linearize_depth(const float& depth) {
+#if defined(DEPTH_ZW)
+		// depth is written as z/w in shader -> need to perform a small adjustment to account for near/far plane to get the real world depth
+		// (note that this error is almost imperceptible and could just be ignored)
+		return depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
+		
+#elif defined(DEPTH_NORMALIZED)
+		// reading from the actual depth buffer which is normalized in [0, 1]
+		constexpr const float2 near_far_projection {
+			-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+			(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+		};
+		return near_far_projection.y / (depth - near_far_projection.x);
+#endif
 	}
 };
 
+// decodes the encoded input 3D motion vector
+// format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
 static float3 decode_motion(const uint32_t& encoded_motion) {
 	const float3 signs {
 		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
@@ -59,9 +92,18 @@ static float3 decode_motion(const uint32_t& encoded_motion) {
 	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
 }
 
+// depth buffer format: actual depth on metal, color (red-only) on opencl - either will work for cuda and host (identical sampling)
+constexpr const COMPUTE_IMAGE_TYPE depth_image_format {
+#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_HOST)
+	COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F
+#else
+	COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F
+#endif
+};
+
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_depth,
+								ro_image<depth_image_format> img_depth,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
@@ -70,7 +112,7 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
-	const auto linear_depth = read(img_depth, coord); // depth is already linear with z/w in shader
+	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
 	const auto motion = (motion_override->w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override->xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
@@ -90,7 +132,6 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	}
 }
 
-// NOTE: r/w image supported by cuda, not officially supported by opencl (works with cpu, doesn't with gpu)
 kernel void single_px_fixup(
 #if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST) || defined(FLOOR_COMPUTE_METAL)
 							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img

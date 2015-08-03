@@ -33,7 +33,7 @@ struct warp_option_context {
 typedef option_handler<warp_option_context> warp_opt_handler;
 
 static unique_ptr<camera> cam;
-static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.1f /* slower */ };
+static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.25f /* slower */ };
 
 //! option -> function map
 template<> unordered_map<string, warp_opt_handler::option_function> warp_opt_handler::options {
@@ -262,6 +262,14 @@ int main(int, char* argv[]) {
 	log_debug("first frame");
 	while(!warp_state.done) {
 		floor::get_event()->handle_events();
+		
+#if !defined(FLOOR_IOS)
+		// stop drawing if window is inactive
+		if(!(SDL_GetWindowFlags(floor::get_window()) & SDL_WINDOW_INPUT_FOCUS)) {
+			SDL_Delay(20);
+			continue;
+		}
+#endif
 		
 		if(!warp_state.is_auto_cam) cam->run();
 		else auto_cam::run(*cam);

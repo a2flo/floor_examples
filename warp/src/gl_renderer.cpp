@@ -47,7 +47,7 @@ static struct {
 } shadow_map;
 static float3 light_pos;
 static shared_ptr<compute_image> compute_color, compute_scene_color, compute_scene_depth, compute_scene_motion;
-static matrix4f prev_mvm, prev_imvm, cur_imvm;
+static matrix4f prev_mvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
@@ -134,6 +134,7 @@ static void create_textures() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
 					 GL_RGBA, GL_FLOAT, nullptr);
 #endif
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, scene_fbo.motion, 0);
 		
 		glGenTextures(1, &scene_fbo.depth);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
@@ -457,7 +458,6 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		
 		// draw main scene
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, scene_fbo.motion, 0);
 		glDrawBuffers(size(draw_buffers), &draw_buffers[0]);
 		glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
 		
@@ -500,8 +500,6 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glUniformMatrix4fv(shd->program.uniforms["mvm"].location, 1, false, &mview.data[0]);
 	glUniformMatrix4fv(shd->program.uniforms["prev_mvm"].location, 1, false, &prev_mvm.data[0]);
 	prev_mvm = mview;
-	prev_imvm = mview;
-	prev_imvm.invert();
 	const matrix4f mvpm { mview * mproj };
 	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
 	
@@ -682,10 +680,9 @@ bool gl_renderer::compile_shaders() {
 		in vec3 light_dir;
 		in vec3 motion;
 		
-		out vec4 frag_color;
-		out float frag_depth;
-		
-		out uint motion_color;
+		layout (location = 0) out vec4 frag_color;
+		layout (location = 1) out float frag_depth;
+		layout (location = 2) out uint motion_color;
 		//out vec4 motion_color;
 		
 		uint encode_motion(in vec3 motion) {
@@ -775,9 +772,7 @@ bool gl_renderer::compile_shaders() {
 			lighting = max(lighting, ambient);
 			
 			frag_color = vec4(diff.xyz * lighting, 0.0);
-			//frag_depth = gl_FragCoord.z; // normalized depth
-			frag_depth = gl_FragCoord.z / gl_FragCoord.w; // linear depth
-
+			frag_depth = gl_FragCoord.z / gl_FragCoord.w;
 			motion_color = encode_motion(motion);
 			//motion_color = vec4(motion, 1.0);
 		}

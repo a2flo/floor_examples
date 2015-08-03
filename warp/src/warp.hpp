@@ -35,31 +35,26 @@
 #define SCREEN_FOV 72.0f
 #endif
 
+// screen origin is left bottom for opengl, left top for metal (and directx)
+#if !defined(FLOOR_COMPUTE_METAL)
+#define SCREEN_ORIGIN_LEFT_BOTTOM 1
+#else
+#define SCREEN_ORIGIN_LEFT_TOP 1
+#endif
+
+// depth is written as z/w in opengl (thus cuda/opencl/host) and normalized in [0, 1] for metal
+#if !defined(FLOOR_COMPUTE_METAL)
+#define DEPTH_ZW 1
+#else
+#define DEPTH_NORMALIZED 1
+#endif
+// TODO: support log depth?
+
 #if defined(FLOOR_COMPUTE)
 
 #if defined(FLOOR_COMPUTE_HOST)
 #include <floor/compute/device/common.hpp>
 #endif
-
-// prototypes
-kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_depth,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
-								param<float> relative_delta,
-								param<float4> motion_override);
-
-kernel void single_px_fixup(
-#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST) || defined(FLOOR_COMPUTE_METAL)
-							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img
-#else
-							ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img_in,
-							wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img_out
-#endif
-);
-
-kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img,
-					  param<float4> clear_color);
 
 #endif
 

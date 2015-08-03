@@ -28,15 +28,11 @@
 struct metal_renderer {
 	static bool init();
 	static void destroy();
-	static bool render(const metal_obj_model& model, const camera& cam);
+	static void render(const metal_obj_model& model, const camera& cam);
 	
 	// internal
 	static bool compile_shaders();
-	static void blit(const bool full_scene);
-	static void render_kernels(const camera& cam,
-							   const float& delta, const float& render_delta,
-							   const size_t& warp_frame_num);
-	static void render_full_scene(const metal_obj_model& model, const camera& cam);
+	
 };
 
 #endif

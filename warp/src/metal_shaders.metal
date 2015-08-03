@@ -69,27 +69,28 @@ vertex scene_in_out scene_vs(device const packed_float3* in_position [[buffer(0)
 	return out;
 }
 
-static uint encode_motion(thread const float3& motion) {
-	const float range = 64.0; // [-range, range]
-	float3 signs = sign(motion);
+static uint32_t encode_motion(thread const float3& motion) {
+	constexpr const float range = 64.0; // [-range, range]
+	const float3 signs = sign(motion);
 	float3 cmotion = clamp(abs(motion), 0.0, range);
 	// use log2 scaling
-	cmotion = log2(cmotion + 1.0);
+	cmotion = precise::log2(cmotion + 1.0);
 	// encode x and z with 10-bit, y with 9-bit
-	cmotion *= 1.0 / log2(range + 1.0);
+	//cmotion *= 1.0 / precise::log2(range + 1.0);
+	cmotion *= 0.16604764621594f; // no constexpr math :(
 	cmotion.xz *= 1024.0; // 2^10
 	cmotion.y *= 512.0; // 2^9
 	return ((signs.x < 0.0 ? 0x80000000u : 0u) |
 			(signs.y < 0.0 ? 0x40000000u : 0u) |
 			(signs.z < 0.0 ? 0x20000000u : 0u) |
-			(clamp(uint(cmotion.x), 0u, 1023u) << 19u) |
-			(clamp(uint(cmotion.y), 0u, 511u) << 10u) |
-			(clamp(uint(cmotion.z), 0u, 1023u)));
+			(clamp(uint32_t(cmotion.x), 0u, 1023u) << 19u) |
+			(clamp(uint32_t(cmotion.y), 0u, 511u) << 10u) |
+			(clamp(uint32_t(cmotion.z), 0u, 1023u)));
 }
 
 struct scene_fragment_out {
 	float4 color [[color(0)]];
-	uint motion [[color(1)]];
+	uint32_t motion [[color(1)]];
 };
 
 fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
@@ -220,6 +221,7 @@ vertex motion_in_out motion_only_vs(device const packed_float3* in_position [[bu
 	
 	return out;
 }
+
 fragment float4 motion_only_fs(const motion_in_out in [[stage_in]],
 							   texture2d<float> mask_tex [[texture(0)]]) {
 	constexpr sampler smplr {
@@ -257,4 +259,33 @@ vertex shadow_in_out shadow_vs(device const packed_float3* in_position [[buffer(
 	out.position = log_depth(uniforms.mvpm * position);
 	
 	return out;
+}
+
+//////////////////////////////////////////
+// manual blitting
+
+struct blit_in_out {
+	float4 position [[position]];
+};
+
+vertex blit_in_out blit_vs(const unsigned int vid [[vertex_id]]) {
+	constexpr const float2 fullscreen_triangle[3] {
+		float2 { 1.0f, 1.0f },
+		float2 { 1.0f, -3.0f },
+		float2 { -3.0f, 1.0f }
+	};
+	blit_in_out out;
+	out.position = float4(fullscreen_triangle[vid], 0.0, 1.0);
+	return out;
+}
+
+fragment half4 blit_fs(const blit_in_out in [[stage_in]],
+					   texture2d<half, access::read> img [[texture(0)]]) {
+	return img.read(uint2 { uint(in.position.x), uint(in.position.y) });
+	//return img.read(uint2 { uint(in.position.x), img.get_height() - uint(in.position.y) - 1u });
+}
+fragment half4 blit_swizzle_fs(const blit_in_out in [[stage_in]],
+							   texture2d<half, access::read> img [[texture(0)]]) {
+	const half4 color = img.read(uint2 { uint(in.position.x), uint(in.position.y) });
+	return { color.z, color.y, color.x, color.w };
 }
