@@ -33,17 +33,6 @@
 #include <floor/compute/device/common.hpp>
 #endif
 
-kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img);
-
-
-kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img);
-
-
-kernel void image_blur_dumb_vertical(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img);
-
 #endif
 
 #endif
