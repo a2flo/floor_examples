@@ -96,7 +96,7 @@ static void create_textures() {
 		glGenFramebuffers(1, &scene_fbo.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
 		
-		scene_fbo.dim = { int(floor::get_width()), int(floor::get_height()) };
+		scene_fbo.dim = floor::get_physical_screen_size();
 		
 		// kernel work-group size is { 32, 32 } -> round global size to a multiple of it
 		scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(32);
@@ -459,7 +459,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		// draw main scene
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
 		glDrawBuffers(size(draw_buffers), &draw_buffers[0]);
-		glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
+		glViewport(0, 0, scene_fbo.dim.x, scene_fbo.dim.y);
 		
 		// clear the color/depth buffer
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);

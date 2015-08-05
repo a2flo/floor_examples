@@ -1,10 +1,16 @@
 {
 	// screen resolution and settings
 	"screen": {
-		"width": 1024,
-		"height": 1024,
+		// (logical) window width
+		"width": 1280,
+		// (logical) window height
+		"height": 720,
+		// start in fullscreen?
 		"fullscreen": false,
-		"vsync": false,
+		// enable vsync?
+		"vsync": true,
+		// if enabled, will create a opengl/metal window/surface using the native device/display resolution
+		"hidpi": true,
 		// 0 = auto-detect, other values can be used to override the detected value
 		"dpi": 0,
 		// serves no purpose right now

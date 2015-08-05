@@ -295,7 +295,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src img.cpp --target air -- -Dimg_TILE_SIZE=512 -Dimg_SOFTENING=0.01f -Dimg_DAMPING=0.999f\nmetal-as -o=img.air air_processed.ll\nmetal-ar r img.a img.air\nmetallib -o ../../data/img.metallib img.a\n";
+			shellScript = "cd src\nocc --src img.cpp --target air --sub-target ios8 --no-double -vv --config ../../../data/\nmetal-as -o=img.air air_processed.ll\nmetal-ar r img.a img.air\nmetallib -o ../../data/img.metallib img.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

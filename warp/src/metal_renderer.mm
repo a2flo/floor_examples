@@ -67,15 +67,18 @@ static matrix4f prev_mvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
-static void destroy_textures() {
+static void destroy_textures(bool is_resize) {
+	scene_fbo.color = nullptr;
 	scene_fbo.depth = nullptr;
-	scene_fbo.motion = nullptr;
 	scene_fbo.compute_color = nullptr;
-	shadow_map.shadow_image = nullptr;
+	scene_fbo.motion = nullptr;
+	
+	// only need to destroy this on exit (not on resize!)
+	if(!is_resize) shadow_map.shadow_image = nullptr;
 }
 
 static void create_textures() {
-	scene_fbo.dim = { floor::get_width(), floor::get_height() };
+	scene_fbo.dim = floor::get_physical_screen_size();
 	
 	// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
 	scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(uint2 { 32, 16 });
@@ -109,14 +112,15 @@ static void create_textures() {
 													COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
 	if(render_pass_desc != nil) {
-		render_pass_desc.depthAttachment.texture = ((metal_image*)scene_fbo.depth.get())->get_metal_image();
+		render_pass_desc.colorAttachments[0].texture = ((metal_image*)scene_fbo.color.get())->get_metal_image();
 		render_pass_desc.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion.get())->get_metal_image();
+		render_pass_desc.depthAttachment.texture = ((metal_image*)scene_fbo.depth.get())->get_metal_image();
 	}
 }
 
 static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
 	if(type == EVENT_TYPE::WINDOW_RESIZE) {
-		destroy_textures();
+		destroy_textures(true);
 		create_textures();
 		first_frame = true;
 		return true;
@@ -132,7 +136,6 @@ bool metal_renderer::init() {
 	}
 	
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
-	create_textures();
 	
 	// scene renderer setup
 	{
@@ -162,20 +165,20 @@ bool metal_renderer::init() {
 		color_attachment.loadAction = MTLLoadActionClear;
 		color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		color_attachment.storeAction = MTLStoreActionStore;
-		color_attachment.texture = ((metal_image*)scene_fbo.color.get())->get_metal_image();
 		
 		MTLRenderPassColorAttachmentDescriptor* motion_attachment = render_pass_desc.colorAttachments[1];
 		motion_attachment.loadAction = MTLLoadActionClear;
 		motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 		motion_attachment.storeAction = MTLStoreActionStore;
-		motion_attachment.texture = ((metal_image*)scene_fbo.motion.get())->get_metal_image();
 		
 		MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc.depthAttachment;
 		depth_attachment.loadAction = MTLLoadActionClear;
 		depth_attachment.clearDepth = 1.0;
 		depth_attachment.storeAction = MTLStoreActionStore;
-		depth_attachment.texture = ((metal_image*)scene_fbo.depth.get())->get_metal_image();
 	}
+	
+	// creates fbo textures/images and sets attachment textures of render_pass_desc
+	create_textures();
 	
 	// shadow renderer setup
 	{
@@ -275,7 +278,7 @@ bool metal_renderer::init() {
 }
 
 void metal_renderer::destroy() {
-	destroy_textures();
+	destroy_textures(false);
 }
 
 static void render_full_scene(const metal_obj_model& model, const camera& cam, id <MTLCommandBuffer> cmd_buffer);

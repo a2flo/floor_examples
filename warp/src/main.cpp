@@ -58,8 +58,8 @@ static bool compile_program() {
 #if !defined(FLOOR_IOS)
 	auto new_warp_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp.cpp"),
 														  "-I" + floor::data_path("../warp/src") +
-														  " -DSCREEN_WIDTH=" + to_string(floor::get_width()) +
-														  " -DSCREEN_HEIGHT=" + to_string(floor::get_height()) +
+														  " -DSCREEN_WIDTH=" + to_string(floor::get_physical_width()) +
+														  " -DSCREEN_HEIGHT=" + to_string(floor::get_physical_height()) +
 														  " -DSCREEN_FOV=" + to_string(warp_state.fov));
 #else
 	// TODO
