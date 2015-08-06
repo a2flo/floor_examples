@@ -444,7 +444,7 @@ int main(int, char* argv[]) {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
 				auto ctx = make_shared<opencl_compute>();
-				ctx->init(false, floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
+				ctx->init(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
 				auto cl_ctx = ctx->get_opencl_context();
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				auto cl_dev = ((opencl_device*)dev.get())->device_id;
