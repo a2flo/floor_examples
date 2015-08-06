@@ -80,7 +80,7 @@ template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handl
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
-				 "\t--config <path>: the path where config.xml is located (defaults to \"../../data/\")\n"
+				 "\t--config <path>: the path where config.json is located (defaults to \"../../data/\")\n"
 				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
 		ctx.done = true;
 	}},
@@ -481,7 +481,13 @@ int main(int, char* argv[]) {
 				else log_debug("successfully created opencl program!");
 				
 				// ... and build it
-				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, option_ctx.additional_options.c_str(), nullptr, nullptr),
+				const string build_options {
+					option_ctx.additional_options
+#if !defined(__APPLE__)
+					+ " -x spir -spir-std=1.2"
+#endif
+				};
+				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
 									  build_err, "failed to build opencl program", {});
 				log_debug("check"); logger::flush();
 				
