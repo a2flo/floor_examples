@@ -346,14 +346,14 @@ kernel void path_trace(buffer<float4> img,
 					   param<uint32_t> seed,
 					   param<uint2> img_size) {
 	const auto idx = global_id.x;
-	const uint2 pixel { idx % img_size->x, idx / img_size->y };
-	if(pixel.y >= img_size->y) return;
+	const uint2 pixel { idx % img_size.x, idx / img_size.y };
+	if(pixel.y >= img_size.y) return;
 	
 	// this is hard ... totally random
-	uint32_t random_seed = *seed;
+	uint32_t random_seed = seed;
 	random_seed += {
-		(random_seed ^ (idx << (random_seed & ((idx + *iteration) & 0x1F)))) +
-		((idx + random_seed) * img_size->x * img_size->y) ^ 0x52FBD9EC
+		(random_seed ^ (idx << (random_seed & ((idx + iteration) & 0x1F)))) +
+		((idx + random_seed) * img_size.x * img_size.y) ^ 0x52FBD9EC
 	};
 	simple_path_tracer pt(random_seed);
 	
@@ -362,7 +362,7 @@ kernel void path_trace(buffer<float4> img,
 	
 	//
 	camera cam;
-	cam.init(float2(*img_size));
+	cam.init(float2(img_size));
 	
 	//
 	ray r {
@@ -375,8 +375,8 @@ kernel void path_trace(buffer<float4> img,
 	//if(idx % img_size->x == 0) color = { 1.0f, 0.0f, 0.0f };
 	
 	// merge with previous frames (re-weight)
-	if(*iteration == 0) img[idx] = color;
-	else img[idx] = img[idx].interpolate(color, 1.0f / float(*iteration + 1));
+	if(iteration == 0) img[idx] = color;
+	else img[idx] = img[idx].interpolate(color, 1.0f / float(iteration + 1));
 }
 
 #endif

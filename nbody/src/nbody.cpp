@@ -96,9 +96,9 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	}
 #endif
 	
-	velocity += acceleration * *delta;
+	velocity += acceleration * delta;
 	velocity *= NBODY_DAMPING;
-	position.xyz += velocity * *delta;
+	position.xyz += velocity * delta;
 	
 	out_positions[idx] = position;
 	velocities[idx] = velocity;
@@ -113,12 +113,12 @@ kernel void nbody_raster(buffer<const float4> positions,
 	const auto idx = global_id.x;
 	img_old[idx] = 0;
 	
-	if(idx < *body_count) {
-		const matrix4f mproj { matrix4f().perspective(90.0f, float(img_size->x) / float(img_size->y), 0.25f, 2500.0f) };
+	if(idx < body_count) {
+		const matrix4f mproj { matrix4f().perspective(90.0f, float(img_size.x) / float(img_size.y), 0.25f, 2500.0f) };
 		
 		// transform vector (*TMVP)
 		const float3 position = positions[idx].xyz;
-		const float3 mview_vec = position * *mview;
+		const float3 mview_vec = position * mview;
 		float3 proj_vec = mview_vec * mproj;
 		
 		// check if point is not behind cam
@@ -127,22 +127,22 @@ kernel void nbody_raster(buffer<const float4> positions,
 			
 			// and finally: compute window position
 			const int2 pixel {
-				(int32_t)(float(img_size->x) * (proj_vec.x * 0.5f + 0.5f)),
-				(int32_t)(float(img_size->y) * (proj_vec.y * 0.5f + 0.5f))
+				(int32_t)(float(img_size.x) * (proj_vec.x * 0.5f + 0.5f)),
+				(int32_t)(float(img_size.y) * (proj_vec.y * 0.5f + 0.5f))
 			};
 			if(pixel.x < 0 || pixel.y < 0) return;
 			
 			const uint2 upixel { pixel };
-			if(upixel.x < img_size->x && upixel.y < img_size->y) {
+			if(upixel.x < img_size.x && upixel.y < img_size.y) {
 #if 0 // just add/override previous value, this will overflow of course
 				img[upixel.y * img_size->x + upixel.x] += 0x404040;
 #else // use atomics and max out at 0xFFFFFF
 				uint32_t color, cur_color;
 				do {
-					cur_color = img[upixel.y * img_size->x + upixel.x];
+					cur_color = img[upixel.y * img_size.x + upixel.x];
 					if(cur_color >= 0xFFFFFFu) break; // overflow
 					color = std::min(cur_color + 0x404040u, 0xFFFFFFu);
-				} while(atomic_cmpxchg(&img[upixel.y * img_size->x + upixel.x], cur_color, color) != cur_color);
+				} while(atomic_cmpxchg(&img[upixel.y * img_size.x + upixel.x], cur_color, color) != cur_color);
 #endif
 			}
 		}

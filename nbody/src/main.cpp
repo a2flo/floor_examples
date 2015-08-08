@@ -475,7 +475,7 @@ int main(int, char* argv[]) {
 	nbody_state.no_metal = true;
 #else
 	if(!nbody_state.no_metal) {
-		nbody_state.no_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST);
+		nbody_state.no_metal = (floor::get_compute_context()->get_compute_type() != COMPUTE_TYPE::METAL);
 	}
 #endif
 	
@@ -600,17 +600,17 @@ int main(int, char* argv[]) {
 	// image buffers (for s/w rendering only)
 	array<shared_ptr<compute_buffer>, 2> img_buffers;
 	size_t img_buffer_flip_flop { 0 };
+	const uint2 img_size { floor::get_physical_screen_size() };
 	if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 		img_buffers = {{
-			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * floor::get_width() * floor::get_height(),
+			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
 									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * floor::get_width() * floor::get_height(),
+			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
 									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
 		}};
 		img_buffers[0]->zero(dev_queue);
 		img_buffers[1]->zero(dev_queue);
 	}
-	const uint2 img_size { floor::get_width(), floor::get_height() };
 	
 	// init nbody system
 	init_system();
@@ -717,11 +717,13 @@ int main(int, char* argv[]) {
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
-			const uint2 render_dim = img_size.minned(uint2 { floor::get_width(), floor::get_height() });
-			for(uint32_t y = 0; y < render_dim.y; ++y) {
+			const uint2 surface_dim = { uint32_t(wnd_surface->w), uint32_t(wnd_surface->h) }; // TODO: figure out how to coerce sdl to create a 2x surface
+			const uint2 render_dim = img_size.minned(floor::get_physical_screen_size());
+			const uint2 scale = render_dim / surface_dim;
+			for(uint32_t y = 0; y < surface_dim.y; ++y) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
-				uint32_t img_idx = img_size.x * y;
-				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
+				uint32_t img_idx = img_size.x * y * scale.y;
+				for(uint32_t x = 0; x < surface_dim.x; ++x, img_idx += scale.x) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, img_data[img_idx].x, img_data[img_idx].y, img_data[img_idx].z);
 				}
 			}

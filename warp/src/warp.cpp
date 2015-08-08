@@ -113,13 +113,13 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
 	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
-	const auto motion = (motion_override->w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override->xyz);
+	const auto motion = (motion_override.w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override.xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
 	const float3 reconstructed_pos = warp_camera::reconstruct_position(coord, linear_depth);
 	
 	// predict/compute new 3D position from current motion and time
-	const auto motion_dst = (motion_override->w < 0.0f ? *relative_delta : 1.0f) * motion;
+	const auto motion_dst = (motion_override.w < 0.0f ? relative_delta : 1.0f) * motion;
 	const auto new_pos = reconstructed_pos + motion_dst;
 	// project 3D position back into 2D
 	const int2 idst_coord { warp_camera::reproject_position(new_pos) };
@@ -175,7 +175,7 @@ kernel void single_px_fixup(
 kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img,
 					  param<float4> clear_color) {
 	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
-	write(img, int2 { global_id.xy }, float4 { (*clear_color).xyz, 0.0f });
+	write(img, int2 { global_id.xy }, float4 { clear_color.xyz, 0.0f });
 }
 
 #endif
