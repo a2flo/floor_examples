@@ -132,29 +132,20 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	}
 }
 
-kernel void single_px_fixup(
-#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_HOST) || defined(FLOOR_COMPUTE_METAL)
-							rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img
-#define warp_img_in warp_img
-#define warp_img_out warp_img
-#else
-							ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img_in,
-							wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img_out
-#endif
-							) {
+kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img) {
 	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
 	
 	const int2 coord { global_id.xy };
-	const auto color = read(warp_img_in, coord);
+	const auto color = read(warp_img, coord);
 	
 	// 0 if it hasn't been written (needs fixup), 1 if it has been written
 	if(color.w < 1.0f) {
 		// sample pixels around
 		const float4 colors[] {
-			read(warp_img_in, int2 { coord.x, coord.y - 1 }),
-			read(warp_img_in, int2 { coord.x + 1, coord.y }),
-			read(warp_img_in, int2 { coord.x, coord.y + 1 }),
-			read(warp_img_in, int2 { coord.x - 1, coord.y }),
+			read(warp_img, int2 { coord.x, coord.y - 1 }),
+			read(warp_img, int2 { coord.x + 1, coord.y }),
+			read(warp_img, int2 { coord.x, coord.y + 1 }),
+			read(warp_img, int2 { coord.x - 1, coord.y }),
 		};
 		
 		float3 avg;
@@ -168,7 +159,7 @@ kernel void single_px_fixup(
 		avg /= sum;
 		
 		// write new averaged color
-		write(warp_img_out, coord, float4 { avg, 0.0f });
+		write(warp_img, coord, float4 { avg, 0.0f });
 	}
 }
 

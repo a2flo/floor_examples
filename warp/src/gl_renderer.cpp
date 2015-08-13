@@ -98,8 +98,8 @@ static void create_textures() {
 		
 		scene_fbo.dim = floor::get_physical_screen_size();
 		
-		// kernel work-group size is { 32, 32 } -> round global size to a multiple of it
-		scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(32);
+		// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
+		scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(uint2 { 32, 16 });
 		
 		glGenTextures(1, &scene_fbo.color);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.color);
@@ -377,13 +377,13 @@ void gl_renderer::render_kernels(const camera& cam,
 	if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
 		warp_state.dev_queue->execute(warp_state.clear_kernel,
 									  scene_fbo.dim_multiple,
-									  uint2 { 32, 32 },
+									  uint2 { 32, 16 },
 									  compute_color, clear_color);
 	}
 	
 	warp_state.dev_queue->execute(warp_state.warp_kernel,
 								  scene_fbo.dim_multiple,
-								  uint2 { 32, 32 },
+								  uint2 { 32, 16 },
 								  compute_scene_color, compute_scene_depth, compute_scene_motion, compute_color,
 								  delta / render_delta,
 								  (!warp_state.is_single_frame ?
@@ -395,13 +395,13 @@ void gl_renderer::render_kernels(const camera& cam,
 		if(warp_state.ctx->get_compute_type() == COMPUTE_TYPE::CUDA) {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
 										  scene_fbo.dim_multiple,
-										  uint2 { 32, 32 },
+										  uint2 { 32, 16 },
 										  compute_color);
 		}
 		else {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
 										  scene_fbo.dim_multiple,
-										  uint2 { 32, 32 },
+										  uint2 { 32, 16 },
 										  compute_color, compute_color);
 		}
 	}
