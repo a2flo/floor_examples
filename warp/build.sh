@@ -783,4 +783,4 @@ linker_cmd="${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
 verbose "${linker_cmd}"
 eval ${linker_cmd}
 
-info "built ${TARGET_NAME} v${TARGET_FULL_VERSION}"
+info "built ${TARGET_NAME}"
