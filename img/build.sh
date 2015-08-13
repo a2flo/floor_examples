@@ -57,7 +57,7 @@ BUILD_VERBOSE=0
 BUILD_JOB_COUNT=0
 
 # read/evaluate floor_conf.hpp to know which build configuration should be used (must match the floor one!)
-eval $(printf "" | ${CXX} -E -dM -isystem /usr/include -isystem /usr/local/include -include floor/floor/floor_conf.hpp - 2>&1 | grep -E "define FLOOR_" | sed -E "s/.*define (.*) [\"]*([^ \"]*)[\"]*/export \1=\2/g")
+eval $(printf "" | ${CXX} -E -dM ${INCLUDES} -isystem /usr/include -isystem /usr/local/include -include floor/floor/floor_conf.hpp - 2>&1 | grep -E "define FLOOR_" | sed -E "s/.*define (.*) [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 BUILD_CONF_OPENCL=$((1 - $((${FLOOR_NO_OPENCL}))))
 BUILD_CONF_CUDA=$((1 - $((${FLOOR_NO_CUDA}))))
 BUILD_CONF_OPENAL=$((1 - $((${FLOOR_NO_OPENAL}))))
@@ -97,7 +97,7 @@ for arg in "$@"; do
 			echo "	clean              cleans all build binaries and intermediate build files"
 			echo ""
 			echo "build configuration:"
-			#echo "	libstdc++          use the libstdc++ library instead of libc++ (unsupported)"
+			echo "	libstdc++          use libstdc++ instead of libc++ (highly discouraged unless building on mingw)"
 			echo "	x32                build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
 			echo "	x64                build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
 			echo ""
@@ -224,8 +224,8 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 fi
 # all else: no file ending
 
-# disable metal support on non-iOS targets
-if [ $BUILD_OS != "ios" ]; then
+# disable metal support on non-iOS/-OS X targets
+if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	BUILD_CONF_METAL=0
 fi
 
@@ -241,10 +241,10 @@ TARGET_BIN=${BIN_DIR}/${TARGET_BIN_NAME}
 TARGET_STATIC_BIN=${BIN_DIR}/${TARGET_STATIC_BIN_NAME}
 
 # root folder of the source code
-SRC_DIR=.
+SRC_DIR="src"
 
 # all source code sub-directories, relative to SRC_DIR
-SRC_SUB_DIRS="src"
+SRC_SUB_DIRS="."
 
 # build directory where all temporary files are stored (*.o, etc.)
 BUILD_DIR=build
@@ -328,7 +328,14 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	done
 
 	# libs that don't have pkg-config
-	UNCHECKED_LIBS="pthread"
+	UNCHECKED_LIBS=""
+	if [ $BUILD_OS != "mingw" ]; then
+		# must link pthread on unix
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} pthread"
+	else
+		# must link winpthread instead on windows/mingw
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} winpthread"
+	fi
 	if [ ${BUILD_CONF_OPENCL} -gt 0 -a ${BUILD_CONF_POCL} -eq 0 ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} OpenCL"
 	fi
@@ -360,39 +367,45 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 				# use amd opencl sdk
 				AMDAPPSDKROOT_FIXED=$(echo ${AMDAPPSDKROOT} | sed -E "s/\\\\/\//g")
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					OPENCL_LIB_PATH="${AMDAPPSDKROOT_FIXED}lib/x86"
+					LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86\""
 				else
-					OPENCL_LIB_PATH="${AMDAPPSDKROOT_FIXED}lib/x86_64"
+					LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86_64\""
 				fi
 				INCLUDES="${INCLUDES} -isystem \"${AMDAPPSDKROOT_FIXED}include\""
 			elif [ ! -z "${INTELOCLSDKROOT}" ]; then
 				# use intel opencl sdk
 				INTELOCLSDKROOT_FIXED=$(echo ${INTELOCLSDKROOT} | sed -E "s/\\\\/\//g")
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x86"
+					LDFLAGS="${LDFLAGS} -L\"${INTELOCLSDKROOT_FIXED}lib/x86\""
 				else
-					OPENCL_LIB_PATH="${INTELOCLSDKROOT_FIXED}lib/x64"
+					LDFLAGS="${LDFLAGS} -L\"${INTELOCLSDKROOT_FIXED}lib/x64\""
 				fi
 				INCLUDES="${INCLUDES} -isystem \"${INTELOCLSDKROOT_FIXED}include\""
 			elif [ ! -z "${CUDA_PATH}" ]; then
 				# use nvidia opencl/cuda sdk
+				CUDA_PATH_FIXED=$(echo ${CUDA_PATH} | sed -E "s/\\\\/\//g")
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					OPENCL_LIB_PATH="${CUDA_PATH}/lib/Win32"
+					LDFLAGS="${LDFLAGS} -L\"${CUDA_PATH_FIXED}/lib/Win32\""
 				else
-					OPENCL_LIB_PATH="${CUDA_PATH}/lib/x64"
+					LDFLAGS="${LDFLAGS} -L\"${CUDA_PATH_FIXED}/lib/x64\""
 				fi
-				INCLUDES="${INCLUDES} -isystem \"${CUDA_PATH}/include\""
+				INCLUDES="${INCLUDES} -isystem \"${CUDA_PATH_FIXED}/include\""
 			else
 				error "building with OpenCL support, but no OpenCL SDK was found - please install the Intel, AMD or NVIDIA OpenCL SDK!"
 			fi
 		fi
 		
 		if [ ${BUILD_CONF_CUDA} -gt 0 ]; then
+			CUDA_PATH_FIXED=$(echo ${CUDA_PATH} | sed -E "s/\\\\/\//g")
 			if [ -z "${CUDA_PATH}" ]; then
 				error "building with CUDA support, but CUDA is not installed or CUDA_PATH is not set!"
 			fi
-			# note: put in '"' because of windows paths containing spaces
-			INCLUDES="${INCLUDES} -isystem \"${CUDA_PATH}/include\""
+			if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
+				LDFLAGS="${LDFLAGS} -L\"${CUDA_PATH_FIXED}/lib/Win32\""
+			else
+				LDFLAGS="${LDFLAGS} -L\"${CUDA_PATH_FIXED}/lib/x64\""
+			fi
+			INCLUDES="${INCLUDES} -isystem \"${CUDA_PATH_FIXED}/include\""
 		fi
 	fi
 
@@ -611,14 +624,18 @@ COMMON_FLAGS="${COMMON_FLAGS} -fparse-all-comments -fno-elide-type -fdiagnostics
 # includes + replace all "-I"s with "-isystem"s so that we don't get warnings in external headers
 COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
-COMMON_FLAGS="${COMMON_FLAGS} -Isrc"
+COMMON_FLAGS="${COMMON_FLAGS} -I${SRC_DIR}"
 
 # mingw sdl fixes
 if [ $BUILD_OS == "mingw" ]; then
 	# remove sdls main redirect, we want to use our own main
 	COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-Dmain=SDL_main//g")
 	# remove windows flag -> creates a separate cmd window + working iostream output
-	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-mwindows//g")
+	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-mwindows //g")
+	# remove unwanted -static-libgcc flag (this won't work and lead to linker errors!)
+	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-static-libgcc //g")
+	# remove unwanted -lm (this won't work and lead to linker errors!)
+	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-lm //g")
 fi
 
 # finally: add all common c++ and c flags/options
@@ -630,14 +647,21 @@ CFLAGS="${CFLAGS} ${COMMON_FLAGS}"
 
 # get all source files (c++/c/objective-c++/objective-c) and create build folders
 for dir in ${SRC_SUB_DIRS}; do
+	# hanlde paths correctly (don't want /./ or //)
+	if [ ${dir} == "." ]; then
+		dir=""
+	else
+		dir="/${dir}"
+	fi
+
 	# source files
-	SRC_FILES="${SRC_FILES} $(find ${dir} -maxdepth 1 -type f -name '*.cpp')"
-	SRC_FILES="${SRC_FILES} $(find ${dir} -maxdepth 1 -type f -name '*.c')"
-	SRC_FILES="${SRC_FILES} $(find ${dir} -maxdepth 1 -type f -name '*.mm')"
-	SRC_FILES="${SRC_FILES} $(find ${dir} -maxdepth 1 -type f -name '*.m')"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.cpp')"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.c')"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.mm')"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.m')"
 	
 	# create resp. build folder
-	mkdir -p ${BUILD_DIR}/${dir}
+	mkdir -p ${BUILD_DIR}/${SRC_DIR}${dir}
 done
 
 # make a list of all object files
@@ -739,7 +763,7 @@ for source_file in ${SRC_FILES}; do
 			if [ $cur_job_count -lt $BUILD_CPU_COUNT ]; then
 				break
 			fi
-			sleep 0.25
+			sleep 0.1
 		done
 		(build_file $source_file $file_counter $file_count) &
 	else
@@ -755,19 +779,8 @@ wait
 info "linking ..."
 mkdir -p ${BIN_DIR}
 
-if [ $BUILD_OS != "mingw" ]; then
-	verbose "${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
-	${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}
-else
-	# escape and space char hell, I have no idea how to escape this properly (no combination of backslahes and '"' seems to work)
-	# -> specify cuda lib folder directly on mingw
-	if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-		verbose "${CXX} -o ${TARGET_BIN} ${OBJ_FILES} -L\"${OPENCL_LIB_PATH}\" -L\"${CUDA_PATH_ESC}/lib/Win32\" ${LDFLAGS}"
-		${CXX} -o ${TARGET_BIN} ${OBJ_FILES} -L"${OPENCL_LIB_PATH}" -L"${CUDA_PATH}/lib/Win32" ${LDFLAGS}
-	else
-		verbose "${CXX} -o ${TARGET_BIN} ${OBJ_FILES} -L\"${OPENCL_LIB_PATH}\" -L\"${CUDA_PATH_ESC}/lib/x64\" ${LDFLAGS}"
-		${CXX} -o ${TARGET_BIN} ${OBJ_FILES} -L"${OPENCL_LIB_PATH}" -L"${CUDA_PATH}/lib/x64" ${LDFLAGS}
-	fi
-fi
+linker_cmd="${CXX} -o ${TARGET_BIN} ${OBJ_FILES} ${LDFLAGS}"
+verbose "${linker_cmd}"
+eval ${linker_cmd}
 
 info "built ${TARGET_NAME} v${TARGET_FULL_VERSION}"
