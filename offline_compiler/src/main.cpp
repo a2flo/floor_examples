@@ -60,7 +60,7 @@ struct option_context {
 typedef option_handler<option_context> occ_opt_handler;
 
 //! option -> function map
-template<> unordered_map<string, occ_opt_handler::option_function> occ_opt_handler::options {
+template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handler::options {
 	{ "--help", [](option_context& ctx, char**&) {
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"

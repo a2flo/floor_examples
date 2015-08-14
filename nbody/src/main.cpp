@@ -67,7 +67,7 @@ static long double sim_time_sum { 0.0L };
 static void init_system();
 
 //! option -> function map
-template<> unordered_map<string, nbody_opt_handler::option_function> nbody_opt_handler::options {
+template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_handler::options {
 	{ "--help", [](nbody_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--count <count>: specify the amount of bodies (default: " << nbody_state.body_count << ")" << endl;

@@ -39,7 +39,7 @@ static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { TAP_COUNT };
 
 //! option -> function map
-template<> unordered_map<string, img_opt_handler::option_function> img_opt_handler::options {
+template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handler::options {
 	{ "--help", [](img_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--dim <width> <height>: image width * height in px (default: " << image_size << ")" << endl;

@@ -36,7 +36,7 @@ static unique_ptr<camera> cam;
 static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.25f /* slower */ };
 
 //! option -> function map
-template<> unordered_map<string, warp_opt_handler::option_function> warp_opt_handler::options {
+template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
 	{ "--help", [](warp_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--TODO: TODO" << endl;
