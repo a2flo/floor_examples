@@ -232,7 +232,7 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = Albion2;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -375,8 +375,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -411,6 +411,7 @@
 					"$(inherited)",
 					"-lfloord_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbody;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -451,8 +452,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -487,6 +488,7 @@
 					"$(inherited)",
 					"-lfloor_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbody;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -502,7 +504,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -534,7 +536,7 @@
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -576,6 +578,7 @@
 					"-framework",
 					SDL2,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbodyd;
 				VALID_ARCHS = x86_64;
 			};
@@ -588,7 +591,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -616,7 +619,7 @@
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				LLVM_LTO = YES;
 				OTHER_CFLAGS = (
@@ -659,6 +662,7 @@
 					"-framework",
 					SDL2,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbody;
 				VALID_ARCHS = x86_64;
 			};
@@ -683,6 +687,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_FAST_MATH = YES;
@@ -703,7 +708,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
@@ -778,7 +785,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
