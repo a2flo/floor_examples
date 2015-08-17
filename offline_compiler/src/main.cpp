@@ -32,9 +32,6 @@
 #include <floor/compute/cuda/cuda_compute.hpp>
 #include <floor/compute/cuda/cuda_device.hpp>
 
-#if !defined(FLOOR_NO_METAL)
-#define FLOOR_NO_METAL // don't need any specifics and this disables the obj-c code
-#endif
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
 
@@ -447,8 +444,12 @@ int main(int, char* argv[]) {
 				ctx->init(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
 				auto cl_ctx = ctx->get_opencl_context();
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
-				auto cl_dev = ((opencl_device*)dev.get())->device_id;
+				if(dev == nullptr) {
+					log_error("no device available!");
+					break;
+				}
 				log_debug("using device: %s", dev->name);
+				auto cl_dev = ((opencl_device*)dev.get())->device_id;
 				
 				// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
 				size_t binary_length;
@@ -509,9 +510,40 @@ int main(int, char* argv[]) {
 				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
 #endif
 			} break;
-			case llvm_compute::TARGET::AIR:
-				log_error("metal/air testing not supported yet");
+			case llvm_compute::TARGET::AIR: {
+#if !defined(FLOOR_NO_METAL)
+				auto ctx = make_shared<metal_compute>();
+				ctx->init(0, false, floor::get_metal_whitelist());
+				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				if(dev == nullptr) {
+					log_error("no device available!");
+					break;
+				}
+				log_debug("using device: %s", dev->name);
+				
+				//
+				if(option_ctx.test_bin) {
+					program_data.first = "";
+					if(!file_io::file_to_string(option_ctx.test_bin_filename, program_data.first)) {
+						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+						break;
+					}
+					
+					if(!llvm_compute::get_floor_metadata(program_data.first, program_data.second)) {
+						log_error("failed to extract floor metadata from specified test binary %s", option_ctx.test_bin_filename);
+						break;
+					}
+				}
+				
+				auto prog = ctx->add_program(program_data, option_ctx.additional_options);
+				if(prog == nullptr) {
+					log_error("program compilation failed!");
+				}
+#else
+				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
+#endif
 				break;
+			}
 			case llvm_compute::TARGET::PTX:
 				log_error("cuda/ptx testing not supported yet");
 				break;
