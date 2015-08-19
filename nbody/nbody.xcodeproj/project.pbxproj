@@ -393,7 +393,7 @@
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
 					"-isystem",
-					/usr/include/floor/ios/deps/include,
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
 					/usr/include,
 				);
@@ -470,7 +470,7 @@
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
 					"-isystem",
-					/usr/include/floor/ios/deps/include,
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
 					/usr/include,
 				);

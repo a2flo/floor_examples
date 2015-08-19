@@ -25,7 +25,6 @@ static GLuint vbo_fullscreen_triangle { 0 };
 static struct {
 	GLuint fbo { 0u };
 	GLuint color { 0u };
-	GLuint depth_as_color { 0u };
 	GLuint depth { 0u };
 	GLuint motion { 0u };
 	
@@ -67,10 +66,6 @@ static void destroy_textures() {
 		glDeleteTextures(1, &scene_fbo.color);
 		scene_fbo.color = 0;
 	}
-	if(scene_fbo.depth_as_color > 0) {
-		glDeleteTextures(1, &scene_fbo.depth_as_color);
-		scene_fbo.depth_as_color = 0;
-	}
 	if(scene_fbo.motion > 0) {
 		glDeleteTextures(1, &scene_fbo.motion);
 		scene_fbo.motion = 0;
@@ -111,16 +106,6 @@ static void create_textures() {
 					 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scene_fbo.color, 0);
 		
-		glGenTextures(1, &scene_fbo.depth_as_color);
-		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth_as_color);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RED, GL_FLOAT, nullptr);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, scene_fbo.depth_as_color, 0);
-		
 		glGenTextures(1, &scene_fbo.motion);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.motion);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -134,7 +119,7 @@ static void create_textures() {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
 					 GL_RGBA, GL_FLOAT, nullptr);
 #endif
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, scene_fbo.motion, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, scene_fbo.motion, 0);
 		
 		glGenTextures(1, &scene_fbo.depth);
 		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
@@ -192,17 +177,13 @@ static void create_textures() {
 	}
 	
 	compute_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.compute_color, GL_TEXTURE_2D,
-											   COMPUTE_MEMORY_FLAG::READ_WRITE |
-											   COMPUTE_MEMORY_FLAG::OPENGL_READ_WRITE);
+											   COMPUTE_MEMORY_FLAG::READ_WRITE);
 	compute_scene_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ |
-													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
-	compute_scene_depth = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth_as_color, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ |
-													 COMPUTE_MEMORY_FLAG::OPENGL_READ);
+													 COMPUTE_MEMORY_FLAG::READ );
+	compute_scene_depth = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth, GL_TEXTURE_2D,
+													 COMPUTE_MEMORY_FLAG::READ);
 	compute_scene_motion = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion, GL_TEXTURE_2D,
-													  COMPUTE_MEMORY_FLAG::READ |
-													  COMPUTE_MEMORY_FLAG::OPENGL_READ);
+													  COMPUTE_MEMORY_FLAG::READ);
 }
 
 static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
@@ -417,7 +398,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glBindVertexArray(global_vao);
 	
 	static constexpr const GLenum draw_buffers[] {
-		GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2
+		GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1
 	};
 	
 	matrix4f light_bias_mvpm;
@@ -455,13 +436,14 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		}
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		
+
 		// draw main scene
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
 		glDrawBuffers(size(draw_buffers), &draw_buffers[0]);
 		glViewport(0, 0, scene_fbo.dim.x, scene_fbo.dim.y);
 		
 		// clear the color/depth buffer
+		glClearDepthf(1.0f);
 		glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
@@ -681,9 +663,7 @@ bool gl_renderer::compile_shaders() {
 		in vec3 motion;
 		
 		layout (location = 0) out vec4 frag_color;
-		layout (location = 1) out float frag_depth;
-		layout (location = 2) out uint motion_color;
-		//out vec4 motion_color;
+		layout (location = 1) out uint motion_color;
 		
 		uint encode_motion(in vec3 motion) {
 			const float range = 64.0; // [-range, range]
@@ -772,9 +752,7 @@ bool gl_renderer::compile_shaders() {
 			lighting = max(lighting, ambient);
 			
 			frag_color = vec4(diff.xyz * lighting, 0.0);
-			frag_depth = gl_FragCoord.z / gl_FragCoord.w;
 			motion_color = encode_motion(motion);
-			//motion_color = vec4(motion, 1.0);
 		}
 	)RAWSTR"};
 	static const char shadow_map_vs_text[] { u8R"RAWSTR(#version 150 core

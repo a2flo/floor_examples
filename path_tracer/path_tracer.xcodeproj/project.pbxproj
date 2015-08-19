@@ -343,8 +343,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -361,7 +361,7 @@
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
 					"-isystem",
-					/usr/include/floor/ios/deps/include,
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
 					/usr/include,
 				);
@@ -418,8 +418,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -436,7 +436,7 @@
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
 					"-isystem",
-					/usr/include/floor/ios/deps/include,
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
 					/usr/include,
 				);
@@ -467,7 +467,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -496,7 +496,7 @@
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -544,7 +544,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -569,7 +569,7 @@
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -650,7 +650,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -723,7 +725,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				LLVM_LTO = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = NO;

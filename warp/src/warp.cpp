@@ -66,6 +66,8 @@ namespace warp_camera {
 			-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 			(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 		};
+		// ignore full depth (this happens when clear depth == 1.0f and no fragments+depth are written for a pixel)
+		if(depth == 1.0f) return 0.0f;
 		return near_far_projection.y / (depth - near_far_projection.x);
 #endif
 	}
@@ -92,18 +94,9 @@ static float3 decode_motion(const uint32_t& encoded_motion) {
 	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
 }
 
-// depth buffer format: actual depth on metal, color (red-only) on opencl - either will work for cuda and host (identical sampling)
-constexpr const COMPUTE_IMAGE_TYPE depth_image_format {
-#if defined(FLOOR_COMPUTE_CUDA) || defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_HOST)
-	COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F
-#else
-	COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F
-#endif
-};
-
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-								ro_image<depth_image_format> img_depth,
+								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"

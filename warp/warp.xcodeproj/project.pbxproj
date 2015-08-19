@@ -395,12 +395,11 @@
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -416,11 +415,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
@@ -472,12 +470,11 @@
 					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
 					"$(SDKROOT)/usr/lib",
-					/usr/include/floor/bin,
-					/usr/include/floor/ios/deps/lib,
+					/opt/floor/lib,
+					/opt/floor/include/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -493,11 +490,10 @@
 					"-isystem",
 					"$(SDKROOT)/usr/include/freetype2",
 					"-I$(SDKROOT)/usr/include",
-					"-I/usr/local/include",
 					"-isystem",
-					"$(SDKROOT)/usr/include/floor/ios/deps/include",
+					/opt/floor/include/floor/ios/deps/include,
 					"-isystem",
-					/usr/local/include/floor/ios/deps/include,
+					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
@@ -528,7 +524,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -558,12 +554,10 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -613,7 +607,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = avx;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -640,12 +634,10 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
 					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
-					/usr/lib,
-					/usr/include/floor/bin,
+					/opt/floor/lib,
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -725,7 +717,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
@@ -797,7 +791,9 @@
 					"$(inherited)",
 					/usr/include,
 					/usr/local/include,
+					/opt/floor/include,
 				);
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;

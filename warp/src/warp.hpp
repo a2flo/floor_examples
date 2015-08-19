@@ -42,13 +42,10 @@
 #define SCREEN_ORIGIN_LEFT_TOP 1
 #endif
 
-// depth is written as z/w in opengl (thus cuda/opencl/host) and normalized in [0, 1] for metal
-#if !defined(FLOOR_COMPUTE_METAL)
-#define DEPTH_ZW 1
-#else
+// normalized depth (in [0, 1]) for opengl/metal
 #define DEPTH_NORMALIZED 1
-#endif
-// TODO: support log depth?
+//#define DEPTH_ZW 1 // e.g. if written as z/w by the shader
+//#define DEPTH_LOG 1 // TODO: support log depth?
 
 #if defined(FLOOR_COMPUTE)
 

@@ -321,8 +321,7 @@ int main(int, char* argv[]) {
 												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::READ_WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
 												  // init image with our random data, or nothing
 												  (img_idx == 0 ? &img_data[0] : nullptr),
-												  // kernel will read from the first image and write to the second, read+write for the third
-												  (img_idx == 0 ? COMPUTE_MEMORY_FLAG::READ : (img_idx == 1 ? COMPUTE_MEMORY_FLAG::READ_WRITE : COMPUTE_MEMORY_FLAG::READ_WRITE)) |
+												  // NOTE: COMPUTE_MEMORY_FLAG r/w flags are inferred automatically
 												  // w/ opengl: host will only write, w/o opengl: host will read and write
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
 												  // we want to render the images, so enable opengl sharing
