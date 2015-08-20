@@ -3,7 +3,8 @@
 
 int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/"); // call path, data path
+	floor::init(argv[0], (const char*)"../../data/", // call path, data path
+				false, "config.json", true);
 #else
 	floor::init(argv[0], (const char*)"data/");
 #endif

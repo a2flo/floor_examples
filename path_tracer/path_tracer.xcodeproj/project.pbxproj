@@ -74,7 +74,7 @@
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
 		5C30CAA31AA625DC008986B1 /* path_tracer.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = path_tracer.metallib; path = ../data/path_tracer.metallib; sourceTree = "<group>"; };
 		5C5487861B608EE60088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
-		5C5487871B608EE60088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; };
+		5C5487871B608EE60088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* path_tracer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = path_tracer.cpp; sourceTree = "<group>"; };
 		5C7467141A5828D000999E78 /* path_tracer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = path_tracer.hpp; sourceTree = "<group>"; };
 		5C7467161A58532500999E78 /* cornell_box.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = cornell_box.hpp; sourceTree = "<group>"; };
@@ -213,7 +213,7 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = Albion2;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -378,6 +378,7 @@
 					"$(inherited)",
 					"-lfloord_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = path_tracer;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -453,6 +454,7 @@
 					"$(inherited)",
 					"-lfloor_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = path_tracer;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -525,8 +527,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -598,8 +598,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",
@@ -630,6 +628,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_FAST_MATH = YES;

@@ -560,8 +560,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -644,8 +642,6 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",

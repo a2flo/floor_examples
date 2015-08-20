@@ -196,8 +196,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -269,8 +267,6 @@
 				OTHER_LDFLAGS = (
 					"-framework",
 					SDL2,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",

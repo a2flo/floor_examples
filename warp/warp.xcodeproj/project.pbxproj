@@ -250,7 +250,7 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0700;
 				ORGANIZATIONNAME = Albion2;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -434,6 +434,7 @@
 					"$(inherited)",
 					"-lfloord_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -509,6 +510,7 @@
 					"$(inherited)",
 					"-lfloor_static",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -583,8 +585,6 @@
 					SDL2,
 					"-framework",
 					SDL2_image,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -595,6 +595,7 @@
 					"-framework",
 					Metal,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warpd;
 				VALID_ARCHS = x86_64;
 			};
@@ -663,8 +664,6 @@
 					SDL2,
 					"-framework",
 					SDL2_image,
-					"-weak_framework",
-					CUDA,
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",
@@ -675,6 +674,7 @@
 					"-framework",
 					Metal,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warp;
 				VALID_ARCHS = x86_64;
 			};
@@ -699,6 +699,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;

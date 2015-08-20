@@ -83,7 +83,7 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(FLOOR_COMPUTE_METAL) && 1
+#if defined(FLOOR_COMPUTE_METAL) && 0
 		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
 		// so do a software 32-bit * 16-bit multiply instead
 		uint32_t low = (seed & 0xFFFFu) * 16807u;
@@ -293,25 +293,31 @@ protected:
 		// X = left, Y = up, Z = forward
 		dir.normalize();
 		dir = {
-			dir[0] * left[0] + dir[1] * up[0] + dir[2] * forward[0],
-			dir[0] * left[1] + dir[1] * up[1] + dir[2] * forward[1],
-			dir[0] * left[2] + dir[1] * up[2] + dir[2] * forward[2],
+			dir.x * left.x + dir.y * up.x + dir.z * forward.x,
+			dir.x * left.y + dir.y * up.y + dir.z * forward.y,
+			dir.x * left.z + dir.y * up.z + dir.z * forward.z,
 		};
 		dir.normalize();
 	}
 	
 	static pair<float3, float3> get_local_system(const float3& normal) {
 		// compute orthogonal local coordinate system
-		const size_t c0 = (const_math::abs(normal.x) > const_math::abs(normal.y)) ? 0 : 1;
-		const size_t c1 = (const_math::abs(normal.x) > const_math::abs(normal.y)) ? 1 : 0;
-		const float sig = (const_math::abs(normal.x) > const_math::abs(normal.y)) ? -1.0f : 1.0f;
+		const bool norm_x_greater_y = (fabs(normal.x) > fabs(normal.y));
+		const float norm_c0 = norm_x_greater_y ? normal.x : normal.y;
+		const float sig = norm_x_greater_y ? -1.0f : 1.0f;
 		
-		const float invLen = 1.0f / (normal[c0] * normal[c0] + normal.z * normal.z);
+		const float invLen = sig / (norm_c0 * norm_c0 + normal.z * normal.z);
 		
 		float3 tangent;
-		tangent[c0] = normal.z * sig * invLen;
-		tangent[c1] = 0.0f;
-		tangent.z = normal[c0] * -1.0f * sig * invLen;
+		if(norm_x_greater_y) {
+			tangent.x = normal.z * invLen;
+			tangent.y = 0.0f;
+		}
+		else {
+			tangent.x = 0.0f;
+			tangent.y = normal.z * invLen;
+		}
+		tangent.z = norm_c0 * -1.0f * invLen;
 		tangent.normalize();
 		const float3 binormal = normal.crossed(tangent).normalize();
 		
