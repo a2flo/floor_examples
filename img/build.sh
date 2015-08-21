@@ -457,7 +457,7 @@ fi
 # just in case, also add these rather default ones (should also go after all previous libs/includes,
 # in case a local or otherwise set up lib is overwriting a system lib and should be used instead)
 LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
-INCLUDES="${INCLUDES} -I/opt/floor/include"
+INCLUDES="${INCLUDES}"
 # don't automatically add /usr/include and /usr/local/include on mingw/msys (these will lead to the wrong headers being included)
 if [ $BUILD_OS != "mingw" ]; then
     INCLUDES="${INCLUDES} -isystem /usr/include -isystem /usr/local/include"
@@ -596,7 +596,7 @@ COMMON_FLAGS="${COMMON_FLAGS} -fparse-all-comments -fno-elide-type -fdiagnostics
 # includes + replace all "-I"s with "-isystem"s so that we don't get warnings in external headers
 COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
-COMMON_FLAGS="${COMMON_FLAGS} -I${SRC_DIR}"
+COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I${SRC_DIR}"
 
 # mingw sdl fixes
 if [ $BUILD_OS == "mingw" ]; then
