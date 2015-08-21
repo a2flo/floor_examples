@@ -545,7 +545,59 @@ int main(int, char* argv[]) {
 				break;
 			}
 			case llvm_compute::TARGET::PTX:
-				log_error("cuda/ptx testing not supported yet");
+#if !defined(FLOOR_NO_CUDA)
+				auto ctx = make_shared<cuda_compute>();
+				ctx->init(0, false, floor::get_cuda_whitelist());
+				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				if(dev == nullptr) {
+					log_error("no device available!");
+					break;
+				}
+				log_debug("using device: %s", dev->name);
+				
+				//
+				if(option_ctx.test_bin) {
+					program_data.first = "";
+					if(!file_io::file_to_string(option_ctx.test_bin_filename, program_data.first)) {
+						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+						break;
+					}
+					
+					// can't grab non-existing floor metadata from a ptx file
+					// -> parse the ptx instead (only need the kernel function names when testing/compiling)
+					static const char ptx_kernel_func_marker[] { ".visible .entry " };
+					vector<llvm_compute::kernel_info> kernels;
+					for(size_t pos = 0; ; ++pos) {
+						pos = program_data.first.find(ptx_kernel_func_marker, pos);
+						if(pos == string::npos) break;
+						
+						const auto start_pos = pos + size(ptx_kernel_func_marker) - 1 /* \0 */;
+						const auto end_pos = program_data.first.find('(', start_pos);
+						if(end_pos == string::npos) {
+							log_error("kernel function name end not found (@pos: %u)", pos);
+							continue;
+						}
+						const auto kernel_name = program_data.first.substr(start_pos, end_pos - start_pos);
+						
+						kernels.push_back(llvm_compute::kernel_info {
+							kernel_name, {}
+						});
+					}
+					
+					if(kernels.empty()) {
+						log_error("no kernels found in binary %s", option_ctx.test_bin_filename);
+					}
+					
+					program_data.second = kernels;
+				}
+				
+				auto prog = ctx->add_program(program_data, option_ctx.additional_options);
+				if(prog == nullptr) {
+					log_error("program compilation failed!");
+				}
+#else
+				log_error("cuda testing not supported on this platform (or disabled during floor compilation)");
+#endif
 				break;
 		}
 	}
