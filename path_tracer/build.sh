@@ -296,7 +296,14 @@ fi
 if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# need to make kernel symbols visible for dlsym
 	LDFLAGS="${LDFLAGS} -rdynamic"
-	
+
+	# find libfloor*.so, w/o the need to have it in PATH/"LD PATH"
+	if [ $BUILD_OS != "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
+	else
+		LDFLAGS="${LDFLAGS} -rpath /c/msys/opt/floor/lib"
+	fi
+
 	# use PIC
 	LDFLAGS="${LDFLAGS} -fPIC"
 	COMMON_FLAGS="${COMMON_FLAGS} -fPIC"

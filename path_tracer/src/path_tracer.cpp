@@ -30,21 +30,20 @@ public:
 		float3 normal;
 		float distance { numeric_limits<float>::infinity() };
 		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_COUNT };
-
-		#pragma clang loop unroll_count(32)
+		
 		for(uint32_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
 			const auto& index = cornell_indices[triangle_idx];
 			const auto& v0 = cornell_vertices[index.x];
 			const auto& v1 = cornell_vertices[index.y];
 			const auto& v2 = cornell_vertices[index.z];
 	
-			const auto e1 = v0 - v2, e2 = v1 - v2;
+			const auto e1 = v0.xyz - v2.xyz, e2 = v1.xyz - v2.xyz;
 			const auto pvec = r.direction.crossed(e2);
 			const auto det = e1.dot(pvec);
-			if(const_math::abs(det) <= const_math::EPSILON<float>) continue;
+			if(fabs(det) <= const_math::EPSILON<float>) continue;
 			
 			const auto inv_det = 1.0f / det;
-			const auto tvec = r.origin - v2;
+			const auto tvec = r.origin - v2.xyz;
 			const auto qvec = tvec.crossed(e1);
 			
 			float3 ip;
@@ -83,7 +82,7 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(FLOOR_COMPUTE_METAL) && 0
+#if defined(FLOOR_COMPUTE_METAL) && 1
 		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
 		// so do a software 32-bit * 16-bit multiply instead
 		uint32_t low = (seed & 0xFFFFu) * 16807u;
@@ -108,7 +107,7 @@ public:
 		const auto& mat = cornell_materials[(size_t)p.object];
 		
 		// emission (don't oversample for indirect illumination)
-		if(sample_emission) radiance += mat.emission;
+		if(sample_emission) radiance += mat.emission.xyz;
 		
 		// compute direct illumination at given point
 		radiance += compute_direct_illumination(-r.direction, p, mat);
@@ -160,7 +159,7 @@ protected:
 			const auto dir_and_prob = generate_cosine_weighted_direction(normal, tb.first, tb.second,
 																		 { rand_0_1(), rand_0_1() });
 			
-			radiance = mat.diffuse_reflectance;
+			radiance = mat.diffuse_reflectance.xyz;
 			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_diffuse, dir_and_prob, p.hit_point);
 		}
@@ -169,15 +168,15 @@ protected:
 			const auto tb = get_local_system(rnormal);
 			const auto dir_and_prob = generate_power_cosine_weighted_direction(rnormal, tb.first, tb.second,
 																			   { rand_0_1(), rand_0_1() },
-																			   mat.specular_exponent);
+																			   mat.specular.w);
 			
 			// "reject directions below the surface" (or in it)
 			if(normal.dot(dir_and_prob.dir) <= 0.0f) {
 				return {};
 			}
 			
-			radiance = mat.specular_reflectance;
-			radiance *= pow(std::max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular_exponent);
+			radiance = mat.specular_reflectance.xyz;
+			radiance *= pow(std::max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular.w);
 			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_specular, dir_and_prob, p.hit_point);
 		}
@@ -201,7 +200,11 @@ protected:
 			const float3 normal { 0.0f, -1.0f, 0.0f }; // down
 			const float3 edge_1 { 0.0f, 0.0f, 33.2f - 22.7f };
 			const float3 edge_2 { 21.3f - 34.3f, 0.0f, 0.0f };
-			const float3 intensity { cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission };
+			const float3 intensity {
+				cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission.x,
+				cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission.y,
+				cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission.z
+			};
 			
 			constexpr float3 get_point(const float2& coord) const {
 				return position + coord.x * edge_1 + coord.y * edge_2;
@@ -230,13 +233,13 @@ protected:
 				const auto lambert = std::max(norm_surface.dot(r.direction), 0.0f);
 				
 				// diffuse
-				float3 illum = mat.diffuse_reflectance;
+				float3 illum = mat.diffuse_reflectance.xyz;
 				
 				// specular (only do the computation if it actually has a spec coeff > 0)
 				if(!mat.specular.is_null()) {
 					const auto R = float3::reflect(norm_surface, -r.direction).normalized();
-					illum += (mat.specular_reflectance *
-							  pow(std::max(R.dot(norm_eye_dir), 0.0f), mat.specular_exponent));
+					illum += (mat.specular_reflectance.xyz *
+							  pow(std::max(R.dot(norm_eye_dir), 0.0f), mat.specular.w));
 				}
 				
 				// mul by intensity and mul single floats separately
