@@ -565,7 +565,7 @@ int main(int, char* argv[]) {
 					
 					// can't grab non-existing floor metadata from a ptx file
 					// -> parse the ptx instead (only need the kernel function names when testing/compiling)
-					static const char ptx_kernel_func_marker[] { ".visible .entry " };
+					static const char ptx_kernel_func_marker[] { ".entry " };
 					vector<llvm_compute::kernel_info> kernels;
 					for(size_t pos = 0; ; ++pos) {
 						pos = program_data.first.find(ptx_kernel_func_marker, pos);
@@ -577,7 +577,7 @@ int main(int, char* argv[]) {
 							log_error("kernel function name end not found (@pos: %u)", pos);
 							continue;
 						}
-						const auto kernel_name = program_data.first.substr(start_pos, end_pos - start_pos);
+						const auto kernel_name = core::trim(program_data.first.substr(start_pos, end_pos - start_pos));
 						
 						kernels.push_back(llvm_compute::kernel_info {
 							kernel_name, {}
