@@ -328,6 +328,7 @@ int main(int, char* argv[]) {
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
 												  // when using opengl sharing: appropriate texture target must be set
 												  GL_TEXTURE_2D);
+		if(img_idx > 0) imgs[img_idx]->zero(dev_queue);
 	}
 	
 	// flush/finish everything (init, data copy) before running the benchmark
@@ -378,8 +379,10 @@ int main(int, char* argv[]) {
 	}
 	
 	// acquire for opengl use
-	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-		imgs[img_idx]->release_opengl_object(dev_queue);
+	if(!no_opengl) {
+		for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
+			imgs[img_idx]->release_opengl_object(dev_queue);
+		}
 	}
 	
 	// -> opengl/glsl blur
