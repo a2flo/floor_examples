@@ -174,13 +174,13 @@
 			isa = PBXGroup;
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
+				5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */,
 				5C7467131A5828D000999E78 /* nbody.cpp */,
 				5C7467141A5828D000999E78 /* nbody.hpp */,
 				5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */,
 				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
 				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
 				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
-				5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */,
 				5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */,
 			);
 			path = src;

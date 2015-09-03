@@ -103,8 +103,10 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	
 	glEnable(GL_PROGRAM_POINT_SIZE);
 #if !defined(__APPLE__)
-	// must be enabled when not using an opengl core context
-	glEnable(0x8861 /* GL_POINT_SPRITE */);
+	// must be enabled when not using an opengl core context on nvidia h/w / s/w
+	if(core::str_to_lower(floor::get_gl_vendor()).find("nvidia") != string::npos) {
+		glEnable(0x8861 /* GL_POINT_SPRITE */);
+	}
 #endif
 	
 	//
@@ -112,7 +114,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	
 	const auto shd = (nbody_state.render_sprites ?
 					  (nbody_state.alpha_mask ? shader_objects["SPRITE_DISCARD"] : shader_objects["SPRITE"]) :
-					  (nbody_state.alpha_mask ? shader_objects["POINT_DISCARD"] :shader_objects["POINT"]));
+					  (nbody_state.alpha_mask ? shader_objects["POINT_DISCARD"] : shader_objects["POINT"]));
 	glUseProgram(shd->program.program);
 	
 	glUniform1i((GLint)shd->program.uniforms["tex"].location, 0);
