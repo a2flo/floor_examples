@@ -76,6 +76,7 @@
 			"paths": [
 				"/opt/floor/compute",
 				"/c/msys/opt/floor/compute",
+				"%ProgramW6432%/floor/compute",
 				"%ProgramFiles%/floor/compute"
 			],
 			// the compute clang binary name
