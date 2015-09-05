@@ -93,6 +93,8 @@
 		"opencl": {
 			// the opencl platform index
 			"platform": 0,
+			// run the spir-verifier after compiling a spir binary
+			"verify_spir": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched,
 			//       can also use "CPU", "GPU" or "ACCELERATOR" to only match these types of devices
@@ -103,6 +105,8 @@
 			
 			// the compute spir-encoder binary name
 			"spir-encoder": "spir-encoder",
+			// the compute spir-verifier binary name
+			"spir-verifier": "spir-verifier",
 			// the compute applecl-encoder binary name
 			"applecl-encoder": "applecl-encoder"
 		},
