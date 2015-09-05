@@ -49,8 +49,8 @@
 
 	// general compute and compute toolchain settings, and specific backend settings further down
 	"compute": {
-		// opencl, cuda, metal or host (NOTE: defaults to opencl if possible and main platform fails to init)
-		"backend": "opencl",
+		// opencl, cuda, metal or host (NOTE: default backend depends on the OS)
+		"backend": "",
 		// if true, creates an opengl sharing context (only affects opencl right now, opengl sharing is always enabled with cuda and host)
 		"gl_sharing": false,
 		// compile code with debug information
