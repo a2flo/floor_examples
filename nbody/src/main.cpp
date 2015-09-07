@@ -335,14 +335,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			static constexpr const float rot_speed { 100.0f };
 			delta *= rot_speed;
 			
-			// compute rotation around x and y axis
-			quaternionf q_x, q_y;
-			q_x.set_rotation(delta.x, float3 { 0.0f, 1.0f, 0.0f });
-			q_y.set_rotation(delta.y, float3 { 1.0f, 0.0f, 0.0f });
-			q_x *= q_y;
-			
-			// multiply existing rotation by newly computed one
-			nbody_state.cam_rotation *= q_x;
+			// multiply existing rotation by newly computed rotation around the x and y axis
+			nbody_state.cam_rotation *= (quaternionf::rotation_deg(delta.x, float3 { 0.0f, 1.0f, 0.0f }) *
+										 quaternionf::rotation_deg(delta.y, float3 { 1.0f, 0.0f, 0.0f }));
 		}
 		else {
 			// multiply by desired move speed
@@ -463,7 +458,7 @@ int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
 	floor::init(argv[0], (const char*)"../../data/", // call path, data path
 				nbody_state.benchmark, "config.json", // console-mode, config name
-				nbody_state.benchmark ^ true); // use opengl 3.2+ core
+				nbody_state.benchmark ^ true); // use opengl 3.3+ (core)
 #else
 	floor::init(argv[0], (const char*)"data/");
 	nbody_state.body_count = 8192;

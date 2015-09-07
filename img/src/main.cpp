@@ -215,7 +215,7 @@ int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
 	floor::init(argv[0], (const char*)"../../data/", // call path, data path
 				false, "config.json", // console-mode, config name
-				true); // use opengl 3.2+ core
+				true); // use opengl 3.3+ (core)
 #else
 	floor::init(argv[0], (const char*)"data/");
 #endif

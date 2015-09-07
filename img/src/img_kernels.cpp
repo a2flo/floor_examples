@@ -81,7 +81,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 	const int2 gid { global_id.xy };
 	const int2 lid { local_id.xy };
 	
-	const int lin_lid { lid.y * int(TILE_SIZE) + lid.x };
+	const uint32_t lin_lid { local_id.y * TILE_SIZE + local_id.x };
 	
 	// awesome constexpr magic
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
@@ -159,7 +159,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i, idx += TILE_SIZE) {
 			// note that this will be optimized to an fma instruction if possible
-			v_color += coeffs[size_t(overlap + i)] * samples[idx];
+			v_color += coeffs[size_t(overlap + i)] * samples[uint32_t(idx)];
 		}
 		
 #if defined(SECOND_CACHE)
@@ -219,7 +219,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 		
 #pragma clang loop unroll_count(TAP_COUNT)
 		for(int i = -overlap; i <= overlap; ++i, ++idx) {
-			h_color += coeffs[size_t(overlap + i)] * samples_2[idx];
+			h_color += coeffs[size_t(overlap + i)] * samples_2[uint32_t(idx)];
 		}
 		
 		// write out

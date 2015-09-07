@@ -428,8 +428,8 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 	{
 		const matrix4f light_mproj { matrix4f().perspective(120.0f, 1.0f, 1.0f, 260.0f) };
 		const matrix4f light_mview {
-			matrix4f().translate(-light_pos.x, -light_pos.y, -light_pos.z) *
-			matrix4f().rotate_x(90.0f) // rotate downwards
+			matrix4f::translation(-light_pos) *
+			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
 		};
 		const matrix4f light_mvpm { light_mview * light_mproj };
 		light_bias_mvpm = matrix4f {
@@ -468,7 +468,7 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		// set/compute uniforms
 		const matrix4f mproj { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
 													  0.5f, warp_state.view_distance) };
-		const matrix4f rot_mat { matrix4f().rotate_y(cam.get_rotation().y) * matrix4f().rotate_x(cam.get_rotation().x) };
+		const matrix4f rot_mat { matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) * matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x) };
 		const matrix4f mview { matrix4f().translate(cam.get_position().x, cam.get_position().y, cam.get_position().z) * rot_mat };
 		
 		const struct {

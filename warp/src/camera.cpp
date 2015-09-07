@@ -122,14 +122,9 @@ void camera::run() {
 				
 				single_frame_direction += delta * 0.1f;
 				
-				// compute rotation around x and y axis
-				quaternionf q_x, q_y;
-				q_x.set_rotation(float(delta.x), float3 { 0.0f, 1.0f, 0.0f });
-				q_y.set_rotation(float(delta.y), float3 { 1.0f, 0.0f, 0.0f });
-				q_x *= q_y;
-				
-				// multiply existing rotation by newly computed one
-				single_frame_quat *= q_x;
+				// multiply existing rotation by newly computed rotation around the x and y axis
+				single_frame_quat *= (quaternionf::rotation_deg(float(delta.x), float3 { 0.0f, 1.0f, 0.0f }) *
+									  quaternionf::rotation_deg(float(delta.y), float3 { 1.0f, 0.0f, 0.0f }));
 			}
 			else ignore_next_rotation--;
 			
@@ -143,7 +138,7 @@ void camera::run() {
 void camera::set_single_frame(const bool& state) {
 	if(state && !is_single_frame) {
 		// init with current camera orientation
-		single_frame_quat.set_rotation(0.0f, get_direction());
+		single_frame_quat = quaternionf::rotation(0.0f, get_direction());
 		single_frame_direction = 0.0f;
 	}
 	is_single_frame = state;
