@@ -20,7 +20,7 @@
 #define __FLOOR_WARP_GL_RENDERER_HPP__
 
 #include <floor/floor/floor.hpp>
-#include <floor/compute/compute_base.hpp>
+#include <floor/compute/compute_context.hpp>
 #include "obj_loader.hpp"
 #include "camera.hpp"
 #include "warp_state.hpp"

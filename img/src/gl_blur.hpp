@@ -20,7 +20,7 @@
 #define __FLOOR_IMG_GL_BLUR_HPP__
 
 #include <floor/floor/floor.hpp>
-#include <floor/compute/compute_base.hpp>
+#include <floor/compute/compute_context.hpp>
 #include <floor/core/gl_shader.hpp>
 
 struct gl_blur {

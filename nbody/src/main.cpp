@@ -463,7 +463,7 @@ int main(int, char* argv[]) {
 	floor::init(argv[0], (const char*)"data/");
 	nbody_state.body_count = 8192;
 #endif
-	// disable opengl renderer when using metal or host
+	// disable opengl renderer when using metal
 	if(!nbody_state.no_opengl) {
 		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
 	}

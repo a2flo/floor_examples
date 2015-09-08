@@ -20,7 +20,7 @@
 #define __FLOOR_NBODY_METAL_RENDERER_HPP__
 
 #include <floor/floor/floor.hpp>
-#include <floor/compute/compute_base.hpp>
+#include <floor/compute/compute_context.hpp>
 
 struct metal_renderer {
 	static bool init(shared_ptr<compute_device> dev);

@@ -221,6 +221,11 @@ int main(int, char* argv[]) {
 #endif
 	floor::set_caption("img");
 	
+	// disable opengl when using metal
+	if(!no_opengl) {
+		no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	}
+	
 	// opengl and floor context handling
 	if(no_opengl) floor::set_use_gl_context(false);
 	floor::acquire_context();

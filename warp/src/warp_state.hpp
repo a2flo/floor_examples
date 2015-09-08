@@ -20,7 +20,7 @@
 #define __FLOOR_WARP_WARP_STATE_HPP__
 
 struct warp_state_struct {
-	shared_ptr<compute_base> ctx;
+	shared_ptr<compute_context> ctx;
 	shared_ptr<compute_queue> dev_queue;
 	shared_ptr<compute_device> dev;
 	
