@@ -132,10 +132,7 @@
 		// host backend settings
 		"host": {
 			// single (single-threaded), mt-item (multi-threaded, 1 cpu : 1 work-item), mt-group (multi-threaded, 1 cpu : 1 group)
-			"exec_model": "mt-group",
-			// if non-empty: only devices with names matching any of the names in this list will be used
-			// NOTE: capitalization is ignored, names can be partially matched
-			"whitelist": []
+			"exec_model": "mt-group"
 		}
 	}
 }
