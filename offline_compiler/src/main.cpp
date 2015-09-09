@@ -440,8 +440,7 @@ int main(int, char* argv[]) {
 			case llvm_compute::TARGET::APPLECL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
-				auto ctx = make_shared<opencl_compute>();
-				ctx->init(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
+				auto ctx = make_shared<opencl_compute>(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
 				auto cl_ctx = ctx->get_opencl_context();
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
@@ -512,8 +511,7 @@ int main(int, char* argv[]) {
 			} break;
 			case llvm_compute::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
-				auto ctx = make_shared<metal_compute>();
-				ctx->init(0, false, floor::get_metal_whitelist());
+				auto ctx = make_shared<metal_compute>(floor::get_metal_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
@@ -546,8 +544,7 @@ int main(int, char* argv[]) {
 			}
 			case llvm_compute::TARGET::PTX:
 #if !defined(FLOOR_NO_CUDA)
-				auto ctx = make_shared<cuda_compute>();
-				ctx->init(0, false, floor::get_cuda_whitelist());
+				auto ctx = make_shared<cuda_compute>(floor::get_cuda_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
