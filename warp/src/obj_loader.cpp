@@ -1305,13 +1305,13 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		model->objects.reserve(sub_object_count);
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
-			model->material_infos.emplace_back(obj_model::material_info {
-				bin_file.get_terminated_block(0),
-				bin_file.get_terminated_block(0),
-				bin_file.get_terminated_block(0),
-				bin_file.get_terminated_block(0),
-				bin_file.get_terminated_block(0)
-			});
+			obj_model::material_info mat_info;
+			mat_info.name = bin_file.get_terminated_block(0);
+			mat_info.diffuse_file_name = bin_file.get_terminated_block(0);
+			mat_info.specular_file_name = bin_file.get_terminated_block(0);
+			mat_info.normal_file_name = bin_file.get_terminated_block(0);
+			mat_info.mask_file_name = bin_file.get_terminated_block(0);
+			model->material_infos.emplace_back(mat_info);
 		}
 		
 		unordered_map<string, pair<uint32_t, compute_image*>> texture_filenames;
@@ -1356,11 +1356,11 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 			obj->mat_idx = bin_file.get_uint();
 			
 			for(uint32_t j = 0; j < index_count; ++j) {
-				obj->indices.emplace_back(uint3 {
-					bin_file.get_uint(),
-					bin_file.get_uint(),
-					bin_file.get_uint()
-				});
+				uint3 idx;
+				idx.x = bin_file.get_uint();
+				idx.y = bin_file.get_uint();
+				idx.z = bin_file.get_uint();
+				obj->indices.emplace_back(idx);
 			}
 			
 			model->objects.emplace_back(move(obj));
@@ -1368,38 +1368,38 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		log_debug("loaded sub-objects");
 		
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model->vertices.emplace_back(float3 {
-				bin_file.get_float(),
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
+			float3 vtx;
+			vtx.x = bin_file.get_float();
+			vtx.y = bin_file.get_float();
+			vtx.z = bin_file.get_float();
+			model->vertices.emplace_back(vtx);
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model->tex_coords.emplace_back(float2 {
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
+			float2 tc;
+			tc.x = bin_file.get_float();
+			tc.y = bin_file.get_float();
+			model->tex_coords.emplace_back(tc);
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model->normals.emplace_back(float3 {
-				bin_file.get_float(),
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
+			float3 norm;
+			norm.x = bin_file.get_float();
+			norm.y = bin_file.get_float();
+			norm.z = bin_file.get_float();
+			model->normals.emplace_back(norm);
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model->binormals.emplace_back(float3 {
-				bin_file.get_float(),
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
+			float3 bn;
+			bn.x = bin_file.get_float();
+			bn.y = bin_file.get_float();
+			bn.z = bin_file.get_float();
+			model->binormals.emplace_back(bn);
 		}
 		for(uint32_t i = 0; i < vertex_count; ++i) {
-			model->tangents.emplace_back(float3 {
-				bin_file.get_float(),
-				bin_file.get_float(),
-				bin_file.get_float()
-			});
+			float3 tn;
+			tn.x = bin_file.get_float();
+			tn.y = bin_file.get_float();
+			tn.z = bin_file.get_float();
+			model->tangents.emplace_back(tn);
 		}
 		
 		success = true;
