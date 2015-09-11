@@ -15,18 +15,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\auto_cam.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gl_renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\path_tracer.cpp">
+    <ClCompile Include="src\obj_loader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\warp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\cornell_box.hpp">
+    <ClInclude Include="src\auto_cam.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\path_tracer.hpp">
+    <ClInclude Include="src\camera.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gl_renderer.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\obj_loader.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\warp.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\warp_state.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

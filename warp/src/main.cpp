@@ -235,6 +235,7 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 	}
+#if defined(__APPLE__)
 	else {
 		if(warp_state.no_metal) {
 			log_error("metal renderer required!");
@@ -247,6 +248,7 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 	}
+#endif
 	
 	//
 	bool model_success { false };
@@ -290,7 +292,9 @@ int main(int, char* argv[]) {
 			if(!warp_state.no_opengl) {
 				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
 			}
+#if defined(__APPLE__)
 			else metal_renderer::render((const metal_obj_model&)*model.get(), *cam.get());
+#endif
 			floor::stop_draw();
 		}
 	}

@@ -10,10 +10,26 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\auto_cam.cpp" />
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\gl_renderer.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\obj_loader.cpp" />
+    <ClCompile Include="src\warp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\auto_cam.hpp" />
+    <ClInclude Include="src\camera.hpp" />
+    <ClInclude Include="src\gl_renderer.hpp" />
+    <ClInclude Include="src\obj_loader.hpp" />
+    <ClInclude Include="src\warp.hpp" />
+    <ClInclude Include="src\warp_state.hpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3347F94F-5939-425D-B525-1C4C4C4832FC}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>occ</RootNamespace>
+    <RootNamespace>warp</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -27,7 +43,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>LLVM-vs2014</PlatformToolset>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -46,8 +62,8 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProgramW6432)\floor\include;C:\deps\include;$(AMDAPPSDKROOT)include;C:\Intel\INDE\code_builder_5.0.0.43\include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
     <LibraryPath>$(ProgramW6432)\floor\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;C:\Intel\INDE\code_builder_5.0.0.43\lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
-    <TargetName>$(ProjectName)d</TargetName>
     <OutDir>$(SolutionDir)bin\</OutDir>
+    <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -68,11 +84,13 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;OpenGL32.lib;floord.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;OpenCL.lib;OpenGL32.lib;floord.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
@@ -93,21 +111,21 @@
       <PrecompiledHeaderFile />
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <OpenMPSupport>false</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>SDL2.lib;SDL2main.lib;OpenCL.lib;OpenGL32.lib;floor.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;OpenCL.lib;OpenGL32.lib;floor.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkErrorReporting>NoErrorReport</LinkErrorReporting>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\main.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

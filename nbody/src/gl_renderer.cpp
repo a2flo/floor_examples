@@ -102,7 +102,7 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	}
 	
 	glEnable(GL_PROGRAM_POINT_SIZE);
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(__WINDOWS__) // TODO: is this a linux driver bug?
 	// must be enabled when not using an opengl core context on nvidia h/w / s/w
 	if(core::str_to_lower(floor::get_gl_vendor()).find("nvidia") != string::npos) {
 		glEnable(0x8861 /* GL_POINT_SPRITE */);
