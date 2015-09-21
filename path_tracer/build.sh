@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# TODO: intro
-
 ##########################################
 # helper functions
 error() {
@@ -66,7 +64,6 @@ BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
 BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_XML=$((1 - $((${FLOOR_NO_XML}))))
 BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
-BUILD_CONF_NO_CL_PROFILING=$((1 - $((${FLOOR_CL_PROFILING}))))
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
 
@@ -84,7 +81,6 @@ case $BUILD_ARCH in
 		;;
 esac
 
-# TODO: install/uninstall?
 for arg in "$@"; do
 	case $arg in
 		"help"|"-help"|"--help")
@@ -148,13 +144,6 @@ for arg in "$@"; do
 	esac
 done
 
-# sanity check
-if [ ${BUILD_CONF_EXCEPTIONS} -eq 0 ]; then
-	if [ ${BUILD_CONF_NET} -gt 0 ]; then
-		error "when building without exceptions, network support must be disabled as well! (./build.sh no-exceptions no-net)"
-	fi
-fi
-
 ##########################################
 # target and build environment setup
 
@@ -191,7 +180,7 @@ case ${BUILD_PLATFORM} in
 		# untested
 		BUILD_OS="cygwin"
 		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([:digit:]*)/\1/g')
-		warning "cygwin support is untested!"
+		warning "cygwin support is untested and unsupported!"
 		;;
 	"mingw"*)
 		BUILD_OS="mingw"
@@ -298,11 +287,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	LDFLAGS="${LDFLAGS} -rdynamic"
 
 	# find libfloor*.so, w/o the need to have it in PATH/"LD PATH"
-	if [ $BUILD_OS != "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
-	else
-		LDFLAGS="${LDFLAGS} -rpath /c/msys/opt/floor/lib"
-	fi
+	LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
 
 	# use PIC
 	LDFLAGS="${LDFLAGS} -fPIC"
@@ -351,7 +336,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	if [ $BUILD_OS == "linux" -o $BUILD_OS == "freebsd" -o $BUILD_OS == "openbsd" ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} GL Xxf86vm"
 	elif [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
-		UNCHECKED_LIBS="${UNCHECKED_LIBS} opengl32 glu32 gdi32 ws2_32"
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} opengl32 glu32 gdi32 ws2_32 mswsock"
 	fi
 	
 	# linux:
@@ -400,6 +385,11 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# also note: since libc++ is linked first, libc++'s functions will be used
 	if [ $BUILD_OS == "mingw" -a ${BUILD_CONF_LIBSTDCXX} -eq 0 ]; then
 		LDFLAGS="${LDFLAGS} -lc++.dll -Wl,--allow-multiple-definition -lsupc++"
+	fi
+	
+	# needed for ___chkstk_ms
+	if [ $BUILD_OS == "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -lgcc"
 	fi
 	
 	# add all libs to LDFLAGS
@@ -485,6 +475,11 @@ if [ ${BUILD_CONF_EXCEPTIONS} -eq 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -fno-exceptions"
 fi
 
+# so not standard compliant ...
+if [ $BUILD_OS == "mingw" ]; then
+	CXXFLAGS="${CXXFLAGS} -pthread"
+fi
+
 # arch handling (use -arch on osx/ios and -m32/-m64 everywhere else, except for mingw)
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
@@ -564,8 +559,6 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 	if [ $BUILD_OS == "mingw" ]; then
 		# set __WINDOWS__ and mingw specific flag
 		COMMON_FLAGS="${COMMON_FLAGS} -D__WINDOWS__ -DMINGW"
-		# tell boost to use windows.h (will get conflicts otherwise)
-		COMMON_FLAGS="${COMMON_FLAGS} -DBOOST_USE_WINDOWS_H"
 	fi
 	if [ $BUILD_OS == "cygwin" ]; then
 		# set cygwin specific flag
@@ -687,11 +680,14 @@ if [ ${BUILD_VERBOSE} -gt 0 ]; then
 fi
 
 # build the target
+export build_error=false
+trap build_error=true USR1
 build_file() {
 	# this function builds one source file
 	source_file=$1
 	file_num=$2
 	file_count=$3
+	parent_pid=$4
 	info "building ${source_file} [${file_num}/${file_count}]"
 	case ${source_file} in
 		*".cpp")
@@ -713,6 +709,13 @@ build_file() {
 	build_cmd="${build_cmd} -c ${source_file} -o ${BUILD_DIR}/${source_file}.o -MMD -MT deps -MF ${BUILD_DIR}/${source_file}.d"
 	verbose "${build_cmd}"
 	eval ${build_cmd}
+
+	# handle errors
+	ret_code=$?
+	if [ ${ret_code} -ne 0 ]; then
+		kill -USR1 ${parent_pid}
+		error "compilation failed (${source_file})"
+	fi
 }
 job_count() {
 	echo $(jobs -p | wc -l)
@@ -737,9 +740,16 @@ for source_file in ${SRC_FILES}; do
 			fi
 			sleep 0.1
 		done
-		(build_file $source_file $file_counter $file_count) &
+		(build_file $source_file $file_counter $file_count $$) &
 	else
-		build_file $source_file $file_counter $file_count
+		build_file $source_file $file_counter $file_count $$
+	fi
+
+	# abort on build errors
+	if [ ${build_error} == "true" ]; then
+		# wait until all build jobs have finished (all error output has been written)
+		wait
+		exit -1
 	fi
 done
 # all jobs were started, now we just have to wait until all are done
