@@ -344,7 +344,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/ios/deps/lib,
+					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -420,7 +420,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/ios/deps/lib,
+					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (

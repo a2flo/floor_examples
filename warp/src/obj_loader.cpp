@@ -27,6 +27,7 @@
 #include <floor/constexpr/const_string.hpp>
 #include <floor/core/core.hpp>
 #include <floor/threading/task.hpp>
+#include <floor/core/gl_support.hpp>
 
 #if defined(__APPLE__)
 #include <SDL2_image/SDL_image.h>
@@ -36,6 +37,8 @@
 #include <SDL_image.h>
 #endif
 
+// -> opengl
+#if !defined(FLOOR_IOS)
 #if !defined(GL_BGRA8)
 #define GL_BGRA8 GL_BGRA
 #endif
@@ -43,7 +46,6 @@
 #define GL_BGR8 GL_BGR
 #endif
 
-// -> opengl
 #define __TEXTURE_FORMATS(F, src_surface, dst_internal_format, dst_format, dst_type) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 8, 0, 0, 0, 0) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 16, 0, 8, 0, 0) \
@@ -57,6 +59,27 @@ F(src_surface, dst_internal_format, dst_format, dst_type, GL_R16, GL_RED, GL_UNS
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG16, GL_RG, GL_UNSIGNED_SHORT, 32, 0, 16, 0, 0) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB16, GL_RGB, GL_UNSIGNED_SHORT, 48, 0, 16, 32, 0) \
 F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT, 64, 0, 16, 32, 48)
+#else
+// these are necessary to correctly convert bgr textures to rgb
+#define FLOOR_IOS_GL_BGR 1
+#define FLOOR_IOS_GL_BGR8 2
+#if !defined(GL_BGRA8)
+#define GL_BGRA8 GL_BGRA
+#endif
+#if !defined(GL_BGR)
+#define GL_BGR FLOOR_IOS_GL_BGR
+#endif
+
+#define __TEXTURE_FORMATS(F, src_surface, dst_internal_format, dst_format, dst_type) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 8, 0, 0, 0, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 16, 0, 8, 0, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, 24, 0, 8, 16, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 24) \
+F(src_surface, dst_internal_format, dst_format, dst_type, FLOOR_IOS_GL_BGR8, FLOOR_IOS_GL_BGR, GL_UNSIGNED_BYTE, 24, 16, 8, 0, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, FLOOR_IOS_GL_BGR8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 0) \
+F(src_surface, dst_internal_format, dst_format, dst_type, GL_BGRA8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 24)
+#endif
 
 #define __CHECK_FORMAT(src_surface, dst_internal_format, dst_format, dst_type, \
 					   gl_internal_format, gl_format, gl_type, bpp, rshift, gshift, bshift, ashift) \
@@ -535,6 +558,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	}
 	log_debug("%u textures loaded to mem", surfaces.size());
 	
+#if !defined(FLOOR_IOS)
 	if(is_opengl) {
 		// create gl textures
 		model_gl_textures->resize(surfaces.size());
@@ -573,7 +597,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 		}
 		log_debug("gl textures created");
 	}
-	else {
+	else
+#endif
+	{
 		// create metal textures
 		model_metal_textures->resize(surfaces.size());
 		for(size_t i = 0, count = model_metal_textures->size(); i < count; ++i) {

@@ -30,10 +30,22 @@ struct img_option_context {
 typedef option_handler<img_option_context> img_opt_handler;
 
 static bool done { false };
-static bool no_opengl { false };
+static bool no_opengl {
+#if !defined(FLOOR_IOS)
+	false
+#else
+	true
+#endif
+};
 static bool run_gl_blur { false };
 static bool second_cache { true };
-static bool dumb { false };
+static bool dumb {
+#if !defined(FLOOR_IOS)
+	false
+#else
+	true
+#endif
+};
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { TAP_COUNT };
@@ -124,11 +136,14 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 
 /////////////////
 // TODO: creata a common header/source file ...
-
+		
+#if !defined(FLOOR_IOS)
 static GLuint vbo_fullscreen_triangle { 0 };
 static uint32_t global_vao { 0 };
+#endif
 static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
-
+		
+#if !defined(FLOOR_IOS)
 static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
 	// draws ogl stuff
 	// don't need to clear, drawing the complete screen
@@ -203,6 +218,7 @@ static bool gl_init() {
 	
 	return compile_shaders();
 }
+#endif
 
 /////////////////
 int main(int, char* argv[]) {
@@ -231,8 +247,10 @@ int main(int, char* argv[]) {
 	floor::acquire_context();
 	
 	if(!no_opengl) {
+#if !defined(FLOOR_IOS)
 		if(!gl_init()) return -1;
 		if(run_gl_blur && !gl_blur::init(image_size, tap_count)) return -1;
+#endif
 	}
 	
 	// add event handlers
@@ -268,16 +286,30 @@ int main(int, char* argv[]) {
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
-		{
-			"image_blur",
-			{ 0, 0 },
+		// non-functional right now
+		/*{
+			"image_blur_single_stage",
 			{
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE,
-				llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE,
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+			}
+		},*/
+		{
+			"image_blur_dumb_horizontal",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+			}
+		},
+		{
+			"image_blur_dumb_vertical",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},
 	};
-	auto img_prog = compute_ctx->add_precompiled_program_file(floor::data_path("img.metallib"), kernel_infos);
+	auto img_prog = compute_ctx->add_precompiled_program_file(floor::data_path("img_kernels.metallib"), kernel_infos);
 #endif
 	if(img_prog == nullptr) {
 		log_error("program compilation failed");
@@ -286,7 +318,10 @@ int main(int, char* argv[]) {
 	auto image_blur = img_prog->get_kernel("image_blur_single_stage");
 	auto image_blur_dumb_v = img_prog->get_kernel("image_blur_dumb_vertical");
 	auto image_blur_dumb_h = img_prog->get_kernel("image_blur_dumb_horizontal");
-	if(image_blur == nullptr ||
+	if(
+#if !defined(FLOOR_IOS)
+	   image_blur == nullptr ||
+#endif
 	   image_blur_dumb_v == nullptr ||
 	   image_blur_dumb_h == nullptr) {
 		log_error("failed to retrieve kernel from program");
@@ -390,6 +425,7 @@ int main(int, char* argv[]) {
 		}
 	}
 	
+#if !defined(FLOOR_IOS)
 	// -> opengl/glsl blur
 	if(run_gl_blur) {
 		// flush/finish again after acquire (just to be sure _everything_ has completed)
@@ -405,6 +441,7 @@ int main(int, char* argv[]) {
 			log_debug("blur run in %fms", double(gl_blur_end) / 1000.0);
 		}
 	}
+#endif
 	
 	// render output image by default
 	cur_image = 1;
@@ -444,7 +481,9 @@ int main(int, char* argv[]) {
 		// opengl rendering
 		else if(!no_opengl) {
 			floor::start_draw();
+#if !defined(FLOOR_IOS)
 			gl_render(dev_queue, imgs[cur_image]);
+#endif
 			floor::stop_draw();
 		}
 	}

@@ -22,11 +22,11 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C30CAA51AA625F5008986B1 /* img.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* img.metallib */; };
 		5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C54774E1AD645AF00F55003 /* img_kernels.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C54774B1AD645AF00F55003 /* img_kernels.cpp */; };
 		5C54878E1B608FB50088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54878C1B608FA70088272A /* config.json */; };
 		5C54878F1B608FB50088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54878D1B608FA70088272A /* config.json.local */; };
+		5C56D4DA1BB2F11E0024467C /* img_kernels.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4D91BB2F11E0024467C /* img_kernels.metallib */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */; };
@@ -41,7 +41,7 @@
 			files = (
 				5C54878E1B608FB50088272A /* config.json in CopyFiles */,
 				5C54878F1B608FB50088272A /* config.json.local in CopyFiles */,
-				5C30CAA51AA625F5008986B1 /* img.metallib in CopyFiles */,
+				5C56D4DA1BB2F11E0024467C /* img_kernels.metallib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -64,10 +64,10 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
-		5C30CAA31AA625DC008986B1 /* img.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = img.metallib; path = ../data/img.metallib; sourceTree = "<group>"; };
 		5C54774B1AD645AF00F55003 /* img_kernels.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = img_kernels.cpp; sourceTree = "<group>"; };
 		5C54878C1B608FA70088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54878D1B608FA70088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
+		5C56D4D91BB2F11E0024467C /* img_kernels.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = img_kernels.metallib; path = ../data/img_kernels.metallib; sourceTree = "<group>"; };
 		5C8FD0941AD3366800215230 /* imgd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imgd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
@@ -133,7 +133,7 @@
 		5C0071E01A9200D400F4711D /* data */ = {
 			isa = PBXGroup;
 			children = (
-				5C30CAA31AA625DC008986B1 /* img.metallib */,
+				5C56D4D91BB2F11E0024467C /* img_kernels.metallib */,
 				5C54878C1B608FA70088272A /* config.json */,
 				5C54878D1B608FA70088272A /* config.json.local */,
 			);
@@ -295,7 +295,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src img.cpp --target air --sub-target ios8 --no-double -vv --config ../../../data/\nmetal-as -o=img.air air_processed.ll\nmetal-ar r img.a img.air\nmetallib -o ../../data/img.metallib img.a\n";
+			shellScript = "cd src\nocc --src img_kernels.cpp --target air --sub-target ios8 --no-double -vv --config ../../../data/\nmetal-as -o=img_kernels.air air_processed.ll\nmetal-ar r img_kernels.a img_kernels.air\nmetallib -o ../../data/img_kernels.metallib img_kernels.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -359,7 +359,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/ios/deps/lib,
+					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -434,7 +434,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/ios/deps/lib,
+					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (

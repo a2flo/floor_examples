@@ -20,6 +20,8 @@
 #include <floor/core/gl_shader.hpp>
 #include <floor/core/timer.hpp>
 
+#if !defined(FLOOR_IOS)
+
 static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
 static GLuint vbo_fullscreen_triangle { 0 };
 static struct {
@@ -811,3 +813,9 @@ bool gl_renderer::compile_shaders() {
 	}
 	return true;
 }
+
+#else
+bool gl_renderer::init() { return false; }
+void gl_renderer::destroy() {}
+bool gl_renderer::render(const gl_obj_model&, const camera&) { return false; }
+#endif

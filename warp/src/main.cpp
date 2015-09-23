@@ -62,7 +62,34 @@ static bool compile_program() {
 														  " -DSCREEN_HEIGHT=" + to_string(floor::get_physical_height()) +
 														  " -DSCREEN_FOV=" + to_string(warp_state.fov));
 #else
-	// TODO
+	// for now: use a precompiled metal lib instead of compiling at runtime
+	const vector<llvm_compute::kernel_info> kernel_infos {
+		{
+			"warp_scatter_simple",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
+		},
+		{
+			"single_px_fixup",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+			}
+		},
+		{
+			"img_clear",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
+		},
+	};
+	auto new_warp_prog = warp_state.ctx->add_precompiled_program_file(floor::data_path("warp.metallib"), kernel_infos);
 #endif
 	if(new_warp_prog == nullptr) {
 		log_error("program compilation failed");

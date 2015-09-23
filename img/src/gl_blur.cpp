@@ -18,6 +18,8 @@
 
 #include "gl_blur.hpp"
 
+#if !defined(FLOOR_IOS)
+
 static shared_ptr<floor_shader_object> h_blur_shd, v_blur_shd;
 static GLuint rtt_fbo { 0u };
 
@@ -154,3 +156,5 @@ void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& t
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, FLOOR_DEFAULT_FRAMEBUFFER);
 }
+		
+#endif
