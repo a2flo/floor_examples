@@ -21,6 +21,7 @@
 #endif
 
 #include <floor/floor/floor.hpp>
+#include <floor/floor/floor_version.hpp>
 #include <floor/compute/llvm_compute.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/core/option_handler.hpp>
@@ -34,6 +35,9 @@
 
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
+
+#define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
+#define FLOOR_OCC_FULL_VERSION_STR "offline compute compiler v" FLOOR_OCC_VERSION_STR
 
 struct option_context {
 	string filename { "" };
@@ -59,6 +63,7 @@ typedef option_handler<option_context> occ_opt_handler;
 //! option -> function map
 template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handler::options {
 	{ "--help", [](option_context& ctx, char**&) {
+		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
@@ -77,6 +82,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
+				 "\t--version: prints the occ/floor version\n"
 				 "\t--config <path>: the path where config.json is located (defaults to \"../../data/\")\n"
 				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
 		ctx.done = true;
@@ -173,6 +179,10 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "-vv", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::UNDECORATED;
+	}},
+	{ "--version", [](option_context& ctx, char**&) {
+		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
+		ctx.done = true;
 	}},
 	{ "--config", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
