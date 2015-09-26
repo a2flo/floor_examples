@@ -57,6 +57,7 @@ struct nbody_state_struct {
 	
 	bool render_sprites { true };
 	bool alpha_mask { false };
+	uint32_t render_size { 0 };
 	
 	//
 	bool done { false };

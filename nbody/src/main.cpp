@@ -62,7 +62,7 @@ static size_t buffer_flip_flop { 0 };
 // current iteration number (used to track/compute gflops, resets every 100 iterations)
 static size_t iteration { 0 };
 // used to track/compute gflops, resets every 100 iterations
-static long double sim_time_sum { 0.0L };
+static double sim_time_sum { 0.0 };
 // initializes (or resets) the current nbody system
 static void init_system();
 
@@ -82,6 +82,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 #endif
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
+		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
 		for(const auto& desc : nbody_setup_desc) {
 			cout << "\t\t" << desc << endl;
 		}
@@ -223,6 +224,16 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 			++cur_setup;
 		}
 		cerr << "unknown nbody setup: " << arg_str << endl;
+	}},
+	{ "--render-size", [](nbody_option_context&, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after --render-size!" << endl;
+			nbody_state.done = true;
+			return;
+		}
+		nbody_state.render_size = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		cout << "render size set to: " << nbody_state.render_size << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
@@ -618,7 +629,7 @@ int main(int, char* argv[]) {
 	// keeps track of the time between two simulation steps -> time delta in kernel
 	auto time_keeper = chrono::high_resolution_clock::now();
 	// is there a price for the most nested namespace/typedef?
-	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
+	static const double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
 	// main loop
 	while(!nbody_state.done) {
 		floor::get_event()->handle_events();
@@ -634,18 +645,18 @@ int main(int, char* argv[]) {
 		time_keeper = now;
 		
 		// simple iteration time -> gflops mapping function (note that flops per interaction is a fixed number)
-		const auto compute_gflops = [](const long double& iter_time_in_ms, const bool use_fma) {
+		const auto compute_gflops = [](const double& iter_time_in_ms, const bool use_fma) {
 			if(!use_fma) {
 				const size_t flops_per_body { 19 };
 				const size_t flops_per_iter { size_t(nbody_state.body_count) * size_t(nbody_state.body_count) * flops_per_body };
-				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter) / 1'000'000'000.0L;
+				return ((1000.0 / iter_time_in_ms) * (double)flops_per_iter) / 1'000'000'000.0;
 			}
 			else {
 				// NOTE: GPUs and recent CPUs support fma instructions, thus performing 2 floating point operations
 				// in 1 cycle instead of 2 -> to account for that, compute some kind of "actual ops done" metric
 				const size_t flops_per_body_fma { 13 };
 				const size_t flops_per_iter_fma { size_t(nbody_state.body_count) * size_t(nbody_state.body_count) * flops_per_body_fma };
-				return ((1000.0L / iter_time_in_ms) * (long double)flops_per_iter_fma) / 1'000'000'000.0L;
+				return ((1000.0 / iter_time_in_ms) * (double)flops_per_iter_fma) / 1'000'000'000.0;
 			}
 		};
 		
@@ -653,17 +664,17 @@ int main(int, char* argv[]) {
 		const size_t cur_buffer = buffer_flip_flop;
 		const size_t next_buffer = (buffer_flip_flop + 1) % pos_buffer_count;
 		if(!nbody_state.stop) {
-			//log_debug("delta: %fms /// %f gflops", 1000.0f * float(((long double)delta.count()) / time_den),
-			//		  compute_gflops(1000.0L * (((long double)delta.count()) / time_den), false));
+			//log_debug("delta: %fms /// %f gflops", 1000.0f * float(((double)delta.count()) / time_den),
+			//		  compute_gflops(1000.0 * (((double)delta.count()) / time_den), false));
 			
 			// in ms
-			sim_time_sum += ((long double)delta.count()) / (time_den / 1000.0L);
+			sim_time_sum += ((double)delta.count()) / (time_den / 1000.0);
 			
 			if(iteration == 99) {
 				log_debug("avg of 100 iterations: %fms ### %s gflops",
-						  sim_time_sum / 100.0L, compute_gflops(sim_time_sum / 100.0L, false));
+						  sim_time_sum / 100.0, compute_gflops(sim_time_sum / 100.0, false));
 				floor::set_caption("nbody / " + to_string(nbody_state.body_count) + " bodies / " +
-								   to_string(compute_gflops(sim_time_sum / 100.0L, false)) + " gflops");
+								   to_string(compute_gflops(sim_time_sum / 100.0, false)) + " gflops");
 				iteration = 0;
 				sim_time_sum = 0.0L;
 				
@@ -685,7 +696,7 @@ int main(int, char* argv[]) {
 							   /* in_positions: */		position_buffers[cur_buffer],
 							   /* out_positions: */		position_buffers[next_buffer],
 							   /* velocities: */		velocity_buffer,
-							   /* delta: */				/*float(((long double)delta.count()) / time_den)*/
+							   /* delta: */				/*float(((double)delta.count()) / time_den)*/
 							   							// NOTE: could use a time-step scaler instead, but fixed size seems more reasonable
 							   							nbody_state.time_step);
 			buffer_flip_flop = next_buffer;
@@ -699,7 +710,10 @@ int main(int, char* argv[]) {
 							   // total amount of work:
 							   uint1 { img_size.x * img_size.y },
 							   // work per work-group:
-							   uint1 { fastest_device->max_work_group_size },
+							   uint1 {
+								   nbody_state.render_size == 0 ?
+								   fastest_device->max_work_group_size : nbody_state.render_size
+							   },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
 							   /* img: */				img_buffers[img_buffer_flip_flop],
