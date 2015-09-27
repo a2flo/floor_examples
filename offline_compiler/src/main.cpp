@@ -276,7 +276,7 @@ int main(int, char* argv[]) {
 				}
 				else if(option_ctx.sub_target == "ios9") {
 					dev->family = (family == 0 ? 1 : family);
-					dev->family_version = 2;
+					dev->family_version = (family < 3 ? 2 : 1);
 				}
 				else if(option_ctx.sub_target == "osx11") {
 					dev->family = (family == 0 ? 10000 : family);
