@@ -117,6 +117,12 @@
 			"force_driver_sm": "",
 			// forces the sm target to sm_xy when compiling to ptx
 			"force_compile_sm": "",
+			// max amount of registers that may be used by a cuda thread / work-item
+			"max_registers": 32,
+			// if enabled, this will create a verbose error and info log when jitting ptx code
+			"jit_verbose": false,
+			// the optimization level that the jit compiler should use (range: 0 - 4)
+			"jit_opt_level": 4,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": []
