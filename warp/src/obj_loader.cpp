@@ -609,7 +609,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 				continue;
 			}
 			
-			COMPUTE_IMAGE_TYPE image_type;
+			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
 			floor_check_format(surface, image_type);
 			image_type |= COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED;
 			

@@ -76,6 +76,17 @@ static bool compile_program() {
 			}
 		},
 		{
+			"warp_scatter_patch",
+			{
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 16, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
+		},
+		{
 			"single_px_fixup",
 			{
 				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
@@ -95,10 +106,18 @@ static bool compile_program() {
 		log_error("program compilation failed");
 		return false;
 	}
+#if 1
 	auto new_warp_kernel = new_warp_prog->get_kernel("warp_scatter_simple");
+#else
+	auto new_warp_kernel = new_warp_prog->get_kernel("warp_scatter_patch");
+#endif
+	auto new_warp_gather_kernel = new_warp_prog->get_kernel("warp_gather");
 	auto new_clear_kernel = new_warp_prog->get_kernel("img_clear");
 	auto new_fixup_kernel = new_warp_prog->get_kernel("single_px_fixup");
-	if(new_warp_kernel == nullptr || new_clear_kernel == nullptr || new_fixup_kernel == nullptr) {
+	if(new_warp_kernel == nullptr ||
+	   new_warp_gather_kernel == nullptr ||
+	   new_clear_kernel == nullptr ||
+	   new_fixup_kernel == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return false;
 	}
@@ -106,6 +125,7 @@ static bool compile_program() {
 	// all okay
 	warp_state.warp_prog = new_warp_prog;
 	warp_state.warp_kernel = new_warp_kernel;
+	warp_state.warp_gather_kernel = new_warp_gather_kernel;
 	warp_state.clear_kernel = new_clear_kernel;
 	warp_state.fixup_kernel = new_fixup_kernel;
 	return true;
@@ -156,6 +176,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.is_auto_cam = !warp_state.is_single_frame && warp_state.is_auto_cam;
 				cam->set_single_frame(warp_state.is_single_frame);
 				break;
+			case SDLK_m:
+				warp_state.is_motion_only ^= true;
+				break;
 			case SDLK_r:
 				warp_state.is_warping = true;
 				warp_state.is_render_full = true;
@@ -177,6 +200,11 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_4:
 				warp_state.is_fixup ^= true;
 				log_debug("px fixup? %b", warp_state.is_fixup);
+				break;
+			case SDLK_g:
+				warp_state.cur_fbo = 0;
+				warp_state.is_scatter ^= true;
+				log_debug("scatter/gather? %s", (warp_state.is_scatter ? "scatter" : "gather"));
 				break;
 			default: break;
 		}

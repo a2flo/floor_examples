@@ -30,6 +30,8 @@ camera::~camera() {
 /*! runs the camera (expected to be called every draw)
  */
 void camera::run() {
+	prev_position = position;
+	
 	if(!is_single_frame) {
 		if(keyboard_input) {
 			// ... recalculate the cameras position
@@ -177,6 +179,7 @@ void camera::set_position(const float& x, const float& y, const float& z) {
 }
 void camera::set_position(const float3& pos) {
 	position.set(pos);
+	prev_position = position; // assume full reset
 }
 
 /*! sets the rotation of the camera
@@ -198,6 +201,10 @@ float3& camera::get_position() {
 }
 const float3& camera::get_position() const {
 	return position;
+}
+
+const float3& camera::get_prev_position() const {
+	return prev_position;
 }
 
 /*! returns the rotation of the camera

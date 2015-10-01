@@ -20,6 +20,13 @@
 
 #if defined(FLOOR_COMPUTE)
 
+// if tiles (work-group x/y sizes) overlap the screen size, a check is neccesary to ignore the overlapping work-items
+#if (((SCREEN_WIDTH / TILE_SIZE_X) * TILE_SIZE_X) != SCREEN_WIDTH) || (((SCREEN_HEIGHT / TILE_SIZE_Y) * TILE_SIZE_Y) != SCREEN_HEIGHT)
+#define screen_check() if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return
+#else
+#define screen_check() /* nop */
+#endif
+
 namespace warp_camera {
 	// sceen size in fp
 	static constexpr const float2 screen_size { float(SCREEN_WIDTH), float(SCREEN_HEIGHT) };
@@ -75,7 +82,7 @@ namespace warp_camera {
 
 // decodes the encoded input 3D motion vector
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
-static float3 decode_motion(const uint32_t& encoded_motion) {
+static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	const float3 signs {
 		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
 		(encoded_motion & 0x40000000u) != 0u ? -1.0f : 1.0f,
@@ -94,6 +101,27 @@ static float3 decode_motion(const uint32_t& encoded_motion) {
 	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
 }
 
+// decodes the encoded input 2D motion vector
+// format: [16-bit signed x][16-bit signed y]
+static float2 decode_2d_motion(const uint32_t& encoded_motion) {
+	const float2 signs {
+		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
+		(encoded_motion & 0x00008000u) != 0u ? -1.0f : 1.0f
+	};
+	const uint2 shifted_motion {
+		(encoded_motion >> 16u) & 0x7FFu,
+		encoded_motion & 0x7FFu
+	};
+	
+#if 0 // log scale
+	constexpr const float adjust { const_math::log2(128.0f + 1.0f) / 32768.0f };
+	return signs * ((float2(shifted_motion) * adjust).exp2() - 1.0f);
+#else // input uniform in [-1, 1] -> vector in screen space (width, height)
+	constexpr const float2 adjust { warp_camera::screen_size / 32768.0f };
+	return signs * float2(shifted_motion) * adjust;
+#endif
+}
+
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
@@ -101,12 +129,12 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 								param<float4> motion_override) {
-	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	screen_check();
 	
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
 	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
-	const auto motion = (motion_override.w < 0.0f ? decode_motion(read(img_motion, coord)) : motion_override.xyz);
+	const auto motion = (motion_override.w < 0.0f ? decode_3d_motion(read(img_motion, coord)) : motion_override.xyz);
 	
 	// reconstruct 3D position from depth + camera/screen setup
 	const float3 reconstructed_pos = warp_camera::reconstruct_position(coord, linear_depth);
@@ -125,8 +153,169 @@ kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_
 	}
 }
 
+// TODO/wip
+static constexpr const uint32_t depth_groups { 8u };
+static constexpr const float3 dbg_colors[depth_groups] {
+	float3 { 1.0f, 0.0f, 0.0f },
+	float3 { 0.0f, 1.0f, 0.0f },
+	float3 { 0.0f, 0.0f, 1.0f },
+	float3 { 1.0f, 1.0f, 0.0f },
+	float3 { 1.0f, 0.0f, 1.0f },
+	float3 { 0.0f, 1.0f, 1.0f },
+	float3 { 1.0f, 1.0f, 1.0f },
+	float3 { 0.5f, 0.5f, 0.5f },
+};
+kernel void warp_scatter_patch(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
+							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+							   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+							   param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
+							   param<float4> motion_override) {
+	screen_check();
+	
+	const auto coord = global_id.xy;
+	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
+	
+	//
+	local_buffer<float, 2> d_min_max;
+	local_buffer<uint32_t, depth_groups, 4> rect_min_max;
+	if(local_id.x == 0 && local_id.y == 0) {
+		d_min_max[0] = numeric_limits<float>::max();
+		d_min_max[1] = -numeric_limits<float>::max();
+	}
+	if(local_id.x < depth_groups) {
+		rect_min_max[local_id.x][0] = TILE_SIZE_X;
+		rect_min_max[local_id.x][1] = TILE_SIZE_Y;
+		rect_min_max[local_id.x][2] = 0;
+		rect_min_max[local_id.x][3] = 0;
+	}
+	local_barrier();
+	
+	// find min/max linear depth for this tile
+	atomic_min(&d_min_max[0], linear_depth);
+	atomic_max(&d_min_max[1], linear_depth);
+	local_barrier();
+	
+	const float d_min = d_min_max[0];
+	const float d_max = d_min_max[1];
+	
+	// classify depth, max 8 depth groups
+	const float range = d_max - d_min;
+	const float step = range * (1.0f / float(depth_groups));
+	const float classified_depth = (linear_depth - d_min) / std::max(step, warp_camera::near_far_plane.y / 50.0f);
+	const uint32_t idx = std::min(uint32_t(classified_depth), depth_groups - 1u);
+	const auto color = dbg_colors[idx];
+	
+	// find rect min/max coordinates for this group
+	atomic_min(&rect_min_max[idx][0], local_id.x);
+	atomic_min(&rect_min_max[idx][1], local_id.y);
+	atomic_max(&rect_min_max[idx][2], local_id.x);
+	atomic_max(&rect_min_max[idx][3], local_id.y);
+	local_barrier();
+	
+	//
+	//float3 color;
+	write(img_out_color, coord, float4 { color, 1.0f });
+}
+
+kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_forward,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_backward,
+						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+						param<float> relative_delta // "current compute/warp delta" divided by "delta between last two frames"
+) {
+	screen_check();
+	
+	const auto coord = global_id.xy;
+	
+	// iterate
+	const float2 fcoord = float2 { coord } + 0.5f; // start at pixel center (this is p_t+alpha)
+#if 0 // basic, both start at p_t+alpha
+	float2 p_fwd = fcoord;
+	float2 p_bwd = fcoord;
+#else // dual init, opposing init
+	float2 p_fwd = fcoord + relative_delta * decode_2d_motion(read(img_motion_backward, coord));
+	float2 p_bwd = fcoord + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, coord));
+#endif
+	for(uint32_t i = 0; i < 3; ++i) {
+		const auto motion = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
+		const auto d = relative_delta * motion;
+		p_fwd = fcoord - d;
+	}
+	for(uint32_t i = 0; i < 3; ++i) {
+		const auto motion = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
+		const auto d = (1.0f - relative_delta) * motion;
+		p_bwd = fcoord - d;
+	}
+	
+	//
+	const auto color_fwd = read(img_color_prev, int2(p_fwd.floored()));
+	const auto color_bwd = read(img_color, int2(p_bwd.floored()));
+	
+	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
+	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
+	
+	const auto err_fwd = (p_fwd + relative_delta * motion_fwd - fcoord).dot();
+	const auto err_bwd = (p_bwd + (1.0f - relative_delta) * motion_bwd - fcoord).dot();
+	constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
+	constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
+	
+	// TODO: depth inside motion vec!
+	const auto linear_depth_fwd = warp_camera::linearize_depth(read(img_depth_prev, int2(p_fwd.floored())));
+	const auto linear_depth_bwd = warp_camera::linearize_depth(read(img_depth, int2(p_bwd.floored())));
+	const auto depth_diff = fabs(linear_depth_fwd - linear_depth_bwd);
+	constexpr const float epsilon_2 { 5.0f }; // aka "max depth difference between fwd and bwd"
+	
+	const bool fwd_valid = (err_fwd < epsilon_1_sq);
+	const bool bwd_valid = (err_bwd < epsilon_1_sq);
+#if 0 // just blended
+	const auto color = color_fwd.interpolated(color_bwd, relative_delta);
+#else
+	float4 color;
+	const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
+								 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
+	const auto proj_color_bwd = ((1.0f - relative_delta) * read(img_color_prev, int2((p_bwd + motion_bwd).floored())) +
+								 relative_delta * color_bwd);
+	if(fwd_valid && bwd_valid) {
+		if(depth_diff < epsilon_2) {
+			// case 1: both fwd and bwd are valid
+			if(err_fwd < err_bwd) {
+				color = proj_color_fwd;
+			}
+			else {
+				color = proj_color_bwd;
+			}
+		}
+		else {
+			// case 2: select the one closer to the camera (occlusion)
+			if(linear_depth_fwd < linear_depth_bwd) {
+				color = proj_color_fwd;
+			}
+			else { // bwd < fwd
+				color = proj_color_bwd;
+			}
+		}
+	}
+	else if(fwd_valid) {
+		color = proj_color_fwd;
+	}
+	else if(bwd_valid) {
+		color = proj_color_bwd;
+	}
+	// case 3 / else: both are invalid
+	else {
+		color = proj_color_fwd.interpolated(proj_color_bwd, relative_delta);
+	}
+#endif
+	
+	write(img_out_color, coord, color);
+}
+
 kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img) {
-	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	screen_check();
 	
 	const int2 coord { global_id.xy };
 	const auto color = read(warp_img, coord);
@@ -158,7 +347,7 @@ kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAG
 
 kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img,
 					  param<float4> clear_color) {
-	if(global_id.x >= SCREEN_WIDTH || global_id.y >= SCREEN_HEIGHT) return;
+	screen_check();
 	write(img, int2 { global_id.xy }, float4 { clear_color.xyz, 0.0f });
 }
 

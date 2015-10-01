@@ -20,15 +20,22 @@
 #include <floor/core/gl_shader.hpp>
 #include <floor/core/timer.hpp>
 
+// uncomment to enable forward instead of reverse reprojection
+//#define FORWARD_REPROJECTION 1
+
+//
+#define WARP_GATHER 1
+
 #if !defined(FLOOR_IOS)
 
 static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
 static GLuint vbo_fullscreen_triangle { 0 };
 static struct {
-	GLuint fbo { 0u };
-	GLuint color { 0u };
-	GLuint depth { 0u };
-	GLuint motion { 0u };
+	GLuint fbo[2] { 0u, 0u };
+	GLuint color[2] { 0u, 0u };
+	GLuint depth[2] { 0u, 0u };
+	// if gather: { forward, backward }, { forward, backward }
+	GLuint motion[4] { 0u, 0u, 0u, 0u };
 	
 	GLuint compute_fbo { 0u };
 	GLuint compute_color { 0u };
@@ -47,34 +54,51 @@ static struct {
 #endif
 } shadow_map;
 static float3 light_pos;
-static shared_ptr<compute_image> compute_color, compute_scene_color, compute_scene_depth, compute_scene_motion;
-static matrix4f prev_mvm;
+static shared_ptr<compute_image> compute_color;
+static shared_ptr<compute_image> compute_scene_color[2];
+static shared_ptr<compute_image> compute_scene_depth[2];
+static shared_ptr<compute_image> compute_scene_motion[4];
+static matrix4f prev_mvm, prev_prev_mvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
 static void destroy_textures() {
 	// kill old shared/wrapped compute images (also makes sure these don't access the gl objects any more)
 	compute_color = nullptr;
-	compute_scene_color = nullptr;
-	compute_scene_depth = nullptr;
-	compute_scene_motion = nullptr;
+	for(auto& img : compute_scene_color) {
+		img = nullptr;
+	}
+	for(auto& img : compute_scene_motion) {
+		img = nullptr;
+	}
+	for(auto& img : compute_scene_depth) {
+		img = nullptr;
+	}
 	
 	// kill gl stuff
-	if(scene_fbo.fbo > 0) {
-		glDeleteFramebuffers(1, &scene_fbo.fbo);
-		scene_fbo.fbo = 0;
+	for(auto& fbo : scene_fbo.fbo) {
+		if(fbo > 0) {
+			glDeleteFramebuffers(1, &fbo);
+			fbo = 0;
+		}
 	}
-	if(scene_fbo.color > 0) {
-		glDeleteTextures(1, &scene_fbo.color);
-		scene_fbo.color = 0;
+	for(auto& tex : scene_fbo.color) {
+		if(tex > 0) {
+			glDeleteTextures(1, &tex);
+			tex = 0;
+		}
 	}
-	if(scene_fbo.motion > 0) {
-		glDeleteTextures(1, &scene_fbo.motion);
-		scene_fbo.motion = 0;
+	for(auto& tex : scene_fbo.motion) {
+		if(tex > 0) {
+			glDeleteTextures(1, &tex);
+			tex = 0;
+		}
 	}
-	if(scene_fbo.depth > 0) {
-		glDeleteTextures(1, &scene_fbo.depth);
-		scene_fbo.depth = 0;
+	for(auto& tex : scene_fbo.depth) {
+		if(tex > 0) {
+			glDeleteTextures(1, &tex);
+			tex = 0;
+		}
 	}
 	
 	if(scene_fbo.compute_fbo > 0) {
@@ -90,63 +114,68 @@ static void destroy_textures() {
 static void create_textures() {
 	// create scene fbo
 	{
-		glGenFramebuffers(1, &scene_fbo.fbo);
-		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
-		
 		scene_fbo.dim = floor::get_physical_screen_size();
 		
 		// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
 		scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(uint2 { 32, 16 });
 		
-		glGenTextures(1, &scene_fbo.color);
-		glBindTexture(GL_TEXTURE_2D, scene_fbo.color);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scene_fbo.color, 0);
-		
-		glGenTextures(1, &scene_fbo.motion);
-		glBindTexture(GL_TEXTURE_2D, scene_fbo.motion);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		for(size_t i = 0, count = size(scene_fbo.fbo); i < count; ++i) {
+			glGenFramebuffers(1, &scene_fbo.fbo[i]);
+			glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[i]);
+			
+			glGenTextures(1, &scene_fbo.color[i]);
+			glBindTexture(GL_TEXTURE_2D, scene_fbo.color[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+						 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scene_fbo.color[i], 0);
+			
+			for(size_t j = 0; j < 2; ++j) {
+				glGenTextures(1, &scene_fbo.motion[i * 2 + j]);
+				glBindTexture(GL_TEXTURE_2D, scene_fbo.motion[i * 2 + j]);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 #if 1
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+							 GL_RED_INTEGER, GL_UNSIGNED_INT, nullptr);
 #else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_RGBA, GL_FLOAT, nullptr);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+							 GL_RGBA, GL_FLOAT, nullptr);
 #endif
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, scene_fbo.motion, 0);
-		
-		glGenTextures(1, &scene_fbo.depth);
-		glBindTexture(GL_TEXTURE_2D, scene_fbo.depth);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 + (GLenum)j, GL_TEXTURE_2D,
+									   scene_fbo.motion[i * 2 + j], 0);
+			}
+			
+			glGenTextures(1, &scene_fbo.depth[i]);
+			glBindTexture(GL_TEXTURE_2D, scene_fbo.depth[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 #if 1
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+						 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 #else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-					 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+						 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
 #endif
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, scene_fbo.depth, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, scene_fbo.depth[i], 0);
 		
-		//
-		const auto err = glGetError();
-		const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
-			log_error("scene fbo/tex error: %X %X", err, fbo_err);
+			//
+			const auto err = glGetError();
+			const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
+				log_error("scene fbo/tex error: %X %X", err, fbo_err);
+			}
+			
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		}
-		
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -180,12 +209,16 @@ static void create_textures() {
 	
 	compute_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.compute_color, GL_TEXTURE_2D,
 											   COMPUTE_MEMORY_FLAG::READ_WRITE);
-	compute_scene_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ );
-	compute_scene_depth = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth, GL_TEXTURE_2D,
-													 COMPUTE_MEMORY_FLAG::READ);
-	compute_scene_motion = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion, GL_TEXTURE_2D,
-													  COMPUTE_MEMORY_FLAG::READ);
+	for(size_t i = 0, count = size(scene_fbo.fbo); i < count; ++i) {
+		compute_scene_color[i] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color[i], GL_TEXTURE_2D,
+															COMPUTE_MEMORY_FLAG::READ );
+		compute_scene_depth[i] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth[i], GL_TEXTURE_2D,
+															COMPUTE_MEMORY_FLAG::READ);
+		compute_scene_motion[i * 2] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion[i * 2], GL_TEXTURE_2D,
+																 COMPUTE_MEMORY_FLAG::READ);
+		compute_scene_motion[i * 2 + 1] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion[i * 2 + 1], GL_TEXTURE_2D,
+																	 COMPUTE_MEMORY_FLAG::READ);
+	}
 }
 
 static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
@@ -295,7 +328,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 	
 	
 	//
-	static constexpr const float frame_limit { 1.0f / 10.0f };
+	static constexpr const float frame_limit { 1.0f / 15.0f };
 	static size_t warp_frame_num = 0;
 	if(deltaf < frame_limit && !first_frame) {
 		if(warp_state.is_warping) {
@@ -312,17 +345,28 @@ bool gl_renderer::render(const gl_obj_model& model,
 		time_keeper = now;
 		warp_frame_num = 0;
 		
-		compute_scene_color->release_opengl_object(warp_state.dev_queue);
-		compute_scene_depth->release_opengl_object(warp_state.dev_queue);
-		compute_scene_motion->release_opengl_object(warp_state.dev_queue);
+		compute_scene_color[0]->release_opengl_object(warp_state.dev_queue);
+		compute_scene_depth[0]->release_opengl_object(warp_state.dev_queue);
+#if defined(WARP_GATHER)
+		compute_scene_color[1]->release_opengl_object(warp_state.dev_queue);
+		compute_scene_depth[1]->release_opengl_object(warp_state.dev_queue);
+#endif
+		compute_scene_motion[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
+		compute_scene_motion[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
 		
 		render_full_scene(model, cam);
 		
 		blit(warp_state.is_render_full);
 		
-		compute_scene_color->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_depth->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_color[0]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_depth[0]->acquire_opengl_object(warp_state.dev_queue);
+#if defined(WARP_GATHER)
+		compute_scene_color[1]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_depth[1]->acquire_opengl_object(warp_state.dev_queue);
+#endif
+		// NOTE: warp_state.cur_fbo changed
+		compute_scene_motion[(1 - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
 		
 		return true;
 	}
@@ -330,7 +374,8 @@ bool gl_renderer::render(const gl_obj_model& model,
 
 void gl_renderer::blit(const bool full_scene) {
 	if(full_scene) {
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo);
+		// if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
@@ -357,6 +402,7 @@ void gl_renderer::render_kernels(const camera& cam,
 #endif
 	
 	// clear if enabled + always clear the first frame
+	// TODO: necessary for gather?
 	if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
 		warp_state.dev_queue->execute(warp_state.clear_kernel,
 									  scene_fbo.dim_multiple,
@@ -364,17 +410,39 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_color, clear_color);
 	}
 	
-	warp_state.dev_queue->execute(warp_state.warp_kernel,
-								  scene_fbo.dim_multiple,
-								  uint2 { 32, 16 },
-								  compute_scene_color, compute_scene_depth, compute_scene_motion, compute_color,
-								  delta / render_delta,
-								  (!warp_state.is_single_frame ?
-								   float4 { -1.0f } :
-								   float4 { cam.get_single_frame_direction(), 1.0f }
-								   ));
+	if(warp_state.is_scatter) {
+		warp_state.dev_queue->execute(warp_state.warp_kernel,
+									  scene_fbo.dim_multiple,
+									  uint2 { 32, 16 },
+									  compute_scene_color[0],
+									  compute_scene_depth[0],
+									  compute_scene_motion[0],
+									  compute_color,
+									  delta / render_delta,
+									  (!warp_state.is_single_frame ?
+									   float4 { -1.0f } :
+									   float4 { cam.get_single_frame_direction(), 1.0f }
+									   ));
+	}
+	else {
+		warp_state.dev_queue->execute(warp_state.warp_gather_kernel,
+									  scene_fbo.dim_multiple,
+									  uint2 { 32, 16 },
+									  // current frame (t)
+									  compute_scene_color[1u - warp_state.cur_fbo],
+									  compute_scene_depth[1u - warp_state.cur_fbo],
+									  // previous frame (t-1)
+									  compute_scene_color[warp_state.cur_fbo],
+									  compute_scene_depth[warp_state.cur_fbo],
+									  // forward from prev frame, t-1 -> t
+									  compute_scene_motion[warp_state.cur_fbo * 2],
+									  // backward from cur frame, t -> t-1
+									  compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1],
+									  compute_color,
+									  delta / render_delta);
+	}
 	
-	if(warp_state.is_fixup) {
+	if(warp_state.is_fixup && warp_state.is_scatter) {
 		if(warp_state.ctx->get_compute_type() == COMPUTE_TYPE::CUDA) {
 			warp_state.dev_queue->execute(warp_state.fixup_kernel,
 										  scene_fbo.dim_multiple,
@@ -400,7 +468,11 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glBindVertexArray(global_vao);
 	
 	static constexpr const GLenum draw_buffers[] {
-		GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1
+		GL_COLOR_ATTACHMENT0,
+		GL_COLOR_ATTACHMENT1,
+#if defined(WARP_GATHER)
+		GL_COLOR_ATTACHMENT2,
+#endif
 	};
 	
 	matrix4f light_bias_mvpm;
@@ -440,7 +512,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 		// draw main scene
-		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
 		glDrawBuffers(size(draw_buffers), &draw_buffers[0]);
 		glViewport(0, 0, scene_fbo.dim.x, scene_fbo.dim.y);
 		
@@ -450,47 +522,51 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 	
-	// debug
-#if 0
-	{
-		glFrontFace(GL_CW);
-		const auto dbg_shd = shader_objects["SHADOW_DBG"];
-		glUseProgram(dbg_shd->program.program);
-		
-		glUniform1i(dbg_shd->program.uniforms["tex"].location, 0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, shadow_map.shadow_tex);
-		
-		glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-		glEnableVertexAttribArray(0);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glDisableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glFrontFace(GL_CCW);
-	}
-#endif
-	
 	// render actual scene
-#if 1
-	const auto shd = shader_objects[warp_state.is_single_frame ? "MOTION_ONLY" : "SCENE"];
+	const auto shd = (shader_objects[warp_state.is_single_frame || warp_state.is_motion_only ?
+									 "MOTION_ONLY" : "SCENE"]);
 	glUseProgram(shd->program.program);
 	
 	const matrix4f mproj { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
 												  0.5f, warp_state.view_distance) };
-	const matrix4f rot_mat { matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) * matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x) };
-	const matrix4f mview { matrix4f().translate(cam.get_position().x, cam.get_position().y, cam.get_position().z) * rot_mat };
+	const matrix4f rot_mat {
+		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
+		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
+	};
+	const matrix4f mview { matrix4f::translation(cam.get_position()) * rot_mat };
 
+#if !defined(WARP_GATHER)
 	glUniformMatrix4fv(shd->program.uniforms["mvm"].location, 1, false, &mview.data[0]);
 	glUniformMatrix4fv(shd->program.uniforms["prev_mvm"].location, 1, false, &prev_mvm.data[0]);
-	prev_mvm = mview;
-	const matrix4f mvpm { mview * mproj };
-	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+#endif
 	
-	if(!warp_state.is_single_frame) {
+#if defined(WARP_GATHER)
+	const matrix4f next_mvpm { mview * mproj };
+	const matrix4f mvpm { prev_mvm * mproj };
+	const matrix4f prev_mvpm { prev_prev_mvm * mproj };
+	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+	glUniformMatrix4fv(shd->program.uniforms["next_mvpm"].location, 1, false, &next_mvpm.data[0]);
+	glUniformMatrix4fv(shd->program.uniforms["prev_mvpm"].location, 1, false, &prev_mvpm.data[0]);
+#else
+#if defined(FORWARD_REPROJECTION)
+	const matrix4f mvpm { prev_mvm * mproj };
+#else
+	const matrix4f mvpm { mview * mproj };
+#endif
+	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+#endif
+
+	prev_prev_mvm = prev_mvm;
+	prev_mvm = mview;
+	
+	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 		glUniformMatrix4fv(shd->program.uniforms["light_bias_mvpm"].location, 1, false, &light_bias_mvpm.data[0]);
 		
+#if defined(FORWARD_REPROJECTION)
 		const float3 cam_pos { -cam.get_position() };
+#else
+		const float3 cam_pos { -cam.get_prev_position() };
+#endif
 		glUniform3fv(shd->program.uniforms["cam_pos"].location, 1, cam_pos.data());
 		
 		glUniform3fv(shd->program.uniforms["light_pos"].location, 1, light_pos.data());
@@ -506,7 +582,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glEnableVertexAttribArray(tex_coords_location);
 	glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 	
-	if(!warp_state.is_single_frame) {
+	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 		glBindBuffer(GL_ARRAY_BUFFER, model.normals_vbo);
 		const GLuint normals_location = (GLuint)shd->program.attributes["in_normal"].location;
 		glEnableVertexAttribArray(normals_location);
@@ -529,7 +605,11 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		glBindTexture(GL_TEXTURE_2D, shadow_map.shadow_tex);
 	}
 	else {
+#if !defined(WARP_GATHER)
 		glDrawBuffers(1, &draw_buffers[0]);
+#else
+		glDrawBuffers(2, &draw_buffers[0]);
+#endif
 	}
 	
 	const GLint diff_loc { shd->program.uniforms["diff_tex"].location };
@@ -541,7 +621,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	const GLint mask_loc { shd->program.uniforms["mask_tex"].location };
 	const GLint mask_num { shd->program.samplers["mask_tex"] };
 	for(const auto& obj : model.objects) {
-		if(!warp_state.is_single_frame) {
+		if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 			glUniform1i(diff_loc, diff_num);
 			glActiveTexture((GLenum)(GL_TEXTURE0 + diff_num));
 			glBindTexture(GL_TEXTURE_2D, model.materials[obj->mat_idx].diffuse);
@@ -567,20 +647,37 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	
 	glUseProgram(0);
 	glDrawBuffers(1, &draw_buffers[0]); // reset to 1 draw buffer
+	
+#if defined(WARP_GATHER)
+	// flip state
+	warp_state.cur_fbo = 1 - warp_state.cur_fbo;
 #endif
 }
 
 bool gl_renderer::compile_shaders() {
 	static const char motion_only_vs_text[] { u8R"RAWSTR(#version 150 core
-		uniform mat4 mvpm;
+#define WARP_GATHER 1
+		uniform mat4 mvpm; // @t
+#if defined(WARP_GATHER)
+		uniform mat4 next_mvpm; // @t+1
+		uniform mat4 prev_mvpm; // @t-1
+#else
 		uniform mat4 mvm;
 		uniform mat4 prev_mvm;
+#endif
 		
 		in vec2 in_tex_coord;
 		in vec3 in_vertex;
 		
 		out vec2 tex_coord;
+		
+#if !defined(WARP_GATHER)
 		out vec3 motion;
+#else
+		out vec4 motion_prev;
+		out vec4 motion_now;
+		out vec4 motion_next;
+#endif
 		
 		void main() {
 			tex_coord = in_tex_coord;
@@ -588,31 +685,57 @@ bool gl_renderer::compile_shaders() {
 			vec4 vertex = vec4(in_vertex.xyz, 1.0);
 			gl_Position = mvpm * vertex;
 			
+#if !defined(WARP_GATHER)
 			vec4 prev_pos = prev_mvm * vertex;
 			vec4 cur_pos = mvm * vertex;
 			motion = cur_pos.xyz - prev_pos.xyz;
+#else
+			motion_prev = prev_mvpm * vertex;
+			motion_now = mvpm * vertex;
+			motion_next = next_mvpm * vertex;
+#endif
 		}
 	)RAWSTR"};
-	static const char motion_only_fs_text[] { u8R"RAWSTR(#version 150 core
+	static const char motion_only_fs_text[] { u8R"RAWSTR(#version 330 core
+#define WARP_GATHER 1
 		uniform sampler2D mask_tex;
 		
 		in vec2 tex_coord;
-		in vec3 motion;
 		
-		out vec3 motion_color;
+#if !defined(WARP_GATHER)
+		in vec3 motion;
+		layout (location = 0) out vec3 motion_color;
+#else
+		in vec4 motion_prev;
+		in vec4 motion_now;
+		in vec4 motion_next;
+		layout (location = 0) out vec3 motion_forward;
+		layout (location = 1) out vec3 motion_backward;
+#endif
 		
 		void main() {
 			// still need to properly handle this
 			float mask = textureLod(mask_tex, tex_coord, 0).x;
 			if(mask < 0.5) discard;
 			
+#if !defined(WARP_GATHER)
 			motion_color = motion;
+#else
+			motion_forward = vec3(abs((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w)), 0.0);
+			motion_backward = vec3(abs((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w)), 0.0);
+#endif
 		}
 	)RAWSTR"};
 	static const char scene_vs_text[] { u8R"RAWSTR(#version 150 core
-		uniform mat4 mvpm;
+#define WARP_GATHER 1
+		uniform mat4 mvpm; // @t
+#if defined(WARP_GATHER)
+		uniform mat4 next_mvpm; // @t+1
+		uniform mat4 prev_mvpm; // @t-1
+#else
 		uniform mat4 mvm;
 		uniform mat4 prev_mvm;
+#endif
 		uniform mat4 light_bias_mvpm;
 		uniform vec3 cam_pos;
 		uniform vec3 light_pos;
@@ -627,7 +750,14 @@ bool gl_renderer::compile_shaders() {
 		out vec4 shadow_coord;
 		out vec3 view_dir;
 		out vec3 light_dir;
+		
+#if !defined(WARP_GATHER)
 		out vec3 motion;
+#else
+		out vec4 motion_prev;
+		out vec4 motion_now;
+		out vec4 motion_next;
+#endif
 		
 		void main() {
 			tex_coord = in_tex_coord;
@@ -636,9 +766,15 @@ bool gl_renderer::compile_shaders() {
 			shadow_coord = light_bias_mvpm * vertex;
 			gl_Position = mvpm * vertex;
 			
+#if !defined(WARP_GATHER)
 			vec4 prev_pos = prev_mvm * vertex;
 			vec4 cur_pos = mvm * vertex;
 			motion = cur_pos.xyz - prev_pos.xyz;
+#else
+			motion_prev = prev_mvpm * vertex;
+			motion_now = mvpm * vertex;
+			motion_next = next_mvpm * vertex;
+#endif
 			
 			vec3 vview = cam_pos - in_vertex;
 			view_dir.x = dot(vview, in_tangent);
@@ -651,7 +787,8 @@ bool gl_renderer::compile_shaders() {
 			light_dir.z = dot(vlight, in_normal);
 		}
 	)RAWSTR"};
-	static const char scene_fs_text[] { u8R"RAWSTR(#version 410 core
+	static const char scene_fs_text[] { u8R"RAWSTR(#version 330 core
+#define WARP_GATHER 1
 		uniform sampler2D diff_tex;
 		uniform sampler2D spec_tex;
 		uniform sampler2D norm_tex;
@@ -662,12 +799,24 @@ bool gl_renderer::compile_shaders() {
 		in vec4 shadow_coord;
 		in vec3 view_dir;
 		in vec3 light_dir;
+		
+#if !defined(WARP_GATHER)
 		in vec3 motion;
+#else
+		in vec4 motion_prev;
+		in vec4 motion_now;
+		in vec4 motion_next;
+#endif
 		
 		layout (location = 0) out vec4 frag_color;
+#if !defined(WARP_GATHER)
 		layout (location = 1) out uint motion_color;
+#else
+		layout (location = 1) out uint motion_forward;
+		layout (location = 2) out uint motion_backward;
+#endif
 		
-		uint encode_motion(in vec3 motion) {
+		uint encode_motion_3d(in vec3 motion) {
 			const float range = 64.0; // [-range, range]
 			vec3 signs = sign(motion);
 			vec3 cmotion = clamp(abs(motion), 0.0, range);
@@ -683,6 +832,31 @@ bool gl_renderer::compile_shaders() {
 					(clamp(uint(cmotion.x), 0u, 1023u) << 19u) |
 					(clamp(uint(cmotion.y), 0u, 511u) << 10u) |
 					(clamp(uint(cmotion.z), 0u, 1023u)));
+		}
+		
+		uint encode_motion_2d(in vec2 motion) {
+#if 0 // with log scale
+			const float range = 128.0; // [-range, range]
+			vec2 signs = sign(motion);
+			vec2 cmotion = clamp(abs(motion), 0.0, range);
+			// use log2 scaling
+			cmotion = log2(cmotion + 1.0);
+			// encode x and y with 16-bit (15-bit w/o sign)
+			cmotion *= 1.0 / log2(range + 1.0);
+			cmotion *= 32768.0; // 2^15
+			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
+					(signs.y < 0.0 ? 0x00008000u : 0u) |
+					(clamp(uint(cmotion.x), 0u, 32767u) << 16u) |
+					(clamp(uint(cmotion.y), 0u, 32767u)));
+#else // uniform in [-1, 1]
+			vec2 signs = sign(motion);
+			vec2 cmotion = clamp(abs(motion), 0.0, 1.0);
+			cmotion *= 32768.0; // 2^15
+			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
+					(signs.y < 0.0 ? 0x00008000u : 0u) |
+					(clamp(uint(cmotion.x), 0u, 32767u) << 16u) |
+					(clamp(uint(cmotion.y), 0u, 32767u)));
+#endif
 		}
 		
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
@@ -754,7 +928,12 @@ bool gl_renderer::compile_shaders() {
 			lighting = max(lighting, ambient);
 			
 			frag_color = vec4(diff.xyz * lighting, 0.0);
-			motion_color = encode_motion(motion);
+#if !defined(WARP_GATHER)
+			motion_color = encode_motion_3d(motion);
+#else
+			motion_forward = encode_motion_2d((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
+			motion_backward = encode_motion_2d((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
+#endif
 		}
 	)RAWSTR"};
 	static const char shadow_map_vs_text[] { u8R"RAWSTR(#version 150 core
@@ -770,26 +949,6 @@ bool gl_renderer::compile_shaders() {
 			frag_depth = gl_FragCoord.z;
 		}
 	)RAWSTR"};
-	static const char shadow_dbg_vs_text[] { u8R"RAWSTR(#version 150 core
-		in vec2 in_vertex;
-		out vec2 tex_coord;
-		void main() {
-			tex_coord = in_vertex.xy * 0.5 + 0.5;
-			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
-		}
-	)RAWSTR" };
-	static const char shadow_dbg_fs_text[] { u8R"RAWSTR(#version 150 core
-		uniform sampler2DShadow tex;
-		in vec2 tex_coord;
-		out vec4 frag_color;
-		void main() {
-			float val = mix(mix(texture(tex, vec3(tex_coord, 0.5)),
-								texture(tex, vec3(tex_coord, 0.8)), 0.5),
-							mix(texture(tex, vec3(tex_coord, 0.999)),
-								texture(tex, vec3(tex_coord, 0.9999)), 0.5), 0.5);
-			frag_color = vec4(vec3(val), 1.0);
-		}
-	)RAWSTR" };
 	
 	{
 		auto shd = make_shared<floor_shader_object>("SCENE");
@@ -804,11 +963,6 @@ bool gl_renderer::compile_shaders() {
 	{
 		auto shd = make_shared<floor_shader_object>("SHADOW");
 		if(!floor_compile_shader(*shd.get(), shadow_map_vs_text, shadow_map_fs_text)) return false;
-		shader_objects.emplace(shd->name, shd);
-	}
-	{
-		auto shd = make_shared<floor_shader_object>("SHADOW_DBG");
-		if(!floor_compile_shader(*shd.get(), shadow_dbg_vs_text, shadow_dbg_fs_text)) return false;
 		shader_objects.emplace(shd->name, shd);
 	}
 	return true;

@@ -47,6 +47,10 @@
 //#define DEPTH_ZW 1 // e.g. if written as z/w by the shader
 //#define DEPTH_LOG 1 // TODO: support log depth?
 
+// work-group/tile x/y size
+#define TILE_SIZE_X 32u
+#define TILE_SIZE_Y 16u
+
 #if defined(FLOOR_COMPUTE)
 
 #if defined(FLOOR_COMPUTE_HOST)

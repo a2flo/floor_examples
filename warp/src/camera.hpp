@@ -36,6 +36,7 @@ public:
 	void set_position(const float3& pos);
 	float3& get_position();
 	const float3& get_position() const;
+	const float3& get_prev_position() const;
 	
 	void set_rotation(const float& x, const float& y, const float& z);
 	void set_rotation(const float3& rot);
@@ -65,7 +66,7 @@ public:
 protected:
 	event* evt;
 
-	float3 position;
+	float3 position, prev_position;
 	float3 rotation;
 	mutable float3 direction;
 	
@@ -75,7 +76,7 @@ protected:
 	float single_frame_distance = 0.0f;
 	
 	float up_down = 0.0f;
-	float rotation_speed = 100.0f;
+	float rotation_speed = 150.0f;
 	float cam_speed = 1.0f;
 
 	bool keyboard_input = true;

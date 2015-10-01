@@ -25,7 +25,7 @@ struct warp_state_struct {
 	shared_ptr<compute_device> dev;
 	
 	shared_ptr<compute_program> warp_prog;
-	shared_ptr<compute_kernel> warp_kernel, clear_kernel, fixup_kernel;
+	shared_ptr<compute_kernel> warp_kernel, warp_gather_kernel, clear_kernel, fixup_kernel;
 	
 	//
 	bool done { false };
@@ -34,12 +34,18 @@ struct warp_state_struct {
 	bool no_metal { false };
 	bool is_auto_cam { false };
 	bool is_single_frame { false };
+	bool is_motion_only { false };
 	
 	//
+	bool is_scatter { false };
 	bool is_warping { true };
 	bool is_render_full { true };
-	bool is_clear_frame { true };
-	bool is_fixup { true };
+	bool is_clear_frame { false };
+	bool is_fixup { false };
+	
+	// when using gather based warping, this is the current flip flop fbo idx
+	// (the one which will be rendered to next)
+	uint32_t cur_fbo = 0;
 	
 	//
 	const float view_distance { 500.0f };
