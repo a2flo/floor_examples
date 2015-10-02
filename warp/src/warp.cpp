@@ -102,24 +102,14 @@ static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 }
 
 // decodes the encoded input 2D motion vector
-// format: [16-bit signed x][16-bit signed y]
+// format: [16-bit x][16-bit y]
 static float2 decode_2d_motion(const uint32_t& encoded_motion) {
-	const float2 signs {
-		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
-		(encoded_motion & 0x00008000u) != 0u ? -1.0f : 1.0f
-	};
 	const uint2 shifted_motion {
-		(encoded_motion >> 16u) & 0x7FFu,
-		encoded_motion & 0x7FFu
+		(encoded_motion >> 16u) & 0xFFFFu,
+		encoded_motion & 0xFFFFu
 	};
-	
-#if 0 // log scale
-	constexpr const float adjust { const_math::log2(128.0f + 1.0f) / 32768.0f };
-	return signs * ((float2(shifted_motion) * adjust).exp2() - 1.0f);
-#else // input uniform in [-1, 1] -> vector in screen space (width, height)
-	constexpr const float2 adjust { warp_camera::screen_size / 32768.0f };
-	return signs * float2(shifted_motion) * adjust;
-#endif
+	// map [0, 65535] -> [0, 1] -> [-1, 1] -> [-width|-height, width|height]
+	return ((float2(shifted_motion) * (2.0f / 65535.0f)) - 1.0f) * warp_camera::screen_size;
 }
 
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
@@ -273,7 +263,12 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 #if 0 // just blended
 	const auto color = color_fwd.interpolated(color_bwd, relative_delta);
-#else
+#elif 0 // dbg
+	//const auto color = color_fwd;
+	const auto color = color_bwd;
+	//const auto color = ((1.0f - relative_delta) * color_fwd + relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
+	//const auto color = float4 { decode_2d_motion(read(img_motion_forward, coord)), 0.0f, 1.0f };
+#elif 1 // as in paper
 	float4 color;
 	const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
 								 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
@@ -292,10 +287,12 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		else {
 			// case 2: select the one closer to the camera (occlusion)
 			if(linear_depth_fwd < linear_depth_bwd) {
-				color = proj_color_fwd;
+				const auto linear_depth_fwd_other = warp_camera::linearize_depth(read(img_depth, int2((p_fwd + motion_fwd).floored())));
+				color = (fabs(linear_depth_fwd - linear_depth_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 			}
 			else { // bwd < fwd
-				color = proj_color_bwd;
+				const auto linear_depth_bwd_other = warp_camera::linearize_depth(read(img_depth_prev, int2((p_bwd + motion_bwd).floored())));
+				color = (fabs(linear_depth_bwd - linear_depth_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 			}
 		}
 	}

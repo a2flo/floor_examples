@@ -401,16 +401,15 @@ void gl_renderer::render_kernels(const camera& cam,
 	const auto timing_start = floor_timer2::start();
 #endif
 	
-	// clear if enabled + always clear the first frame
-	// TODO: necessary for gather?
-	if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
-		warp_state.dev_queue->execute(warp_state.clear_kernel,
-									  scene_fbo.dim_multiple,
-									  uint2 { 32, 16 },
-									  compute_color, clear_color);
-	}
-	
 	if(warp_state.is_scatter) {
+		// clear if enabled + always clear the first frame
+		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
+			warp_state.dev_queue->execute(warp_state.clear_kernel,
+										  scene_fbo.dim_multiple,
+										  uint2 { 32, 16 },
+										  compute_color, clear_color);
+		}
+		
 		warp_state.dev_queue->execute(warp_state.warp_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
@@ -835,28 +834,11 @@ bool gl_renderer::compile_shaders() {
 		}
 		
 		uint encode_motion_2d(in vec2 motion) {
-#if 0 // with log scale
-			const float range = 128.0; // [-range, range]
-			vec2 signs = sign(motion);
-			vec2 cmotion = clamp(abs(motion), 0.0, range);
-			// use log2 scaling
-			cmotion = log2(cmotion + 1.0);
-			// encode x and y with 16-bit (15-bit w/o sign)
-			cmotion *= 1.0 / log2(range + 1.0);
-			cmotion *= 32768.0; // 2^15
-			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
-					(signs.y < 0.0 ? 0x00008000u : 0u) |
-					(clamp(uint(cmotion.x), 0u, 32767u) << 16u) |
-					(clamp(uint(cmotion.y), 0u, 32767u)));
-#else // uniform in [-1, 1]
-			vec2 signs = sign(motion);
-			vec2 cmotion = clamp(abs(motion), 0.0, 1.0);
-			cmotion *= 32768.0; // 2^15
-			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
-					(signs.y < 0.0 ? 0x00008000u : 0u) |
-					(clamp(uint(cmotion.x), 0u, 32767u) << 16u) |
-					(clamp(uint(cmotion.y), 0u, 32767u)));
-#endif
+			// uniform in [-1, 1]
+			vec2 cmotion = clamp(motion * 0.5 + 0.5, 0.0, 1.0); // map to positive [0, 1] range
+			cmotion *= 65535.0; // 2^16 - 1, fit into 16 bits
+			return ((clamp(uint(cmotion.x), 0u, 65535u) << 16u) |
+					(clamp(uint(cmotion.y), 0u, 65535u)));
 		}
 		
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
