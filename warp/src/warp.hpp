@@ -42,10 +42,22 @@
 #define SCREEN_ORIGIN_LEFT_TOP 1
 #endif
 
-// normalized depth (in [0, 1]) for opengl/metal
-#define DEPTH_NORMALIZED 1
-//#define DEPTH_ZW 1 // e.g. if written as z/w by the shader
-//#define DEPTH_LOG 1 // TODO: support log depth?
+// depth buffer types
+enum class depth_type {
+	// normalized in [0, 1], default for opengl and metal
+	normalized,
+	// z/w depth
+	z_div_w,
+	// log depth, computed in software
+	// NOTE/TODO: not supported yet
+	log,
+	// linear depth [0, far-plane]
+	linear,
+};
+
+#if !defined(DEFAULT_DEPTH_TYPE)
+#define DEFAULT_DEPTH_TYPE depth_type::normalized
+#endif
 
 // work-group/tile x/y size
 #define TILE_SIZE_X 32u

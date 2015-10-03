@@ -61,22 +61,32 @@ namespace warp_camera {
 	}
 	
 	// linearizes the input depth value according to the depth type and returns the real world depth value
-	static float linearize_depth(const float& depth) {
-#if defined(DEPTH_ZW)
-		// depth is written as z/w in shader -> need to perform a small adjustment to account for near/far plane to get the real world depth
-		// (note that this error is almost imperceptible and could just be ignored)
-		return depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
-		
-#elif defined(DEPTH_NORMALIZED)
-		// reading from the actual depth buffer which is normalized in [0, 1]
-		constexpr const float2 near_far_projection {
-			-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
-			(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
-		};
-		// ignore full depth (this happens when clear depth == 1.0f and no fragments+depth are written for a pixel)
-		if(depth == 1.0f) return 0.0f;
-		return near_far_projection.y / (depth - near_far_projection.x);
-#endif
+	template <depth_type type = DEFAULT_DEPTH_TYPE>
+	constexpr static float linearize_depth(const float& depth) {
+		if(type == depth_type::normalized) {
+			// reading from the actual depth buffer which is normalized in [0, 1]
+			constexpr const float2 near_far_projection {
+				-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+				(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+			};
+			// ignore full depth (this happens when clear depth == 1.0f and no fragments+depth are written for a pixel)
+			if(depth == 1.0f) return 0.0f;
+			return near_far_projection.y / (depth - near_far_projection.x);
+		}
+		else if(type == depth_type::z_div_w) {
+			// depth is written as z/w in shader -> need to perform a small adjustment to account for near/far plane to get the real world depth
+			// (note that this error is almost imperceptible and could just be ignored)
+			return depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
+		}
+		else if(type == depth_type::log) {
+			// TODO: implement this
+			return 0.0f;
+		}
+		else if(type == depth_type::linear) {
+			// already linear, just pass through
+			return depth;
+		}
+		floor_unreachable();
 	}
 };
 
@@ -213,7 +223,9 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_forward,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_motion_depth_forward,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_backward,
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_motion_depth_backward,
 						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 						param<float> relative_delta // "current compute/warp delta" divided by "delta between last two frames"
 ) {
@@ -253,11 +265,14 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
 	constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	
-	// TODO: depth inside motion vec!
-	const auto linear_depth_fwd = warp_camera::linearize_depth(read(img_depth_prev, int2(p_fwd.floored())));
-	const auto linear_depth_bwd = warp_camera::linearize_depth(read(img_depth, int2(p_bwd.floored())));
-	const auto depth_diff = fabs(linear_depth_fwd - linear_depth_bwd);
-	constexpr const float epsilon_2 { 5.0f }; // aka "max depth difference between fwd and bwd"
+	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, int2(p_fwd.floored()))) +
+						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward,
+																								int2(p_fwd.floored()))));
+	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, int2(p_bwd.floored()))) +
+						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward,
+																										 int2(p_bwd.floored()))));
+	const auto depth_diff = fabs(z_fwd - z_bwd);
+	constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
 	
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
@@ -265,9 +280,11 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const auto color = color_fwd.interpolated(color_bwd, relative_delta);
 #elif 0 // dbg
 	//const auto color = color_fwd;
-	const auto color = color_bwd;
+	//const auto color = color_bwd;
 	//const auto color = ((1.0f - relative_delta) * color_fwd + relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
 	//const auto color = float4 { decode_2d_motion(read(img_motion_forward, coord)), 0.0f, 1.0f };
+	const auto color = float4 { float3 { z_fwd }, 1.0f };
+	//const auto color = float4 { float3 { fabs(read(img_motion_depth_forward, int2(p_fwd.floored()))) }, 1.0f };
 #elif 1 // as in paper
 	float4 color;
 	const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
@@ -286,13 +303,14 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		}
 		else {
 			// case 2: select the one closer to the camera (occlusion)
-			if(linear_depth_fwd < linear_depth_bwd) {
-				const auto linear_depth_fwd_other = warp_camera::linearize_depth(read(img_depth, int2((p_fwd + motion_fwd).floored())));
-				color = (fabs(linear_depth_fwd - linear_depth_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
+			if(z_fwd < z_bwd) {
+				// depth from other frame
+				const auto z_fwd_other = read(img_depth, int2((p_fwd + motion_fwd).floored())) + (1.0f - relative_delta) * read(img_motion_depth_backward, int2((p_fwd + motion_fwd).floored()));
+				color = (fabs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 			}
 			else { // bwd < fwd
-				const auto linear_depth_bwd_other = warp_camera::linearize_depth(read(img_depth_prev, int2((p_bwd + motion_bwd).floored())));
-				color = (fabs(linear_depth_bwd - linear_depth_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
+				const auto z_bwd_other = read(img_depth_prev, int2((p_bwd + motion_bwd).floored())) + relative_delta * read(img_motion_depth_forward, int2((p_bwd + motion_bwd).floored()));
+				color = (fabs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 			}
 		}
 	}

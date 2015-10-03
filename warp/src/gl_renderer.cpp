@@ -36,6 +36,7 @@ static struct {
 	GLuint depth[2] { 0u, 0u };
 	// if gather: { forward, backward }, { forward, backward }
 	GLuint motion[4] { 0u, 0u, 0u, 0u };
+	GLuint motion_depth[4] { 0u, 0u, 0u, 0u };
 	
 	GLuint compute_fbo { 0u };
 	GLuint compute_color { 0u };
@@ -58,6 +59,7 @@ static shared_ptr<compute_image> compute_color;
 static shared_ptr<compute_image> compute_scene_color[2];
 static shared_ptr<compute_image> compute_scene_depth[2];
 static shared_ptr<compute_image> compute_scene_motion[4];
+static shared_ptr<compute_image> compute_scene_motion_depth[4];
 static matrix4f prev_mvm, prev_prev_mvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
@@ -69,6 +71,9 @@ static void destroy_textures() {
 		img = nullptr;
 	}
 	for(auto& img : compute_scene_motion) {
+		img = nullptr;
+	}
+	for(auto& img : compute_scene_motion_depth) {
 		img = nullptr;
 	}
 	for(auto& img : compute_scene_depth) {
@@ -89,6 +94,12 @@ static void destroy_textures() {
 		}
 	}
 	for(auto& tex : scene_fbo.motion) {
+		if(tex > 0) {
+			glDeleteTextures(1, &tex);
+			tex = 0;
+		}
+	}
+	for(auto& tex : scene_fbo.motion_depth) {
 		if(tex > 0) {
 			glDeleteTextures(1, &tex);
 			tex = 0;
@@ -149,6 +160,19 @@ static void create_textures() {
 #endif
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 + (GLenum)j, GL_TEXTURE_2D,
 									   scene_fbo.motion[i * 2 + j], 0);
+			}
+			
+			for(size_t j = 0; j < 2; ++j) {
+				glGenTextures(1, &scene_fbo.motion_depth[i * 2 + j]);
+				glBindTexture(GL_TEXTURE_2D, scene_fbo.motion_depth[i * 2 + j]);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+							 GL_RED, GL_FLOAT, nullptr);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 + (GLenum)j, GL_TEXTURE_2D,
+									   scene_fbo.motion_depth[i * 2 + j], 0);
 			}
 			
 			glGenTextures(1, &scene_fbo.depth[i]);
@@ -214,10 +238,22 @@ static void create_textures() {
 															COMPUTE_MEMORY_FLAG::READ );
 		compute_scene_depth[i] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth[i], GL_TEXTURE_2D,
 															COMPUTE_MEMORY_FLAG::READ);
-		compute_scene_motion[i * 2] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion[i * 2], GL_TEXTURE_2D,
+		compute_scene_motion[i * 2] = warp_state.ctx->wrap_image(warp_state.dev,
+																 scene_fbo.motion[i * 2],
+																 GL_TEXTURE_2D,
 																 COMPUTE_MEMORY_FLAG::READ);
-		compute_scene_motion[i * 2 + 1] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.motion[i * 2 + 1], GL_TEXTURE_2D,
+		compute_scene_motion[i * 2 + 1] = warp_state.ctx->wrap_image(warp_state.dev,
+																	 scene_fbo.motion[i * 2 + 1],
+																	 GL_TEXTURE_2D,
 																	 COMPUTE_MEMORY_FLAG::READ);
+		compute_scene_motion_depth[i * 2] = warp_state.ctx->wrap_image(warp_state.dev,
+																	   scene_fbo.motion_depth[i * 2],
+																	   GL_TEXTURE_2D,
+																	   COMPUTE_MEMORY_FLAG::READ);
+		compute_scene_motion_depth[i * 2 + 1] = warp_state.ctx->wrap_image(warp_state.dev,
+																		   scene_fbo.motion_depth[i * 2 + 1],
+																		   GL_TEXTURE_2D,
+																		   COMPUTE_MEMORY_FLAG::READ);
 	}
 }
 
@@ -353,6 +389,8 @@ bool gl_renderer::render(const gl_obj_model& model,
 #endif
 		compute_scene_motion[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
 		compute_scene_motion[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
 		
 		render_full_scene(model, cam);
 		
@@ -367,6 +405,8 @@ bool gl_renderer::render(const gl_obj_model& model,
 		// NOTE: warp_state.cur_fbo changed
 		compute_scene_motion[(1 - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
 		compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
 		
 		return true;
 	}
@@ -435,8 +475,10 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_depth[warp_state.cur_fbo],
 									  // forward from prev frame, t-1 -> t
 									  compute_scene_motion[warp_state.cur_fbo * 2],
+									  compute_scene_motion_depth[warp_state.cur_fbo * 2],
 									  // backward from cur frame, t -> t-1
 									  compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1],
+									  compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2 + 1],
 									  compute_color,
 									  delta / render_delta);
 	}
@@ -471,6 +513,8 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		GL_COLOR_ATTACHMENT1,
 #if defined(WARP_GATHER)
 		GL_COLOR_ATTACHMENT2,
+		GL_COLOR_ATTACHMENT3,
+		GL_COLOR_ATTACHMENT4,
 #endif
 	};
 	
@@ -813,6 +857,8 @@ bool gl_renderer::compile_shaders() {
 #else
 		layout (location = 1) out uint motion_forward;
 		layout (location = 2) out uint motion_backward;
+		layout (location = 3) out float motion_depth_forward;
+		layout (location = 4) out float motion_depth_backward;
 #endif
 		
 		uint encode_motion_3d(in vec3 motion) {
@@ -914,7 +960,9 @@ bool gl_renderer::compile_shaders() {
 			motion_color = encode_motion_3d(motion);
 #else
 			motion_forward = encode_motion_2d((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
+			motion_depth_forward = (motion_next.z / motion_next.w) - (motion_now.z / motion_now.w);
 			motion_backward = encode_motion_2d((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
+			motion_depth_backward = (motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w);
 #endif
 		}
 	)RAWSTR"};
