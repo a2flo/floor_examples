@@ -132,6 +132,9 @@ static bool compile_program() {
 }
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
+	static constexpr const float eps1_step_size { 0.5f };
+	static constexpr const float eps2_step_size { 0.5f };
+	
 	if(type == EVENT_TYPE::QUIT) {
 		warp_state.done = true;
 		return true;
@@ -145,6 +148,27 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_RCTRL:
 				cam->set_cam_speed(cam_speeds.z);
 				break;
+			case SDLK_i:
+				warp_state.gather_eps_1 += eps1_step_size;
+				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
+				log_debug("eps 1: %f", warp_state.gather_eps_1);
+				break;
+			case SDLK_u:
+				warp_state.gather_eps_1 -= eps1_step_size;
+				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
+				log_debug("eps 1: %f", warp_state.gather_eps_1);
+				break;
+			case SDLK_k:
+				warp_state.gather_eps_2 += eps2_step_size;
+				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
+				log_debug("eps 2: %f", warp_state.gather_eps_2);
+				break;
+			case SDLK_j:
+				warp_state.gather_eps_2 -= eps2_step_size;
+				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
+				log_debug("eps 2: %f", warp_state.gather_eps_2);
+				break;
+			default: break;
 		}
 		return true;
 	}
@@ -205,6 +229,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.cur_fbo = 0;
 				warp_state.is_scatter ^= true;
 				log_debug("scatter/gather? %s", (warp_state.is_scatter ? "scatter" : "gather"));
+				break;
+			case SDLK_TAB:
+				warp_state.is_frame_repeat ^= true;
+				log_debug("frame repeat? %b", warp_state.is_frame_repeat);
 				break;
 			default: break;
 		}
@@ -328,8 +356,10 @@ int main(int, char* argv[]) {
 		}
 #endif
 		
-		if(!warp_state.is_auto_cam) cam->run();
-		else auto_cam::run(*cam);
+		if(!warp_state.is_frame_repeat) {
+			if(!warp_state.is_auto_cam) cam->run();
+			else auto_cam::run(*cam);
+		}
 		
 		if(floor::is_new_fps_count()) {
 			floor::set_caption("warp | FPS: " + to_string(floor::get_fps()) +

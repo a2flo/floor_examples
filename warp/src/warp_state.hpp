@@ -35,6 +35,7 @@ struct warp_state_struct {
 	bool is_auto_cam { false };
 	bool is_single_frame { false };
 	bool is_motion_only { false };
+	bool is_frame_repeat { false };
 	
 	//
 	bool is_scatter { false };
@@ -46,6 +47,9 @@ struct warp_state_struct {
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)
 	uint32_t cur_fbo = 0;
+	
+	float gather_eps_1 { 8.0f };
+	float gather_eps_2 { 4.0f };
 	
 	//
 	const float view_distance { 500.0f };

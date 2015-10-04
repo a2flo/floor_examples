@@ -227,7 +227,9 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_backward,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_motion_depth_backward,
 						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
-						param<float> relative_delta // "current compute/warp delta" divided by "delta between last two frames"
+						param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
+						param<float> epsilon_1,
+						param<float> epsilon_2
 ) {
 	screen_check();
 	
@@ -262,8 +264,9 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	
 	const auto err_fwd = (p_fwd + relative_delta * motion_fwd - fcoord).dot();
 	const auto err_bwd = (p_bwd + (1.0f - relative_delta) * motion_bwd - fcoord).dot();
-	constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
-	constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
+	//constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
+	//constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
+	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	
 	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, int2(p_fwd.floored()))) +
 						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward,
@@ -272,7 +275,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward,
 																										 int2(p_bwd.floored()))));
 	const auto depth_diff = fabs(z_fwd - z_bwd);
-	constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
+	//constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
 	
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);

@@ -366,7 +366,13 @@ bool gl_renderer::render(const gl_obj_model& model,
 	//
 	static constexpr const float frame_limit { 1.0f / 15.0f };
 	static size_t warp_frame_num = 0;
-	if(deltaf < frame_limit && !first_frame) {
+	if((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat) {
+		if(deltaf >= frame_limit) { // need to reset when over the limit
+			render_delta = deltaf;
+			time_keeper = now;
+			warp_frame_num = 0;
+		}
+		
 		if(warp_state.is_warping) {
 			render_kernels(cam, deltaf, render_delta, warp_frame_num);
 			blit(false);
@@ -480,7 +486,9 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1],
 									  compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2 + 1],
 									  compute_color,
-									  delta / render_delta);
+									  delta / render_delta,
+									  warp_state.gather_eps_1,
+									  warp_state.gather_eps_2);
 	}
 	
 	if(warp_state.is_fixup && warp_state.is_scatter) {
