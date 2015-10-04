@@ -229,7 +229,8 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 						param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 						param<float> epsilon_1,
-						param<float> epsilon_2
+						param<float> epsilon_2,
+						param<uint32_t> dbg_render_type
 ) {
 	screen_check();
 	
@@ -281,51 +282,54 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 #if 0 // just blended
 	const auto color = color_fwd.interpolated(color_bwd, relative_delta);
-#elif 0 // dbg
-	//const auto color = color_fwd;
-	//const auto color = color_bwd;
-	//const auto color = ((1.0f - relative_delta) * color_fwd + relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
-	//const auto color = float4 { decode_2d_motion(read(img_motion_forward, coord)), 0.0f, 1.0f };
-	const auto color = float4 { float3 { z_fwd }, 1.0f };
-	//const auto color = float4 { float3 { fabs(read(img_motion_depth_forward, int2(p_fwd.floored()))) }, 1.0f };
 #elif 1 // as in paper
 	float4 color;
-	const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
-								 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
-	const auto proj_color_bwd = ((1.0f - relative_delta) * read(img_color_prev, int2((p_bwd + motion_bwd).floored())) +
-								 relative_delta * color_bwd);
-	if(fwd_valid && bwd_valid) {
-		if(depth_diff < epsilon_2) {
-			// case 1: both fwd and bwd are valid
-			if(err_fwd < err_bwd) {
-				color = proj_color_fwd;
+	if(dbg_render_type > 0) { // dbg rendering
+		if(dbg_render_type == 1) color = color_fwd;
+		else if(dbg_render_type == 2) color = color_bwd;
+		//const auto color = ((1.0f - relative_delta) * color_fwd + relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));
+		//const auto color = float4 { decode_2d_motion(read(img_motion_forward, coord)), 0.0f, 1.0f };
+		//const auto color = float4 { float3 { z_fwd }, 1.0f };
+		//const auto color = float4 { float3 { fabs(read(img_motion_depth_forward, int2(p_fwd.floored()))) }, 1.0f };
+	}
+	else {
+		const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
+									 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
+		const auto proj_color_bwd = ((1.0f - relative_delta) * read(img_color_prev, int2((p_bwd + motion_bwd).floored())) +
+									 relative_delta * color_bwd);
+		if(fwd_valid && bwd_valid) {
+			if(depth_diff < epsilon_2) {
+				// case 1: both fwd and bwd are valid
+				if(err_fwd < err_bwd) {
+					color = proj_color_fwd;
+				}
+				else {
+					color = proj_color_bwd;
+				}
 			}
 			else {
-				color = proj_color_bwd;
+				// case 2: select the one closer to the camera (occlusion)
+				if(z_fwd < z_bwd) {
+					// depth from other frame
+					const auto z_fwd_other = read(img_depth, int2((p_fwd + motion_fwd).floored())) + (1.0f - relative_delta) * read(img_motion_depth_backward, int2((p_fwd + motion_fwd).floored()));
+					color = (fabs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
+				}
+				else { // bwd < fwd
+					const auto z_bwd_other = read(img_depth_prev, int2((p_bwd + motion_bwd).floored())) + relative_delta * read(img_motion_depth_forward, int2((p_bwd + motion_bwd).floored()));
+					color = (fabs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
+				}
 			}
 		}
+		else if(fwd_valid) {
+			color = proj_color_fwd;
+		}
+		else if(bwd_valid) {
+			color = proj_color_bwd;
+		}
+		// case 3 / else: both are invalid
 		else {
-			// case 2: select the one closer to the camera (occlusion)
-			if(z_fwd < z_bwd) {
-				// depth from other frame
-				const auto z_fwd_other = read(img_depth, int2((p_fwd + motion_fwd).floored())) + (1.0f - relative_delta) * read(img_motion_depth_backward, int2((p_fwd + motion_fwd).floored()));
-				color = (fabs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
-			}
-			else { // bwd < fwd
-				const auto z_bwd_other = read(img_depth_prev, int2((p_bwd + motion_bwd).floored())) + relative_delta * read(img_motion_depth_forward, int2((p_bwd + motion_bwd).floored()));
-				color = (fabs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
-			}
+			color = proj_color_fwd.interpolated(proj_color_bwd, relative_delta);
 		}
-	}
-	else if(fwd_valid) {
-		color = proj_color_fwd;
-	}
-	else if(bwd_valid) {
-		color = proj_color_bwd;
-	}
-	// case 3 / else: both are invalid
-	else {
-		color = proj_color_fwd.interpolated(proj_color_bwd, relative_delta);
 	}
 #endif
 	

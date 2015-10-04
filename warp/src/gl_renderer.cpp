@@ -488,7 +488,8 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_color,
 									  delta / render_delta,
 									  warp_state.gather_eps_1,
-									  warp_state.gather_eps_2);
+									  warp_state.gather_eps_2,
+									  warp_state.gather_dbg);
 	}
 	
 	if(warp_state.is_fixup && warp_state.is_scatter) {

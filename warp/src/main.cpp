@@ -134,6 +134,7 @@ static bool compile_program() {
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	static constexpr const float eps1_step_size { 0.5f };
 	static constexpr const float eps2_step_size { 0.5f };
+	static constexpr const uint32_t gather_max_dbg { 2 };
 	
 	if(type == EVENT_TYPE::QUIT) {
 		warp_state.done = true;
@@ -233,6 +234,14 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_TAB:
 				warp_state.is_frame_repeat ^= true;
 				log_debug("frame repeat? %b", warp_state.is_frame_repeat);
+				break;
+			case SDLK_p:
+				if(warp_state.gather_dbg < gather_max_dbg) ++warp_state.gather_dbg;
+				log_debug("dbg: %u", warp_state.gather_dbg);
+				break;
+			case SDLK_o:
+				if(warp_state.gather_dbg > 0) --warp_state.gather_dbg;
+				log_debug("dbg: %u", warp_state.gather_dbg);
 				break;
 			default: break;
 		}

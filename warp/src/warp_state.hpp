@@ -50,6 +50,7 @@ struct warp_state_struct {
 	
 	float gather_eps_1 { 8.0f };
 	float gather_eps_2 { 4.0f };
+	uint32_t gather_dbg { 0 };
 	
 	//
 	const float view_distance { 500.0f };
