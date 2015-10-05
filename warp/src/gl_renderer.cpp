@@ -364,7 +364,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 	
 	
 	//
-	static constexpr const float frame_limit { 1.0f / 15.0f };
+	static constexpr const float frame_limit { 1.0f / 10.0f };
 	static size_t warp_frame_num = 0;
 	if((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat) {
 		if(deltaf >= frame_limit) { // need to reset when over the limit
@@ -409,10 +409,10 @@ bool gl_renderer::render(const gl_obj_model& model,
 		compute_scene_depth[1]->acquire_opengl_object(warp_state.dev_queue);
 #endif
 		// NOTE: warp_state.cur_fbo changed
-		compute_scene_motion[(1 - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+		compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
 		
 		return true;
 	}
@@ -470,6 +470,17 @@ void gl_renderer::render_kernels(const camera& cam,
 									   ));
 	}
 	else {
+//#define GATHER_DEBUG_DELTA 1
+#if defined(GATHER_DEBUG_DELTA)
+		static float dbg_delta = 0.0f;
+		
+		static constexpr const float delta_eps = 0.0025f;
+		if(dbg_delta >= (1.0f - delta_eps)) {
+			dbg_delta = delta_eps;
+		}
+		else dbg_delta += delta_eps;
+#endif
+		
 		warp_state.dev_queue->execute(warp_state.warp_gather_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
@@ -483,10 +494,14 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_motion[warp_state.cur_fbo * 2],
 									  compute_scene_motion_depth[warp_state.cur_fbo * 2],
 									  // backward from cur frame, t -> t-1
-									  compute_scene_motion[(1 - warp_state.cur_fbo) * 2 + 1],
-									  compute_scene_motion_depth[(1 - warp_state.cur_fbo) * 2 + 1],
+									  compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1],
+									  compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1],
 									  compute_color,
+#if !defined(GATHER_DEBUG_DELTA)
 									  delta / render_delta,
+#else
+									  dbg_delta,
+#endif
 									  warp_state.gather_eps_1,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);

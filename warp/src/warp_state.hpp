@@ -48,8 +48,8 @@ struct warp_state_struct {
 	// (the one which will be rendered to next)
 	uint32_t cur_fbo = 0;
 	
-	float gather_eps_1 { 8.0f };
-	float gather_eps_2 { 4.0f };
+	float gather_eps_1 { 1.0f };
+	float gather_eps_2 { 2.0f };
 	uint32_t gather_dbg { 0 };
 	
 	//

@@ -114,12 +114,14 @@ static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 // decodes the encoded input 2D motion vector
 // format: [16-bit x][16-bit y]
 static float2 decode_2d_motion(const uint32_t& encoded_motion) {
+	if(encoded_motion == 0) return {}; // TODO: better way to do this
+	
 	const uint2 shifted_motion {
 		(encoded_motion >> 16u) & 0xFFFFu,
 		encoded_motion & 0xFFFFu
 	};
-	// map [0, 65535] -> [0, 1] -> [-1, 1] -> [-width|-height, width|height]
-	return ((float2(shifted_motion) * (2.0f / 65535.0f)) - 1.0f) * warp_camera::screen_size;
+	// map [0, 65535] -> [0, 1] -> [-0.5, 0.5] -> [-width/2|-height/2, width/2|height/2]
+	return ((float2(shifted_motion) * (1.0f / 65535.0f)) - 0.5f) * warp_camera::screen_size;
 }
 
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
@@ -245,12 +247,12 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	float2 p_fwd = fcoord + relative_delta * decode_2d_motion(read(img_motion_backward, coord));
 	float2 p_bwd = fcoord + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, coord));
 #endif
-	for(uint32_t i = 0; i < 3; ++i) {
+	for(uint32_t i = 0; i < 6; ++i) {
 		const auto motion = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
 		const auto d = relative_delta * motion;
 		p_fwd = fcoord - d;
 	}
-	for(uint32_t i = 0; i < 3; ++i) {
+	for(uint32_t i = 0; i < 6; ++i) {
 		const auto motion = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
 		const auto d = (1.0f - relative_delta) * motion;
 		p_bwd = fcoord - d;
@@ -275,7 +277,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, int2(p_bwd.floored()))) +
 						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward,
 																										 int2(p_bwd.floored()))));
-	const auto depth_diff = fabs(z_fwd - z_bwd);
+	const auto depth_diff = abs(z_fwd - z_bwd);
 	//constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
 	
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
@@ -286,15 +288,31 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	float4 color;
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
-		else if(dbg_render_type == 2) color = color_bwd;
-		//const auto color = ((1.0f - relative_delta) * color_fwd + relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));
-		//const auto color = float4 { decode_2d_motion(read(img_motion_forward, coord)), 0.0f, 1.0f };
-		//const auto color = float4 { float3 { z_fwd }, 1.0f };
-		//const auto color = float4 { float3 { fabs(read(img_motion_depth_forward, int2(p_fwd.floored()))) }, 1.0f };
+		else if(dbg_render_type == 4) color = color_bwd;
+		else if(dbg_render_type == 5) {
+			color = ((fwd_valid && bwd_valid) ? float4 { 1.0f } :
+					 (fwd_valid ? float4 { 0.0f, 1.0f, 0.0f, 1.0f} :
+					  (bwd_valid ? float4 { 1.0f, 0.0f, 0.0f, 1.0f} : float4 { 0.0f } )));
+		}
+		else if(dbg_render_type == 2) {
+			color = read(img_color_prev, coord);
+		}
+		else if(dbg_render_type == 3) {
+			color = read(img_color, coord);
+		}
+		else if(dbg_render_type == 6) {
+			color = float4 { float3 { z_fwd }.absed() / warp_camera::near_far_plane.y, 1.0f };
+		}
+		else if(dbg_render_type == 7) {
+			color = (!bwd_valid ? float4 { err_bwd } : float4 { 1.0f, 0.0f, 0.0f, 1.0f });
+			/*if(global_id.x == 20 && global_id.y == (SCREEN_HEIGHT - 30)) {
+				print("err: $, p: $, m: $, s: $, f: $", err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, fcoord);
+			}*/
+		}
 	}
 	else {
 		const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
-									 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));;
+									 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));
 		const auto proj_color_bwd = ((1.0f - relative_delta) * read(img_color_prev, int2((p_bwd + motion_bwd).floored())) +
 									 relative_delta * color_bwd);
 		if(fwd_valid && bwd_valid) {
@@ -312,19 +330,19 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 				if(z_fwd < z_bwd) {
 					// depth from other frame
 					const auto z_fwd_other = read(img_depth, int2((p_fwd + motion_fwd).floored())) + (1.0f - relative_delta) * read(img_motion_depth_backward, int2((p_fwd + motion_fwd).floored()));
-					color = (fabs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
+					color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 				}
 				else { // bwd < fwd
 					const auto z_bwd_other = read(img_depth_prev, int2((p_bwd + motion_bwd).floored())) + relative_delta * read(img_motion_depth_forward, int2((p_bwd + motion_bwd).floored()));
-					color = (fabs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
+					color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 				}
 			}
 		}
 		else if(fwd_valid) {
-			color = proj_color_fwd;
+			color = color_fwd;
 		}
 		else if(bwd_valid) {
-			color = proj_color_bwd;
+			color = color_bwd;
 		}
 		// case 3 / else: both are invalid
 		else {

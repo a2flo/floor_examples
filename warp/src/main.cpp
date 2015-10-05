@@ -33,7 +33,7 @@ struct warp_option_context {
 typedef option_handler<warp_option_context> warp_opt_handler;
 
 static unique_ptr<camera> cam;
-static const float3 cam_speeds { 1.0f /* default */, 2.0f /* faster */, 0.25f /* slower */ };
+static const float3 cam_speeds { 75.0f /* default */, 150.0f /* faster */, 10.0f /* slower */ };
 
 //! option -> function map
 template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
@@ -132,9 +132,9 @@ static bool compile_program() {
 }
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
-	static constexpr const float eps1_step_size { 0.5f };
-	static constexpr const float eps2_step_size { 0.5f };
-	static constexpr const uint32_t gather_max_dbg { 2 };
+	static constexpr const float eps1_step_size { 0.05f };
+	static constexpr const float eps2_step_size { 0.1f };
+	static constexpr const uint32_t gather_max_dbg { 8 };
 	
 	if(type == EVENT_TYPE::QUIT) {
 		warp_state.done = true;

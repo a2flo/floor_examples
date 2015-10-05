@@ -23,6 +23,7 @@
 #include <floor/core/core.hpp>
 #include <floor/core/event.hpp>
 #include <floor/math/quaternion.hpp>
+#include <chrono>
 
 //! a2e camera functions
 class camera {
@@ -77,7 +78,7 @@ protected:
 	
 	float up_down = 0.0f;
 	float rotation_speed = 150.0f;
-	float cam_speed = 1.0f;
+	float cam_speed = 75.0f;
 
 	bool keyboard_input = true;
 	bool mouse_input = false;
@@ -90,6 +91,9 @@ protected:
 	
 	event::handler keyboard_handler;
 	bool key_handler(EVENT_TYPE type, shared_ptr<event_object> obj);
+	
+	//
+	chrono::time_point<chrono::high_resolution_clock> time_keeper { chrono::high_resolution_clock::now() };
 	
 };
 

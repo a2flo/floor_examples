@@ -32,26 +32,36 @@ camera::~camera() {
 void camera::run() {
 	prev_position = position;
 	
+	// make camera speed dependent on the time between the last update and now (scale with delta)
+	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
+	const auto now = chrono::high_resolution_clock::now();
+	const auto delta_tp = now - time_keeper;
+	time_keeper = now;
+	
+	auto delta = float(((long double)delta_tp.count()) / time_den);
+	if(delta > 2.0f) delta = 0.0f; // ignore any updates > 2s
+	const auto move_speed = delta * cam_speed;
+	
 	if(!is_single_frame) {
 		if(keyboard_input) {
 			// ... recalculate the cameras position
 			if(key_state[0]) {
-				position.x += (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * cam_speed;
-				position.z -= (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * cam_speed;
+				position.x += (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z -= (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[1]) {
-				position.x -= (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * cam_speed;
-				position.z += (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * cam_speed;
+				position.x -= (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z += (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[2]) {
-				position.x -= (float)sin(rotation.y * const_math::PI_DIV_180<double>) * cam_speed;
-				position.y += (float)sin(rotation.x * const_math::PI_DIV_180<double>) * cam_speed;
-				position.z += (float)cos(rotation.y * const_math::PI_DIV_180<double>) * cam_speed;
+				position.x -= (float)sin(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
+				position.y += (float)sin(rotation.x * const_math::PI_DIV_180<double>) * move_speed;
+				position.z += (float)cos(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[3]) {
-				position.x += (float)sin(rotation.y * const_math::PI_DIV_180<double>) * cam_speed;
-				position.y -= (float)sin(rotation.x * const_math::PI_DIV_180<double>) * cam_speed;
-				position.z -= (float)cos(rotation.y * const_math::PI_DIV_180<double>) * cam_speed;
+				position.x += (float)sin(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
+				position.y -= (float)sin(rotation.x * const_math::PI_DIV_180<double>) * move_speed;
+				position.z -= (float)cos(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
 			}
 		}
 		
