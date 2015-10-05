@@ -247,12 +247,12 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	float2 p_fwd = fcoord + relative_delta * decode_2d_motion(read(img_motion_backward, coord));
 	float2 p_bwd = fcoord + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, coord));
 #endif
-	for(uint32_t i = 0; i < 6; ++i) {
+	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
 		const auto d = relative_delta * motion;
 		p_fwd = fcoord - d;
 	}
-	for(uint32_t i = 0; i < 6; ++i) {
+	for(uint32_t i = 0; i < 3; ++i) {
 		const auto motion = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
 		const auto d = (1.0f - relative_delta) * motion;
 		p_bwd = fcoord - d;

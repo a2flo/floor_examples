@@ -119,12 +119,12 @@ void camera::run() {
 		int cursor_pos_y = 0;
 		SDL_GetRelativeMouseState(&cursor_pos_x, &cursor_pos_y);
 		
-		double2 delta {
+		const double2 cursor_delta {
 			(1.0 / (double)floor::get_width()) * (double)-cursor_pos_x,
 			(1.0 / (double)floor::get_height()) * (double)-cursor_pos_y
 		};
 		
-		if(delta.x != 0.0 || delta.y != 0.0) {
+		if(cursor_delta.x != 0.0 || cursor_delta.y != 0.0) {
 			if(!ignore_next_rotation) {
 				//single_frame_rotation.x -= ypos * (double)rotation_speed;
 				//single_frame_rotation.y -= xpos * (double)rotation_speed;
@@ -135,8 +135,8 @@ void camera::run() {
 				single_frame_direction += delta * 0.1f;
 				
 				// multiply existing rotation by newly computed rotation around the x and y axis
-				single_frame_quat *= (quaternionf::rotation_deg(float(delta.x), float3 { 0.0f, 1.0f, 0.0f }) *
-									  quaternionf::rotation_deg(float(delta.y), float3 { 1.0f, 0.0f, 0.0f }));
+				single_frame_quat *= (quaternionf::rotation_deg(float(cursor_delta.x), float3 { 0.0f, 1.0f, 0.0f }) *
+									  quaternionf::rotation_deg(float(cursor_delta.y), float3 { 1.0f, 0.0f, 0.0f }));
 			}
 			else ignore_next_rotation--;
 			
