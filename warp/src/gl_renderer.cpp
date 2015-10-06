@@ -364,7 +364,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 	
 	
 	//
-	static constexpr const float frame_limit { 1.0f / 10.0f };
+	static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 	static size_t warp_frame_num = 0;
 	if((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat) {
 		if(deltaf >= frame_limit) { // need to reset when over the limit

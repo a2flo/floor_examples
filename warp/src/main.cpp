@@ -39,8 +39,18 @@ static const float3 cam_speeds { 75.0f /* default */, 150.0f /* faster */, 10.0f
 template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
 	{ "--help", [](warp_option_context&, char**&) {
 		cout << "command line options:" << endl;
-		cout << "\t--TODO: TODO" << endl;
+		cout << "\t--frames: amount of frames per second that will actually be rendered (via opengl/metal), NOTE: obviously an upper limit" << endl;
 		warp_state.done = true;
+	}},
+	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after --frames!" << endl;
+			warp_state.done = true;
+			return;
+		}
+		warp_state.render_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		cout << "render frame count set to: " << warp_state.render_frame_count << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },

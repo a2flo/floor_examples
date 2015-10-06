@@ -48,13 +48,16 @@ struct warp_state_struct {
 	// (the one which will be rendered to next)
 	uint32_t cur_fbo = 0;
 	
-	float gather_eps_1 { 0.005f };
-	float gather_eps_2 { 0.01f };
+	float gather_eps_1 { 0.0025f };
+	float gather_eps_2 { 2.0f };
 	uint32_t gather_dbg { 0 };
 	
 	//
 	const float view_distance { 500.0f };
 	const float fov { 72.0f };
+	
+	// amount of frames per second that will actually be rendered (via opengl/metal)
+	uint32_t render_frame_count { 10 };
 	
 };
 extern warp_state_struct warp_state;

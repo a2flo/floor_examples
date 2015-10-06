@@ -324,7 +324,7 @@ void metal_renderer::render(const metal_obj_model& model,
 		
 		//
 		//static constexpr const float frame_limit { 0.0f };
-		static constexpr const float frame_limit { 1.0f / 10.0f };
+		static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 		static size_t warp_frame_num = 0;
 		bool blit = false;
 		if(deltaf < frame_limit && !first_frame) {

@@ -260,8 +260,11 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, p_fwd));
 	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, p_bwd));
 	
-	const auto err_fwd = (p_fwd + relative_delta * motion_fwd - p_init).dot();
-	const auto err_bwd = (p_bwd + (1.0f - relative_delta) * motion_bwd - p_init).dot();
+	const auto err_fwd = ((p_fwd + relative_delta * motion_fwd - p_init).dot() +
+						  // account for out-of-bound access (-> large error so any checks will fail)
+						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
+	const auto err_bwd = ((p_bwd + (1.0f - relative_delta) * motion_bwd - p_init).dot() +
+						  ((p_bwd < 0.0f).any() || (p_bwd > 1.0f).any() ? 1e10f : 0.0f));
 	//constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
 	//constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
@@ -297,8 +300,10 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		}
 		else if(dbg_render_type == 7) {
 			color = (!bwd_valid ? float4 { err_bwd } : float4 { 1.0f, 0.0f, 0.0f, 1.0f });
-			/*if(global_id.x == 20 && global_id.y == (SCREEN_HEIGHT - 30)) {
-				print("err: $, p: $, m: $, s: $, f: $", err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, p_init);
+			/*if(global_id.x == 5 && global_id.y == 30) {
+				print("err: $, p: $, m: $, s: $, f: $, init: $",
+					  err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, p_init,
+					  decode_2d_motion(read(img_motion_backward, p_init)));
 			}*/
 		}
 	}
