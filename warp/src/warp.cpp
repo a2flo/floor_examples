@@ -111,19 +111,6 @@ static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
 }
 
-// decodes the encoded input 2D motion vector
-// format: [16-bit x][16-bit y]
-static float2 decode_2d_motion(const uint32_t& encoded_motion) {
-	if(encoded_motion == 0) return {}; // TODO: better way to do this
-	
-	const uint2 shifted_motion {
-		(encoded_motion >> 16u) & 0xFFFFu,
-		encoded_motion & 0xFFFFu
-	};
-	// map [0, 65535] -> [0, 1] -> [-0.5, 0.5] -> [-width/2|-height/2, width/2|height/2]
-	return ((float2(shifted_motion) * (1.0f / 65535.0f)) - 0.5f) * warp_camera::screen_size;
-}
-
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
@@ -220,6 +207,22 @@ kernel void warp_scatter_patch(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_I
 	write(img_out_color, coord, float4 { color, 1.0f });
 }
 
+// decodes the encoded input 2D motion vector
+// format: [16-bit x][16-bit y]
+static float2 decode_2d_motion(const uint32_t& encoded_motion) {
+	const union {
+		ushort2 us16;
+		short2 s16;
+	} shifted_motion {
+		.us16 = {
+			encoded_motion & 0xFFFFu,
+			(encoded_motion >> 16u) & 0xFFFFu
+		}
+	};
+	// map [-32767, 32767] -> [-0.5, 0.5]
+	return float2(shifted_motion.s16) * (0.5f / 32767.0f);
+}
+
 kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
@@ -236,56 +239,45 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 ) {
 	screen_check();
 	
-	const auto coord = global_id.xy;
-	
 	// iterate
-	const float2 fcoord = float2 { coord } + 0.5f; // start at pixel center (this is p_t+alpha)
-#if 0 // basic, both start at p_t+alpha
-	float2 p_fwd = fcoord;
-	float2 p_bwd = fcoord;
-#else // dual init, opposing init
-	float2 p_fwd = fcoord + relative_delta * decode_2d_motion(read(img_motion_backward, coord));
-	float2 p_bwd = fcoord + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, coord));
-#endif
+	const float2 p_init = (float2(global_id.xy) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
+	// dual init, opposing init
+	float2 p_fwd = p_init + relative_delta * decode_2d_motion(read(img_motion_backward, p_init));
+	float2 p_bwd = p_init + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, p_init));
 	for(uint32_t i = 0; i < 3; ++i) {
-		const auto motion = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
-		const auto d = relative_delta * motion;
-		p_fwd = fcoord - d;
+		const auto motion = decode_2d_motion(read(img_motion_forward, p_fwd));
+		p_fwd = p_init - relative_delta * motion;
 	}
 	for(uint32_t i = 0; i < 3; ++i) {
-		const auto motion = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
-		const auto d = (1.0f - relative_delta) * motion;
-		p_bwd = fcoord - d;
+		const auto motion = decode_2d_motion(read(img_motion_backward, p_bwd));
+		p_bwd = p_init - (1.0f - relative_delta) * motion;
 	}
 	
 	//
-	const auto color_fwd = read(img_color_prev, int2(p_fwd.floored()));
-	const auto color_bwd = read(img_color, int2(p_bwd.floored()));
+	const auto color_fwd = read(img_color_prev, p_fwd);
+	const auto color_bwd = read(img_color, p_bwd);
 	
-	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, int2(p_fwd.floored())));
-	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, int2(p_bwd.floored())));
+	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, p_fwd));
+	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, p_bwd));
 	
-	const auto err_fwd = (p_fwd + relative_delta * motion_fwd - fcoord).dot();
-	const auto err_bwd = (p_bwd + (1.0f - relative_delta) * motion_bwd - fcoord).dot();
+	const auto err_fwd = (p_fwd + relative_delta * motion_fwd - p_init).dot();
+	const auto err_bwd = (p_bwd + (1.0f - relative_delta) * motion_bwd - p_init).dot();
 	//constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
 	//constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
+	// TODO: should have a more tangible epsilon, e.g. max pixel offset -> (max_offset / screen_size).max_element()
 	
-	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, int2(p_fwd.floored()))) +
-						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward,
-																								int2(p_fwd.floored()))));
-	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, int2(p_bwd.floored()))) +
-						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward,
-																										 int2(p_bwd.floored()))));
+	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, p_fwd)) +
+						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward, p_fwd)));
+	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, p_bwd)) +
+						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward, p_bwd)));
 	const auto depth_diff = abs(z_fwd - z_bwd);
 	//constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
 	
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
-#if 0 // just blended
-	const auto color = color_fwd.interpolated(color_bwd, relative_delta);
-#elif 1 // as in paper
 	float4 color;
+#if 0 // dbg
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
 		else if(dbg_render_type == 4) color = color_bwd;
@@ -295,10 +287,10 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 					  (bwd_valid ? float4 { 1.0f, 0.0f, 0.0f, 1.0f} : float4 { 0.0f } )));
 		}
 		else if(dbg_render_type == 2) {
-			color = read(img_color_prev, coord);
+			color = read(img_color_prev, p_init);
 		}
 		else if(dbg_render_type == 3) {
-			color = read(img_color, coord);
+			color = read(img_color, p_init);
 		}
 		else if(dbg_render_type == 6) {
 			color = float4 { float3 { z_fwd }.absed() / warp_camera::near_far_plane.y, 1.0f };
@@ -306,15 +298,15 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		else if(dbg_render_type == 7) {
 			color = (!bwd_valid ? float4 { err_bwd } : float4 { 1.0f, 0.0f, 0.0f, 1.0f });
 			/*if(global_id.x == 20 && global_id.y == (SCREEN_HEIGHT - 30)) {
-				print("err: $, p: $, m: $, s: $, f: $", err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, fcoord);
+				print("err: $, p: $, m: $, s: $, f: $", err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, p_init);
 			}*/
 		}
 	}
-	else {
-		const auto proj_color_fwd = ((1.0f - relative_delta) * color_fwd +
-									 relative_delta * read(img_color, int2((p_fwd + motion_fwd).floored())));
-		const auto proj_color_bwd = ((1.0f - relative_delta) * read(img_color_prev, int2((p_bwd + motion_bwd).floored())) +
-									 relative_delta * color_bwd);
+	else
+#endif
+	{
+		const auto proj_color_fwd = color_fwd.interpolated(read(img_color, p_fwd + motion_fwd), relative_delta);
+		const auto proj_color_bwd = read(img_color_prev, p_bwd + motion_bwd).interpolated(color_bwd, relative_delta);
 		if(fwd_valid && bwd_valid) {
 			if(depth_diff < epsilon_2) {
 				// case 1: both fwd and bwd are valid
@@ -329,11 +321,13 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 				// case 2: select the one closer to the camera (occlusion)
 				if(z_fwd < z_bwd) {
 					// depth from other frame
-					const auto z_fwd_other = read(img_depth, int2((p_fwd + motion_fwd).floored())) + (1.0f - relative_delta) * read(img_motion_depth_backward, int2((p_fwd + motion_fwd).floored()));
+					const auto z_fwd_other = (read(img_depth, p_fwd + motion_fwd) +
+											  (1.0f - relative_delta) * read(img_motion_depth_backward, p_fwd + motion_fwd));
 					color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 				}
 				else { // bwd < fwd
-					const auto z_bwd_other = read(img_depth_prev, int2((p_bwd + motion_bwd).floored())) + relative_delta * read(img_motion_depth_forward, int2((p_bwd + motion_bwd).floored()));
+					const auto z_bwd_other = (read(img_depth_prev, p_bwd + motion_bwd) +
+											  relative_delta * read(img_motion_depth_forward,  p_bwd + motion_bwd));
 					color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 				}
 			}
@@ -344,14 +338,13 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		else if(bwd_valid) {
 			color = color_bwd;
 		}
-		// case 3 / else: both are invalid
+		// case 3 / else: both are invalid -> just do a linear interpolation between the two
 		else {
-			color = proj_color_fwd.interpolated(proj_color_bwd, relative_delta);
+			color = color_bwd.interpolated(color_bwd, relative_delta);
 		}
 	}
-#endif
 	
-	write(img_out_color, coord, color);
+	write(img_out_color, global_id.xy, color);
 }
 
 kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img) {
@@ -390,5 +383,13 @@ kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE
 	screen_check();
 	write(img, int2 { global_id.xy }, float4 { clear_color.xyz, 0.0f });
 }
+
+#if 0
+kernel void testk(const_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> src,
+				  const_image_2d<float> src2,
+				  image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> dst) {
+	//dst.write(src.read(global_id.xy));
+}
+#endif
 
 #endif

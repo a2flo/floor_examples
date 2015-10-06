@@ -132,8 +132,8 @@ static bool compile_program() {
 }
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
-	static constexpr const float eps1_step_size { 0.05f };
-	static constexpr const float eps2_step_size { 0.1f };
+	static constexpr const float eps1_step_size { 0.0005f };
+	static constexpr const float eps2_step_size { 0.001f };
 	static constexpr const uint32_t gather_max_dbg { 8 };
 	
 	if(type == EVENT_TYPE::QUIT) {

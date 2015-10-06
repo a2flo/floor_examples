@@ -903,12 +903,12 @@ bool gl_renderer::compile_shaders() {
 					(clamp(uint(cmotion.z), 0u, 1023u)));
 		}
 		
-		uint encode_motion_2d(in vec2 motion) {
+		uint encode_motion_2d(in vec2 motion) { // NOTE: with GLSL 4.20, could also directly use packSnorm2x16(motion) here
 			// uniform in [-1, 1]
-			vec2 cmotion = clamp(motion * 0.5 + 0.5, 0.0, 1.0); // map to positive [0, 1] range
-			cmotion *= 65535.0; // 2^16 - 1, fit into 16 bits
-			return ((clamp(uint(cmotion.x), 0u, 65535u) << 16u) |
-					(clamp(uint(cmotion.y), 0u, 65535u)));
+			vec2 cmotion = clamp(motion * 32767.0, -32767.0, 32767.0); // +/- 2^15 - 1, fit into 16 bits
+			// weird bit reinterpretation chain, b/c there is no direct way to interpret an ivec2 as an uvec2
+			uvec2 umotion = floatBitsToUint(intBitsToFloat(ivec2(cmotion))) & 0xFFFFu;
+			return (umotion.x | (umotion.y << 16u));
 		}
 		
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
