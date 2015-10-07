@@ -20,15 +20,12 @@
 #include <floor/core/gl_shader.hpp>
 #include <floor/core/timer.hpp>
 
-// uncomment to enable forward instead of reverse reprojection
-//#define FORWARD_REPROJECTION 1
-
-//
-#define WARP_GATHER 1
+// uncomment to enable forward projection instead of reverse reprojection
+#define FORWARD_PROJECTION 1
 
 #if !defined(FLOOR_IOS)
 
-static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
+static unordered_map<string, floor_shader_object> shader_objects;
 static GLuint vbo_fullscreen_triangle { 0 };
 static struct {
 	GLuint fbo[2] { 0u, 0u };
@@ -51,7 +48,7 @@ static struct {
 	int2 dim { 2048 };
 #else
 	// "anything worth doing, is worth overdoing!"
-	int2 dim { 16384 };
+	int2 dim { 8192 };
 #endif
 } shadow_map;
 static float3 light_pos;
@@ -389,14 +386,18 @@ bool gl_renderer::render(const gl_obj_model& model,
 		
 		compute_scene_color[0]->release_opengl_object(warp_state.dev_queue);
 		compute_scene_depth[0]->release_opengl_object(warp_state.dev_queue);
-#if defined(WARP_GATHER)
-		compute_scene_color[1]->release_opengl_object(warp_state.dev_queue);
-		compute_scene_depth[1]->release_opengl_object(warp_state.dev_queue);
-#endif
-		compute_scene_motion[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
-		compute_scene_motion[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
+		if(warp_state.is_scatter) {
+			compute_scene_motion[0]->release_opengl_object(warp_state.dev_queue);
+		}
+		else {
+			compute_scene_color[1]->release_opengl_object(warp_state.dev_queue);
+			compute_scene_depth[1]->release_opengl_object(warp_state.dev_queue);
+			
+			compute_scene_motion[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
+			compute_scene_motion[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
+			compute_scene_motion_depth[warp_state.cur_fbo * 2]->release_opengl_object(warp_state.dev_queue);
+			compute_scene_motion_depth[warp_state.cur_fbo * 2 + 1]->release_opengl_object(warp_state.dev_queue);
+		}
 		
 		render_full_scene(model, cam);
 		
@@ -404,15 +405,19 @@ bool gl_renderer::render(const gl_obj_model& model,
 		
 		compute_scene_color[0]->acquire_opengl_object(warp_state.dev_queue);
 		compute_scene_depth[0]->acquire_opengl_object(warp_state.dev_queue);
-#if defined(WARP_GATHER)
-		compute_scene_color[1]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_depth[1]->acquire_opengl_object(warp_state.dev_queue);
-#endif
-		// NOTE: warp_state.cur_fbo changed
-		compute_scene_motion[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
-		compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+		if(warp_state.is_scatter) {
+			compute_scene_motion[0]->acquire_opengl_object(warp_state.dev_queue);
+		}
+		else {
+			compute_scene_color[1]->acquire_opengl_object(warp_state.dev_queue);
+			compute_scene_depth[1]->acquire_opengl_object(warp_state.dev_queue);
+			
+			// NOTE: warp_state.cur_fbo changed
+			compute_scene_motion[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+			compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+			compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2]->acquire_opengl_object(warp_state.dev_queue);
+			compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1]->acquire_opengl_object(warp_state.dev_queue);
+		}
 		
 		return true;
 	}
@@ -456,7 +461,7 @@ void gl_renderer::render_kernels(const camera& cam,
 										  compute_color, clear_color);
 		}
 		
-		warp_state.dev_queue->execute(warp_state.warp_kernel,
+		warp_state.dev_queue->execute(warp_state.warp_scatter_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
 									  compute_scene_color[0],
@@ -535,22 +540,20 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	static constexpr const GLenum draw_buffers[] {
 		GL_COLOR_ATTACHMENT0,
 		GL_COLOR_ATTACHMENT1,
-#if defined(WARP_GATHER)
 		GL_COLOR_ATTACHMENT2,
 		GL_COLOR_ATTACHMENT3,
 		GL_COLOR_ATTACHMENT4,
-#endif
 	};
 	
 	matrix4f light_bias_mvpm;
 	if(!warp_state.is_single_frame) {
 		// draw shadow map
-		const matrix4f light_mproj { matrix4f().perspective(120.0f, 1.0f, 1.0f, light_pos.y + 10.0f) };
-		const matrix4f light_mview {
+		const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f, 1.0f, light_pos.y + 10.0f) };
+		const matrix4f light_mvm {
 			matrix4f::translation(-light_pos) *
 			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
 		};
-		const matrix4f light_mvpm { light_mview * light_mproj };
+		const matrix4f light_mvpm { light_mvm * light_pm };
 		light_bias_mvpm = matrix4f {
 			light_mvpm * matrix4f().scale(0.5f, 0.5f, 0.5f).translate(0.5f, 0.5f, 0.5f)
 		};
@@ -561,13 +564,13 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		glDrawBuffer(GL_NONE);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		
-		const auto shadow_shd = shader_objects["SHADOW"];
-		glUseProgram(shadow_shd->program.program);
+		auto& shadow_shd = shader_objects["SHADOW"];
+		glUseProgram(shadow_shd.program.program);
 		
-		glUniformMatrix4fv(shadow_shd->program.uniforms["mvpm"].location, 1, false, &light_mvpm.data[0]);
+		glUniformMatrix4fv(shadow_shd.program.uniforms["mvpm"].location, 1, false, &light_mvpm.data[0]);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, model.vertices_vbo);
-		const GLuint shdw_vertices_location = (GLuint)shadow_shd->program.attributes["in_vertex"].location;
+		const GLuint shdw_vertices_location = (GLuint)shadow_shd.program.attributes["in_vertex"].location;
 		glEnableVertexAttribArray(shdw_vertices_location);
 		glVertexAttribPointer(shdw_vertices_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 		
@@ -580,7 +583,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 
 		// draw main scene
 		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
-		glDrawBuffers(size(draw_buffers), &draw_buffers[0]);
+		glDrawBuffers(warp_state.is_scatter ? 2 : size(draw_buffers), &draw_buffers[0]);
 		glViewport(0, 0, scene_fbo.dim.x, scene_fbo.dim.y);
 		
 		// clear the color/depth buffer
@@ -590,103 +593,100 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	}
 	
 	// render actual scene
-	const auto shd = (shader_objects[warp_state.is_single_frame || warp_state.is_motion_only ?
-									 "MOTION_ONLY" : "SCENE"]);
-	glUseProgram(shd->program.program);
+	auto& shd = (shader_objects[warp_state.is_single_frame || warp_state.is_motion_only ?
+								(warp_state.is_scatter ? "MOTION_ONLY_SCATTER" : "MOTION_ONLY_GATHER") :
+								(warp_state.is_scatter ? "SCENE_SCATTER" : "SCENE_GATHER")]);
+	glUseProgram(shd.program.program);
 	
-	const matrix4f mproj { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-												  0.5f, warp_state.view_distance) };
+	const matrix4f pm { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
+											   0.5f, warp_state.view_distance) };
 	const matrix4f rot_mat {
 		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
 	};
-	const matrix4f mview { matrix4f::translation(cam.get_position()) * rot_mat };
+	const matrix4f mvm { matrix4f::translation(cam.get_position()) * rot_mat };
 
-#if !defined(WARP_GATHER)
-	glUniformMatrix4fv(shd->program.uniforms["mvm"].location, 1, false, &mview.data[0]);
-	glUniformMatrix4fv(shd->program.uniforms["prev_mvm"].location, 1, false, &prev_mvm.data[0]);
-#endif
-	
-#if defined(WARP_GATHER)
-	const matrix4f next_mvpm { mview * mproj };
-	const matrix4f mvpm { prev_mvm * mproj };
-	const matrix4f prev_mvpm { prev_prev_mvm * mproj };
-	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
-	glUniformMatrix4fv(shd->program.uniforms["next_mvpm"].location, 1, false, &next_mvpm.data[0]);
-	glUniformMatrix4fv(shd->program.uniforms["prev_mvpm"].location, 1, false, &prev_mvpm.data[0]);
+	if(warp_state.is_scatter) {
+		glUniformMatrix4fv(shd.program.uniforms["mvm"].location, 1, false, &mvm.data[0]);
+		glUniformMatrix4fv(shd.program.uniforms["prev_mvm"].location, 1, false, &prev_mvm.data[0]);
+		
+#if defined(FORWARD_PROJECTION)
+		const matrix4f mvpm { mvm * pm };
 #else
-#if defined(FORWARD_REPROJECTION)
-	const matrix4f mvpm { prev_mvm * mproj };
-#else
-	const matrix4f mvpm { mview * mproj };
+		const matrix4f mvpm { prev_mvm * pm };
 #endif
-	glUniformMatrix4fv(shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
-#endif
+		glUniformMatrix4fv(shd.program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+	}
+	else {
+		const matrix4f next_mvpm { mvm * pm };
+		const matrix4f mvpm { prev_mvm * pm };
+		const matrix4f prev_mvpm { prev_prev_mvm * pm };
+		glUniformMatrix4fv(shd.program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+		glUniformMatrix4fv(shd.program.uniforms["next_mvpm"].location, 1, false, &next_mvpm.data[0]);
+		glUniformMatrix4fv(shd.program.uniforms["prev_mvpm"].location, 1, false, &prev_mvpm.data[0]);
+	}
 
+	// remember t-2 and t-1 mvms
 	prev_prev_mvm = prev_mvm;
-	prev_mvm = mview;
+	prev_mvm = mvm;
 	
 	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
-		glUniformMatrix4fv(shd->program.uniforms["light_bias_mvpm"].location, 1, false, &light_bias_mvpm.data[0]);
+		glUniformMatrix4fv(shd.program.uniforms["light_bias_mvpm"].location, 1, false, &light_bias_mvpm.data[0]);
 		
-#if defined(FORWARD_REPROJECTION)
+#if defined(FORWARD_PROJECTION)
 		const float3 cam_pos { -cam.get_position() };
 #else
 		const float3 cam_pos { -cam.get_prev_position() };
 #endif
-		glUniform3fv(shd->program.uniforms["cam_pos"].location, 1, cam_pos.data());
+		glUniform3fv(shd.program.uniforms["cam_pos"].location, 1, cam_pos.data());
 		
-		glUniform3fv(shd->program.uniforms["light_pos"].location, 1, light_pos.data());
+		glUniform3fv(shd.program.uniforms["light_pos"].location, 1, light_pos.data());
 	}
 	
 	glBindBuffer(GL_ARRAY_BUFFER, model.vertices_vbo);
-	const GLuint vertices_location = (GLuint)shd->program.attributes["in_vertex"].location;
+	const GLuint vertices_location = (GLuint)shd.program.attributes["in_vertex"].location;
 	glEnableVertexAttribArray(vertices_location);
 	glVertexAttribPointer(vertices_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, model.tex_coords_vbo);
-	const GLuint tex_coords_location = (GLuint)shd->program.attributes["in_tex_coord"].location;
+	const GLuint tex_coords_location = (GLuint)shd.program.attributes["in_tex_coord"].location;
 	glEnableVertexAttribArray(tex_coords_location);
 	glVertexAttribPointer(tex_coords_location, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
 	
 	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 		glBindBuffer(GL_ARRAY_BUFFER, model.normals_vbo);
-		const GLuint normals_location = (GLuint)shd->program.attributes["in_normal"].location;
+		const GLuint normals_location = (GLuint)shd.program.attributes["in_normal"].location;
 		glEnableVertexAttribArray(normals_location);
 		glVertexAttribPointer(normals_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, model.binormals_vbo);
-		const GLuint binormals_location = (GLuint)shd->program.attributes["in_binormal"].location;
+		const GLuint binormals_location = (GLuint)shd.program.attributes["in_binormal"].location;
 		glEnableVertexAttribArray(binormals_location);
 		glVertexAttribPointer(binormals_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 		
 		glBindBuffer(GL_ARRAY_BUFFER, model.tangents_vbo);
-		const GLuint tangents_location = (GLuint)shd->program.attributes["in_tangent"].location;
+		const GLuint tangents_location = (GLuint)shd.program.attributes["in_tangent"].location;
 		glEnableVertexAttribArray(tangents_location);
 		glVertexAttribPointer(tangents_location, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-		const GLint shadow_loc { shd->program.uniforms["shadow_tex"].location };
-		const GLint shadow_num { shd->program.samplers["shadow_tex"] };
+		const GLint shadow_loc { shd.program.uniforms["shadow_tex"].location };
+		const GLint shadow_num { shd.program.samplers["shadow_tex"] };
 		glUniform1i(shadow_loc, shadow_num);
 		glActiveTexture((GLenum)(GL_TEXTURE0 + shadow_num));
 		glBindTexture(GL_TEXTURE_2D, shadow_map.shadow_tex);
 	}
 	else {
-#if !defined(WARP_GATHER)
-		glDrawBuffers(1, &draw_buffers[0]);
-#else
-		glDrawBuffers(2, &draw_buffers[0]);
-#endif
+		glDrawBuffers(warp_state.is_scatter ? 1 : 2, &draw_buffers[0]);
 	}
 	
-	const GLint diff_loc { shd->program.uniforms["diff_tex"].location };
-	const GLint diff_num { shd->program.samplers["diff_tex"] };
-	const GLint spec_loc { shd->program.uniforms["spec_tex"].location };
-	const GLint spec_num { shd->program.samplers["spec_tex"] };
-	const GLint norm_loc { shd->program.uniforms["norm_tex"].location };
-	const GLint norm_num { shd->program.samplers["norm_tex"] };
-	const GLint mask_loc { shd->program.uniforms["mask_tex"].location };
-	const GLint mask_num { shd->program.samplers["mask_tex"] };
+	const GLint diff_loc { shd.program.uniforms["diff_tex"].location };
+	const GLint diff_num { shd.program.samplers["diff_tex"] };
+	const GLint spec_loc { shd.program.uniforms["spec_tex"].location };
+	const GLint spec_num { shd.program.samplers["spec_tex"] };
+	const GLint norm_loc { shd.program.uniforms["norm_tex"].location };
+	const GLint norm_num { shd.program.samplers["norm_tex"] };
+	const GLint mask_loc { shd.program.uniforms["mask_tex"].location };
+	const GLint mask_num { shd.program.samplers["mask_tex"] };
 	for(const auto& obj : model.objects) {
 		if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 			glUniform1i(diff_loc, diff_num);
@@ -715,15 +715,14 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glUseProgram(0);
 	glDrawBuffers(1, &draw_buffers[0]); // reset to 1 draw buffer
 	
-#if defined(WARP_GATHER)
-	// flip state
-	warp_state.cur_fbo = 1 - warp_state.cur_fbo;
-#endif
+	if(!warp_state.is_scatter) {
+		// flip state
+		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
+	}
 }
 
 bool gl_renderer::compile_shaders() {
-	static const char motion_only_vs_text[] { u8R"RAWSTR(#version 150 core
-#define WARP_GATHER 1
+	static const char motion_only_vs_text[] { u8R"RAWSTR(
 		uniform mat4 mvpm; // @t
 #if defined(WARP_GATHER)
 		uniform mat4 next_mvpm; // @t+1
@@ -763,8 +762,7 @@ bool gl_renderer::compile_shaders() {
 #endif
 		}
 	)RAWSTR"};
-	static const char motion_only_fs_text[] { u8R"RAWSTR(#version 330 core
-#define WARP_GATHER 1
+	static const char motion_only_fs_text[] { u8R"RAWSTR(
 		uniform sampler2D mask_tex;
 		
 		in vec2 tex_coord;
@@ -793,8 +791,7 @@ bool gl_renderer::compile_shaders() {
 #endif
 		}
 	)RAWSTR"};
-	static const char scene_vs_text[] { u8R"RAWSTR(#version 150 core
-#define WARP_GATHER 1
+	static const char scene_vs_text[] { u8R"RAWSTR(
 		uniform mat4 mvpm; // @t
 #if defined(WARP_GATHER)
 		uniform mat4 next_mvpm; // @t+1
@@ -854,8 +851,7 @@ bool gl_renderer::compile_shaders() {
 			light_dir.z = dot(vlight, in_normal);
 		}
 	)RAWSTR"};
-	static const char scene_fs_text[] { u8R"RAWSTR(#version 330 core
-#define WARP_GATHER 1
+	static const char scene_fs_text[] { u8R"RAWSTR(
 		uniform sampler2D diff_tex;
 		uniform sampler2D spec_tex;
 		uniform sampler2D norm_tex;
@@ -990,14 +986,14 @@ bool gl_renderer::compile_shaders() {
 #endif
 		}
 	)RAWSTR"};
-	static const char shadow_map_vs_text[] { u8R"RAWSTR(#version 150 core
+	static const char shadow_map_vs_text[] { u8R"RAWSTR(
 		uniform mat4 mvpm;
 		in vec3 in_vertex;
 		void main() {
 			gl_Position = mvpm * vec4(in_vertex.xyz, 1.0);
 		}
 	)RAWSTR"};
-	static const char shadow_map_fs_text[] { u8R"RAWSTR(#version 150 core
+	static const char shadow_map_fs_text[] { u8R"RAWSTR(
 		out float frag_depth;
 		void main() {
 			frag_depth = gl_FragCoord.z;
@@ -1005,19 +1001,31 @@ bool gl_renderer::compile_shaders() {
 	)RAWSTR"};
 	
 	{
-		auto shd = make_shared<floor_shader_object>("SCENE");
-		if(!floor_compile_shader(*shd.get(), scene_vs_text, scene_fs_text)) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("SCENE_SCATTER", scene_vs_text, scene_fs_text, 330);
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		auto shd = make_shared<floor_shader_object>("MOTION_ONLY");
-		if(!floor_compile_shader(*shd.get(), motion_only_vs_text, motion_only_fs_text)) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("SCENE_GATHER", scene_vs_text, scene_fs_text, 330,
+											  { { "WARP_GATHER", 1 } });
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		auto shd = make_shared<floor_shader_object>("SHADOW");
-		if(!floor_compile_shader(*shd.get(), shadow_map_vs_text, shadow_map_fs_text)) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("MOTION_ONLY_SCATTER", motion_only_vs_text, motion_only_fs_text, 330);
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
+	}
+	{
+		const auto shd = floor_compile_shader("MOTION_ONLY_GATHER", motion_only_vs_text, motion_only_fs_text, 330,
+											  { { "WARP_GATHER", 1 } });
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
+	}
+	{
+		const auto shd = floor_compile_shader("SHADOW", shadow_map_vs_text, shadow_map_fs_text);
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	return true;
 }

@@ -39,6 +39,8 @@ static const float3 cam_speeds { 75.0f /* default */, 150.0f /* faster */, 10.0f
 template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
 	{ "--help", [](warp_option_context&, char**&) {
 		cout << "command line options:" << endl;
+		cout << "\t--scatter: warp in scatter mode" << endl;
+		cout << "\t--gather: warp in gather mode" << endl;
 		cout << "\t--frames: amount of frames per second that will actually be rendered (via opengl/metal), NOTE: obviously an upper limit" << endl;
 		warp_state.done = true;
 	}},
@@ -51,6 +53,14 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		}
 		warp_state.render_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
 		cout << "render frame count set to: " << warp_state.render_frame_count << endl;
+	}},
+	{ "--scatter", [](warp_option_context&, char**&) {
+		warp_state.is_scatter = true;
+		cout << "using scatter" << endl;
+	}},
+	{ "--gather", [](warp_option_context&, char**&) {
+		warp_state.is_scatter = false;
+		cout << "using gather" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -117,14 +127,14 @@ static bool compile_program() {
 		return false;
 	}
 #if 1
-	auto new_warp_kernel = new_warp_prog->get_kernel("warp_scatter_simple");
+	auto new_warp_scatter_kernel = new_warp_prog->get_kernel("warp_scatter_simple");
 #else
-	auto new_warp_kernel = new_warp_prog->get_kernel("warp_scatter_patch");
+	auto new_warp_scatter_kernel = new_warp_prog->get_kernel("warp_scatter_patch");
 #endif
 	auto new_warp_gather_kernel = new_warp_prog->get_kernel("warp_gather");
 	auto new_clear_kernel = new_warp_prog->get_kernel("img_clear");
 	auto new_fixup_kernel = new_warp_prog->get_kernel("single_px_fixup");
-	if(new_warp_kernel == nullptr ||
+	if(new_warp_scatter_kernel == nullptr ||
 	   new_warp_gather_kernel == nullptr ||
 	   new_clear_kernel == nullptr ||
 	   new_fixup_kernel == nullptr) {
@@ -134,7 +144,7 @@ static bool compile_program() {
 	
 	// all okay
 	warp_state.warp_prog = new_warp_prog;
-	warp_state.warp_kernel = new_warp_kernel;
+	warp_state.warp_scatter_kernel = new_warp_scatter_kernel;
 	warp_state.warp_gather_kernel = new_warp_gather_kernel;
 	warp_state.clear_kernel = new_clear_kernel;
 	warp_state.fixup_kernel = new_fixup_kernel;

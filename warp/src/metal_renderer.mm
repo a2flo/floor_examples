@@ -397,7 +397,7 @@ static void render_kernels(const camera& cam,
 									  scene_fbo.compute_color, clear_color);
 	}
 	
-	warp_state.dev_queue->execute(warp_state.warp_kernel,
+	warp_state.dev_queue->execute(warp_state.warp_scatter_kernel,
 								  scene_fbo.dim_multiple,
 								  uint2 { 32, 16 },
 								  scene_fbo.color, scene_fbo.depth, scene_fbo.motion, scene_fbo.compute_color,

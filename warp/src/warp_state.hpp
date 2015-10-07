@@ -25,7 +25,7 @@ struct warp_state_struct {
 	shared_ptr<compute_device> dev;
 	
 	shared_ptr<compute_program> warp_prog;
-	shared_ptr<compute_kernel> warp_kernel, warp_gather_kernel, clear_kernel, fixup_kernel;
+	shared_ptr<compute_kernel> warp_scatter_kernel, warp_gather_kernel, clear_kernel, fixup_kernel;
 	
 	//
 	bool done { false };
