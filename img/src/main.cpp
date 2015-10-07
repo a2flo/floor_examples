@@ -141,7 +141,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 static GLuint vbo_fullscreen_triangle { 0 };
 static uint32_t global_vao { 0 };
 #endif
-static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
+static unordered_map<string, floor_shader_object> shader_objects;
 		
 #if !defined(FLOOR_IOS)
 static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
@@ -151,10 +151,10 @@ static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_p
 	
 	//img->release_opengl_object(dev_queue);
 	
-	const auto shd = shader_objects["IMG_DRAW"];
-	glUseProgram(shd->program.program);
+	auto& shd = shader_objects["IMG_DRAW"];
+	glUseProgram(shd.program.program);
 	
-	glUniform1i((GLint)shd->program.uniforms["tex"].location, 0);
+	glUniform1i(shd.program.uniforms["tex"].location, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, img->get_opengl_object());
 	
@@ -171,14 +171,14 @@ static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_p
 }
 
 static bool compile_shaders() {
-	static const char img_vs_text[] { u8R"RAWSTR(#version 150 core
+	static const char img_vs_text[] { u8R"RAWSTR(
 		in vec2 in_vertex;
 		out vec2 tex_coord;
 		void main() {
 			tex_coord = in_vertex.xy * 0.5 + 0.5;
 			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
 		})RAWSTR" };
-	static const char img_fs_text[] { u8R"RAWSTR(#version 150 core
+	static const char img_fs_text[] { u8R"RAWSTR(
 		uniform sampler2D tex;
 		in vec2 tex_coord;
 		out vec4 frag_color;
@@ -188,9 +188,9 @@ static bool compile_shaders() {
 	)RAWSTR" };
 	
 	{
-		auto shd = make_shared<floor_shader_object>("IMG_DRAW");
-		if(!floor_compile_shader(*shd.get(), &img_vs_text[0], &img_fs_text[0])) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("IMG_DRAW", &img_vs_text[0], &img_fs_text[0]);
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	return true;
 }

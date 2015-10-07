@@ -20,7 +20,7 @@
 
 #if !defined(FLOOR_IOS)
 
-static shared_ptr<floor_shader_object> h_blur_shd, v_blur_shd;
+static floor_shader_object h_blur_shd, v_blur_shd;
 static GLuint rtt_fbo { 0u };
 
 bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
@@ -42,14 +42,14 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 	}
 	log_debug("offsets: %s", offsets.str());
 	
-	static const char blur_vs_text[] { u8R"RAWSTR(#version 150 core
+	static const char blur_vs_text[] { u8R"RAWSTR(
 		in vec2 in_vertex;
 		out vec2 tex_coord;
 		void main() {
 			tex_coord = in_vertex.xy * 0.5 + 0.5;
 			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
 		})RAWSTR" };
-	static const string blur_h_fs_text { u8R"RAWSTR(#version 150 core
+	static const string blur_fs_text { u8R"RAWSTR(
 		uniform sampler2D tex;
 		in vec2 tex_coord;
 		out vec4 frag_color;
@@ -65,7 +65,13 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 											   0.0351776, 0.0196995, 0.00984974, 0.00437766);
 			vec4 color = vec4(0.0);
 			for(int i = 0; i < 17; ++i) {
-				color += coeffs[i] * texture(tex, tex_coord + vec2(offsets[i], 0.0));
+				color += coeffs[i] * texture(tex, tex_coord +
+#if defined(BLUR_HORIZONTAL)
+											 vec2(offsets[i], 0.0)
+#elif defined(BLUR_VERTICAL)
+											 vec2(0.0, offsets[i])
+#endif
+											 );
 			}
 			frag_color = color;
 		}
@@ -91,15 +97,15 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 		}
 	)RAWSTR" };
 
-	h_blur_shd = make_shared<floor_shader_object>("BLUR_HORIZONTAL");
-	if(!floor_compile_shader(*h_blur_shd.get(), &blur_vs_text[0], blur_h_fs_text.c_str())) return false;
+	const auto hshd = floor_compile_shader("BLUR_HORIZONTAL", blur_vs_text, blur_fs_text.c_str(), 150,
+										   { { "BLUR_HORIZONTAL", 1 } });
+	if(!hshd.first) return false;
+	h_blur_shd = hshd.second;
 	
-	v_blur_shd = make_shared<floor_shader_object>("BLUR_VERTICAL");
-	if(!floor_compile_shader(*v_blur_shd.get(), &blur_vs_text[0], blur_v_fs_text.c_str())) return false;
-
-	if(h_blur_shd == nullptr || v_blur_shd == nullptr) {
-		return false;
-	}
+	const auto vshd = floor_compile_shader("BLUR_VERTICAL", blur_vs_text, blur_fs_text.c_str(), 150,
+										   { { "BLUR_VERTICAL", 1 } });
+	if(!vshd.first) return false;
+	v_blur_shd = vshd.second;
 	
 	// create fbo
 	glGenFramebuffers(1, &rtt_fbo);
@@ -126,10 +132,10 @@ void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& t
 	
 	// blur / horizontal first, as this is apparently faster in opengl/glsl
 	{
-		glUseProgram(h_blur_shd->program.program);
+		glUseProgram(h_blur_shd.program.program);
 		
 		// bind/set source texture
-		glUniform1i((GLint)h_blur_shd->program.uniforms["tex"].location, 0);
+		glUniform1i(h_blur_shd.program.uniforms["tex"].location, 0);
 		glBindTexture(GL_TEXTURE_2D, tex_src);
 		
 		// and go
@@ -139,10 +145,10 @@ void gl_blur::blur(const GLuint& tex_src, const GLuint& tex_dst, const GLuint& t
 	// attach final destination texture
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex_dst, 0);
 	{
-		glUseProgram(v_blur_shd->program.program);
+		glUseProgram(v_blur_shd.program.program);
 		
 		// bind/set source texture
-		glUniform1i((GLint)v_blur_shd->program.uniforms["tex"].location, 0);
+		glUniform1i(v_blur_shd.program.uniforms["tex"].location, 0);
 		glBindTexture(GL_TEXTURE_2D, tex_tmp);
 		
 		// and go

@@ -20,7 +20,7 @@
 #include "nbody_state.hpp"
 #include <floor/core/gl_shader.hpp>
 
-static unordered_map<string, shared_ptr<floor_shader_object>> shader_objects;
+static unordered_map<string, floor_shader_object> shader_objects;
 
 static array<GLuint, 2> body_textures {{ 0u, 0u }};
 static void create_textures() {
@@ -112,25 +112,25 @@ void gl_renderer::render(shared_ptr<compute_queue> dev_queue,
 	//
 	position_buffer->release_opengl_object(dev_queue);
 	
-	const auto shd = (nbody_state.render_sprites ?
-					  (nbody_state.alpha_mask ? shader_objects["SPRITE_DISCARD"] : shader_objects["SPRITE"]) :
-					  (nbody_state.alpha_mask ? shader_objects["POINT_DISCARD"] : shader_objects["POINT"]));
-	glUseProgram(shd->program.program);
+	auto& shd = (nbody_state.render_sprites ?
+				 (nbody_state.alpha_mask ? shader_objects["SPRITE_DISCARD"] : shader_objects["SPRITE"]) :
+				 (nbody_state.alpha_mask ? shader_objects["POINT_DISCARD"] : shader_objects["POINT"]));
+	glUseProgram(shd.program.program);
 	
-	glUniform1i((GLint)shd->program.uniforms["tex"].location, 0);
+	glUniform1i((GLint)shd.program.uniforms["tex"].location, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, (nbody_state.alpha_mask ? body_textures[1] : body_textures[0]));
 	
 	const matrix4f mproj { matrix4f().perspective(90.0f, float(floor::get_width()) / float(floor::get_height()), 0.25f, nbody_state.max_distance) };
 	const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
 	const matrix4f mvpm { mview * mproj };
-	glUniformMatrix4fv((GLint)shd->program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
-	if(nbody_state.render_sprites) glUniformMatrix4fv((GLint)shd->program.uniforms["mvm"].location, 1, false, &mview.data[0]);
+	glUniformMatrix4fv((GLint)shd.program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
+	if(nbody_state.render_sprites) glUniformMatrix4fv((GLint)shd.program.uniforms["mvm"].location, 1, false, &mview.data[0]);
 	
-	glUniform2f((GLint)shd->program.uniforms["mass_minmax"].location, nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
+	glUniform2f((GLint)shd.program.uniforms["mass_minmax"].location, nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, position_buffer->get_opengl_object());
-	const GLuint vertices_location = (GLuint)shd->program.attributes["in_vertex"].location;
+	const GLuint vertices_location = (GLuint)shd.program.attributes["in_vertex"].location;
 	glEnableVertexAttribArray(vertices_location);
 	glVertexAttribPointer(vertices_location, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
 	
@@ -165,7 +165,7 @@ bool gl_renderer::compile_shaders() {
 			return color;
 		}
 	)RAWSTR"};
-	static const string nbody_vs_text { "#version 150 core\n" + nbody_color_gradient_compute + u8R"RAWSTR(
+	static const string nbody_vs_text { nbody_color_gradient_compute + u8R"RAWSTR(
 		uniform mat4 mvpm;
 		uniform vec2 mass_minmax;
 		in vec4 in_vertex;
@@ -177,7 +177,7 @@ bool gl_renderer::compile_shaders() {
 			gl_Position = mvpm * vec4(in_vertex.xyz, 1.0);
 		}
 	)RAWSTR"};
-	static const string nbody_vs_sprite_text { "#version 150 core\n" + nbody_color_gradient_compute + u8R"RAWSTR(
+	static const string nbody_vs_sprite_text { nbody_color_gradient_compute + u8R"RAWSTR(
 		uniform mat4 mvpm;
 		uniform mat4 mvm;
 		uniform vec2 mass_minmax;
@@ -200,7 +200,6 @@ bool gl_renderer::compile_shaders() {
 		}
 	)RAWSTR"};
 	static const string nbody_fs_text { u8R"RAWSTR(
-#version 150 core
 		in vec4 color;
 		uniform mat4 mvpm;
 		uniform sampler2D tex;
@@ -211,7 +210,6 @@ bool gl_renderer::compile_shaders() {
 		}
 	)RAWSTR"};
 	static const string nbody_fs_discard_text { u8R"RAWSTR(
-#version 150 core
 		in vec4 color;
 		uniform mat4 mvpm;
 		uniform sampler2D tex;
@@ -225,24 +223,24 @@ bool gl_renderer::compile_shaders() {
 	)RAWSTR"};
 	
 	{
-		auto shd = make_shared<floor_shader_object>("POINT");
-		if(!floor_compile_shader(*shd.get(), nbody_vs_text.c_str(), nbody_fs_text.c_str())) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("POINT", nbody_vs_text.c_str(), nbody_fs_text.c_str());
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		auto shd = make_shared<floor_shader_object>("POINT_DISCARD");
-		if(!floor_compile_shader(*shd.get(), nbody_vs_text.c_str(), nbody_fs_discard_text.c_str())) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("POINT_DISCARD", nbody_vs_text.c_str(), nbody_fs_discard_text.c_str());
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		auto shd = make_shared<floor_shader_object>("SPRITE");
-		if(!floor_compile_shader(*shd.get(), nbody_vs_sprite_text.c_str(), nbody_fs_text.c_str())) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("SPRITE", nbody_vs_sprite_text.c_str(), nbody_fs_text.c_str());
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		auto shd = make_shared<floor_shader_object>("SPRITE_DISCARD");
-		if(!floor_compile_shader(*shd.get(), nbody_vs_sprite_text.c_str(), nbody_fs_discard_text.c_str())) return false;
-		shader_objects.emplace(shd->name, shd);
+		const auto shd = floor_compile_shader("SPRITE_DISCARD", nbody_vs_sprite_text.c_str(), nbody_fs_discard_text.c_str());
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	return true;
 }
