@@ -208,7 +208,7 @@ kernel void warp_scatter_patch(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_I
 }
 
 // decodes the encoded input 2D motion vector
-// format: [16-bit x][16-bit y]
+// format: [16-bit y][16-bit x]
 static float2 decode_2d_motion(const uint32_t& encoded_motion) {
 	const union {
 		ushort2 us16;
@@ -239,8 +239,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 						param<float> epsilon_1,
 						param<float> epsilon_2,
-						param<uint32_t> dbg_render_type
-) {
+						param<uint32_t> dbg_render_type) {
 	screen_check();
 	
 	// iterate
@@ -269,11 +268,11 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
 	const auto err_bwd = ((p_bwd + (1.0f - relative_delta) * motion_bwd - p_init).dot() +
 						  ((p_bwd < 0.0f).any() || (p_bwd > 1.0f).any() ? 1e10f : 0.0f));
-	//constexpr const float epsilon_1 { 8.0f }; // aka "max offset in px"
-	//constexpr const float epsilon_1_sq { epsilon_1 * epsilon_1 };
-	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	// TODO: should have a more tangible epsilon, e.g. max pixel offset -> (max_offset / screen_size).max_element()
+	const float epsilon_1_sq { epsilon_1 * epsilon_1 };
 	
+	// NOTE: scene depth type is dependent on the renderer (-> use the default), motion depth is always z/w
+	// -> need to linearize both to properly add + compare them
 	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, p_fwd)) +
 						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward, p_fwd)));
 	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, p_bwd)) +
@@ -284,7 +283,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 	float4 color;
-#if 0 // dbg
+#if 0
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
 		else if(dbg_render_type == 4) color = color_bwd;
