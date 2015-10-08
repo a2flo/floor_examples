@@ -473,6 +473,13 @@ void gl_renderer::render_kernels(const camera& cam,
 									   float4 { -1.0f } :
 									   float4 { cam.get_single_frame_direction(), 1.0f }
 									   ));
+		
+		if(warp_state.is_fixup) {
+			warp_state.dev_queue->execute(warp_state.fixup_kernel,
+										  scene_fbo.dim_multiple,
+										  uint2 { 32, 16 },
+										  compute_color);
+		}
 	}
 	else {
 //#define GATHER_DEBUG_DELTA 1
@@ -510,21 +517,6 @@ void gl_renderer::render_kernels(const camera& cam,
 									  warp_state.gather_eps_1,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);
-	}
-	
-	if(warp_state.is_fixup && warp_state.is_scatter) {
-		if(warp_state.ctx->get_compute_type() == COMPUTE_TYPE::CUDA) {
-			warp_state.dev_queue->execute(warp_state.fixup_kernel,
-										  scene_fbo.dim_multiple,
-										  uint2 { 32, 16 },
-										  compute_color);
-		}
-		else {
-			warp_state.dev_queue->execute(warp_state.fixup_kernel,
-										  scene_fbo.dim_multiple,
-										  uint2 { 32, 16 },
-										  compute_color, compute_color);
-		}
 	}
 	
 #if defined(WARP_TIMING)
@@ -881,7 +873,7 @@ bool gl_renderer::compile_shaders() {
 		layout (location = 4) out float motion_depth_backward;
 #endif
 		
-		uint encode_motion_3d(in vec3 motion) {
+		uint encode_3d_motion(in vec3 motion) {
 			const float range = 64.0; // [-range, range]
 			vec3 signs = sign(motion);
 			vec3 cmotion = clamp(abs(motion), 0.0, range);
@@ -899,7 +891,7 @@ bool gl_renderer::compile_shaders() {
 					(clamp(uint(cmotion.z), 0u, 1023u)));
 		}
 		
-		uint encode_motion_2d(in vec2 motion) { // NOTE: with GLSL 4.20, could also directly use packSnorm2x16(motion) here
+		uint encode_2d_motion(in vec2 motion) { // NOTE: with GLSL 4.20, could also directly use packSnorm2x16(motion) here
 			// uniform in [-1, 1]
 			vec2 cmotion = clamp(motion * 32767.0, -32767.0, 32767.0); // +/- 2^15 - 1, fit into 16 bits
 			// weird bit reinterpretation chain, b/c there is no direct way to interpret an ivec2 as an uvec2
@@ -977,11 +969,11 @@ bool gl_renderer::compile_shaders() {
 			
 			frag_color = vec4(diff.xyz * lighting, 0.0);
 #if !defined(WARP_GATHER)
-			motion_color = encode_motion_3d(motion);
+			motion_color = encode_3d_motion(motion);
 #else
-			motion_forward = encode_motion_2d((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
+			motion_forward = encode_2d_motion((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
 			motion_depth_forward = (motion_next.z / motion_next.w) - (motion_now.z / motion_now.w);
-			motion_backward = encode_motion_2d((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
+			motion_backward = encode_2d_motion((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
 			motion_depth_backward = (motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w);
 #endif
 		}

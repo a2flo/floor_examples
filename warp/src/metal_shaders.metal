@@ -6,7 +6,46 @@ using namespace metal;
 //////////////////////////////////////////
 // scene
 
-struct scene_uniforms_t {
+// since there is no inheritance in metal, this base class will be awkwardly copypasted to both "inheriting" classes
+struct scene_base_in_out {
+	float4 position;
+	float4 shadow_coord;
+	float2 tex_coord;
+	float3 view_dir;
+	float3 light_dir;
+};
+
+struct scene_scatter_in_out {
+	float4 position [[position]];
+	float4 shadow_coord;
+	float2 tex_coord;
+	float3 view_dir;
+	float3 light_dir;
+	float3 motion;
+};
+
+struct scene_gather_in_out {
+	float4 position [[position]];
+	float4 shadow_coord;
+	float2 tex_coord;
+	float3 view_dir;
+	float3 light_dir;
+	float4 motion_prev;
+	float4 motion_now;
+	float4 motion_next;
+};
+
+// same as above ...
+struct scene_base_uniforms_t {
+	matrix_float4x4 mvpm;
+	matrix_float4x4 m0;
+	matrix_float4x4 m1;
+	matrix_float4x4 light_bias_mvpm;
+	packed_float3 cam_pos;
+	packed_float3 light_pos;
+};
+
+struct scene_scatter_uniforms_t {
 	matrix_float4x4 mvpm;
 	matrix_float4x4 mvm;
 	matrix_float4x4 prev_mvm;
@@ -15,13 +54,26 @@ struct scene_uniforms_t {
 	packed_float3 light_pos;
 };
 
-struct scene_in_out {
-	float4 position [[position]];
-	float4 shadow_coord;
-	float2 tex_coord;
-	float3 view_dir;
-	float3 light_dir;
-	float3 motion;
+struct scene_gather_uniforms_t {
+	matrix_float4x4 mvpm; // @t
+	matrix_float4x4 next_mvpm; // @t+1
+	matrix_float4x4 prev_mvpm; // @t-1
+	matrix_float4x4 light_bias_mvpm;
+	packed_float3 cam_pos;
+	packed_float3 light_pos;
+};
+
+struct scene_scatter_fragment_out {
+	float4 color [[color(0)]];
+	uint32_t motion [[color(1)]];
+};
+
+struct scene_gather_fragment_out {
+	float4 color [[color(0)]];
+	uint32_t motion_forward [[color(1)]];
+	uint32_t motion_backward [[color(2)]];
+	float motion_depth_forward [[color(3)]];
+	float motion_depth_backward [[color(4)]];
 };
 
 // props to:
@@ -38,38 +90,72 @@ static float4 log_depth(float4 transformed_position) {
 	return transformed_position;
 }
 
-vertex scene_in_out scene_vs(device const packed_float3* in_position [[buffer(0)]],
-							 device const packed_float2* in_tex_coord [[buffer(1)]],
-							 device const packed_float3* in_normal [[buffer(2)]],
-							 device const packed_float3* in_binormal [[buffer(3)]],
-							 device const packed_float3* in_tangent [[buffer(4)]],
-							 constant scene_uniforms_t& uniforms [[buffer(5)]],
-							 const unsigned int vid [[vertex_id]]) {
-	scene_in_out out;
-	out.tex_coord = in_tex_coord[vid];
+static void scene_vs(thread scene_base_in_out* out,
+					 device const packed_float3* in_position,
+					 device const packed_float2* in_tex_coord,
+					 device const packed_float3* in_normal,
+					 device const packed_float3* in_binormal,
+					 device const packed_float3* in_tangent,
+					 constant scene_base_uniforms_t* uniforms,
+					 const unsigned int vid) {
+	out->tex_coord = in_tex_coord[vid];
 	
 	float4 pos(in_position[vid], 1.0f);
-	out.shadow_coord = log_depth(uniforms.light_bias_mvpm * pos);
-	out.position = uniforms.mvpm * pos;
+	out->shadow_coord = log_depth(uniforms->light_bias_mvpm * pos);
+	out->position = uniforms->mvpm * pos;
 	
+	float3 vview = uniforms->cam_pos - in_position[vid];
+	out->view_dir.x = dot(vview, in_tangent[vid]);
+	out->view_dir.y = dot(vview, in_binormal[vid]);
+	out->view_dir.z = dot(vview, in_normal[vid]);
+	
+	float3 vlight = uniforms->light_pos - in_position[vid];
+	out->light_dir.x = dot(vlight, in_tangent[vid]);
+	out->light_dir.y = dot(vlight, in_binormal[vid]);
+	out->light_dir.z = dot(vlight, in_normal[vid]);
+}
+
+vertex scene_scatter_in_out scene_scatter_vs(device const packed_float3* in_position [[buffer(0)]],
+											 device const packed_float2* in_tex_coord [[buffer(1)]],
+											 device const packed_float3* in_normal [[buffer(2)]],
+											 device const packed_float3* in_binormal [[buffer(3)]],
+											 device const packed_float3* in_tangent [[buffer(4)]],
+											 constant scene_scatter_uniforms_t& uniforms [[buffer(5)]],
+											 const unsigned int vid [[vertex_id]]) {
+	scene_scatter_in_out out;
+	
+	scene_vs((thread scene_base_in_out*)&out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent,
+			 (constant scene_base_uniforms_t*)&uniforms, vid);
+	
+	float4 pos(in_position[vid], 1.0f);
 	float4 prev_pos = uniforms.prev_mvm * pos;
 	float4 cur_pos = uniforms.mvm * pos;
 	out.motion = cur_pos.xyz - prev_pos.xyz;
 	
-	float3 vview = uniforms.cam_pos - in_position[vid];
-	out.view_dir.x = dot(vview, in_tangent[vid]);
-	out.view_dir.y = dot(vview, in_binormal[vid]);
-	out.view_dir.z = dot(vview, in_normal[vid]);
+	return out;
+}
+
+vertex scene_gather_in_out scene_gather_vs(device const packed_float3* in_position [[buffer(0)]],
+										   device const packed_float2* in_tex_coord [[buffer(1)]],
+										   device const packed_float3* in_normal [[buffer(2)]],
+										   device const packed_float3* in_binormal [[buffer(3)]],
+										   device const packed_float3* in_tangent [[buffer(4)]],
+										   constant scene_gather_uniforms_t& uniforms [[buffer(5)]],
+										   const unsigned int vid [[vertex_id]]) {
+	scene_gather_in_out out;
 	
-	float3 vlight = uniforms.light_pos - in_position[vid];
-	out.light_dir.x = dot(vlight, in_tangent[vid]);
-	out.light_dir.y = dot(vlight, in_binormal[vid]);
-	out.light_dir.z = dot(vlight, in_normal[vid]);
+	scene_vs((thread scene_base_in_out*)&out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent,
+			 (constant scene_base_uniforms_t*)&uniforms, vid);
+	
+	float4 pos(in_position[vid], 1.0f);
+	out.motion_prev = uniforms.prev_mvpm * pos;
+	out.motion_now = uniforms.mvpm * pos;
+	out.motion_next = uniforms.next_mvpm * pos;
 	
 	return out;
 }
 
-static uint32_t encode_motion(thread const float3& motion) {
+static uint32_t encode_3d_motion(thread const float3& motion) {
 	constexpr const float range = 64.0; // [-range, range]
 	const float3 signs = sign(motion);
 	float3 cmotion = clamp(abs(motion), 0.0, range);
@@ -78,28 +164,32 @@ static uint32_t encode_motion(thread const float3& motion) {
 	// encode x and z with 10-bit, y with 9-bit
 	//cmotion *= 1.0 / precise::log2(range + 1.0);
 	cmotion *= 0.16604764621594f; // no constexpr math :(
-	cmotion.xz *= 1024.0; // 2^10
-	cmotion.y *= 512.0; // 2^9
-	return ((signs.x < 0.0 ? 0x80000000u : 0u) |
-			(signs.y < 0.0 ? 0x40000000u : 0u) |
-			(signs.z < 0.0 ? 0x20000000u : 0u) |
+	cmotion.xz *= 1024.0f; // 2^10
+	cmotion.y *= 512.0f; // 2^9
+	return ((signs.x < 0.0f ? 0x80000000u : 0u) |
+			(signs.y < 0.0f ? 0x40000000u : 0u) |
+			(signs.z < 0.0f ? 0x20000000u : 0u) |
 			(clamp(uint32_t(cmotion.x), 0u, 1023u) << 19u) |
 			(clamp(uint32_t(cmotion.y), 0u, 511u) << 10u) |
 			(clamp(uint32_t(cmotion.z), 0u, 1023u)));
 }
 
-struct scene_fragment_out {
-	float4 color [[color(0)]];
-	uint32_t motion [[color(1)]];
-};
+static uint32_t encode_2d_motion(thread const float2& motion) {
+	// could use this if it wasn't broken on intel gpus ...
+	//return pack_float_to_snorm2x16(motion);
+	float2 cmotion = clamp(motion * 32767.0f, -32767.0f, 32767.0f); // +/- 2^15 - 1, fit into 16 bits
+	//return as_type<uint>(short2(cmotion)); // this is also broken
+	uint2 umotion = as_type<uint2>(int2(cmotion)) & 0xFFFFu;
+	return (umotion.x | (umotion.y << 16u));
+}
 
-fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
-									 const sampler smplr [[sampler(0)]],
-									 texture2d<float> diff_tex [[texture(0)]],
-									 texture2d<float> spec_tex [[texture(1)]],
-									 texture2d<float> norm_tex [[texture(2)]],
-									 texture2d<float> mask_tex [[texture(3)]],
-									 depth2d<float> shadow_tex [[texture(4)]]) {
+static float4 scene_fs(const thread scene_base_in_out* in,
+					   const sampler smplr,
+					   texture2d<float> diff_tex,
+					   texture2d<float> spec_tex,
+					   texture2d<float> norm_tex,
+					   texture2d<float> mask_tex,
+					   depth2d<float> shadow_tex) {
 	constexpr sampler shadow_smplr {
 		coord::normalized,
 		filter::linear,
@@ -109,11 +199,11 @@ fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
 		compare_func::less_equal,
 	};
 	
-	float mask = mask_tex.sample(smplr, in.tex_coord, level { 0.0f }).x;
+	float mask = mask_tex.sample(smplr, in->tex_coord, level { 0.0f }).x;
 	if(mask < 0.5f) discard_fragment();
 	
-	const gradient2d tex_grad { dfdx(in.tex_coord), dfdy(in.tex_coord) };
-	auto diff = diff_tex.sample(smplr, in.tex_coord, tex_grad);
+	const gradient2d tex_grad { dfdx(in->tex_coord), dfdy(in->tex_coord) };
+	auto diff = diff_tex.sample(smplr, in->tex_coord, tex_grad);
 	
 	//
 	constexpr float fixed_bias = 0.001f;
@@ -123,10 +213,10 @@ fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
 	float light_vis = 1.0f;
 	
 	//
-	float3 norm_view_dir = normalize(in.view_dir);
-	float3 norm_light_dir = normalize(in.light_dir);
+	float3 norm_view_dir = normalize(in->view_dir);
+	float3 norm_light_dir = normalize(in->light_dir);
 	float3 norm_half_dir = normalize(norm_view_dir + norm_light_dir);
-	float3 normal = norm_tex.sample(smplr, in.tex_coord, tex_grad).xyz * 2.0f - 1.0f;
+	float3 normal = norm_tex.sample(smplr, in->tex_coord, tex_grad).xyz * 2.0f - 1.0f;
 	
 	float lambert = dot(normal, norm_light_dir);
 	if(lambert > 0.0f) {
@@ -135,7 +225,7 @@ fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
 		float slope = sqrt(1.0f - bias_lambert * bias_lambert) / bias_lambert; // = tan(acos(lambert))
 		float shadow_bias = clamp(fixed_bias * slope, 0.0f, fixed_bias * 2.0f);
 		
-		float3 shadow_coord = in.shadow_coord.xyz / in.shadow_coord.w;
+		float3 shadow_coord = in->shadow_coord.xyz / in->shadow_coord.w;
 		shadow_coord.y = 1.0f - shadow_coord.y; // why metal, why?
 #if 0
 		if(in.shadow_coord.w > 0.0f) {
@@ -175,7 +265,7 @@ fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
 		lighting += lambert;
 		
 		// specular
-		float spec = spec_tex.sample(smplr, in.tex_coord, tex_grad).x;
+		float spec = spec_tex.sample(smplr, in->tex_coord, tex_grad).x;
 		float specular = pow(max(dot(norm_half_dir, normal), 0.0f), spec * 10.0f);
 		lighting += specular;
 		
@@ -184,59 +274,36 @@ fragment scene_fragment_out scene_fs(const scene_in_out in [[stage_in]],
 	}
 	lighting = max(lighting, ambient);
 	
-	//
+	return float4(diff.xyz * lighting, 1.0f);
+}
+
+fragment scene_scatter_fragment_out scene_scatter_fs(const scene_scatter_in_out in [[stage_in]],
+													 const sampler smplr [[sampler(0)]],
+													 texture2d<float> diff_tex [[texture(0)]],
+													 texture2d<float> spec_tex [[texture(1)]],
+													 texture2d<float> norm_tex [[texture(2)]],
+													 texture2d<float> mask_tex [[texture(3)]],
+													 depth2d<float> shadow_tex [[texture(4)]]) {
 	return {
-		float4(diff.xyz * lighting, 1.0f),
-		encode_motion(in.motion)
+		scene_fs((const thread scene_base_in_out*)&in, smplr, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
+		encode_3d_motion(in.motion)
 	};
 }
 
-//////////////////////////////////////////
-// motion only
-struct motion_uniforms_t {
-	matrix_float4x4 mvpm;
-	matrix_float4x4 mvm;
-	matrix_float4x4 prev_mvm;
-};
-
-struct motion_in_out {
-	float4 position [[position]];
-	float2 tex_coord;
-	float3 motion;
-};
-
-vertex motion_in_out motion_only_vs(device const packed_float3* in_position [[buffer(0)]],
-									device const packed_float2* in_tex_coord [[buffer(1)]],
-									constant motion_uniforms_t& uniforms [[buffer(2)]],
-									const unsigned int vid [[vertex_id]]) {
-	motion_in_out out;
-	out.tex_coord = in_tex_coord[vid];
-	
-	float4 position(in_position[vid], 1.0f);
-	out.position = uniforms.mvpm * position;
-	
-	float4 prev_pos = uniforms.prev_mvm * position;
-	float4 cur_pos = uniforms.mvm * position;
-	out.motion = cur_pos.xyz - prev_pos.xyz;
-	
-	return out;
-}
-
-fragment float4 motion_only_fs(const motion_in_out in [[stage_in]],
-							   texture2d<float> mask_tex [[texture(0)]]) {
-	constexpr sampler smplr {
-		coord::normalized,
-		filter::linear,
-		mip_filter::linear,
-		mag_filter::linear,
-		min_filter::linear,
-		address::repeat,
+fragment scene_gather_fragment_out scene_gather_fs(const scene_gather_in_out in [[stage_in]],
+												   const sampler smplr [[sampler(0)]],
+												   texture2d<float> diff_tex [[texture(0)]],
+												   texture2d<float> spec_tex [[texture(1)]],
+												   texture2d<float> norm_tex [[texture(2)]],
+												   texture2d<float> mask_tex [[texture(3)]],
+												   depth2d<float> shadow_tex [[texture(4)]]) {
+	return {
+		scene_fs((const thread scene_base_in_out*)&in, smplr, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+		(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
 	};
-	
-	float mask = mask_tex.sample(smplr, in.tex_coord, level { 0.0f }).x;
-	if(mask < 0.5f) discard_fragment();
-	
-	return float4(in.motion, 0.0f);
 }
 
 //////////////////////////////////////////

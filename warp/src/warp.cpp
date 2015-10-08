@@ -220,7 +220,11 @@ static float2 decode_2d_motion(const uint32_t& encoded_motion) {
 		}
 	};
 	// map [-32767, 32767] -> [-0.5, 0.5]
+#if defined(SCREEN_ORIGIN_LEFT_BOTTOM)
 	return float2(shifted_motion.s16) * (0.5f / 32767.0f);
+#else // if the origin is at the top left, the y component points in the opposite/wrong direction
+	return float2(shifted_motion.s16) * float2 { 0.5f / 32767.0f, -0.5f / 32767.0f };
+#endif
 }
 
 kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
@@ -305,6 +309,9 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 					  err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, p_init,
 					  decode_2d_motion(read(img_motion_backward, p_init)));
 			}*/
+		}
+		else if(dbg_render_type == 8) {
+			color = p_fwd;
 		}
 	}
 	else
