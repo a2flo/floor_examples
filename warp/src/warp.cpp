@@ -351,7 +351,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		}
 		// case 3 / else: both are invalid -> just do a linear interpolation between the two
 		else {
-			color = color_bwd.interpolated(color_bwd, relative_delta);
+			color = color_fwd.interpolated(color_bwd, relative_delta);
 		}
 	}
 	
