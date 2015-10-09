@@ -477,6 +477,49 @@ struct mtl_grammar {
 };
 
 
+pair<bool, SDL_Surface*> obj_loader::load_texture(const char* filename) {
+	SDL_Surface* surface = IMG_Load(filename);
+	if(surface == nullptr) {
+		log_error("error loading texture file \"%s\": %s!", filename, SDL_GetError());
+		return { false, nullptr };
+	}
+	
+	// check format, BGR(A) needs to be converted to RGB(A)
+	GLint internal_format = 0;
+	GLenum format = 0;
+	GLenum type = 0;
+	check_format(surface, internal_format, format, type);
+	if(format == GL_BGR || format == GL_BGRA) {
+		SDL_PixelFormat new_pformat;
+		memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
+		new_pformat.Rshift = surface->format->Bshift;
+		new_pformat.Bshift = surface->format->Rshift;
+		new_pformat.Rmask = surface->format->Bmask;
+		new_pformat.Bmask = surface->format->Rmask;
+		
+		bool alpha_component = (surface->format->Ashift != 0);
+		if(!alpha_component) {
+			new_pformat.BytesPerPixel = 3;
+			new_pformat.BitsPerPixel = 24;
+		}
+		else if(format == GL_BGRA) {
+			new_pformat.BytesPerPixel = 4;
+			new_pformat.BitsPerPixel = 32;
+		}
+		
+		SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
+		if(new_surface == nullptr) {
+			log_error("BGR(A)->RGB(A) surface conversion failed!");
+			SDL_FreeSurface(surface);
+			return { false, nullptr };
+		}
+		SDL_FreeSurface(surface);
+		surface = new_surface;
+	}
+	
+	return { true, surface };
+}
+
 static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  unordered_map<string, pair<uint32_t, compute_image*>>& texture_filenames,
 						  // opengl or metal?
@@ -510,45 +553,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 					}
 				}
 				
-				SDL_Surface* surface = IMG_Load(filename.c_str());
-				if(surface == nullptr) {
-					log_error("error loading texture file \"%s\": %s!", filenames[id], SDL_GetError());
-					continue;
-				}
-				
-				// check format, BGR(A) needs to be converted to RGB(A)
-				GLint internal_format = 0;
-				GLenum format = 0;
-				GLenum type = 0;
-				check_format(surface, internal_format, format, type);
-				if(format == GL_BGR || format == GL_BGRA) {
-					SDL_PixelFormat new_pformat;
-					memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
-					new_pformat.Rshift = surface->format->Bshift;
-					new_pformat.Bshift = surface->format->Rshift;
-					new_pformat.Rmask = surface->format->Bmask;
-					new_pformat.Bmask = surface->format->Rmask;
-					
-					bool alpha_component = (surface->format->Ashift != 0);
-					if(!alpha_component) {
-						new_pformat.BytesPerPixel = 3;
-						new_pformat.BitsPerPixel = 24;
-					}
-					else if(format == GL_BGRA) {
-						new_pformat.BytesPerPixel = 4;
-						new_pformat.BitsPerPixel = 32;
-					}
-					
-					SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
-					if(new_surface == nullptr) {
-						log_error("BGR(A)->RGB(A) surface conversion failed!");
-						continue;
-					}
-					SDL_FreeSurface(surface);
-					surface = new_surface;
-				}
-				
-				surfaces[id] = surface;
+				const auto tex = obj_loader::load_texture(filename.c_str());
+				surfaces[id] = tex.second;
+				if(!tex.first) continue;
 			}
 			active_workers--;
 		});

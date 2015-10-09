@@ -69,8 +69,8 @@ namespace warp_camera {
 				-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 				(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
 			};
-			// ignore full depth (this happens when clear depth == 1.0f and no fragments+depth are written for a pixel)
-			if(depth == 1.0f) return 0.0f;
+			// special case: clear/full depth, assume this comes from a normalized sky box
+			if(depth == 1.0f) return 1.0f;
 			return near_far_projection.y / (depth - near_far_projection.x);
 		}
 		else if(type == depth_type::z_div_w) {

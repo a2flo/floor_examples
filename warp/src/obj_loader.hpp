@@ -89,6 +89,8 @@ class obj_loader {
 public:
 	static shared_ptr<obj_model> load(const string& file_name, bool& success, const bool is_opengl);
 	
+	static pair<bool, SDL_Surface*> load_texture(const char* filename);
+	
 protected:
 	// static class
 	obj_loader(const obj_loader&) = delete;

@@ -51,6 +51,7 @@ static struct {
 	int2 dim { 8192 };
 #endif
 } shadow_map;
+static GLuint skybox_tex { 0u };
 static float3 light_pos;
 static shared_ptr<compute_image> compute_color;
 static shared_ptr<compute_image> compute_scene_color[2];
@@ -58,6 +59,7 @@ static shared_ptr<compute_image> compute_scene_depth[2];
 static shared_ptr<compute_image> compute_scene_motion[4];
 static shared_ptr<compute_image> compute_scene_motion_depth[4];
 static matrix4f prev_mvm, prev_prev_mvm;
+static matrix4f prev_rmvm, prev_prev_rmvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
@@ -254,6 +256,65 @@ static void create_textures() {
 	}
 }
 
+static void create_skybox() {
+	static const char* skybox_filenames[] {
+		"skybox/posx.png",
+		"skybox/negx.png",
+		"skybox/posy.png",
+		"skybox/negy.png",
+		"skybox/posz.png",
+		"skybox/negz.png",
+	};
+	
+	array<SDL_Surface*, size(skybox_filenames)> skybox_surfaces;
+	auto surf_iter = begin(skybox_surfaces);
+	for(const auto& filename : skybox_filenames) {
+		const auto tex = obj_loader::load_texture(floor::data_path(filename).c_str());
+		if(!tex.first) {
+			log_error("failed to load sky box");
+			return;
+		}
+		*surf_iter++ = tex.second;
+	}
+	
+	// now create/generate an opengl texture and bind it
+	glGenTextures(1, &skybox_tex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_tex);
+	
+	// texture parameters
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	
+	static const GLenum cubemap_enums[size(skybox_filenames)] {
+		GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+		GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+		GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+	};
+	
+	for(size_t i = 0, count = size(cubemap_enums); i < count; ++i) {
+		glTexImage2D(cubemap_enums[i], 0, GL_RGB,
+					 skybox_surfaces[i]->w, skybox_surfaces[i]->h,
+					 0, GL_RGB, GL_UNSIGNED_BYTE,
+					 skybox_surfaces[i]->pixels);
+		
+	}
+	
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+}
+
+static void destroy_skybox() {
+	if(skybox_tex > 0) {
+		glDeleteTextures(1, &skybox_tex);
+		skybox_tex = 0;
+	}
+}
+
 static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
 	if(type == EVENT_TYPE::WINDOW_RESIZE) {
 		destroy_textures();
@@ -311,6 +372,7 @@ bool gl_renderer::init() {
 	
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 	create_textures();
+	create_skybox();
 	
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -328,6 +390,7 @@ bool gl_renderer::init() {
 
 void gl_renderer::destroy() {
 	destroy_textures();
+	destroy_skybox();
 }
 
 bool gl_renderer::render(const gl_obj_model& model,
@@ -592,35 +655,32 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	
 	const matrix4f pm { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
 											   0.5f, warp_state.view_distance) };
-	const matrix4f rot_mat {
+	const matrix4f rmvm {
 		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
 	};
-	const matrix4f mvm { matrix4f::translation(cam.get_position()) * rot_mat };
+	const matrix4f mvm { matrix4f::translation(cam.get_position()) * rmvm };
 
+	matrix4f mvpm;
 	if(warp_state.is_scatter) {
 		glUniformMatrix4fv(shd.program.uniforms["mvm"].location, 1, false, &mvm.data[0]);
 		glUniformMatrix4fv(shd.program.uniforms["prev_mvm"].location, 1, false, &prev_mvm.data[0]);
 		
 #if defined(FORWARD_PROJECTION)
-		const matrix4f mvpm { mvm * pm };
+		mvpm = mvm * pm;
 #else
-		const matrix4f mvpm { prev_mvm * pm };
+		mvpm = prev_mvm * pm;
 #endif
 		glUniformMatrix4fv(shd.program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
 	}
 	else {
+		mvpm = prev_mvm * pm;
 		const matrix4f next_mvpm { mvm * pm };
-		const matrix4f mvpm { prev_mvm * pm };
 		const matrix4f prev_mvpm { prev_prev_mvm * pm };
 		glUniformMatrix4fv(shd.program.uniforms["mvpm"].location, 1, false, &mvpm.data[0]);
 		glUniformMatrix4fv(shd.program.uniforms["next_mvpm"].location, 1, false, &next_mvpm.data[0]);
 		glUniformMatrix4fv(shd.program.uniforms["prev_mvpm"].location, 1, false, &prev_mvpm.data[0]);
 	}
-
-	// remember t-2 and t-1 mvms
-	prev_prev_mvm = prev_mvm;
-	prev_mvm = mvm;
 	
 	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
 		glUniformMatrix4fv(shd.program.uniforms["light_bias_mvpm"].location, 1, false, &light_bias_mvpm.data[0]);
@@ -704,13 +764,55 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
+	// draw sky box
+	if(!warp_state.is_single_frame && !warp_state.is_motion_only) {
+		auto& skybox_shd = shader_objects[warp_state.is_scatter ? "SKYBOX_SCATTER" : "SKYBOX_GATHER"];
+		glUseProgram(skybox_shd.program.program);
+		
+		const GLint skybox_loc { skybox_shd.program.uniforms["skybox_tex"].location };
+		const GLint skybox_num { skybox_shd.program.samplers["skybox_tex"] };
+		glUniform1i(skybox_loc, skybox_num);
+		glActiveTexture((GLenum)(GL_TEXTURE0 + skybox_num));
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox_tex);
+		
+		matrix4f irmvpm;
+		if(warp_state.is_scatter) {
+#if defined(FORWARD_PROJECTION)
+			irmvpm = (rmvm * pm).inverted();
+#else
+			irmvpm = (prev_rmvm * pm).inverted();
+#endif
+			const auto prev_imvpm = (prev_rmvm * pm).inverted();
+			glUniformMatrix4fv(skybox_shd.program.uniforms["prev_imvpm"].location, 1, false, &prev_imvpm.data[0]);
+		}
+		else {
+			irmvpm = (prev_rmvm * pm).inverted();
+			const matrix4f next_mvpm { rmvm * pm };
+			const matrix4f prev_mvpm { prev_prev_rmvm * pm };
+			glUniformMatrix4fv(skybox_shd.program.uniforms["next_mvpm"].location, 1, false, &next_mvpm.data[0]);
+			glUniformMatrix4fv(skybox_shd.program.uniforms["prev_mvpm"].location, 1, false, &prev_mvpm.data[0]);
+		}
+		glUniformMatrix4fv(skybox_shd.program.uniforms["imvpm"].location, 1, false, &irmvpm.data[0]);
+		
+		glDepthFunc(GL_LEQUAL); // need to overwrite clear depth of 1.0
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDepthFunc(GL_LESS);
+	}
+	
 	glUseProgram(0);
 	glDrawBuffers(1, &draw_buffers[0]); // reset to 1 draw buffer
 	
+	// end
 	if(!warp_state.is_scatter) {
 		// flip state
 		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
 	}
+	
+	// remember t-2 and t-1 mvms
+	prev_prev_mvm = prev_mvm;
+	prev_prev_rmvm = prev_rmvm;
+	prev_mvm = mvm;
+	prev_rmvm = rmvm;
 }
 
 bool gl_renderer::compile_shaders() {
@@ -991,6 +1093,107 @@ bool gl_renderer::compile_shaders() {
 			frag_depth = gl_FragCoord.z;
 		}
 	)RAWSTR"};
+	static const char skybox_vs_text[] { u8R"RAWSTR(
+		uniform mat4 imvpm;
+#if defined(WARP_GATHER)
+		uniform mat4 next_mvpm; // @t+1
+		uniform mat4 prev_mvpm; // @t-1
+#else
+		uniform mat4 prev_imvpm;
+#endif
+		
+		out vec3 cube_tex_coord;
+#if !defined(WARP_GATHER)
+		out vec4 cur_pos;
+		out vec4 prev_pos;
+#else
+		out vec4 motion_prev;
+		out vec4 motion_now;
+		out vec4 motion_next;
+#endif
+		
+		void main() {
+			const vec2 fullscreen_triangle[3] = vec2[](vec2(0.0, 2.0), vec2(-3.0, -1.0), vec2(3.0, -1.0));
+			vec4 vertex = vec4(fullscreen_triangle[gl_VertexID], 1.0, 1.0);
+			gl_Position = vertex;
+			
+			vec4 proj_vertex = imvpm * vertex;
+			cube_tex_coord = proj_vertex.xyz;
+			
+#if !defined(WARP_GATHER)
+			cur_pos = proj_vertex;
+			prev_pos = prev_imvpm * vertex;
+#else
+			motion_prev = prev_mvpm * proj_vertex;
+			motion_now = vertex;
+			motion_next = next_mvpm * proj_vertex;
+#endif
+		}
+	)RAWSTR"};
+	static const char skybox_fs_text[] { u8R"RAWSTR(
+		uniform samplerCube skybox_tex;
+		
+		in vec3 cube_tex_coord;
+		
+#if !defined(WARP_GATHER)
+		//out vec3 motion;
+		in vec4 cur_pos;
+		in vec4 prev_pos;
+#else
+		in vec4 motion_prev;
+		in vec4 motion_now;
+		in vec4 motion_next;
+#endif
+		
+		layout (location = 0) out vec4 frag_color;
+#if !defined(WARP_GATHER)
+		layout (location = 1) out uint motion_color;
+#else
+		layout (location = 1) out uint motion_forward;
+		layout (location = 2) out uint motion_backward;
+		layout (location = 3) out float motion_depth_forward;
+		layout (location = 4) out float motion_depth_backward;
+#endif
+		
+		uint encode_3d_motion(in vec3 motion) {
+			const float range = 64.0; // [-range, range]
+			vec3 signs = sign(motion);
+			vec3 cmotion = clamp(abs(motion), 0.0, range);
+			// use log2 scaling
+			cmotion = log2(cmotion + 1.0);
+			// encode x and z with 10-bit, y with 9-bit
+			cmotion *= 1.0 / log2(range + 1.0);
+			cmotion.xz *= 1024.0; // 2^10
+			cmotion.y *= 512.0; // 2^9
+			return ((signs.x < 0.0 ? 0x80000000u : 0u) |
+					(signs.y < 0.0 ? 0x40000000u : 0u) |
+					(signs.z < 0.0 ? 0x20000000u : 0u) |
+					(clamp(uint(cmotion.x), 0u, 1023u) << 19u) |
+					(clamp(uint(cmotion.y), 0u, 511u) << 10u) |
+					(clamp(uint(cmotion.z), 0u, 1023u)));
+		}
+		
+		uint encode_2d_motion(in vec2 motion) { // NOTE: with GLSL 4.20, could also directly use packSnorm2x16(motion) here
+			// uniform in [-1, 1]
+			vec2 cmotion = clamp(motion * 32767.0, -32767.0, 32767.0); // +/- 2^15 - 1, fit into 16 bits
+			// weird bit reinterpretation chain, b/c there is no direct way to interpret an ivec2 as an uvec2
+			uvec2 umotion = floatBitsToUint(intBitsToFloat(ivec2(cmotion))) & 0xFFFFu;
+			return (umotion.x | (umotion.y << 16u));
+		}
+		
+		void main() {
+			frag_color = texture(skybox_tex, cube_tex_coord);
+#if !defined(WARP_GATHER)
+			//motion_color = encode_3d_motion(prev_pos.xyz - cur_pos.xyz); // not sure why inverted?
+			motion_color = encode_3d_motion(prev_pos.xyz - cur_pos.xyz);
+#else
+			motion_forward = encode_2d_motion((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
+			motion_depth_forward = (motion_next.z / motion_next.w) - (motion_now.z / motion_now.w);
+			motion_backward = encode_2d_motion((motion_prev.xy / motion_prev.w) - (motion_now.xy / motion_now.w));
+			motion_depth_backward = (motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w);
+#endif
+		}
+	)RAWSTR"};
 	
 	{
 		const auto shd = floor_compile_shader("SCENE_SCATTER", scene_vs_text, scene_fs_text, 330);
@@ -999,6 +1202,17 @@ bool gl_renderer::compile_shaders() {
 	}
 	{
 		const auto shd = floor_compile_shader("SCENE_GATHER", scene_vs_text, scene_fs_text, 330,
+											  { { "WARP_GATHER", 1 } });
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
+	}
+	{
+		const auto shd = floor_compile_shader("SKYBOX_SCATTER", skybox_vs_text, skybox_fs_text, 330);
+		if(!shd.first) return false;
+		shader_objects.emplace(shd.second.name, shd.second);
+	}
+	{
+		const auto shd = floor_compile_shader("SKYBOX_GATHER", skybox_vs_text, skybox_fs_text, 330,
 											  { { "WARP_GATHER", 1 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
