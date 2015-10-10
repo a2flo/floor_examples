@@ -286,31 +286,17 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 #if 0
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
-		else if(dbg_render_type == 4) color = color_bwd;
+		else if(dbg_render_type == 2) color = color_bwd;
+		else if(dbg_render_type == 3) {
+			color = read(img_color_prev, p_init);
+		}
+		else if(dbg_render_type == 4) {
+			color = read(img_color, p_init);
+		}
 		else if(dbg_render_type == 5) {
 			color = ((fwd_valid && bwd_valid) ? float4 { 1.0f } :
 					 (fwd_valid ? float4 { 0.0f, 1.0f, 0.0f, 1.0f} :
 					  (bwd_valid ? float4 { 1.0f, 0.0f, 0.0f, 1.0f} : float4 { 0.0f } )));
-		}
-		else if(dbg_render_type == 2) {
-			color = read(img_color_prev, p_init);
-		}
-		else if(dbg_render_type == 3) {
-			color = read(img_color, p_init);
-		}
-		else if(dbg_render_type == 6) {
-			color = float4 { float3 { z_fwd }.absed() / warp_camera::near_far_plane.y, 1.0f };
-		}
-		else if(dbg_render_type == 7) {
-			color = (!bwd_valid ? float4 { err_bwd } : float4 { 1.0f, 0.0f, 0.0f, 1.0f });
-			/*if(global_id.x == 5 && global_id.y == 30) {
-				print("err: $, p: $, m: $, s: $, f: $, init: $",
-					  err_bwd, p_bwd, motion_bwd, (1.0f - relative_delta) * motion_bwd, p_init,
-					  decode_2d_motion(read(img_motion_backward, p_init)));
-			}*/
-		}
-		else if(dbg_render_type == 8) {
-			color = p_fwd;
 		}
 	}
 	else
