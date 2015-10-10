@@ -507,22 +507,35 @@ void gl_renderer::blit(const bool full_scene) {
 		}
 	}
 	else {
+		// split view rendering
+		// clear first, so that we have a black bar in the middle
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
+		// right side is always the original scene
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		
-		compute_color->release_opengl_object(warp_state.dev_queue);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
-						  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
-						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		compute_color->acquire_opengl_object(warp_state.dev_queue);
+		// left side: either the original scene (for full frames), or the warped frame (for in-between)
+		if(full_scene) {
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
+							  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
+							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		}
+		else {
+			compute_color->release_opengl_object(warp_state.dev_queue);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
+							  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
+							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			compute_color->acquire_opengl_object(warp_state.dev_queue);
+		}
 	}
 }
 
