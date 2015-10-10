@@ -263,6 +263,14 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				if(warp_state.gather_dbg > 0) --warp_state.gather_dbg;
 				log_debug("dbg: %u", warp_state.gather_dbg);
 				break;
+			case SDLK_t:
+				warp_state.is_debug_delta ^= true;
+				log_debug("debug delta? %b", warp_state.is_debug_delta);
+				break;
+			case SDLK_b:
+				warp_state.is_split_view ^= true;
+				log_debug("split view? %b", warp_state.is_split_view);
+				break;
 			default: break;
 		}
 		return true;

@@ -373,7 +373,7 @@ struct skybox_gather_uniforms_t {
 static void skybox_vs(thread skybox_base_in_out* out,
 					  constant skybox_base_uniforms_t* uniforms,
 					  const unsigned int vid) {
-	const float2 fullscreen_triangle[3] {
+	constexpr const float2 fullscreen_triangle[3] {
 		float2(0.0f, 2.0f), float2(-3.0f, -1.0f), float2(3.0f, -1.0f)
 	};
 	

@@ -588,7 +588,6 @@ void metal_renderer::render(const metal_obj_model& model,
 		cmd_buffer.label = @"warp render";
 		
 		//
-		//static constexpr const float frame_limit { 0.0f };
 		static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 		static size_t warp_frame_num = 0;
 		bool blit = false;
@@ -661,6 +660,16 @@ static void render_kernels(const camera& cam,
 	const auto timing_start = floor_timer2::start();
 #endif
 	
+	// slow fixed delta for debugging/demo purposes
+	static float dbg_delta = 0.0f;
+	static constexpr const float delta_eps = 0.0025f;
+	if(warp_state.is_debug_delta) {
+		if(dbg_delta >= (1.0f - delta_eps)) {
+			dbg_delta = delta_eps;
+		}
+		else dbg_delta += delta_eps;
+	}
+	
 	if(warp_state.is_scatter) {
 		// clear if enabled + always clear the first frame
 		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
@@ -677,7 +686,7 @@ static void render_kernels(const camera& cam,
 									  scene_fbo.depth[0],
 									  scene_fbo.motion[0],
 									  scene_fbo.compute_color,
-									  delta / render_delta,
+									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
 									  (!warp_state.is_single_frame ?
 									   float4 { -1.0f } :
 									   float4 { cam.get_single_frame_direction(), 1.0f }
@@ -691,17 +700,6 @@ static void render_kernels(const camera& cam,
 		}
 	}
 	else {
-//#define GATHER_DEBUG_DELTA 1
-#if defined(GATHER_DEBUG_DELTA)
-		static float dbg_delta = 0.0f;
-		
-		static constexpr const float delta_eps = 0.0025f;
-		if(dbg_delta >= (1.0f - delta_eps)) {
-			dbg_delta = delta_eps;
-		}
-		else dbg_delta += delta_eps;
-#endif
-		
 		warp_state.dev_queue->execute(warp_state.warp_gather_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
@@ -718,11 +716,7 @@ static void render_kernels(const camera& cam,
 									  scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
 									  scene_fbo.motion_depth[(1u - warp_state.cur_fbo) * 2 + 1],
 									  scene_fbo.compute_color,
-#if !defined(GATHER_DEBUG_DELTA)
-									  delta / render_delta,
-#else
-									  dbg_delta,
-#endif
+									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
 									  warp_state.gather_eps_1,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);

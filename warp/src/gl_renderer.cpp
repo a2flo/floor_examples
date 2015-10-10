@@ -60,7 +60,7 @@ static shared_ptr<compute_image> compute_scene_motion[4];
 static shared_ptr<compute_image> compute_scene_motion_depth[4];
 static matrix4f prev_mvm, prev_prev_mvm;
 static matrix4f prev_rmvm, prev_prev_rmvm;
-static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
+static constexpr const float4 clear_color { 0.0f };
 static bool first_frame { true };
 
 static void destroy_textures() {
@@ -487,20 +487,40 @@ bool gl_renderer::render(const gl_obj_model& model,
 }
 
 void gl_renderer::blit(const bool full_scene) {
-	if(full_scene) {
-		// if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-						  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	if(!warp_state.is_split_view) {
+		if(full_scene) {
+			// if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+							  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		}
+		else {
+			compute_color->release_opengl_object(warp_state.dev_queue);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+			glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+							  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			compute_color->acquire_opengl_object(warp_state.dev_queue);
+		}
 	}
 	else {
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glClear(GL_COLOR_BUFFER_BIT);
+		
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+						  scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+		
 		compute_color->release_opengl_object(warp_state.dev_queue);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-						  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+		glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
+						  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
 						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		compute_color->acquire_opengl_object(warp_state.dev_queue);
 	}
@@ -514,6 +534,16 @@ void gl_renderer::render_kernels(const camera& cam,
 	warp_state.dev_queue->finish();
 	const auto timing_start = floor_timer2::start();
 #endif
+	
+	// slow fixed delta for debugging/demo purposes
+	static float dbg_delta = 0.0f;
+	static constexpr const float delta_eps = 0.0025f;
+	if(warp_state.is_debug_delta) {
+		if(dbg_delta >= (1.0f - delta_eps)) {
+			dbg_delta = delta_eps;
+		}
+		else dbg_delta += delta_eps;
+	}
 	
 	if(warp_state.is_scatter) {
 		// clear if enabled + always clear the first frame
@@ -531,7 +561,7 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_depth[0],
 									  compute_scene_motion[0],
 									  compute_color,
-									  delta / render_delta,
+									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
 									  (!warp_state.is_single_frame ?
 									   float4 { -1.0f } :
 									   float4 { cam.get_single_frame_direction(), 1.0f }
@@ -545,17 +575,6 @@ void gl_renderer::render_kernels(const camera& cam,
 		}
 	}
 	else {
-//#define GATHER_DEBUG_DELTA 1
-#if defined(GATHER_DEBUG_DELTA)
-		static float dbg_delta = 0.0f;
-		
-		static constexpr const float delta_eps = 0.0025f;
-		if(dbg_delta >= (1.0f - delta_eps)) {
-			dbg_delta = delta_eps;
-		}
-		else dbg_delta += delta_eps;
-#endif
-		
 		warp_state.dev_queue->execute(warp_state.warp_gather_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
@@ -572,11 +591,7 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1],
 									  compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1],
 									  compute_color,
-#if !defined(GATHER_DEBUG_DELTA)
-									  delta / render_delta,
-#else
-									  dbg_delta,
-#endif
+									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
 									  warp_state.gather_eps_1,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);

@@ -36,6 +36,8 @@ struct warp_state_struct {
 	bool is_single_frame { false };
 	bool is_motion_only { false };
 	bool is_frame_repeat { false };
+	bool is_debug_delta { false };
+	bool is_split_view { false };
 	
 	//
 	bool is_scatter { false };
