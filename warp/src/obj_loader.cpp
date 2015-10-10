@@ -122,8 +122,10 @@ if(src_surface->format->Rshift == rshift && \
 	dst_image_type = floor_image_type; \
 }
 
-#define floor_check_format(surface, image_type) { \
-	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type); \
+COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
+	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
+	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type);
+	return image_type;
 }
 
 class obj_lexer final : public lexer {
@@ -616,8 +618,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 				continue;
 			}
 			
-			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
-			floor_check_format(surface, image_type);
+			COMPUTE_IMAGE_TYPE image_type = obj_loader::floor_image_type_format(surface);
 			image_type |= COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED;
 			
 			(*model_metal_textures)[i] = warp_state.ctx->create_image(warp_state.dev,

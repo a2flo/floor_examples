@@ -91,6 +91,8 @@ public:
 	
 	static pair<bool, SDL_Surface*> load_texture(const char* filename);
 	
+	static COMPUTE_IMAGE_TYPE floor_image_type_format(const SDL_Surface* surface);
+	
 protected:
 	// static class
 	obj_loader(const obj_loader&) = delete;

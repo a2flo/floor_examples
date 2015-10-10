@@ -329,6 +329,118 @@ vertex shadow_in_out shadow_vs(device const packed_float3* in_position [[buffer(
 }
 
 //////////////////////////////////////////
+// sky box
+
+struct skybox_base_in_out {
+	float4 position;
+	float3 cube_tex_coord;
+};
+
+struct skybox_scatter_in_out {
+	float4 position [[position]];
+	float3 cube_tex_coord;
+	float4 cur_pos;
+	float4 prev_pos;
+};
+
+struct skybox_gather_in_out {
+	float4 position [[position]];
+	float3 cube_tex_coord;
+	float4 motion_prev;
+	float4 motion_now;
+	float4 motion_next;
+};
+
+struct skybox_base_uniforms_t {
+	matrix_float4x4 imvpm;
+	matrix_float4x4 m0;
+	matrix_float4x4 m1;
+};
+
+struct skybox_scatter_uniforms_t {
+	matrix_float4x4 imvpm;
+	matrix_float4x4 prev_imvpm;
+	matrix_float4x4 m1; // unused
+};
+
+struct skybox_gather_uniforms_t {
+	matrix_float4x4 imvpm;
+	matrix_float4x4 next_mvpm;
+	matrix_float4x4 prev_mvpm;
+};
+
+
+static void skybox_vs(thread skybox_base_in_out* out,
+					  constant skybox_base_uniforms_t* uniforms,
+					  const unsigned int vid) {
+	const float2 fullscreen_triangle[3] {
+		float2(0.0f, 2.0f), float2(-3.0f, -1.0f), float2(3.0f, -1.0f)
+	};
+	
+	float4 pos(fullscreen_triangle[vid], 1.0f, 1.0f);
+	out->position = pos;
+	out->cube_tex_coord = (uniforms->imvpm * pos).xyz;
+}
+
+vertex skybox_scatter_in_out skybox_scatter_vs(constant skybox_scatter_uniforms_t& uniforms [[buffer(0)]],
+											   const unsigned int vid [[vertex_id]]) {
+	skybox_scatter_in_out out;
+	
+	skybox_vs((thread skybox_base_in_out*)&out, (constant skybox_base_uniforms_t*)&uniforms, vid);
+	
+	out.cur_pos = uniforms.imvpm * out.position;
+	out.prev_pos = uniforms.prev_imvpm * out.position;
+	
+	return out;
+}
+
+vertex skybox_gather_in_out skybox_gather_vs(constant skybox_gather_uniforms_t& uniforms [[buffer(0)]],
+											 const unsigned int vid [[vertex_id]]) {
+	skybox_gather_in_out out;
+	
+	skybox_vs((thread skybox_base_in_out*)&out, (constant skybox_base_uniforms_t*)&uniforms, vid);
+	
+	const float4 proj_vertex = uniforms.imvpm * out.position;
+	out.motion_prev = uniforms.prev_mvpm * proj_vertex;
+	out.motion_now = out.position;
+	out.motion_next = uniforms.next_mvpm * proj_vertex;
+	
+	return out;
+}
+
+static float4 skybox_fs(const thread skybox_base_in_out* in,
+						texturecube<float> skybox_tex) {
+	constexpr sampler skybox_smplr {
+		coord::normalized,
+		filter::linear,
+		mag_filter::linear,
+		min_filter::linear,
+		address::clamp_to_edge
+	};
+	
+	return skybox_tex.sample(skybox_smplr, in->cube_tex_coord);
+}
+
+fragment scene_scatter_fragment_out skybox_scatter_fs(const skybox_scatter_in_out in [[stage_in]],
+													  texturecube<float> skybox_tex [[texture(0)]]) {
+	return {
+		skybox_fs((const thread skybox_base_in_out*)&in, skybox_tex),
+		encode_3d_motion(in.prev_pos.xyz - in.cur_pos.xyz)
+	};
+}
+
+fragment scene_gather_fragment_out skybox_gather_fs(const skybox_gather_in_out in [[stage_in]],
+													texturecube<float> skybox_tex [[texture(0)]]) {
+	return {
+		skybox_fs((const thread skybox_base_in_out*)&in, skybox_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+		(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+	};
+}
+
+//////////////////////////////////////////
 // manual blitting
 
 struct blit_in_out {

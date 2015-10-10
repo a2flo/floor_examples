@@ -1136,7 +1136,6 @@ bool gl_renderer::compile_shaders() {
 		in vec3 cube_tex_coord;
 		
 #if !defined(WARP_GATHER)
-		//out vec3 motion;
 		in vec4 cur_pos;
 		in vec4 prev_pos;
 #else
@@ -1184,8 +1183,7 @@ bool gl_renderer::compile_shaders() {
 		void main() {
 			frag_color = texture(skybox_tex, cube_tex_coord);
 #if !defined(WARP_GATHER)
-			//motion_color = encode_3d_motion(prev_pos.xyz - cur_pos.xyz); // not sure why inverted?
-			motion_color = encode_3d_motion(prev_pos.xyz - cur_pos.xyz);
+			motion_color = encode_3d_motion(prev_pos.xyz - cur_pos.xyz); // not sure why inverted?
 #else
 			motion_forward = encode_2d_motion((motion_next.xy / motion_next.w) - (motion_now.xy / motion_now.w));
 			motion_depth_forward = (motion_next.z / motion_next.w) - (motion_now.z / motion_now.w);

@@ -40,6 +40,11 @@ static id <MTLRenderPipelineState> render_pipeline_state_gather;
 static MTLRenderPassDescriptor* render_pass_desc_scatter { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc_gather { nullptr };
 
+static id <MTLRenderPipelineState> skybox_pipeline_state_scatter;
+static id <MTLRenderPipelineState> skybox_pipeline_state_gather;
+static MTLRenderPassDescriptor* skybox_pass_desc_scatter { nullptr };
+static MTLRenderPassDescriptor* skybox_pass_desc_gather { nullptr };
+
 static id <MTLRenderPipelineState> shadow_pipeline_state;
 static MTLRenderPassDescriptor* shadow_pass_desc { nullptr };
 
@@ -48,6 +53,7 @@ static MTLRenderPassDescriptor* blit_pass_desc { nullptr };
 
 static id <MTLDepthStencilState> depth_state;
 static id <MTLDepthStencilState> passthrough_depth_state;
+static id <MTLDepthStencilState> skybox_depth_state;
 static id <MTLSamplerState> sampler_state;
 static metal_view* view { nullptr };
 
@@ -65,8 +71,10 @@ static struct {
 	shared_ptr<compute_image> shadow_image;
 	uint2 dim { 2048 };
 } shadow_map;
+static shared_ptr<compute_image> skybox_tex;
 static float3 light_pos;
 static matrix4f prev_mvm, prev_prev_mvm;
+static matrix4f prev_rmvm, prev_prev_rmvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
 
@@ -138,6 +146,59 @@ static void create_textures() {
 		render_pass_desc_scatter.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
 		render_pass_desc_scatter.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
 	}
+	if(skybox_pass_desc_scatter != nil) {
+		skybox_pass_desc_scatter.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[0].get())->get_metal_image();
+		skybox_pass_desc_scatter.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
+		skybox_pass_desc_scatter.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
+	}
+}
+
+static void create_skybox() {
+	static const char* skybox_filenames[] {
+		"skybox/posx.png",
+		"skybox/negx.png",
+		"skybox/posy.png",
+		"skybox/negy.png",
+		"skybox/posz.png",
+		"skybox/negz.png",
+	};
+	
+	array<SDL_Surface*, size(skybox_filenames)> skybox_surfaces;
+	auto surf_iter = begin(skybox_surfaces);
+	for(const auto& filename : skybox_filenames) {
+		const auto tex = obj_loader::load_texture(floor::data_path(filename).c_str());
+		if(!tex.first) {
+			log_error("failed to load sky box");
+			return;
+		}
+		*surf_iter++ = tex.second;
+	}
+	
+	//
+	COMPUTE_IMAGE_TYPE image_type = obj_loader::floor_image_type_format(skybox_surfaces[0]);
+	image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_CUBE |
+				   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
+				   COMPUTE_IMAGE_TYPE::READ);
+	
+	// need to copy the data to a continuous array
+	const uint2 skybox_dim { uint32_t(skybox_surfaces[0]->w), uint32_t(skybox_surfaces[0]->h) };
+	const auto skybox_size = image_data_size_from_types(skybox_dim, image_type);
+	const auto slice_size = image_slice_data_size_from_types(skybox_dim, image_type);
+	auto skybox_pixels = make_unique<uint8_t[]>(skybox_size);
+	for(size_t i = 0, count = size(skybox_surfaces); i < count; ++i) {
+		memcpy(skybox_pixels.get() + i * slice_size, skybox_surfaces[i]->pixels, slice_size);
+	}
+	
+	skybox_tex = warp_state.ctx->create_image(warp_state.dev,
+											  skybox_dim,
+											  image_type,
+											  skybox_pixels.get(),
+											  COMPUTE_MEMORY_FLAG::READ |
+											  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+}
+
+static void destroy_skybox() {
+	skybox_tex = nullptr;
 }
 
 static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
@@ -266,7 +327,114 @@ bool metal_renderer::init() {
 		}
 	}
 	
-	// creates fbo textures/images and sets attachment textures of render_pass_desc_scatter (gather changes at runtime)
+	// sky box renderer setup
+	{
+		// scatter
+		{
+			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
+			pipeline_desc.label = @"warp skybox pipeline (scatter)";
+			pipeline_desc.sampleCount = 1;
+			pipeline_desc.vertexFunction = shader_objects["SKYBOX_SCATTER"]->vertex_program;
+			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_SCATTER"]->fragment_program;
+			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
+			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].blendingEnabled = false;
+			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
+			pipeline_desc.colorAttachments[1].blendingEnabled = false;
+			
+			NSError* error = nullptr;
+			skybox_pipeline_state_scatter = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
+			if(!skybox_pipeline_state_scatter) {
+				log_error("failed to create (scatter) skybox pipeline state: %s",
+						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
+				return false;
+			}
+		}
+		// gather
+		{
+			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
+			pipeline_desc.label = @"warp skybox pipeline (gather)";
+			pipeline_desc.sampleCount = 1;
+			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER"]->vertex_program;
+			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER"]->fragment_program;
+			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
+			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].blendingEnabled = false;
+			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
+			pipeline_desc.colorAttachments[1].blendingEnabled = false;
+			pipeline_desc.colorAttachments[2].pixelFormat = MTLPixelFormatR32Uint;
+			pipeline_desc.colorAttachments[2].blendingEnabled = false;
+			pipeline_desc.colorAttachments[3].pixelFormat = MTLPixelFormatR32Float;
+			pipeline_desc.colorAttachments[3].blendingEnabled = false;
+			pipeline_desc.colorAttachments[4].pixelFormat = MTLPixelFormatR32Float;
+			pipeline_desc.colorAttachments[4].blendingEnabled = false;
+			
+			NSError* error = nullptr;
+			skybox_pipeline_state_gather = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
+			if(!skybox_pipeline_state_gather) {
+				log_error("failed to create (gather) skybox pipeline state: %s",
+						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
+				return false;
+			}
+		}
+		
+		// scatter pass desc
+		{
+			skybox_pass_desc_scatter = [MTLRenderPassDescriptor renderPassDescriptor];
+			MTLRenderPassColorAttachmentDescriptor* color_attachment = skybox_pass_desc_scatter.colorAttachments[0];
+			color_attachment.loadAction = MTLLoadActionDontCare;
+			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+			color_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_attachment = skybox_pass_desc_scatter.colorAttachments[1];
+			motion_attachment.loadAction = MTLLoadActionDontCare;
+			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_scatter.depthAttachment;
+			depth_attachment.loadAction = MTLLoadActionLoad;
+			depth_attachment.clearDepth = 1.0;
+			depth_attachment.storeAction = MTLStoreActionStore;
+		}
+		
+		// gather pass desc
+		{
+			skybox_pass_desc_gather = [MTLRenderPassDescriptor renderPassDescriptor];
+			MTLRenderPassColorAttachmentDescriptor* color_attachment = skybox_pass_desc_gather.colorAttachments[0];
+			color_attachment.loadAction = MTLLoadActionDontCare;
+			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+			color_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_fwd_attachment = skybox_pass_desc_gather.colorAttachments[1];
+			motion_fwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_fwd_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_bwd_attachment = skybox_pass_desc_gather.colorAttachments[2];
+			motion_bwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_bwd_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_depth_fwd_attachment = skybox_pass_desc_gather.colorAttachments[3];
+			motion_depth_fwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_depth_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_fwd_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_depth_bwd_attachment = skybox_pass_desc_gather.colorAttachments[4];
+			motion_depth_bwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_depth_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_bwd_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather.depthAttachment;
+			depth_attachment.loadAction = MTLLoadActionLoad;
+			depth_attachment.clearDepth = 1.0;
+			depth_attachment.storeAction = MTLStoreActionStore;
+		}
+	}
+	
+	// creates fbo textures/images and sets attachment textures of render_pass_desc_scatter + skybox_pass_desc_scatter (gather changes at runtime)
 	create_textures();
 	
 	// shadow renderer setup
@@ -333,7 +501,7 @@ bool metal_renderer::init() {
 		color_attachment.texture = nil;
 	}
 	
-	// used by both scene and shadow renderer
+	// used by scene, shadow and skybox renderer
 	MTLDepthStencilDescriptor* depth_state_desc = [[MTLDepthStencilDescriptor alloc] init];
 	depth_state_desc.depthCompareFunction = MTLCompareFunctionLess;
 	depth_state_desc.depthWriteEnabled = YES;
@@ -342,6 +510,10 @@ bool metal_renderer::init() {
 	depth_state_desc.depthCompareFunction = MTLCompareFunctionAlways;
 	depth_state_desc.depthWriteEnabled = NO;
 	passthrough_depth_state = [device newDepthStencilStateWithDescriptor:depth_state_desc];
+	
+	depth_state_desc.depthCompareFunction = MTLCompareFunctionLessEqual;
+	depth_state_desc.depthWriteEnabled = YES;
+	skybox_depth_state = [device newDepthStencilStateWithDescriptor:depth_state_desc];
 	
 	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
 	view = darwin_helper::create_metal_view(floor::get_window(), device);
@@ -363,11 +535,15 @@ bool metal_renderer::init() {
 	sampler_desc.tAddressMode = MTLSamplerAddressModeRepeat;
 	sampler_state = [device newSamplerStateWithDescriptor:sampler_desc];
 	
+	// sky box
+	create_skybox();
+	
 	return true;
 }
 
 void metal_renderer::destroy() {
 	destroy_textures(false);
+	destroy_skybox();
 }
 
 static void render_full_scene(const metal_obj_model& model, const camera& cam, id <MTLCommandBuffer> cmd_buffer);
@@ -602,15 +778,14 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 	//////////////////////////////////////////
 	// render actual scene
 	
+	matrix4f pm, mvm, rmvm;
 	{
 		// set/compute uniforms
-		const matrix4f pm { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-												   0.5f, warp_state.view_distance) };
-		const matrix4f rot_mat {
-			matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
-			matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
-		};
-		const matrix4f mvm { matrix4f::translation(cam.get_position()) * rot_mat };
+		pm = matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
+									0.5f, warp_state.view_distance);
+		rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
+				matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
+		mvm = matrix4f::translation(cam.get_position()) * rmvm;
 		const matrix4f mvpm {
 			warp_state.is_scatter ?
 			mvm * pm :
@@ -634,10 +809,6 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			.cam_pos = -cam.get_position(),
 			.light_pos = light_pos,
 		};
-		
-		// remember t-2 and t-1 mvms
-		prev_prev_mvm = prev_mvm;
-		prev_mvm = mvm;
 		
 		// for gather rendering, this switches every frame
 		if(!warp_state.is_scatter) {
@@ -691,12 +862,80 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		//
 		[encoder endEncoding];
 		[encoder popDebugGroup];
-		
-		// flip state
-		if(!warp_state.is_scatter) {
-			warp_state.cur_fbo = 1 - warp_state.cur_fbo;
-		}
 	}
+	
+	//////////////////////////////////////////
+	// render sky box
+	
+	{
+		// set/compute uniforms
+		const matrix4f imvpm {
+			warp_state.is_scatter ?
+			(rmvm * pm).inverted() :
+			(prev_rmvm * pm).inverted()
+		};
+		const auto prev_imvpm = (prev_rmvm * pm).inverted(); // scatter
+		const matrix4f next_mvpm { rmvm * pm }; // gather
+		const matrix4f prev_mvpm { prev_prev_rmvm * pm }; // gather
+		
+		const struct {
+			matrix4f imvpm;
+			matrix4f m0; // prev_imvpm (scatter), next_mvpm (gather)
+			matrix4f m1; // unused (scatter), prev_mvpm (gather)
+		} uniforms {
+			.imvpm = imvpm,
+			.m0 = (warp_state.is_scatter ? prev_imvpm : next_mvpm),
+			.m1 = (warp_state.is_scatter ? matrix4f() : prev_mvpm),
+		};
+		
+		// for gather rendering, this switches every frame
+		if(!warp_state.is_scatter) {
+			skybox_pass_desc_gather.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image();
+			skybox_pass_desc_gather.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image();
+			skybox_pass_desc_gather.colorAttachments[2].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
+			skybox_pass_desc_gather.colorAttachments[3].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2].get())->get_metal_image();
+			skybox_pass_desc_gather.colorAttachments[4].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
+			skybox_pass_desc_gather.depthAttachment.texture = ((metal_image*)scene_fbo.depth[warp_state.cur_fbo].get())->get_metal_image();
+		}
+		
+		//
+		id <MTLRenderCommandEncoder> encoder = [cmd_buffer renderCommandEncoderWithDescriptor:(warp_state.is_scatter ?
+																							   skybox_pass_desc_scatter :
+																							   skybox_pass_desc_gather)];
+		encoder.label = @"warp sky box encoder";
+		[encoder setDepthStencilState:skybox_depth_state];
+		[encoder setCullMode:MTLCullModeBack];
+		[encoder setFrontFacingWinding:MTLWindingCounterClockwise];
+		
+		//
+		[encoder pushDebugGroup:@"sky box"];
+		if(warp_state.is_scatter) {
+			[encoder setRenderPipelineState:skybox_pipeline_state_scatter];
+		}
+		else {
+			[encoder setRenderPipelineState:skybox_pipeline_state_gather];
+		}
+		[encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:0];
+		
+		[encoder setFragmentTexture:((metal_image*)skybox_tex.get())->get_metal_image() atIndex:0];
+		[encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+		
+		//
+		[encoder endEncoding];
+		[encoder popDebugGroup];
+	}
+	
+	// end
+	if(!warp_state.is_scatter) {
+		// flip state
+		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
+	}
+	
+	// remember t-2 and t-1 mvms
+	prev_prev_mvm = prev_mvm;
+	prev_prev_rmvm = prev_rmvm;
+	prev_mvm = mvm;
+	prev_rmvm = rmvm;
 }
 
 bool metal_renderer::compile_shaders() {
@@ -723,6 +962,18 @@ bool metal_renderer::compile_shaders() {
 		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"scene_gather_vs"];
 		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"scene_gather_fs"];
 		shader_objects.emplace("SCENE_GATHER", shd);
+	}
+	{
+		auto shd = make_shared<metal_shader_object>();
+		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_vs"];
+		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_fs"];
+		shader_objects.emplace("SKYBOX_SCATTER", shd);
+	}
+	{
+		auto shd = make_shared<metal_shader_object>();
+		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_vs"];
+		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_fs"];
+		shader_objects.emplace("SKYBOX_GATHER", shd);
 	}
 	{
 		auto shd = make_shared<metal_shader_object>();
