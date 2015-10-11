@@ -1,15 +1,22 @@
 
 *floor examples*
 
+*warp:*
+* image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
+* build with "./build.sh" inside the folder (NOTE: in addition to floor+dependencies, this requires SDL2_image with libpng)
+* gather-based warping ref: http://www.cs.virginia.edu/~gfx/pmwiki/index.php?n=Pubs.Yang2011IBB
+* video:
+"!http://img.youtube.com/vi/PmfJ2kzC49A/0.jpg!":https://www.youtube.com/watch?v=PmfJ2kzC49A
+
 *nbody:*
-* N-body simulation to demonstrate local/shared memory buffers, local memory barriers, OpenGL buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
+* N-body simulation to demonstrate local/shared memory buffers, local memory barriers, OpenGL and Metal buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
 * build with "./build.sh" inside the folder
 * ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
 * video:
 "!http://img.youtube.com/vi/DoLe1c-eokI/0.jpg!":https://www.youtube.com/watch?v=DoLe1c-eokI
 
 *path_tracer:*
-* a simple path tracer to demonstrate SPIR/PTX/Metal compilation, execution (as well as rudimentary host execution) and some mildly complex C++14 code
+* a simple path tracer to demonstrate SPIR/PTX/Metal/CPU compilation and execution, as well as some mildly complex C++14 code
 * build with "./build.sh" inside the folder
 !https://raw.githubusercontent.com/a2flo/floor_examples/b3eb816a5c80f079aad4d63aeec2786afe5523d9/poc_spir_ptx/example_rendering.png(noise and streaks courtesy of the horrible random function that I'm using)!
 
@@ -22,7 +29,7 @@
 * build with "./build.sh" inside the folder
 
 *references:*
-* "Clang/LLVM 3.5":http://llvm.org/releases/download.html#3.5.1
+* "Clang/LLVM 3.5":http://llvm.org/releases/download.html#3.5.2
 * "Khronos LLVM 3.5 to LLVM/SPIR 3.2 encoder":https://github.com/KhronosGroup/SPIR-Tools/tree/master/spir-encoder/llvm_3.5_spir_encoder
 * "LLVM 3.5 to LLVM/AppleCL 3.2 encoder":https://github.com/a2flo/applecl-encoder
 * "OpenCL/CUDA/Metal/AppleCL C++ patch for Clang/LLVM 3.5":https://github.com/a2flo/floor/blob/master/etc/llvm35/350_clang_llvm.patch
