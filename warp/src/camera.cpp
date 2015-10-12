@@ -327,9 +327,9 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	if(!keyboard_input) return false;
 	
 	if(type == EVENT_TYPE::KEY_DOWN) {
-		const key_down_event& key_evt = (const key_down_event&)*obj;
+		auto key_evt = static_pointer_cast<key_down_event>(obj);
 		
-		switch(key_evt.key) {
+		switch(key_evt->key) {
 			case SDLK_RIGHT: key_state[0] = true; break;
 			case SDLK_LEFT: key_state[1] = true; break;
 			case SDLK_UP: key_state[2] = true; break;
@@ -337,7 +337,7 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		}
 		
 		if(wasd_input) {
-			switch(key_evt.key) {
+			switch(key_evt->key) {
 				case SDLK_d: key_state[0] = true; break;
 				case SDLK_a: key_state[1] = true; break;
 				case SDLK_w: key_state[2] = true; break;
@@ -346,9 +346,9 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		}
 	}
 	else { // EVENT_TYPE::KEY_UP
-		const key_up_event& key_evt = (const key_up_event&)*obj;
+		auto key_evt = static_pointer_cast<key_up_event>(obj);
 		
-		switch(key_evt.key) {
+		switch(key_evt->key) {
 			case SDLK_RIGHT: key_state[0] = false; break;
 			case SDLK_LEFT: key_state[1] = false; break;
 			case SDLK_UP: key_state[2] = false; break;
@@ -356,7 +356,7 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		}
 		
 		if(wasd_input) {
-			switch(key_evt.key) {
+			switch(key_evt->key) {
 				case SDLK_d: key_state[0] = false; break;
 				case SDLK_a: key_state[1] = false; break;
 				case SDLK_w: key_state[2] = false; break;
