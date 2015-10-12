@@ -283,7 +283,7 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 	float4 color;
-#if 0
+#if 1
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
 		else if(dbg_render_type == 2) color = color_bwd;

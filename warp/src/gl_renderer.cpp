@@ -548,6 +548,21 @@ void gl_renderer::render_kernels(const camera& cam,
 	const auto timing_start = floor_timer2::start();
 #endif
 	
+	//
+	float relative_delta = delta / render_delta;
+	if(warp_state.target_frame_count > 0) {
+		const uint32_t in_between_frame_count = ((warp_state.target_frame_count - warp_state.render_frame_count) /
+												 warp_state.render_frame_count);
+		const float delta_per_frame = 1.0f / float(in_between_frame_count + 1u);
+		
+		// reached the limit
+		if(warp_frame_num >= in_between_frame_count) {
+			return;
+		}
+		
+		relative_delta = float(warp_frame_num + 1u) * delta_per_frame;
+	}
+	
 	// slow fixed delta for debugging/demo purposes
 	static float dbg_delta = 0.0f;
 	static constexpr const float delta_eps = 0.0025f;
@@ -556,6 +571,8 @@ void gl_renderer::render_kernels(const camera& cam,
 			dbg_delta = delta_eps;
 		}
 		else dbg_delta += delta_eps;
+		
+		relative_delta = dbg_delta;
 	}
 	
 	if(warp_state.is_scatter) {
@@ -574,7 +591,7 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_depth[0],
 									  compute_scene_motion[0],
 									  compute_color,
-									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
+									  relative_delta,
 									  (!warp_state.is_single_frame ?
 									   float4 { -1.0f } :
 									   float4 { cam.get_single_frame_direction(), 1.0f }
@@ -604,7 +621,7 @@ void gl_renderer::render_kernels(const camera& cam,
 									  compute_scene_motion[(1u - warp_state.cur_fbo) * 2 + 1],
 									  compute_scene_motion_depth[(1u - warp_state.cur_fbo) * 2 + 1],
 									  compute_color,
-									  !warp_state.is_debug_delta ? delta / render_delta : dbg_delta,
+									  relative_delta,
 									  warp_state.gather_eps_1,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);

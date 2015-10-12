@@ -41,7 +41,10 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "command line options:" << endl;
 		cout << "\t--scatter: warp in scatter mode" << endl;
 		cout << "\t--gather: warp in gather mode" << endl;
-		cout << "\t--frames: amount of frames per second that will actually be rendered (via opengl/metal), NOTE: obviously an upper limit" << endl;
+		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal)" << endl;
+		cout << "\t                  NOTE: obviously an upper limit" << endl;
+		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
+		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
@@ -53,6 +56,16 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		}
 		warp_state.render_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
 		cout << "render frame count set to: " << warp_state.render_frame_count << endl;
+	}},
+	{ "--target", [](warp_option_context&, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after --target!" << endl;
+			warp_state.done = true;
+			return;
+		}
+		warp_state.target_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		cout << "target frame count set to: " << warp_state.target_frame_count << endl;
 	}},
 	{ "--scatter", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = true;
@@ -338,6 +351,31 @@ int main(int, char* argv[]) {
 	warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
 	warp_state.dev_queue = warp_state.ctx->create_queue(warp_state.dev);
 	
+	// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
+	// compute the appropriate value according to the render/input frame rate and display refresh rate
+	if((floor::get_vsync() || warp_state.ctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
+	   warp_state.target_frame_count == 0) {
+		SDL_DisplayMode mode;
+		if(SDL_GetWindowDisplayMode(floor::get_window(), &mode) != 0) {
+			log_error("failed to retrieve display mode: %s", SDL_GetError());
+			warp_state.target_frame_count = 60; // simply assume 60hz
+		}
+		else {
+			if(mode.refresh_rate == 0) {
+				log_warn("failed to retrieve display refresh rate, assuming 60 Hz");
+				warp_state.target_frame_count = 60;
+			}
+			else {
+				warp_state.target_frame_count = (uint32_t)mode.refresh_rate;
+			}
+		}
+	}
+	if(warp_state.target_frame_count > 0) {
+		log_debug("using target frame rate: %u", warp_state.target_frame_count);
+	}
+	else log_debug("using a variable target frame rate");
+	
+	//
 	if(!compile_program()) {
 		return -1;
 	}

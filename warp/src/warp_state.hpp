@@ -58,8 +58,11 @@ struct warp_state_struct {
 	const float view_distance { 500.0f };
 	const float fov { 72.0f };
 	
-	// amount of frames per second that will actually be rendered (via opengl/metal)
+	// input frame rate: amount of frames per second that will actually be rendered
 	uint32_t render_frame_count { 10 };
+	// target frame rate: if set (>0), this will use a constant time delta for each
+	//                    computed frame instead of a variable delta
+	uint32_t target_frame_count { 0 };
 	
 };
 extern warp_state_struct warp_state;
