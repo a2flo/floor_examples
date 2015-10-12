@@ -104,9 +104,8 @@ F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 16, 8, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 16, 8, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 16, 8, 0, 24) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::BGRA8UI_NORM, 32, 16, 8, 0, 0) \
+F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::BGRA8UI_NORM, 32, 16, 8, 0, 24) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
@@ -125,6 +124,14 @@ if(src_surface->format->Rshift == rshift && \
 COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
 	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
 	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type);
+	if(image_type == COMPUTE_IMAGE_TYPE::NONE) {
+		log_error("unknown surface format: %u, %u, %u, %u, %u",
+				  (uint32_t)surface->format->BitsPerPixel,
+				  (uint32_t)surface->format->Rshift,
+				  (uint32_t)surface->format->Gshift,
+				  (uint32_t)surface->format->Bshift,
+				  (uint32_t)surface->format->Ashift);
+	}
 	return image_type;
 }
 
@@ -486,6 +493,13 @@ pair<bool, SDL_Surface*> obj_loader::load_texture(const char* filename) {
 		return { false, nullptr };
 	}
 	
+	// freeing sdl surfaces is not thread-safe
+	static safe_mutex surface_free_mutex;
+	const auto free_surface = [](SDL_Surface* surf) {
+		GUARD(surface_free_mutex);
+		SDL_FreeSurface(surf);
+	};
+	
 	// check format, BGR(A) needs to be converted to RGB(A)
 	GLint internal_format = 0;
 	GLenum format = 0;
@@ -494,13 +508,15 @@ pair<bool, SDL_Surface*> obj_loader::load_texture(const char* filename) {
 	if(format == GL_BGR || format == GL_BGRA) {
 		SDL_PixelFormat new_pformat;
 		memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
+		new_pformat.next = nullptr;
+		new_pformat.palette = nullptr;
+		new_pformat.refcount = 0;
 		new_pformat.Rshift = surface->format->Bshift;
 		new_pformat.Bshift = surface->format->Rshift;
 		new_pformat.Rmask = surface->format->Bmask;
 		new_pformat.Bmask = surface->format->Rmask;
 		
-		bool alpha_component = (surface->format->Ashift != 0);
-		if(!alpha_component) {
+		if(surface->format->Ashift == 0) {
 			new_pformat.BytesPerPixel = 3;
 			new_pformat.BitsPerPixel = 24;
 		}
@@ -508,14 +524,15 @@ pair<bool, SDL_Surface*> obj_loader::load_texture(const char* filename) {
 			new_pformat.BytesPerPixel = 4;
 			new_pformat.BitsPerPixel = 32;
 		}
+		// else: keep it?
 		
 		SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
 		if(new_surface == nullptr) {
 			log_error("BGR(A)->RGB(A) surface conversion failed!");
-			SDL_FreeSurface(surface);
+			free_surface(surface);
 			return { false, nullptr };
 		}
-		SDL_FreeSurface(surface);
+		free_surface(surface);
 		surface = new_surface;
 	}
 	
