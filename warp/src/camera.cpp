@@ -235,7 +235,7 @@ void camera::set_keyboard_input(const bool& state) {
 	keyboard_input = state;
 	
 	// reset key state, in case a move key is still held
-	key_state = { { false, false, false, false } };
+	for(auto& key : key_state) key = false;
 }
 
 /*! if mouse_input is set true then the cameras rotation is controlled via
@@ -280,7 +280,7 @@ void camera::set_wasd_input(const bool& state) {
 	wasd_input = state;
 	
 	// reset key state, in case a wasd key triggered it before
-	key_state = { { false, false, false, false } };
+	for(auto& key : key_state) key = false;
 }
 
 bool camera::get_wasd_input() const {

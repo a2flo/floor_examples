@@ -87,7 +87,7 @@ protected:
 	unsigned int ignore_next_rotation = 0;
 	
 	// [right, left, up, down]
-	array<bool, 4> key_state = { { false, false, false, false } };
+	atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };
 	
 	event::handler keyboard_handler;
 	bool key_handler(EVENT_TYPE type, shared_ptr<event_object> obj);
