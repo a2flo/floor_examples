@@ -92,7 +92,7 @@ namespace warp_camera {
 
 // decodes the encoded input 3D motion vector
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
-static float3 decode_3d_motion(const uint32_t& encoded_motion) {
+floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	const float3 signs {
 		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
 		(encoded_motion & 0x40000000u) != 0u ? -1.0f : 1.0f,
@@ -111,34 +111,163 @@ static float3 decode_3d_motion(const uint32_t& encoded_motion) {
 	return signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
 }
 
+// computes the "scattered" destination coordinate of the pixel at 'coord',
+// according to it's depth value (which is also returned) and motion vector, as well as the current time delta
+floor_inline_always static auto scatter(const int2& coord,
+										const float& relative_delta,
+										ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+										ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion) {
+	// read rendered/input depth and linearize it (linear distance from the camera origin)
+	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
+	// get 3d motion for this pixel
+	const auto motion = decode_3d_motion(read(img_motion, coord));
+	// reconstruct 3D position from depth + camera/screen setup,
+	// then predict/compute new 3D position from current motion and time
+	const auto new_pos = warp_camera::reconstruct_position(coord, linear_depth) + relative_delta * motion;
+	// -> return
+	const struct {
+		const int2 coord;
+		const float linear_depth;
+	} ret {
+		// project 3D position back into 2D
+		.coord = warp_camera::reproject_position(new_pos),
+		.linear_depth = linear_depth
+	};
+	return ret;
+}
+
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
 kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
 								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
 								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
-								param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
-								param<float4> motion_override) {
+								// "current compute/warp delta" divided by "delta between last two frames"
+								param<float> relative_delta) {
 	screen_check();
 	
 	const auto coord = global_id.xy;
 	auto color = read(img_color, coord);
-	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
-	const auto motion = (motion_override.w < 0.0f ? decode_3d_motion(read(img_motion, coord)) : motion_override.xyz);
-	
-	// reconstruct 3D position from depth + camera/screen setup
-	const float3 reconstructed_pos = warp_camera::reconstruct_position(coord, linear_depth);
-	
-	// predict/compute new 3D position from current motion and time
-	const auto motion_dst = (motion_override.w < 0.0f ? relative_delta : 1.0f) * motion;
-	const auto new_pos = reconstructed_pos + motion_dst;
-	// project 3D position back into 2D
-	const int2 idst_coord { warp_camera::reproject_position(new_pos) };
+	const auto scattered = scatter(coord, relative_delta, img_depth, img_motion);
 	
 	// only write if new projected screen position is actually inside the screen
-	if(idst_coord.x >= 0 && idst_coord.x < SCREEN_WIDTH &&
-	   idst_coord.y >= 0 && idst_coord.y < SCREEN_HEIGHT) {
+	if(scattered.coord.x >= 0 && scattered.coord.x < SCREEN_WIDTH &&
+	   scattered.coord.y >= 0 && scattered.coord.y < SCREEN_HEIGHT) {
 		color.w = 1.0f; // px fixup
-		write(img_out_color, idst_coord, color);
+		write(img_out_color, scattered.coord, color);
+	}
+}
+
+//
+kernel void warp_scatter_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+							   buffer<float> depth_buffer,
+							   param<float> relative_delta) {
+	screen_check();
+	
+	const auto scattered = scatter(global_id.xy, relative_delta, img_depth, img_motion);
+	if(scattered.coord.x >= 0 && scattered.coord.x < SCREEN_WIDTH &&
+	   scattered.coord.y >= 0 && scattered.coord.y < SCREEN_HEIGHT) {
+		atomic_min(&depth_buffer[scattered.coord.y * SCREEN_WIDTH + scattered.coord.x], scattered.linear_depth);
+	}
+}
+//
+kernel void warp_scatter_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
+							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+							   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+							   buffer<const float> depth_buffer,
+							   param<float> relative_delta) {
+	screen_check();
+	
+	const auto coord = global_id.xy;
+	const auto scattered = scatter(coord, relative_delta, img_depth, img_motion);
+	if(scattered.coord.x < 0 || scattered.coord.x >= SCREEN_WIDTH ||
+	   scattered.coord.y < 0 || scattered.coord.y >= SCREEN_HEIGHT) {
+		return;
+	}
+	
+	const auto dst_depth = depth_buffer[scattered.coord.y * SCREEN_WIDTH + scattered.coord.x];
+	if(scattered.linear_depth > dst_depth) {
+		return;
+	}
+	
+	auto color = read(img_color, coord);
+	color.w = 1.0f; // px fixup
+	write(img_out_color, scattered.coord, color);
+}
+
+//
+kernel void warp_scatter_bidir_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_prev,
+									 buffer<float> depth_buffer,
+									 param<float> relative_delta) {
+	screen_check();
+	
+	const auto scattered = scatter(global_id.xy, relative_delta, img_depth, img_motion);
+	if(scattered.coord.x >= 0 && scattered.coord.x < SCREEN_WIDTH &&
+	   scattered.coord.y >= 0 && scattered.coord.y < SCREEN_HEIGHT) {
+		atomic_min(&depth_buffer[scattered.coord.y * SCREEN_WIDTH + scattered.coord.x], scattered.linear_depth);
+	}
+	
+	const auto scattered_prev = scatter(global_id.xy, relative_delta, img_depth_prev, img_motion_prev);
+	if(scattered_prev.coord.x >= 0 && scattered_prev.coord.x < SCREEN_WIDTH &&
+	   scattered_prev.coord.y >= 0 && scattered_prev.coord.y < SCREEN_HEIGHT) {
+		atomic_min(&depth_buffer[scattered_prev.coord.y * SCREEN_WIDTH + scattered_prev.coord.x], scattered_prev.linear_depth);
+	}
+}
+//
+kernel void warp_scatter_bidir_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_prev,
+									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+									 buffer<const float> depth_buffer,
+									 param<float> relative_delta) {
+	screen_check();
+	
+	const auto coord = global_id.xy;
+	const auto scattered = scatter(coord, relative_delta, img_depth, img_motion);
+	const auto scattered_prev = scatter(coord, relative_delta, img_depth_prev, img_motion_prev);
+	
+	bool fwd_valid = (scattered.coord.x >= 0 && scattered.coord.x < SCREEN_WIDTH &&
+					  scattered.coord.y >= 0 && scattered.coord.y < SCREEN_HEIGHT);
+	bool bwd_valid = (scattered_prev.coord.x >= 0 && scattered_prev.coord.x < SCREEN_WIDTH &&
+					  scattered_prev.coord.y >= 0 && scattered_prev.coord.y < SCREEN_HEIGHT);
+	
+	if(fwd_valid) {
+		fwd_valid &= (depth_buffer[scattered.coord.y * SCREEN_WIDTH + scattered.coord.x] <= scattered.linear_depth);
+	}
+	if(bwd_valid) {
+		bwd_valid &= (depth_buffer[scattered_prev.coord.y * SCREEN_WIDTH + scattered_prev.coord.x] <= scattered_prev.linear_depth);
+	}
+	
+	if(fwd_valid && bwd_valid) {
+		if(scattered.coord.x == scattered_prev.coord.x &&
+		   scattered.coord.y == scattered_prev.coord.y) {
+			if(scattered.linear_depth <= scattered_prev.linear_depth) {
+				bwd_valid = false;
+				fwd_valid = true;
+			}
+			else {
+				bwd_valid = true;
+				fwd_valid = false;
+			}
+		}
+	}
+	
+	if(fwd_valid) {
+		auto color = read(img_color, coord);
+		color.w = 1.0f; // px fixup
+		write(img_out_color, scattered.coord, color);
+	}
+	if(bwd_valid) {
+		auto color = read(img_color_prev, coord);
+		color.w = 1.0f; // px fixup
+		write(img_out_color, scattered_prev.coord, color);
 	}
 }
 
@@ -158,8 +287,8 @@ kernel void warp_scatter_patch(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_I
 							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
 							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
 							   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
-							   param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
-							   param<float4> motion_override) {
+							   // "current compute/warp delta" divided by "delta between last two frames"
+							   param<float> relative_delta) {
 	screen_check();
 	
 	const auto coord = global_id.xy;

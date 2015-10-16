@@ -151,6 +151,10 @@ static void create_textures() {
 		skybox_pass_desc_scatter.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
 		skybox_pass_desc_scatter.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
 	}
+	
+	// create appropriately sized s/w depth buffer
+	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(sizeof(float) *
+																	size_t(scene_fbo.dim.x) * size_t(scene_fbo.dim.y));
 }
 
 static void create_skybox() {
@@ -690,12 +694,13 @@ static void render_kernels(const camera& cam,
 	if(warp_state.is_scatter) {
 		// clear if enabled + always clear the first frame
 		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
-			warp_state.dev_queue->execute(warp_state.clear_kernel,
+			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_CLEAR],
 										  scene_fbo.dim_multiple,
 										  uint2 { 32, 16 },
 										  scene_fbo.compute_color, clear_color);
 		}
 		
+#if 0
 		warp_state.dev_queue->execute(warp_state.warp_scatter_kernel,
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
@@ -703,21 +708,38 @@ static void render_kernels(const camera& cam,
 									  scene_fbo.depth[0],
 									  scene_fbo.motion[0],
 									  scene_fbo.compute_color,
-									  relative_delta,
-									  (!warp_state.is_single_frame ?
-									   float4 { -1.0f } :
-									   float4 { cam.get_single_frame_direction(), 1.0f }
-									   ));
+									  relative_delta);
+#else
+		const float clear_depth = numeric_limits<float>::max();
+		warp_state.scatter_depth_buffer->fill(warp_state.dev_queue, &clear_depth, sizeof(clear_depth));
+		
+		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_DEPTH_PASS],
+									  scene_fbo.dim_multiple,
+									  uint2 { 32, 16 },
+									  scene_fbo.depth[0],
+									  scene_fbo.motion[0],
+									  warp_state.scatter_depth_buffer,
+									  relative_delta);
+		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
+									  scene_fbo.dim_multiple,
+									  uint2 { 32, 16 },
+									  scene_fbo.color[0],
+									  scene_fbo.depth[0],
+									  scene_fbo.motion[0],
+									  scene_fbo.compute_color,
+									  warp_state.scatter_depth_buffer,
+									  relative_delta);
+#endif
 	
 		if(warp_state.is_fixup) {
-			warp_state.dev_queue->execute(warp_state.fixup_kernel,
+			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_FIXUP],
 										  scene_fbo.dim_multiple,
 										  uint2 { 32, 16 },
 										  scene_fbo.compute_color);
 		}
 	}
 	else {
-		warp_state.dev_queue->execute(warp_state.warp_gather_kernel,
+		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_GATHER],
 									  scene_fbo.dim_multiple,
 									  uint2 { 32, 16 },
 									  // current frame (t)

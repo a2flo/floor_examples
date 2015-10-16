@@ -20,7 +20,7 @@
 
 camera::camera() : evt(floor::get_event()),
 keyboard_handler(bind(&camera::key_handler, this, placeholders::_1, placeholders::_2)) {
-	evt->add_event_handler(keyboard_handler, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::KEY_UP);
+	evt->add_internal_event_handler(keyboard_handler, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::KEY_UP);
 }
 
 camera::~camera() {

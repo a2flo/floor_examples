@@ -28,6 +28,14 @@
 		5C2F83711B654FF600B27BE3 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
 		5C2F83721B654FF600B27BE3 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
 		5C30CAA51AA625F5008986B1 /* warp.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* warp.metallib */; };
+		5C3B0BED1BCED84C000732F9 /* negx.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE61BCED83F000732F9 /* negx.png */; };
+		5C3B0BEE1BCED84C000732F9 /* negy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE71BCED83F000732F9 /* negy.png */; };
+		5C3B0BEF1BCED84C000732F9 /* negz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE81BCED83F000732F9 /* negz.png */; };
+		5C3B0BF01BCED84C000732F9 /* posx.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE91BCED83F000732F9 /* posx.png */; };
+		5C3B0BF11BCED84C000732F9 /* posy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEA1BCED83F000732F9 /* posy.png */; };
+		5C3B0BF21BCED84C000732F9 /* posz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEB1BCED83F000732F9 /* posz.png */; };
+		5C3B0BF31BCED84C000732F9 /* readme.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEC1BCED83F000732F9 /* readme.txt */; };
+		5C3B0BF41BCED855000732F9 /* README in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4E01BB2F6530024467C /* README */; };
 		5C5487841B608E280088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487821B608E110088272A /* config.json */; };
 		5C5487851B608E280088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487831B608E110088272A /* config.json.local */; };
 		5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
@@ -110,12 +118,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5C3B0BE41BCED80C000732F9 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = data/skybox;
+			dstSubfolderSpec = 7;
+			files = (
+				5C3B0BED1BCED84C000732F9 /* negx.png in CopyFiles */,
+				5C3B0BEE1BCED84C000732F9 /* negy.png in CopyFiles */,
+				5C3B0BEF1BCED84C000732F9 /* negz.png in CopyFiles */,
+				5C3B0BF01BCED84C000732F9 /* posx.png in CopyFiles */,
+				5C3B0BF11BCED84C000732F9 /* posy.png in CopyFiles */,
+				5C3B0BF21BCED84C000732F9 /* posz.png in CopyFiles */,
+				5C3B0BF31BCED84C000732F9 /* readme.txt in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		5C56D5161BB2F6700024467C /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = data/sponza;
 			dstSubfolderSpec = 7;
 			files = (
+				5C3B0BF41BCED855000732F9 /* README in CopyFiles */,
 				5C56D5171BB2F67C0024467C /* sponza.mtl in CopyFiles */,
 				5C56D5181BB2F67C0024467C /* sponza.obj.bin in CopyFiles */,
 			);
@@ -185,7 +210,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C0071911A91EF7E00F4711D /* warp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071911A91EF7E00F4711D /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
 		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
@@ -205,6 +230,13 @@
 		5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = metal_renderer.mm; sourceTree = "<group>"; };
 		5C2F83701B654FF600B27BE3 /* metal_shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = metal_shaders.metal; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* warp.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = warp.metallib; path = ../data/warp.metallib; sourceTree = "<group>"; };
+		5C3B0BE61BCED83F000732F9 /* negx.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = negx.png; path = ../data/skybox/negx.png; sourceTree = "<group>"; };
+		5C3B0BE71BCED83F000732F9 /* negy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = negy.png; path = ../data/skybox/negy.png; sourceTree = "<group>"; };
+		5C3B0BE81BCED83F000732F9 /* negz.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = negz.png; path = ../data/skybox/negz.png; sourceTree = "<group>"; };
+		5C3B0BE91BCED83F000732F9 /* posx.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = posx.png; path = ../data/skybox/posx.png; sourceTree = "<group>"; };
+		5C3B0BEA1BCED83F000732F9 /* posy.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = posy.png; path = ../data/skybox/posy.png; sourceTree = "<group>"; };
+		5C3B0BEB1BCED83F000732F9 /* posz.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = posz.png; path = ../data/skybox/posz.png; sourceTree = "<group>"; };
+		5C3B0BEC1BCED83F000732F9 /* readme.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = readme.txt; path = ../data/skybox/readme.txt; sourceTree = "<group>"; };
 		5C5487821B608E110088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C56D4DD1BB2F64D0024467C /* sponza.mtl */ = {isa = PBXFileReference; lastKnownFileType = text; name = sponza.mtl; path = ../data/sponza/sponza.mtl; sourceTree = "<group>"; };
@@ -336,12 +368,27 @@
 		5C0071E01A9200D400F4711D /* data */ = {
 			isa = PBXGroup;
 			children = (
+				5C3B0BE51BCED831000732F9 /* skybox */,
 				5C56D4DC1BB2F6410024467C /* sponza */,
 				5C30CAA31AA625DC008986B1 /* warp.metallib */,
 				5C5487821B608E110088272A /* config.json */,
 				5C5487831B608E110088272A /* config.json.local */,
 			);
 			name = data;
+			sourceTree = "<group>";
+		};
+		5C3B0BE51BCED831000732F9 /* skybox */ = {
+			isa = PBXGroup;
+			children = (
+				5C3B0BE61BCED83F000732F9 /* negx.png */,
+				5C3B0BE71BCED83F000732F9 /* negy.png */,
+				5C3B0BE81BCED83F000732F9 /* negz.png */,
+				5C3B0BE91BCED83F000732F9 /* posx.png */,
+				5C3B0BEA1BCED83F000732F9 /* posy.png */,
+				5C3B0BEB1BCED83F000732F9 /* posz.png */,
+				5C3B0BEC1BCED83F000732F9 /* readme.txt */,
+			);
+			name = skybox;
 			sourceTree = "<group>";
 		};
 		5C56D4DC1BB2F6410024467C /* sponza */ = {
@@ -432,7 +479,7 @@
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
 				5C8FD0B91AD3392500215230 /* osx */,
-				5C0071911A91EF7E00F4711D /* warp.app */,
+				5C0071911A91EF7E00F4711D /* warpd.app */,
 				5C8FD0941AD3366800215230 /* warpd.app */,
 			);
 			sourceTree = "<group>";
@@ -474,6 +521,7 @@
 				5C0071DB1A9200B200F4711D /* CopyFiles */,
 				5C56D5161BB2F6700024467C /* CopyFiles */,
 				5C56D5191BB2F6850024467C /* CopyFiles */,
+				5C3B0BE41BCED80C000732F9 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -481,7 +529,7 @@
 			);
 			name = warp_ios;
 			productName = warp_ios;
-			productReference = 5C0071911A91EF7E00F4711D /* warp.app */;
+			productReference = 5C0071911A91EF7E00F4711D /* warpd.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5C8FD0931AD3366800215230 /* warp_osx */ = {
@@ -508,7 +556,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0700;
-				ORGANIZATIONNAME = Albion2;
+				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
 						CreatedOnToolsVersion = 6.3;
@@ -569,7 +617,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# create entitlements file on the fly\nENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"\nENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"\n\n# need to create the necessary xml file with the correct application-identifier\n# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)\nprintf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}\nprintf \"org.albion2.${PRODUCT_NAME}\" >> ${ENTITLEMENTS_TMP}\nprintf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}\n# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)\nSIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")\n\n# write the 4-byte header + 4-byte size of this complete file\nprintf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}\n# dump the previously created xml file in the new one and remove the appended 8 bytes\ncat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}\n# cleanup\nrm ${ENTITLEMENTS_TMP}\n\n# code sign with entitlements\ncodesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"\n";
+			shellScript = "# create entitlements file on the fly\nENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"\nENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"\n\n# need to create the necessary xml file with the correct application-identifier\n# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)\nprintf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}\nprintf \"${PRODUCT_BUNDLE_IDENTIFIER}\" >> ${ENTITLEMENTS_TMP}\nprintf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}\n# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)\nSIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")\n\n# write the 4-byte header + 4-byte size of this complete file\nprintf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}\n# dump the previously created xml file in the new one and remove the appended 8 bytes\ncat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}\n# cleanup\nrm ${ENTITLEMENTS_TMP}\n\n# code sign with entitlements\ncodesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"\n";
 		};
 		5C30CAA61AA7058D008986B1 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -582,7 +630,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src warp.cpp --target air --sub-target ios8 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DSCREEN_WIDTH=2048 -DSCREEN_HEIGHT=1536\nmetal-as -o=warp.air air_processed.ll\nmetal-ar r warp.a warp.air\nmetallib -o ../../data/warp.metallib warp.a\n";
+			shellScript = "cd src\nocc --src warp.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DSCREEN_WIDTH=2048 -DSCREEN_HEIGHT=1536\nmetal-as -o=warp.air air_processed.ll\nmetal-ar r warp.a warp.air\nmetallib -o ../../data/warp.metallib warp.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -653,7 +701,6 @@
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -692,11 +739,9 @@
 					"$(inherited)",
 					"-lfloord_static",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = warp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7 armv7s x86_64";
+				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Debug;
 		};
@@ -729,7 +774,6 @@
 					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.3;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -768,12 +812,10 @@
 					"$(inherited)",
 					"-lfloor_static",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = warp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7 armv7s x86_64";
+				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Release;
 		};
@@ -853,8 +895,6 @@
 					"-framework",
 					Metal,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = warpd;
 				VALID_ARCHS = x86_64;
 			};
 			name = Debug;
@@ -932,8 +972,6 @@
 					"-framework",
 					Metal,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.albion2.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = warp;
 				VALID_ARCHS = x86_64;
 			};
 			name = Release;
@@ -978,6 +1016,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -989,6 +1028,8 @@
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = warpd;
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
 					"-Weverything",
@@ -1052,6 +1093,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -1062,6 +1104,8 @@
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = warp;
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
 					"-Weverything",

@@ -139,28 +139,35 @@ static bool compile_program() {
 		log_error("program compilation failed");
 		return false;
 	}
+	
+	// NOTE: corresponds to WARP_KERNEL
+	static const char* kernel_names[warp_kernel_count()] {
 #if 1
-	auto new_warp_scatter_kernel = new_warp_prog->get_kernel("warp_scatter_simple");
+		"warp_scatter_simple",
 #else
-	auto new_warp_scatter_kernel = new_warp_prog->get_kernel("warp_scatter_patch");
+		"warp_scatter_patch",
 #endif
-	auto new_warp_gather_kernel = new_warp_prog->get_kernel("warp_gather");
-	auto new_clear_kernel = new_warp_prog->get_kernel("img_clear");
-	auto new_fixup_kernel = new_warp_prog->get_kernel("single_px_fixup");
-	if(new_warp_scatter_kernel == nullptr ||
-	   new_warp_gather_kernel == nullptr ||
-	   new_clear_kernel == nullptr ||
-	   new_fixup_kernel == nullptr) {
-		log_error("failed to retrieve kernel from program");
-		return false;
+		"warp_scatter_depth",
+		"warp_scatter_color",
+		"warp_scatter_bidir_depth",
+		"warp_scatter_bidir_color",
+		"img_clear",
+		"single_px_fixup",
+		"warp_gather",
+	};
+	
+	array<shared_ptr<compute_kernel>, warp_kernel_count()> new_kernels;
+	for(size_t i = 0; i < warp_kernel_count(); ++i) {
+		new_kernels[i] = new_warp_prog->get_kernel(kernel_names[i]);
+		if(new_kernels[i] == nullptr) {
+			log_error("failed to retrieve kernel \"%s\" from program", kernel_names[i]);
+			return false;
+		}
 	}
 	
 	// all okay
-	warp_state.warp_prog = new_warp_prog;
-	warp_state.warp_scatter_kernel = new_warp_scatter_kernel;
-	warp_state.warp_gather_kernel = new_warp_gather_kernel;
-	warp_state.clear_kernel = new_clear_kernel;
-	warp_state.fixup_kernel = new_fixup_kernel;
+	warp_state.prog = new_warp_prog;
+	warp_state.kernels = new_kernels;
 	return true;
 }
 
@@ -229,14 +236,6 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_v:
 				warp_state.is_auto_cam ^= true;
 				break;
-			case SDLK_f:
-				warp_state.is_single_frame ^= true;
-				warp_state.is_auto_cam = !warp_state.is_single_frame && warp_state.is_auto_cam;
-				cam->set_single_frame(warp_state.is_single_frame);
-				break;
-			case SDLK_m:
-				warp_state.is_motion_only ^= true;
-				break;
 			case SDLK_r:
 				warp_state.is_warping = true;
 				warp_state.is_render_full = true;
@@ -258,6 +257,11 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_4:
 				warp_state.is_fixup ^= true;
 				log_debug("px fixup? %b", warp_state.is_fixup);
+				break;
+			case SDLK_5:
+				warp_state.cur_fbo = 0;
+				warp_state.is_bidir_scatter ^= true;
+				log_debug("bidirectional scatter? %b", warp_state.is_bidir_scatter);
 				break;
 			case SDLK_g:
 				warp_state.cur_fbo = 0;

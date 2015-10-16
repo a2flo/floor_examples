@@ -27,18 +27,6 @@
 #include <floor/compute/metal/metal_queue.hpp>
 #include <floor/darwin/darwin_helper.hpp>
 
-//
-/*@protocol MTLFunctionSPI <MTLFunction>
-@property(readonly) long long lineNumber;
-@property(copy) NSString *filePath;
-@end
-
-@interface _MTLLibrary : NSObject <MTLLibrary> {
-	NSMutableDictionary *_functionDictionary;
-}
-@property(readonly, retain, nonatomic) NSMutableDictionary *functionDictionary;
-@end*/
-
 // renderer
 static id <MTLRenderPipelineState> pipeline_state;
 static id <MTLDepthStencilState> depth_state;
@@ -213,15 +201,6 @@ bool metal_renderer::compile_shaders(shared_ptr<compute_device> dev) {
 		log_error("failed to load default shader lib!");
 		return false;
 	}
-	
-	/*auto path = [NSString stringWithUTF8String:"/Users/flo/sync/floor_examples/nbody/src/metal_shaders.metal"];
-	_MTLLibrary* lib = ([metal_shd_lib respondsToSelector:@selector(baseObject)] ?
-						[metal_shd_lib performSelector:@selector(baseObject)] :
-						metal_shd_lib);
-	for(id key in [lib functionDictionary]) {
-		id <MTLFunctionSPI> func = [[lib functionDictionary] objectForKey:key];
-		func.filePath = path;
-	}*/
 	
 	auto shd = make_shared<metal_shader_object>();
 	shd->vertex_program = [metal_shd_lib newFunctionWithName:@"lighting_vertex"];

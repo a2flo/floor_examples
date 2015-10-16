@@ -19,13 +19,28 @@
 #ifndef __FLOOR_WARP_WARP_STATE_HPP__
 #define __FLOOR_WARP_WARP_STATE_HPP__
 
+enum WARP_KERNEL : uint32_t {
+	KERNEL_SCATTER_SIMPLE = 0,
+	KERNEL_SCATTER_DEPTH_PASS,
+	KERNEL_SCATTER_COLOR_DEPTH_TEST,
+	KERNEL_SCATTER_BIDIR_DEPTH_PASS,
+	KERNEL_SCATTER_BIDIR_COLOR_DEPTH_TEST,
+	KERNEL_SCATTER_CLEAR,
+	KERNEL_SCATTER_FIXUP,
+	KERNEL_GATHER,
+	__MAX_WARP_KERNEL
+};
+floor_inline_always static constexpr size_t warp_kernel_count() {
+	return (size_t)WARP_KERNEL::__MAX_WARP_KERNEL;
+}
+
 struct warp_state_struct {
 	shared_ptr<compute_context> ctx;
 	shared_ptr<compute_queue> dev_queue;
 	shared_ptr<compute_device> dev;
 	
-	shared_ptr<compute_program> warp_prog;
-	shared_ptr<compute_kernel> warp_scatter_kernel, warp_gather_kernel, clear_kernel, fixup_kernel;
+	shared_ptr<compute_program> prog;
+	array<shared_ptr<compute_kernel>, warp_kernel_count()> kernels;
 	
 	//
 	bool done { false };
@@ -33,8 +48,6 @@ struct warp_state_struct {
 	bool no_opengl { false };
 	bool no_metal { false };
 	bool is_auto_cam { false };
-	bool is_single_frame { false };
-	bool is_motion_only { false };
 	bool is_frame_repeat { false };
 	bool is_debug_delta { false };
 	bool is_split_view { false };
@@ -43,8 +56,9 @@ struct warp_state_struct {
 	bool is_scatter { false };
 	bool is_warping { true };
 	bool is_render_full { true };
-	bool is_clear_frame { false };
+	bool is_clear_frame { true };
 	bool is_fixup { false };
+	bool is_bidir_scatter { false };
 	
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)
@@ -63,6 +77,9 @@ struct warp_state_struct {
 	// target frame rate: if set (>0), this will use a constant time delta for each
 	//                    computed frame instead of a variable delta
 	uint32_t target_frame_count { 0 };
+	
+	//
+	shared_ptr<compute_buffer> scatter_depth_buffer;
 	
 };
 extern warp_state_struct warp_state;
