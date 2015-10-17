@@ -55,8 +55,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C00718C1A91507900F4711D /* path_tracer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = path_tracer; path = path_tracerd; sourceTree = BUILT_PRODUCTS_DIR; };
-		5C0071911A91EF7E00F4711D /* path_tracer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = path_tracer.app; path = path_tracerd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C00718C1A91507900F4711D /* path_tracerd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = path_tracerd; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071911A91EF7E00F4711D /* path_tracerd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = path_tracerd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
 		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
@@ -151,8 +151,8 @@
 				5CD2175019E924E80049D6AE /* src */,
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
-				5C00718C1A91507900F4711D /* path_tracer */,
-				5C0071911A91EF7E00F4711D /* path_tracer.app */,
+				5C00718C1A91507900F4711D /* path_tracerd */,
+				5C0071911A91EF7E00F4711D /* path_tracerd.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -187,7 +187,7 @@
 			);
 			name = path_tracer_ios;
 			productName = path_tracer_ios;
-			productReference = 5C0071911A91EF7E00F4711D /* path_tracer.app */;
+			productReference = 5C0071911A91EF7E00F4711D /* path_tracerd.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5C6F6ED21A5824B30050C5AC /* path_tracer */ = {
@@ -204,7 +204,7 @@
 			);
 			name = path_tracer;
 			productName = path_tracer;
-			productReference = 5C00718C1A91507900F4711D /* path_tracer */;
+			productReference = 5C00718C1A91507900F4711D /* path_tracerd */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */

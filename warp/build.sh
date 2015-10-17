@@ -103,16 +103,16 @@ for arg in "$@"; do
 			echo "	x32                build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
 			echo "	x64                build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
 			echo ""
-			echo "misc flags:"
-			echo "	-v                 verbose output (prints all executed compiler and linker commands, and some other information)"
-			echo "	-vv                very verbose output (same as -v + runs all compiler and linker commands with -v)"
-			echo "	-j#                explicitly use # amount of build jobs (instead of automatically using #logical-cpus jobs)"
-			echo ""
 			echo "sanitizers:"
 			echo "  asan               build with address sanitizer"
 			echo "  msan               build with memory sanitizer"
 			echo "  tsan               build with thread sanitizer"
-			#echo "  ubsan              build with undefined behavior sanitizer"
+			echo "  ubsan              build with undefined behavior sanitizer"
+			echo ""
+			echo "misc flags:"
+			echo "	-v                 verbose output (prints all executed compiler and linker commands, and some other information)"
+			echo "	-vv                very verbose output (same as -v + runs all compiler and linker commands with -v)"
+			echo "	-j#                explicitly use # amount of build jobs (instead of automatically using #logical-cpus jobs)"
 			echo ""
 			echo ""
 			echo "example:"
@@ -589,8 +589,12 @@ REL_OPT_LD_FLAGS="-flto"
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "osx" ]; then
 		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.9"
-	else
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=8.0"
+	else # ios
+		if [ ${BUILD_CONF_METAL} -gt 0 ]; then
+			COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=9.0"
+		else
+			COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=7.0"
+		fi
 	fi
 fi
 
