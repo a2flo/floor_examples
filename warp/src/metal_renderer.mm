@@ -24,6 +24,7 @@
 #include <floor/compute/metal/metal_buffer.hpp>
 #include <floor/compute/metal/metal_image.hpp>
 #include <floor/compute/metal/metal_queue.hpp>
+#include <floor/compute/metal/metal_program.hpp>
 #include <floor/darwin/darwin_helper.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
@@ -51,6 +52,9 @@ static MTLRenderPassDescriptor* shadow_pass_desc { nullptr };
 static id <MTLRenderPipelineState> blit_pipeline_state;
 static MTLRenderPassDescriptor* blit_pass_desc { nullptr };
 
+static id <MTLRenderPipelineState> warp_gather_pipeline_state;
+static MTLRenderPassDescriptor* warp_gather_pass_desc { nullptr };
+
 static id <MTLDepthStencilState> depth_state;
 static id <MTLDepthStencilState> passthrough_depth_state;
 static id <MTLDepthStencilState> skybox_depth_state;
@@ -61,7 +65,7 @@ static struct {
 	shared_ptr<compute_image> color[2];
 	shared_ptr<compute_image> depth[2];
 	shared_ptr<compute_image> motion[4];
-	shared_ptr<compute_image> motion_depth[4];
+	shared_ptr<compute_image> motion_depth[2];
 	shared_ptr<compute_image> compute_color;
 	
 	uint2 dim;
@@ -101,7 +105,7 @@ static void create_textures() {
 	scene_fbo.dim = floor::get_physical_screen_size();
 	
 	// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
-	scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(uint2 { 32, 16 });
+	scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(warp_state.tile_size);
 	
 	for(size_t i = 0, count = size(scene_fbo.color); i < count; ++i) {
 		scene_fbo.color[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
@@ -125,20 +129,20 @@ static void create_textures() {
 																	   COMPUTE_IMAGE_TYPE::READ_WRITE |
 																	   COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
 																	   COMPUTE_MEMORY_FLAG::READ_WRITE);
-			scene_fbo.motion_depth[i * 2 + j] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
-																			 COMPUTE_IMAGE_TYPE::IMAGE_2D |
-																			 COMPUTE_IMAGE_TYPE::R32F |
-																			 COMPUTE_IMAGE_TYPE::READ_WRITE |
-																			 COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
-																			 COMPUTE_MEMORY_FLAG::READ_WRITE);
 		}
+		
+		scene_fbo.motion_depth[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+																 COMPUTE_IMAGE_TYPE::IMAGE_2D |
+																 COMPUTE_IMAGE_TYPE::RG16F |
+																 COMPUTE_IMAGE_TYPE::READ_WRITE |
+																 COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+																 COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	
 	scene_fbo.compute_color = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
 														   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 														   COMPUTE_IMAGE_TYPE::BGRA8UI_NORM |
-														   COMPUTE_IMAGE_TYPE::READ_WRITE |
-														   COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+														   COMPUTE_IMAGE_TYPE::READ_WRITE,
 														   COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
 	if(render_pass_desc_scatter != nil) {
@@ -170,12 +174,12 @@ static void create_skybox() {
 	array<SDL_Surface*, size(skybox_filenames)> skybox_surfaces;
 	auto surf_iter = begin(skybox_surfaces);
 	for(const auto& filename : skybox_filenames) {
-		const auto tex = obj_loader::load_texture(floor::data_path(filename).c_str());
+		const auto tex = obj_loader::load_texture(floor::data_path(filename));
 		if(!tex.first) {
 			log_error("failed to load sky box");
 			return;
 		}
-		*surf_iter++ = tex.second;
+		*surf_iter++ = tex.second.surface;
 	}
 	
 	//
@@ -263,10 +267,8 @@ bool metal_renderer::init() {
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
 			pipeline_desc.colorAttachments[2].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[2].blendingEnabled = false;
-			pipeline_desc.colorAttachments[3].pixelFormat = MTLPixelFormatR32Float;
+			pipeline_desc.colorAttachments[3].pixelFormat = MTLPixelFormatRG16Float;
 			pipeline_desc.colorAttachments[3].blendingEnabled = false;
-			pipeline_desc.colorAttachments[4].pixelFormat = MTLPixelFormatR32Float;
-			pipeline_desc.colorAttachments[4].blendingEnabled = false;
 			
 			NSError* error = nullptr;
 			render_pipeline_state_gather = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
@@ -314,15 +316,10 @@ bool metal_renderer::init() {
 			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 			motion_bwd_attachment.storeAction = MTLStoreActionStore;
 			
-			MTLRenderPassColorAttachmentDescriptor* motion_depth_fwd_attachment = render_pass_desc_gather.colorAttachments[3];
-			motion_depth_fwd_attachment.loadAction = MTLLoadActionClear;
-			motion_depth_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
-			motion_depth_fwd_attachment.storeAction = MTLStoreActionStore;
-			
-			MTLRenderPassColorAttachmentDescriptor* motion_depth_bwd_attachment = render_pass_desc_gather.colorAttachments[4];
-			motion_depth_bwd_attachment.loadAction = MTLLoadActionClear;
-			motion_depth_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
-			motion_depth_bwd_attachment.storeAction = MTLStoreActionStore;
+			MTLRenderPassColorAttachmentDescriptor* motion_depth_attachment = render_pass_desc_gather.colorAttachments[3];
+			motion_depth_attachment.loadAction = MTLLoadActionClear;
+			motion_depth_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_gather.depthAttachment;
 			depth_attachment.loadAction = MTLLoadActionClear;
@@ -370,10 +367,8 @@ bool metal_renderer::init() {
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
 			pipeline_desc.colorAttachments[2].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[2].blendingEnabled = false;
-			pipeline_desc.colorAttachments[3].pixelFormat = MTLPixelFormatR32Float;
+			pipeline_desc.colorAttachments[3].pixelFormat = MTLPixelFormatRG16Float;
 			pipeline_desc.colorAttachments[3].blendingEnabled = false;
-			pipeline_desc.colorAttachments[4].pixelFormat = MTLPixelFormatR32Float;
-			pipeline_desc.colorAttachments[4].blendingEnabled = false;
 			
 			NSError* error = nullptr;
 			skybox_pipeline_state_gather = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
@@ -388,12 +383,12 @@ bool metal_renderer::init() {
 		{
 			skybox_pass_desc_scatter = [MTLRenderPassDescriptor renderPassDescriptor];
 			MTLRenderPassColorAttachmentDescriptor* color_attachment = skybox_pass_desc_scatter.colorAttachments[0];
-			color_attachment.loadAction = MTLLoadActionDontCare;
+			color_attachment.loadAction = MTLLoadActionLoad;
 			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			color_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_attachment = skybox_pass_desc_scatter.colorAttachments[1];
-			motion_attachment.loadAction = MTLLoadActionDontCare;
+			motion_attachment.loadAction = MTLLoadActionLoad;
 			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 			motion_attachment.storeAction = MTLStoreActionStore;
 			
@@ -407,29 +402,24 @@ bool metal_renderer::init() {
 		{
 			skybox_pass_desc_gather = [MTLRenderPassDescriptor renderPassDescriptor];
 			MTLRenderPassColorAttachmentDescriptor* color_attachment = skybox_pass_desc_gather.colorAttachments[0];
-			color_attachment.loadAction = MTLLoadActionDontCare;
+			color_attachment.loadAction = MTLLoadActionLoad;
 			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 			color_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_fwd_attachment = skybox_pass_desc_gather.colorAttachments[1];
-			motion_fwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_fwd_attachment.loadAction = MTLLoadActionLoad;
 			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 			motion_fwd_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_bwd_attachment = skybox_pass_desc_gather.colorAttachments[2];
-			motion_bwd_attachment.loadAction = MTLLoadActionDontCare;
+			motion_bwd_attachment.loadAction = MTLLoadActionLoad;
 			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
 			motion_bwd_attachment.storeAction = MTLStoreActionStore;
 			
-			MTLRenderPassColorAttachmentDescriptor* motion_depth_fwd_attachment = skybox_pass_desc_gather.colorAttachments[3];
-			motion_depth_fwd_attachment.loadAction = MTLLoadActionDontCare;
-			motion_depth_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
-			motion_depth_fwd_attachment.storeAction = MTLStoreActionStore;
-			
-			MTLRenderPassColorAttachmentDescriptor* motion_depth_bwd_attachment = skybox_pass_desc_gather.colorAttachments[4];
-			motion_depth_bwd_attachment.loadAction = MTLLoadActionDontCare;
-			motion_depth_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
-			motion_depth_bwd_attachment.storeAction = MTLStoreActionStore;
+			MTLRenderPassColorAttachmentDescriptor* motion_depth_attachment = render_pass_desc_gather.colorAttachments[3];
+			motion_depth_attachment.loadAction = MTLLoadActionLoad;
+			motion_depth_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather.depthAttachment;
 			depth_attachment.loadAction = MTLLoadActionLoad;
@@ -491,7 +481,7 @@ bool metal_renderer::init() {
 		NSError* error = nullptr;
 		blit_pipeline_state = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 		if(!blit_pipeline_state) {
-			log_error("failed to create scene pipeline state: %s",
+			log_error("failed to create blit pipeline state: %s",
 					  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 			return false;
 		}
@@ -499,6 +489,35 @@ bool metal_renderer::init() {
 		//
 		blit_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
 		MTLRenderPassColorAttachmentDescriptor* color_attachment = blit_pass_desc.colorAttachments[0];
+		color_attachment.loadAction = MTLLoadActionDontCare; // don't care b/c drawing the whole screen
+		color_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
+		color_attachment.storeAction = MTLStoreActionStore;
+		color_attachment.texture = nil;
+	}
+	
+	// warp gather setup (for testing purposes)
+	{
+		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
+		pipeline_desc.label = @"gather pipeline";
+		pipeline_desc.sampleCount = 1;
+		pipeline_desc.vertexFunction = shader_objects["WARP_GATHER"]->vertex_program;
+		pipeline_desc.fragmentFunction = shader_objects["WARP_GATHER"]->fragment_program;
+		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
+		pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		pipeline_desc.colorAttachments[0].blendingEnabled = false;
+		
+		NSError* error = nullptr;
+		warp_gather_pipeline_state = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
+		if(!warp_gather_pipeline_state) {
+			log_error("failed to create gather pipeline state: %s",
+					  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
+			return false;
+		}
+		
+		//
+		warp_gather_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
+		MTLRenderPassColorAttachmentDescriptor* color_attachment = warp_gather_pass_desc.colorAttachments[0];
 		color_attachment.loadAction = MTLLoadActionDontCare; // don't care b/c drawing the whole screen
 		color_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 		color_attachment.storeAction = MTLStoreActionStore;
@@ -530,8 +549,13 @@ bool metal_renderer::init() {
 	MTLSamplerDescriptor* sampler_desc = [[MTLSamplerDescriptor alloc] init];
 	sampler_desc.minFilter = MTLSamplerMinMagFilterLinear;
 	sampler_desc.magFilter = MTLSamplerMinMagFilterLinear;
+#if !defined(FLOOR_IOS)
 	sampler_desc.mipFilter = MTLSamplerMipFilterLinear;
 	sampler_desc.maxAnisotropy = 16;
+#else // less quality, but quite faster
+	sampler_desc.mipFilter = MTLSamplerMipFilterNearest;
+	sampler_desc.maxAnisotropy = 1;
+#endif
 	sampler_desc.normalizedCoordinates = true;
 	sampler_desc.lodMinClamp = 0.0f;
 	sampler_desc.lodMaxClamp = numeric_limits<float>::max();
@@ -551,8 +575,7 @@ void metal_renderer::destroy() {
 }
 
 static void render_full_scene(const metal_obj_model& model, const camera& cam, id <MTLCommandBuffer> cmd_buffer);
-static void render_kernels(const camera& cam,
-						   const float& delta, const float& render_delta,
+static void render_kernels(const float& delta, const float& render_delta,
 						   const size_t& warp_frame_num);
 void metal_renderer::render(const metal_obj_model& model,
 							const camera& cam) {
@@ -586,16 +609,13 @@ void metal_renderer::render(const metal_obj_model& model,
 	//
 	@autoreleasepool {
 		//
-		auto mtl_queue = ((metal_queue*)warp_state.dev_queue.get())->get_queue();
-		
-		id <MTLCommandBuffer> cmd_buffer = [mtl_queue commandBuffer];
-		cmd_buffer.label = @"warp render";
-		
-		//
 		static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 		static size_t warp_frame_num = 0;
 		bool blit = false;
-		if((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat) {
+		const bool run_warp_kernel = ((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat);
+		if(run_warp_kernel) {
+#define USE_WARP_KERNELS 1
+#if defined(USE_WARP_KERNELS)
 			if(deltaf >= frame_limit) { // need to reset when over the limit
 				render_delta = deltaf;
 				time_keeper = now;
@@ -603,13 +623,19 @@ void metal_renderer::render(const metal_obj_model& model,
 			}
 			
 			if(warp_state.is_warping) {
-				render_kernels(cam, deltaf, render_delta, warp_frame_num);
+				render_kernels(deltaf, render_delta, warp_frame_num);
 				blit = false;
 				++warp_frame_num;
 			}
 			else blit = true;
+#endif
 		}
-		else {
+		
+		//
+		auto mtl_queue = ((metal_queue*)warp_state.dev_queue.get())->get_queue();
+		id <MTLCommandBuffer> cmd_buffer = [mtl_queue commandBuffer];
+		cmd_buffer.label = @"warp render";
+		if(!run_warp_kernel) {
 			first_frame = false;
 			render_delta = deltaf;
 			time_keeper = now;
@@ -628,6 +654,7 @@ void metal_renderer::render(const metal_obj_model& model,
 		}
 		
 		// NOTE: can't use a normal blit encoder step here, because the ca drawable texture apparently isn't allowed to be used like that
+#if defined(USE_WARP_KERNELS)
 		{
 			blit_pass_desc.colorAttachments[0].texture = drawable.texture;
 			
@@ -649,14 +676,100 @@ void metal_renderer::render(const metal_obj_model& model,
 			[encoder endEncoding];
 			[encoder popDebugGroup];
 		}
+#else
+		if(!run_warp_kernel) {
+			blit_pass_desc.colorAttachments[0].texture = drawable.texture;
+			
+			id <MTLRenderCommandEncoder> encoder = [cmd_buffer renderCommandEncoderWithDescriptor:blit_pass_desc];
+			encoder.label = @"warp blit encoder";
+			[encoder setDepthStencilState:passthrough_depth_state];
+			[encoder setCullMode:MTLCullModeBack];
+			[encoder setFrontFacingWinding:MTLWindingClockwise];
+			
+			//
+			[encoder pushDebugGroup:@"blit"];
+			[encoder setRenderPipelineState:blit_pipeline_state];
+			[encoder setFragmentTexture:(blit ?
+										 // if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
+										 ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image() :
+										 ((metal_image*)scene_fbo.compute_color.get())->get_metal_image())
+								atIndex:0];
+			[encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3]; // fullscreen triangle
+			[encoder endEncoding];
+			[encoder popDebugGroup];
+		}
+		else {
+			warp_gather_pass_desc.colorAttachments[0].texture = drawable.texture;
+			
+			//
+			if(deltaf >= frame_limit) { // need to reset when over the limit
+				render_delta = deltaf;
+				time_keeper = now;
+				warp_frame_num = 0;
+			}
+			
+			//
+			float relative_delta = deltaf / render_delta;
+			if(warp_state.target_frame_count > 0) {
+				const uint32_t in_between_frame_count = ((warp_state.target_frame_count - warp_state.render_frame_count) /
+														 warp_state.render_frame_count);
+				const float delta_per_frame = 1.0f / float(in_between_frame_count + 1u);
+				
+				// reached the limit
+				if(warp_frame_num >= in_between_frame_count) {
+					//return; // TODO: !
+				}
+				
+				relative_delta = float(warp_frame_num + 1u) * delta_per_frame;
+			}
+			
+			//
+			blit_pass_desc.colorAttachments[0].texture = drawable.texture;
+			
+			id <MTLRenderCommandEncoder> encoder = [cmd_buffer renderCommandEncoderWithDescriptor:warp_gather_pass_desc];
+			encoder.label = @"gather encoder";
+			[encoder setDepthStencilState:passthrough_depth_state];
+			[encoder setCullMode:MTLCullModeBack];
+			[encoder setFrontFacingWinding:MTLWindingClockwise];
+			
+			//
+			[encoder pushDebugGroup:@"gather"];
+			[encoder setRenderPipelineState:warp_gather_pipeline_state];
+			
+			// current frame (t)
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.color[1u - warp_state.cur_fbo].get())->get_metal_image() atIndex:0];
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.depth[1u - warp_state.cur_fbo].get())->get_metal_image() atIndex:1];
+			// previous frame (t-1)
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image() atIndex:2];
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.depth[warp_state.cur_fbo].get())->get_metal_image() atIndex:3];
+			// forward from prev frame, t-1 -> t
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image() atIndex:4];
+			// backward from cur frame, t -> t-1
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1].get())->get_metal_image() atIndex:5];
+			// packed depth: { fwd t-1 -> t (used here), bwd t-1 -> t-2 (unused here) }
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo].get())->get_metal_image() atIndex:6];
+			// packed depth: { fwd t+1 -> t (unused here), bwd t -> t-1 (used here) }
+			[encoder setFragmentTexture:((metal_image*)scene_fbo.motion_depth[1u - warp_state.cur_fbo].get())->get_metal_image() atIndex:7];
+			
+			[encoder setFragmentBytes:&relative_delta length:sizeof(float) atIndex:0];
+			[encoder setFragmentBytes:&warp_state.gather_eps_1 length:sizeof(float) atIndex:1];
+			[encoder setFragmentBytes:&warp_state.gather_eps_2 length:sizeof(float) atIndex:2];
+			
+			[encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3]; // fullscreen triangle
+			[encoder endEncoding];
+			[encoder popDebugGroup];
+			
+			//
+			++warp_frame_num;
+		}
+#endif
 		
 		[cmd_buffer presentDrawable:drawable];
 		[cmd_buffer commit];
 	}
 }
 
-static void render_kernels(const camera& cam,
-						   const float& delta, const float& render_delta,
+static void render_kernels(const float& delta, const float& render_delta,
 						   const size_t& warp_frame_num) {
 //#define WARP_TIMING
 #if defined(WARP_TIMING)
@@ -696,14 +809,14 @@ static void render_kernels(const camera& cam,
 		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
 			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_CLEAR],
 										  scene_fbo.dim_multiple,
-										  uint2 { 32, 16 },
+										  warp_state.tile_size,
 										  scene_fbo.compute_color, clear_color);
 		}
 		
-#if 0
-		warp_state.dev_queue->execute(warp_state.warp_scatter_kernel,
+#if 1
+		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_SIMPLE],
 									  scene_fbo.dim_multiple,
-									  uint2 { 32, 16 },
+									  warp_state.tile_size,
 									  scene_fbo.color[0],
 									  scene_fbo.depth[0],
 									  scene_fbo.motion[0],
@@ -715,14 +828,14 @@ static void render_kernels(const camera& cam,
 		
 		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_DEPTH_PASS],
 									  scene_fbo.dim_multiple,
-									  uint2 { 32, 16 },
+									  warp_state.tile_size,
 									  scene_fbo.depth[0],
 									  scene_fbo.motion[0],
 									  warp_state.scatter_depth_buffer,
 									  relative_delta);
 		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
 									  scene_fbo.dim_multiple,
-									  uint2 { 32, 16 },
+									  warp_state.tile_size,
 									  scene_fbo.color[0],
 									  scene_fbo.depth[0],
 									  scene_fbo.motion[0],
@@ -734,14 +847,14 @@ static void render_kernels(const camera& cam,
 		if(warp_state.is_fixup) {
 			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_FIXUP],
 										  scene_fbo.dim_multiple,
-										  uint2 { 32, 16 },
+										  warp_state.tile_size,
 										  scene_fbo.compute_color);
 		}
 	}
 	else {
 		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_GATHER],
 									  scene_fbo.dim_multiple,
-									  uint2 { 32, 16 },
+									  warp_state.tile_size,
 									  // current frame (t)
 									  scene_fbo.color[1u - warp_state.cur_fbo],
 									  scene_fbo.depth[1u - warp_state.cur_fbo],
@@ -750,10 +863,12 @@ static void render_kernels(const camera& cam,
 									  scene_fbo.depth[warp_state.cur_fbo],
 									  // forward from prev frame, t-1 -> t
 									  scene_fbo.motion[warp_state.cur_fbo * 2],
-									  scene_fbo.motion_depth[warp_state.cur_fbo * 2],
 									  // backward from cur frame, t -> t-1
 									  scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
-									  scene_fbo.motion_depth[(1u - warp_state.cur_fbo) * 2 + 1],
+									  // packed depth: { fwd t-1 -> t (used here), bwd t-1 -> t-2 (unused here) }
+									  scene_fbo.motion_depth[warp_state.cur_fbo],
+									  // packed depth: { fwd t+1 -> t (unused here), bwd t -> t-1 (used here) }
+									  scene_fbo.motion_depth[1u - warp_state.cur_fbo],
 									  scene_fbo.compute_color,
 									  relative_delta,
 									  warp_state.gather_eps_1,
@@ -848,8 +963,7 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			render_pass_desc_gather.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image();
 			render_pass_desc_gather.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image();
 			render_pass_desc_gather.colorAttachments[2].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
-			render_pass_desc_gather.colorAttachments[3].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2].get())->get_metal_image();
-			render_pass_desc_gather.colorAttachments[4].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
+			render_pass_desc_gather.colorAttachments[3].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo].get())->get_metal_image();
 			render_pass_desc_gather.depthAttachment.texture = ((metal_image*)scene_fbo.depth[warp_state.cur_fbo].get())->get_metal_image();
 		}
 		
@@ -926,8 +1040,7 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			skybox_pass_desc_gather.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image();
 			skybox_pass_desc_gather.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image();
 			skybox_pass_desc_gather.colorAttachments[2].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
-			skybox_pass_desc_gather.colorAttachments[3].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2].get())->get_metal_image();
-			skybox_pass_desc_gather.colorAttachments[4].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
+			skybox_pass_desc_gather.colorAttachments[3].texture = ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo].get())->get_metal_image();
 			skybox_pass_desc_gather.depthAttachment.texture = ((metal_image*)scene_fbo.depth[warp_state.cur_fbo].get())->get_metal_image();
 		}
 		
@@ -1025,6 +1138,12 @@ bool metal_renderer::compile_shaders() {
 		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"blit_vs"];
 		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"blit_swizzle_fs"];
 		shader_objects.emplace("BLIT_SWIZZLE", shd);
+	}
+	{
+		auto shd = make_shared<metal_shader_object>();
+		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"blit_vs"];
+		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"warp_gather"];
+		shader_objects.emplace("WARP_GATHER", shd);
 	}
 	return true;
 }

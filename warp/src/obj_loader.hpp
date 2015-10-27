@@ -89,7 +89,19 @@ class obj_loader {
 public:
 	static shared_ptr<obj_model> load(const string& file_name, bool& success, const bool is_opengl);
 	
-	static pair<bool, SDL_Surface*> load_texture(const char* filename);
+	struct pvrtc_texture {
+		uint2 dim;
+		uint32_t bpp;
+		bool is_mipmapped;
+		bool is_alpha;
+		unique_ptr<uint8_t[]> pixels;
+	};
+	
+	struct texture {
+		SDL_Surface* surface { nullptr };
+		shared_ptr<pvrtc_texture> pvrtc {};
+	};
+	static pair<bool, texture> load_texture(const string& filename);
 	
 	static COMPUTE_IMAGE_TYPE floor_image_type_format(const SDL_Surface* surface);
 	

@@ -1,0 +1,393 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 20.08.2010 18:13:43
+
+newmtl leaf
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_thorn_diff.pvr
+	map_Kd pvrtc_textures/sponza_thorn_diff.pvr
+	map_Ks pvrtc_textures/sponza_thorn_spec.pvr
+	map_d pvrtc_textures/sponza_thorn_mask.pvr
+	map_bump pvrtc_textures/sponza_thorn_ddn.pvr
+	bump pvrtc_textures/sponza_thorn_ddn.pvr
+
+newmtl vase_round
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/vase_round.pvr
+	map_Kd pvrtc_textures/vase_round.pvr
+	map_Ks pvrtc_textures/vase_round_spec.pvr
+	map_bump pvrtc_textures/vase_round_ddn.pvr
+	bump pvrtc_textures/vase_round_ddn.pvr
+
+newmtl Material__57
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/vase_plant.pvr
+	map_Kd pvrtc_textures/vase_plant.pvr
+	map_Ks pvrtc_textures/vase_plant_spec.pvr
+	map_d pvrtc_textures/vase_plant_mask.pvr
+
+newmtl Material__298
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/background.pvr
+	map_Kd pvrtc_textures/background.pvr
+	map_bump pvrtc_textures/background_ddn.pvr
+	bump pvrtc_textures/background_ddn.pvr
+
+newmtl bricks
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/spnza_bricks_a_diff.pvr
+	map_Kd pvrtc_textures/spnza_bricks_a_diff.pvr
+	map_Ks pvrtc_textures/spnza_bricks_a_spec.pvr
+	map_bump pvrtc_textures/spnza_bricks_a_ddn.pvr
+	bump pvrtc_textures/spnza_bricks_a_ddn.pvr
+
+newmtl arch
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_arch_diff.pvr
+	map_Kd pvrtc_textures/sponza_arch_diff.pvr
+	map_Ks pvrtc_textures/sponza_arch_spec.pvr
+	map_bump pvrtc_textures/sponza_arch_ddn.pvr
+	bump pvrtc_textures/sponza_arch_ddn.pvr
+
+newmtl ceiling
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_ceiling_a_diff.pvr
+	map_Kd pvrtc_textures/sponza_ceiling_a_diff.pvr
+	map_Ks pvrtc_textures/sponza_ceiling_a_spec.pvr
+
+newmtl column_a
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_column_a_diff.pvr
+	map_Kd pvrtc_textures/sponza_column_a_diff.pvr
+	map_Ks pvrtc_textures/sponza_column_a_spec.pvr
+	map_bump pvrtc_textures/sponza_column_a_ddn.pvr
+	bump pvrtc_textures/sponza_column_a_ddn.pvr
+
+newmtl floor
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_floor_a_diff.pvr
+	map_Kd pvrtc_textures/sponza_floor_a_diff.pvr
+	map_Ks pvrtc_textures/sponza_floor_a_spec.pvr
+
+newmtl column_c
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_column_c_diff.pvr
+	map_Kd pvrtc_textures/sponza_column_c_diff.pvr
+	map_Ks pvrtc_textures/sponza_column_c_spec.pvr
+	map_bump pvrtc_textures/sponza_column_c_ddn.pvr
+	bump pvrtc_textures/sponza_column_c_ddn.pvr
+
+newmtl details
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_details_diff.pvr
+	map_Kd pvrtc_textures/sponza_details_diff.pvr
+	map_Ks pvrtc_textures/sponza_details_spec.pvr
+
+newmtl column_b
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_column_b_diff.pvr
+	map_Kd pvrtc_textures/sponza_column_b_diff.pvr
+	map_Ks pvrtc_textures/sponza_column_b_spec.pvr
+	map_bump pvrtc_textures/sponza_column_b_ddn.pvr
+	bump pvrtc_textures/sponza_column_b_ddn.pvr
+
+newmtl Material__47
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+
+newmtl flagpole
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_flagpole_diff.pvr
+	map_Kd pvrtc_textures/sponza_flagpole_diff.pvr
+	map_Ks pvrtc_textures/sponza_flagpole_spec.pvr
+
+newmtl fabric_e
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_fabric_green_diff.pvr
+	map_Kd pvrtc_textures/sponza_fabric_green_diff.pvr
+	map_Ks pvrtc_textures/sponza_fabric_spec.pvr
+
+newmtl fabric_d
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_fabric_blue_diff.pvr
+	map_Kd pvrtc_textures/sponza_fabric_blue_diff.pvr
+	map_Ks pvrtc_textures/sponza_fabric_spec.pvr
+
+newmtl fabric_a
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_fabric_diff.pvr
+	map_Kd pvrtc_textures/sponza_fabric_diff.pvr
+	map_Ks pvrtc_textures/sponza_fabric_spec.pvr
+
+newmtl fabric_g
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_curtain_blue_diff.pvr
+	map_Kd pvrtc_textures/sponza_curtain_blue_diff.pvr
+	map_Ks pvrtc_textures/sponza_curtain_spec.pvr
+
+newmtl fabric_c
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_curtain_diff.pvr
+	map_Kd pvrtc_textures/sponza_curtain_diff.pvr
+	map_Ks pvrtc_textures/sponza_curtain_spec.pvr
+
+newmtl fabric_f
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_curtain_green_diff.pvr
+	map_Kd pvrtc_textures/sponza_curtain_green_diff.pvr
+	map_Ks pvrtc_textures/sponza_curtain_spec.pvr
+
+newmtl chain
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/chain_texture.png
+	map_Kd pvrtc_textures/chain_texture.png
+	map_d pvrtc_textures/chain_texture_mask.png
+	map_bump pvrtc_textures/chain_texture_ddn.png
+	bump pvrtc_textures/chain_texture_ddn.png
+
+newmtl vase_hanging
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/vase_hanging.pvr
+	map_Kd pvrtc_textures/vase_hanging.pvr
+
+newmtl vase
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/vase_dif.pvr
+	map_Kd pvrtc_textures/vase_dif.pvr
+	map_bump pvrtc_textures/vase_ddn.pvr
+	bump pvrtc_textures/vase_ddn.pvr
+
+newmtl Material__25
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/lion.pvr
+	map_Kd pvrtc_textures/lion.pvr
+	map_bump pvrtc_textures/lion_ddn.pvr
+	bump pvrtc_textures/lion_ddn.pvr
+
+newmtl roof
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5880 0.5880 0.5880
+	Kd 0.5880 0.5880 0.5880
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka pvrtc_textures/sponza_roof_diff.pvr
+	map_Kd pvrtc_textures/sponza_roof_diff.pvr

@@ -60,8 +60,13 @@ enum class depth_type {
 #endif
 
 // work-group/tile x/y size
-#define TILE_SIZE_X 32u
-#define TILE_SIZE_Y 16u
+#if !defined(TILE_SIZE_X)
+#define TILE_SIZE_X 32
+#endif
+#if !defined(TILE_SIZE_Y)
+#define TILE_SIZE_Y 16
+#endif
+
 
 #if defined(FLOOR_COMPUTE)
 

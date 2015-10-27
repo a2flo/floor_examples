@@ -47,7 +47,13 @@ struct warp_state_struct {
 	bool stop { false };
 	bool no_opengl { false };
 	bool no_metal { false };
-	bool is_auto_cam { false };
+	bool is_auto_cam {
+#if !defined(FLOOR_IOS)
+		false
+#else
+		true
+#endif
+	};
 	bool is_frame_repeat { false };
 	bool is_debug_delta { false };
 	bool is_split_view { false };
@@ -56,7 +62,7 @@ struct warp_state_struct {
 	bool is_scatter { false };
 	bool is_warping { true };
 	bool is_render_full { true };
-	bool is_clear_frame { true };
+	bool is_clear_frame { false };
 	bool is_fixup { false };
 	bool is_bidir_scatter { false };
 	
@@ -71,6 +77,7 @@ struct warp_state_struct {
 	//
 	const float view_distance { 500.0f };
 	const float fov { 72.0f };
+	uint2 tile_size { 32, 16 };
 	
 	// input frame rate: amount of frames per second that will actually be rendered
 	uint32_t render_frame_count { 10 };

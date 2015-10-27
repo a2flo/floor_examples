@@ -44,7 +44,7 @@ namespace warp_camera {
 	static constexpr const float up_vec { -_up_vec };
 #endif
 	// [near, far] plane, needed for depth correction
-	constexpr const float2 near_far_plane { 0.5f, 500.0f };
+	static constexpr const float2 near_far_plane { 0.5f, 500.0f };
 	
 	// reconstructs a 3D position from a 2D screen coordinate and its associated real world depth
 	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {
@@ -57,7 +57,7 @@ namespace warp_camera {
 	// reprojects a 3D position back to 2D
 	static float2 reproject_position(const float3& position) {
 		const auto proj_dst_coord = (position.xy * float2 { 1.0f / right_vec, 1.0f / up_vec }) / -position.z;
-		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size).floor();
+		return ((proj_dst_coord * 0.5f + 0.5f) * screen_size);
 	}
 	
 	// linearizes the input depth value according to the depth type and returns the real world depth value
@@ -90,14 +90,23 @@ namespace warp_camera {
 	}
 };
 
+// used by decode_3d_motion
+static constexpr const float3 signs_lookup[8] {
+	float3 { 1.0f, 1.0f, 1.0f },
+	float3 { 1.0f, 1.0f, -1.0f },
+	float3 { 1.0f, -1.0f, 1.0f },
+	float3 { 1.0f, -1.0f, -1.0f },
+	float3 { -1.0f, 1.0f, 1.0f },
+	float3 { -1.0f, 1.0f, -1.0f },
+	float3 { -1.0f, -1.0f, 1.0f },
+	float3 { -1.0f, -1.0f, -1.0f },
+};
+
 // decodes the encoded input 3D motion vector
 // format: [1-bit sign x][1-bit sign y][1-bit sign z][10-bit x][9-bit y][10-bit z]
 floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motion) {
-	const float3 signs {
-		(encoded_motion & 0x80000000u) != 0u ? -1.0f : 1.0f,
-		(encoded_motion & 0x40000000u) != 0u ? -1.0f : 1.0f,
-		(encoded_motion & 0x20000000u) != 0u ? -1.0f : 1.0f
-	};
+	// lookup into constant memory + 1 shift is faster than 3 ANDs + 3 cmps/sels
+	const float3 signs = signs_lookup[encoded_motion >> 29u];
 	const uint3 shifted_motion {
 		(encoded_motion >> 19u) & 0x3FFu,
 		(encoded_motion >> 10u) & 0x1FFu,
@@ -361,9 +370,11 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_forward,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_motion_depth_forward,
 						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_backward,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32F> img_motion_depth_backward,
+						// packed <forward depth: fwd t-1 -> t (used here), backward depth: bwd t-1 -> t-2 (unused here)>
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RG16F> img_motion_depth_forward,
+						// packed <forward depth: t+1 -> t (unused here), backward depth: t -> t-1 (used here)>
+						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RG16F> img_motion_depth_backward,
 						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
 						param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 						param<float> epsilon_1,
@@ -389,9 +400,13 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	const auto color_fwd = read(img_color_prev, p_fwd);
 	const auto color_bwd = read(img_color, p_bwd);
 	
+	// read final motion vector + depth (packed)
 	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, p_fwd));
 	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, p_bwd));
+	const auto depth_fwd = read(img_motion_depth_forward, p_fwd).x;
+	const auto depth_bwd = read(img_motion_depth_backward, p_bwd).y;
 	
+	// compute screen space error
 	const auto err_fwd = ((p_fwd + relative_delta * motion_fwd - p_init).dot() +
 						  // account for out-of-bound access (-> large error so any checks will fail)
 						  ((p_fwd < 0.0f).any() || (p_fwd > 1.0f).any() ? 1e10f : 0.0f));
@@ -403,16 +418,16 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	// NOTE: scene depth type is dependent on the renderer (-> use the default), motion depth is always z/w
 	// -> need to linearize both to properly add + compare them
 	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, p_fwd)) +
-						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_forward, p_fwd)));
+						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(depth_fwd));
 	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, p_bwd)) +
-						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(read(img_motion_depth_backward, p_bwd)));
+						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(depth_bwd));
 	const auto depth_diff = abs(z_fwd - z_bwd);
 	//constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
 	
 	const bool fwd_valid = (err_fwd < epsilon_1_sq);
 	const bool bwd_valid = (err_bwd < epsilon_1_sq);
 	float4 color;
-#if 1
+#if 0
 	if(dbg_render_type > 0) { // dbg rendering
 		if(dbg_render_type == 1) color = color_fwd;
 		else if(dbg_render_type == 2) color = color_bwd;
@@ -448,12 +463,14 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 				if(z_fwd < z_bwd) {
 					// depth from other frame
 					const auto z_fwd_other = (read(img_depth, p_fwd + motion_fwd) +
-											  (1.0f - relative_delta) * read(img_motion_depth_backward, p_fwd + motion_fwd));
+											  (1.0f - relative_delta) * read(img_motion_depth_backward,
+																			 p_fwd + motion_fwd).y);
 					color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 				}
 				else { // bwd < fwd
 					const auto z_bwd_other = (read(img_depth_prev, p_bwd + motion_bwd) +
-											  relative_delta * read(img_motion_depth_forward,  p_bwd + motion_bwd));
+											  relative_delta * read(img_motion_depth_forward,
+																	p_bwd + motion_bwd).x);
 					color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 				}
 			}

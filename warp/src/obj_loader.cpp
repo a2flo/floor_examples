@@ -37,6 +37,10 @@
 #include <SDL_image.h>
 #endif
 
+#if defined(FLOOR_IOS)
+#include <floor/darwin/darwin_helper.hpp>
+#endif
+
 // -> opengl
 #if !defined(FLOOR_IOS)
 #if !defined(GL_BGRA8)
@@ -486,57 +490,122 @@ struct mtl_grammar {
 };
 
 
-pair<bool, SDL_Surface*> obj_loader::load_texture(const char* filename) {
-	SDL_Surface* surface = IMG_Load(filename);
-	if(surface == nullptr) {
-		log_error("error loading texture file \"%s\": %s!", filename, SDL_GetError());
-		return { false, nullptr };
-	}
+pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename) {
+	texture ret;
 	
-	// freeing sdl surfaces is not thread-safe
-	static safe_mutex surface_free_mutex;
-	const auto free_surface = [](SDL_Surface* surf) {
-		GUARD(surface_free_mutex);
-		SDL_FreeSurface(surf);
-	};
-	
-	// check format, BGR(A) needs to be converted to RGB(A)
-	GLint internal_format = 0;
-	GLenum format = 0;
-	GLenum type = 0;
-	check_format(surface, internal_format, format, type);
-	if(format == GL_BGR || format == GL_BGRA) {
-		SDL_PixelFormat new_pformat;
-		memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
-		new_pformat.next = nullptr;
-		new_pformat.palette = nullptr;
-		new_pformat.refcount = 0;
-		new_pformat.Rshift = surface->format->Bshift;
-		new_pformat.Bshift = surface->format->Rshift;
-		new_pformat.Rmask = surface->format->Bmask;
-		new_pformat.Bmask = surface->format->Rmask;
-		
-		if(surface->format->Ashift == 0) {
-			new_pformat.BytesPerPixel = 3;
-			new_pformat.BitsPerPixel = 24;
+	if(filename.find(".pvr") == string::npos) {
+		SDL_Surface* surface = IMG_Load(filename.c_str());
+		if(surface == nullptr) {
+			log_error("error loading texture file \"%s\": %s!", filename, SDL_GetError());
+			return { false, {} };
 		}
-		else if(format == GL_BGRA) {
-			new_pformat.BytesPerPixel = 4;
-			new_pformat.BitsPerPixel = 32;
-		}
-		// else: keep it?
 		
-		SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
-		if(new_surface == nullptr) {
-			log_error("BGR(A)->RGB(A) surface conversion failed!");
+		// freeing sdl surfaces is not thread-safe
+		static safe_mutex surface_free_mutex;
+		const auto free_surface = [](SDL_Surface* surf) {
+			GUARD(surface_free_mutex);
+			SDL_FreeSurface(surf);
+		};
+		
+		// check format, BGR(A) needs to be converted to RGB(A)
+		GLint internal_format = 0;
+		GLenum format = 0;
+		GLenum type = 0;
+		check_format(surface, internal_format, format, type);
+		if(format == GL_BGR || format == GL_BGRA) {
+			SDL_PixelFormat new_pformat;
+			memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
+			new_pformat.next = nullptr;
+			new_pformat.palette = nullptr;
+			new_pformat.refcount = 0;
+			new_pformat.Rshift = surface->format->Bshift;
+			new_pformat.Bshift = surface->format->Rshift;
+			new_pformat.Rmask = surface->format->Bmask;
+			new_pformat.Bmask = surface->format->Rmask;
+			
+			if(surface->format->Ashift == 0) {
+				new_pformat.BytesPerPixel = 3;
+				new_pformat.BitsPerPixel = 24;
+			}
+			else if(format == GL_BGRA) {
+				new_pformat.BytesPerPixel = 4;
+				new_pformat.BitsPerPixel = 32;
+			}
+			// else: keep it?
+			
+			SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
+			if(new_surface == nullptr) {
+				log_error("BGR(A)->RGB(A) surface conversion failed!");
+				free_surface(surface);
+				return { false, {} };
+			}
 			free_surface(surface);
-			return { false, nullptr };
+			surface = new_surface;
 		}
-		free_surface(surface);
-		surface = new_surface;
+		ret.surface = surface;
+	}
+	else {
+		struct pvrtc_legacy_header {
+			uint32_t header_size;
+			uint32_t height;
+			uint32_t width;
+			uint32_t mip_map_count;
+			struct {
+				uint32_t format : 8;
+				uint32_t flags : 24;
+			};
+			uint32_t surface_size;
+			uint32_t bpp;
+			uint32_t red_mask;
+			uint32_t green_mask;
+			uint32_t blue_mask;
+			uint32_t alpha_mask;
+			uint32_t pvr_id;
+			uint32_t surface_count;
+		};
+		static constexpr const uint32_t pvrtc_header_size { 52 };
+		static_assert(sizeof(pvrtc_legacy_header) == pvrtc_header_size, "invalid header size");
+		
+		string img_data;
+		if(!file_io::file_to_string(filename, img_data)) {
+			log_error("error loading texture file \"%s\"!", filename);
+			return { false, {} };
+		}
+		
+FLOOR_PUSH_WARNINGS()
+FLOOR_IGNORE_WARNING(cast-align)
+		const auto header = (const pvrtc_legacy_header*)img_data.data();
+FLOOR_POP_WARNINGS()
+		
+		// sanity checks
+		if(header->header_size != pvrtc_header_size) {
+			log_error("invalid pvrtc header size: got %u, expected %u!", header->header_size, pvrtc_header_size);
+			return { false, {} };
+		}
+		if(header->pvr_id != 0x21525650u) {
+			log_error("invalid pvrtc id: %X!", header->pvr_id);
+			return { false, {} };
+		}
+		if(header->format != 0xC &&
+		   header->format != 0xD &&
+		   header->format != 0x18 &&
+		   header->format != 0x19) {
+			log_error("pvr pixel format (%X) is not PVRTC!", header->format);
+			return { false, {} };
+		}
+		
+		// fill ret data
+		ret.pvrtc = make_shared<pvrtc_texture>(pvrtc_texture {
+			.dim = { header->width, header->height },
+			.bpp = header->bpp,
+			.is_mipmapped = header->mip_map_count > 1,
+			.is_alpha = (header->flags & 0x8000u) != 0u,
+			.pixels = make_unique<uint8_t[]>(header->surface_size),
+		});
+		memcpy(ret.pvrtc->pixels.get(), img_data.data() + pvrtc_header_size, header->surface_size);
 	}
 	
-	return { true, surface };
+	return { true, ret };
 }
 
 static void load_textures(// file name -> <gl tex id, compute image ptr>
@@ -551,10 +620,10 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  const string& prefix) {
 	// load textures
 	const auto filenames = core::keys(texture_filenames);
-	alignas(128) vector<SDL_Surface*> surfaces(filenames.size(), nullptr);
+	alignas(128) vector<obj_loader::texture> textures(filenames.size());
 	atomic<uint32_t> cur_tex { 0u }, active_workers { core::get_hw_thread_count() };
 	for(uint32_t worker_id = 0; worker_id < core::get_hw_thread_count(); ++worker_id) {
-		task::spawn([worker_id, &active_workers, &filenames, &cur_tex, &surfaces, &prefix] {
+		task::spawn([worker_id, &active_workers, &filenames, &cur_tex, &textures, &prefix] {
 			for(;;) {
 				const auto id = cur_tex++;
 				if(id >= filenames.size()) break;
@@ -572,8 +641,8 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 					}
 				}
 				
-				const auto tex = obj_loader::load_texture(filename.c_str());
-				surfaces[id] = tex.second;
+				const auto tex = obj_loader::load_texture(filename);
+				textures[id] = tex.second;
 				if(!tex.first) continue;
 			}
 			active_workers--;
@@ -582,15 +651,15 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	while(active_workers != 0) {
 		this_thread::sleep_for(10ms);
 	}
-	log_debug("%u textures loaded to mem", surfaces.size());
+	log_debug("%u textures loaded to mem", textures.size());
 	
 #if !defined(FLOOR_IOS)
 	if(is_opengl) {
 		// create gl textures
-		model_gl_textures->resize(surfaces.size());
+		model_gl_textures->resize(textures.size());
 		glGenTextures((GLsizei)model_gl_textures->size(), &(*model_gl_textures)[0]);
 		for(size_t i = 0, count = model_gl_textures->size(); i < count; ++i) {
-			const SDL_Surface* surface = surfaces[i];
+			const SDL_Surface* surface = textures[i].surface;
 			if(surface == nullptr) {
 				log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
 				continue;
@@ -627,24 +696,49 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 #endif
 	{
 		// create metal textures
-		model_metal_textures->resize(surfaces.size());
+		model_metal_textures->resize(textures.size());
 		for(size_t i = 0, count = model_metal_textures->size(); i < count; ++i) {
-			const SDL_Surface* surface = surfaces[i];
-			if(surface == nullptr) {
-				log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
+			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
+			
+			if(textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
+				log_debug("texture #%u invalid due to load failure - continuing ...", i);
 				continue;
 			}
 			
-			COMPUTE_IMAGE_TYPE image_type = obj_loader::floor_image_type_format(surface);
-			image_type |= COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED;
+			uint2 dim;
+			void* pixels;
+			if(textures[i].surface != nullptr) {
+				const SDL_Surface* surface = textures[i].surface;
+				image_type = obj_loader::floor_image_type_format(surface);
+				dim = { uint32_t(surface->w), uint32_t(surface->h) };
+				pixels = surface->pixels;
+			}
+			else {
+				const auto tex = textures[i].pvrtc;
+				dim = tex->dim;
+				pixels = tex->pixels.get();
+				
+				if(tex->bpp != 2 && tex->bpp != 4) {
+					log_error("invalid bpp for pvrtc texture: %u", tex->bpp);
+					continue;
+				}
+				
+				if(tex->bpp == 2) {
+					image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA2 : COMPUTE_IMAGE_TYPE::PVRTC_RGB2);
+				}
+				else {
+					image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA4 : COMPUTE_IMAGE_TYPE::PVRTC_RGB4);
+				}
+			}
+			
+			image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
+						   COMPUTE_IMAGE_TYPE::READ |
+						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
 			
 			(*model_metal_textures)[i] = warp_state.ctx->create_image(warp_state.dev,
-																	  uint2 {
-																		  uint32_t(surface->w),
-																		  uint32_t(surface->h)
-																	  },
+																	  dim,
 																	  image_type,
-																	  surface->pixels,
+																	  pixels,
 																	  COMPUTE_MEMORY_FLAG::READ |
 																	  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 			
@@ -653,6 +747,13 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 		}
 		log_debug("metal textures created");
 	}
+	
+	// cleanup
+	for(auto& tex : textures) {
+		if(tex.surface != nullptr) SDL_FreeSurface(tex.surface);
+		tex.pvrtc = nullptr;
+	}
+	textures.clear();
 }
 
 struct obj_grammar {
@@ -907,7 +1008,11 @@ struct obj_grammar {
 			return {};
 		});
 		mtllib.on_match([this](auto& matches) -> parser_context::match_list {
+#if !defined(FLOOR_IOS)
 			mat_filename = matches[1].token->second.to_string();
+#else
+			mat_filename = "ios_" + matches[1].token->second.to_string();
+#endif
 			return {};
 		});
 		usemtl.on_match([this](auto& matches) -> parser_context::match_list {
@@ -1258,7 +1363,16 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		}
 		
 		// write .bin
+#if !defined(FLOOR_IOS)
 		file_io bin_file(file_name + ".bin", file_io::OPEN_TYPE::WRITE_BINARY);
+#else
+		string bin_file_name = file_name;
+		const auto slash_pos = file_name.rfind('/');
+		if(slash_pos != string::npos) {
+			bin_file_name = file_name.substr(slash_pos + 1);
+		}
+		file_io bin_file(darwin_helper::get_pref_path() + bin_file_name + ".bin", file_io::OPEN_TYPE::WRITE_BINARY);
+#endif
 		if(!bin_file.is_open()) {
 			log_warn("failed to open .bin file!");
 		}
