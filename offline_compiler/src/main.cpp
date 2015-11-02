@@ -492,7 +492,6 @@ int main(int, char* argv[]) {
 				
 				// ... and build it
 				const string build_options {
-					option_ctx.additional_options
 #if !defined(__APPLE__)
 					+ " -x spir -spir-std=1.2"
 #endif
@@ -543,8 +542,8 @@ int main(int, char* argv[]) {
 					}
 				}
 				
-				auto prog = ctx->add_program(program_data, option_ctx.additional_options);
-				if(prog == nullptr) {
+				auto prog_entry = ctx->create_program_entry(dev, program_data);
+				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
 #else
@@ -598,8 +597,8 @@ int main(int, char* argv[]) {
 					program_data.second = kernels;
 				}
 				
-				auto prog = ctx->add_program(program_data, option_ctx.additional_options);
-				if(prog == nullptr) {
+				auto prog_entry = ctx->create_cuda_program(program_data);
+				if(!prog_entry.valid) {
 					log_error("program compilation failed!");
 				}
 #else
