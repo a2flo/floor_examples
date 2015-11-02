@@ -59,11 +59,7 @@ int main(int, char* argv[]) {
 						   // total amount of work:
 						   uint1 { pixel_count },
 						   // work per work-group:
-#if !defined(FLOOR_IOS)
 						   uint1 { fastest_device->max_work_group_size },
-#else
-						   uint1 { 256 }, // TODO: check this in floor
-#endif
 						   // kernel arguments:
 						   img_buffer, iteration, core::rand<uint32_t>(), img_size);
 
