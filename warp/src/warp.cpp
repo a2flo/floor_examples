@@ -124,12 +124,12 @@ floor_inline_always static float3 decode_3d_motion(const uint32_t& encoded_motio
 // according to it's depth value (which is also returned) and motion vector, as well as the current time delta
 floor_inline_always static auto scatter(const int2& coord,
 										const float& relative_delta,
-										ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-										ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion) {
+										const_image_2d_depth<float> img_depth,
+										const_image_2d<uint1> img_motion) {
 	// read rendered/input depth and linearize it (linear distance from the camera origin)
-	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
+	const auto linear_depth = warp_camera::linearize_depth(img_depth.read(coord));
 	// get 3d motion for this pixel
-	const auto motion = decode_3d_motion(read(img_motion, coord));
+	const auto motion = decode_3d_motion(img_motion.read(coord));
 	// reconstruct 3D position from depth + camera/screen setup,
 	// then predict/compute new 3D position from current motion and time
 	const auto new_pos = warp_camera::reconstruct_position(coord, linear_depth) + relative_delta * motion;
@@ -146,29 +146,29 @@ floor_inline_always static auto scatter(const int2& coord,
 }
 
 // simple version of the warp kernel, simply reading all pixels + moving them to the predicted screen position (no checks!)
-kernel void warp_scatter_simple(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-								ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-								wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+kernel void warp_scatter_simple(const_image_2d<float> img_color,
+								const_image_2d_depth<float> img_depth,
+								const_image_2d<uint1> img_motion,
+								image_2d<float4, true> img_out_color,
 								// "current compute/warp delta" divided by "delta between last two frames"
 								param<float> relative_delta) {
 	screen_check();
 	
 	const auto coord = global_id.xy;
-	auto color = read(img_color, coord);
+	auto color = img_color.read(coord);
 	const auto scattered = scatter(coord, relative_delta, img_depth, img_motion);
 	
 	// only write if new projected screen position is actually inside the screen
 	if(scattered.coord.x >= 0 && scattered.coord.x < SCREEN_WIDTH &&
 	   scattered.coord.y >= 0 && scattered.coord.y < SCREEN_HEIGHT) {
 		color.w = 1.0f; // px fixup
-		write(img_out_color, scattered.coord, color);
+		img_out_color.write(scattered.coord, color);
 	}
 }
 
 //
-kernel void warp_scatter_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
+kernel void warp_scatter_depth(const_image_2d_depth<float> img_depth,
+							   const_image_2d<uint1> img_motion,
 							   buffer<float> depth_buffer,
 							   param<float> relative_delta) {
 	screen_check();
@@ -180,10 +180,10 @@ kernel void warp_scatter_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUT
 	}
 }
 //
-kernel void warp_scatter_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-							   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+kernel void warp_scatter_color(const_image_2d<float> img_color,
+							   const_image_2d_depth<float> img_depth,
+							   const_image_2d<uint1> img_motion,
+							   image_2d<float4, true> img_out_color,
 							   buffer<const float> depth_buffer,
 							   param<float> relative_delta) {
 	screen_check();
@@ -200,16 +200,16 @@ kernel void warp_scatter_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_I
 		return;
 	}
 	
-	auto color = read(img_color, coord);
+	auto color = img_color.read(coord);
 	color.w = 1.0f; // px fixup
-	write(img_out_color, scattered.coord, color);
+	img_out_color.write(scattered.coord, color);
 }
 
 //
-kernel void warp_scatter_bidir_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_prev,
+kernel void warp_scatter_bidir_depth(const_image_2d_depth<float> img_depth,
+									 const_image_2d_depth<float> img_depth_prev,
+									 const_image_2d<uint1> img_motion,
+									 const_image_2d<uint1> img_motion_prev,
 									 buffer<float> depth_buffer,
 									 param<float> relative_delta) {
 	screen_check();
@@ -227,13 +227,13 @@ kernel void warp_scatter_bidir_depth(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | 
 	}
 }
 //
-kernel void warp_scatter_bidir_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-									 ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_prev,
-									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+kernel void warp_scatter_bidir_color(const_image_2d<float> img_color,
+									 const_image_2d<float> img_color_prev,
+									 const_image_2d_depth<float> img_depth,
+									 const_image_2d_depth<float> img_depth_prev,
+									 const_image_2d<uint1> img_motion,
+									 const_image_2d<uint1> img_motion_prev,
+									 image_2d<float4, true> img_out_color,
 									 buffer<const float> depth_buffer,
 									 param<float> relative_delta) {
 	screen_check();
@@ -269,80 +269,15 @@ kernel void warp_scatter_bidir_color(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COM
 	}
 	
 	if(fwd_valid) {
-		auto color = read(img_color, coord);
+		auto color = img_color.read(coord);
 		color.w = 1.0f; // px fixup
-		write(img_out_color, scattered.coord, color);
+		img_out_color.write(scattered.coord, color);
 	}
 	if(bwd_valid) {
-		auto color = read(img_color_prev, coord);
+		auto color = img_color_prev.read(coord);
 		color.w = 1.0f; // px fixup
-		write(img_out_color, scattered_prev.coord, color);
+		img_out_color.write(scattered_prev.coord, color);
 	}
-}
-
-// TODO/wip
-static constexpr const uint32_t depth_groups { 8u };
-static constexpr const float3 dbg_colors[depth_groups] {
-	float3 { 1.0f, 0.0f, 0.0f },
-	float3 { 0.0f, 1.0f, 0.0f },
-	float3 { 0.0f, 0.0f, 1.0f },
-	float3 { 1.0f, 1.0f, 0.0f },
-	float3 { 1.0f, 0.0f, 1.0f },
-	float3 { 0.0f, 1.0f, 1.0f },
-	float3 { 1.0f, 1.0f, 1.0f },
-	float3 { 0.5f, 0.5f, 0.5f },
-};
-kernel void warp_scatter_patch(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-							   ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion,
-							   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
-							   // "current compute/warp delta" divided by "delta between last two frames"
-							   param<float> relative_delta) {
-	screen_check();
-	
-	const auto coord = global_id.xy;
-	const auto linear_depth = warp_camera::linearize_depth(read(img_depth, coord));
-	
-	//
-	local_buffer<float, 2> d_min_max;
-	local_buffer<uint32_t, depth_groups, 4> rect_min_max;
-	if(local_id.x == 0 && local_id.y == 0) {
-		d_min_max[0] = numeric_limits<float>::max();
-		d_min_max[1] = -numeric_limits<float>::max();
-	}
-	if(local_id.x < depth_groups) {
-		rect_min_max[local_id.x][0] = TILE_SIZE_X;
-		rect_min_max[local_id.x][1] = TILE_SIZE_Y;
-		rect_min_max[local_id.x][2] = 0;
-		rect_min_max[local_id.x][3] = 0;
-	}
-	local_barrier();
-	
-	// find min/max linear depth for this tile
-	atomic_min(&d_min_max[0], linear_depth);
-	atomic_max(&d_min_max[1], linear_depth);
-	local_barrier();
-	
-	const float d_min = d_min_max[0];
-	const float d_max = d_min_max[1];
-	
-	// classify depth, max 8 depth groups
-	const float range = d_max - d_min;
-	const float step = range * (1.0f / float(depth_groups));
-	const float classified_depth = (linear_depth - d_min) / std::max(step, warp_camera::near_far_plane.y / 50.0f);
-	const uint32_t idx = std::min(uint32_t(classified_depth), depth_groups - 1u);
-	const auto color = dbg_colors[idx];
-	
-	// find rect min/max coordinates for this group
-	atomic_min(&rect_min_max[idx][0], local_id.x);
-	atomic_min(&rect_min_max[idx][1], local_id.y);
-	atomic_max(&rect_min_max[idx][2], local_id.x);
-	atomic_max(&rect_min_max[idx][3], local_id.y);
-	local_barrier();
-	
-	//
-	//float3 color;
-	write(img_out_color, coord, float4 { color, 1.0f });
 }
 
 // decodes the encoded input 2D motion vector
@@ -365,17 +300,17 @@ static float2 decode_2d_motion(const uint32_t& encoded_motion) {
 #endif
 }
 
-kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_color_prev,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_DEPTH | COMPUTE_IMAGE_TYPE::D32F> img_depth_prev,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_forward,
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::R32UI> img_motion_backward,
+kernel void warp_gather(const_image_2d<float> img_color,
+						const_image_2d_depth<float> img_depth,
+						const_image_2d<float> img_color_prev,
+						const_image_2d_depth<float> img_depth_prev,
+						const_image_2d<uint1> img_motion_forward,
+						const_image_2d<uint1> img_motion_backward,
 						// packed <forward depth: fwd t-1 -> t (used here), backward depth: bwd t-1 -> t-2 (unused here)>
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RG16F> img_motion_depth_forward,
+						const_image_2d<float2> img_motion_depth_forward,
 						// packed <forward depth: t+1 -> t (unused here), backward depth: t -> t-1 (used here)>
-						ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RG16F> img_motion_depth_backward,
-						wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img_out_color,
+						const_image_2d<float2> img_motion_depth_backward,
+						image_2d<float4, true> img_out_color,
 						param<float> relative_delta, // "current compute/warp delta" divided by "delta between last two frames"
 						param<float> epsilon_1,
 						param<float> epsilon_2,
@@ -385,26 +320,26 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	// iterate
 	const float2 p_init = (float2(global_id.xy) + 0.5f) * warp_camera::inv_screen_size; // start at pixel center (this is p_t+alpha)
 	// dual init, opposing init
-	float2 p_fwd = p_init + relative_delta * decode_2d_motion(read(img_motion_backward, p_init));
-	float2 p_bwd = p_init + (1.0f - relative_delta) * decode_2d_motion(read(img_motion_forward, p_init));
+	float2 p_fwd = p_init + relative_delta * decode_2d_motion(img_motion_backward.read(p_init));
+	float2 p_bwd = p_init + (1.0f - relative_delta) * decode_2d_motion(img_motion_forward.read(p_init));
 	for(uint32_t i = 0; i < 3; ++i) {
-		const auto motion = decode_2d_motion(read(img_motion_forward, p_fwd));
+		const auto motion = decode_2d_motion(img_motion_forward.read(p_fwd));
 		p_fwd = p_init - relative_delta * motion;
 	}
 	for(uint32_t i = 0; i < 3; ++i) {
-		const auto motion = decode_2d_motion(read(img_motion_backward, p_bwd));
+		const auto motion = decode_2d_motion(img_motion_backward.read(p_bwd));
 		p_bwd = p_init - (1.0f - relative_delta) * motion;
 	}
 	
 	//
-	const auto color_fwd = read(img_color_prev, p_fwd);
-	const auto color_bwd = read(img_color, p_bwd);
+	const auto color_fwd = img_color_prev.read(p_fwd);
+	const auto color_bwd = img_color.read(p_bwd);
 	
 	// read final motion vector + depth (packed)
-	const auto motion_fwd = decode_2d_motion(read(img_motion_forward, p_fwd));
-	const auto motion_bwd = decode_2d_motion(read(img_motion_backward, p_bwd));
-	const auto depth_fwd = read(img_motion_depth_forward, p_fwd).x;
-	const auto depth_bwd = read(img_motion_depth_backward, p_bwd).y;
+	const auto motion_fwd = decode_2d_motion(img_motion_forward.read(p_fwd));
+	const auto motion_bwd = decode_2d_motion(img_motion_backward.read(p_bwd));
+	const auto depth_fwd = img_motion_depth_forward.read(p_fwd).x;
+	const auto depth_bwd = img_motion_depth_backward.read(p_bwd).y;
 	
 	// compute screen space error
 	const auto err_fwd = ((p_fwd + relative_delta * motion_fwd - p_init).dot() +
@@ -417,9 +352,9 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	
 	// NOTE: scene depth type is dependent on the renderer (-> use the default), motion depth is always z/w
 	// -> need to linearize both to properly add + compare them
-	const auto z_fwd = (warp_camera::linearize_depth(read(img_depth_prev, p_fwd)) +
+	const auto z_fwd = (warp_camera::linearize_depth(img_depth_prev.read(p_fwd)) +
 						relative_delta * warp_camera::linearize_depth<depth_type::z_div_w>(depth_fwd));
-	const auto z_bwd = (warp_camera::linearize_depth(read(img_depth, p_bwd)) +
+	const auto z_bwd = (warp_camera::linearize_depth(img_depth.read(p_bwd)) +
 						(1.0f - relative_delta) * warp_camera::linearize_depth<depth_type::z_div_w>(depth_bwd));
 	const auto depth_diff = abs(z_fwd - z_bwd);
 	//constexpr const float epsilon_2 { 4.0f }; // aka "max depth difference between fwd and bwd"
@@ -432,10 +367,10 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		if(dbg_render_type == 1) color = color_fwd;
 		else if(dbg_render_type == 2) color = color_bwd;
 		else if(dbg_render_type == 3) {
-			color = read(img_color_prev, p_init);
+			color = img_color_prev.read(p_init);
 		}
 		else if(dbg_render_type == 4) {
-			color = read(img_color, p_init);
+			color = img_color.read(p_init);
 		}
 		else if(dbg_render_type == 5) {
 			color = ((fwd_valid && bwd_valid) ? float4 { 1.0f } :
@@ -446,8 +381,8 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 	else
 #endif
 	{
-		const auto proj_color_fwd = color_fwd.interpolated(read(img_color, p_fwd + motion_fwd), relative_delta);
-		const auto proj_color_bwd = read(img_color_prev, p_bwd + motion_bwd).interpolated(color_bwd, relative_delta);
+		const auto proj_color_fwd = color_fwd.interpolated(img_color.read(p_fwd + motion_fwd), relative_delta);
+		const auto proj_color_bwd = img_color_prev.read(p_bwd + motion_bwd).interpolated(color_bwd, relative_delta);
 		if(fwd_valid && bwd_valid) {
 			if(depth_diff < epsilon_2) {
 				// case 1: both fwd and bwd are valid
@@ -462,15 +397,13 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 				// case 2: select the one closer to the camera (occlusion)
 				if(z_fwd < z_bwd) {
 					// depth from other frame
-					const auto z_fwd_other = (read(img_depth, p_fwd + motion_fwd) +
-											  (1.0f - relative_delta) * read(img_motion_depth_backward,
-																			 p_fwd + motion_fwd).y);
+					const auto z_fwd_other = (img_depth.read(p_fwd + motion_fwd) +
+											  (1.0f - relative_delta) * img_motion_depth_backward.read(p_fwd + motion_fwd).y);
 					color = (abs(z_fwd - z_fwd_other) < epsilon_2 ? proj_color_fwd : color_fwd);
 				}
 				else { // bwd < fwd
-					const auto z_bwd_other = (read(img_depth_prev, p_bwd + motion_bwd) +
-											  relative_delta * read(img_motion_depth_forward,
-																	p_bwd + motion_bwd).x);
+					const auto z_bwd_other = (img_depth_prev.read(p_bwd + motion_bwd) +
+											  relative_delta * img_motion_depth_forward.read(p_bwd + motion_bwd).x);
 					color = (abs(z_bwd - z_bwd_other) < epsilon_2 ? proj_color_bwd : color_bwd);
 				}
 			}
@@ -487,23 +420,23 @@ kernel void warp_gather(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TY
 		}
 	}
 	
-	write(img_out_color, global_id.xy, color);
+	img_out_color.write(global_id.xy, color);
 }
 
-kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> warp_img) {
+kernel void single_px_fixup(image_2d<float4> warp_img) {
 	screen_check();
 	
 	const int2 coord { global_id.xy };
-	const auto color = read(warp_img, coord);
+	const auto color = warp_img.read(coord);
 	
 	// 0 if it hasn't been written (needs fixup), 1 if it has been written
 	if(color.w < 1.0f) {
 		// sample pixels around
 		const float4 colors[] {
-			read(warp_img, int2 { coord.x, coord.y - 1 }),
-			read(warp_img, int2 { coord.x + 1, coord.y }),
-			read(warp_img, int2 { coord.x, coord.y + 1 }),
-			read(warp_img, int2 { coord.x - 1, coord.y }),
+			warp_img.read(int2 { coord.x, coord.y - 1 }),
+			warp_img.read(int2 { coord.x + 1, coord.y }),
+			warp_img.read(int2 { coord.x, coord.y + 1 }),
+			warp_img.read(int2 { coord.x - 1, coord.y }),
 		};
 		
 		float3 avg;
@@ -517,22 +450,14 @@ kernel void single_px_fixup(rw_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAG
 		avg /= sum;
 		
 		// write new averaged color
-		write(warp_img, coord, float4 { avg, 0.0f });
+		warp_img.write(coord, float4 { avg, 0.0f });
 	}
 }
 
-kernel void img_clear(wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> img,
+kernel void img_clear(image_2d<float4, true> img,
 					  param<float4> clear_color) {
 	screen_check();
-	write(img, int2 { global_id.xy }, float4 { clear_color.xyz, 0.0f });
+	img.write(global_id.xy, float4 { clear_color.xyz, 0.0f });
 }
-
-#if 0
-kernel void testk(const_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> src,
-				  const_image_2d<float> src2,
-				  image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> dst) {
-	//dst.write(src.read(global_id.xy));
-}
-#endif
 
 #endif

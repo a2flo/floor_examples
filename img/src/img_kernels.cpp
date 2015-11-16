@@ -76,8 +76,7 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
+kernel void image_blur_single_stage(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	const int2 gid { global_id.xy };
 	const int2 lid { local_id.xy };
 	
@@ -97,7 +96,7 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 	// map from the global work size to the actual image size
 	const int2 img_coord = (gid / TILE_SIZE) * INNER_TILE_SIZE + (lid - overlap);
 	// read the input pixel and store it in the local buffer/"cache" (note: out-of-bound access is clamped)
-	samples[lin_lid] = read(in_img, img_coord);
+	samples[lin_lid] = in_img.read(img_coord);
 	// make sure the complete tile has been read and stored
 	local_barrier();
 	
@@ -223,15 +222,14 @@ kernel void image_blur_single_stage(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMP
 		}
 		
 		// write out
-		write(out_img, img_coord, h_color);
+		out_img.write(img_coord, h_color);
 	}
 }
 
 // this is the dumb version of the blur, processing a horizontal or vertical line w/o manual caching
 // NOTE: this is practically the same as the opengl/glsl shader
 template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
-floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-												wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
+floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	const int2 img_coord { global_id.xy };
 	
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
@@ -240,22 +238,20 @@ floor_inline_always static void image_blur_dumb(ro_image<COMPUTE_IMAGE_TYPE::IMA
 	float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
 	for(int i = -overlap; i <= overlap; ++i) {
-		color += coeffs[size_t(overlap + i)] * read(in_img, img_coord + int2 {
+		color += coeffs[size_t(overlap + i)] * in_img.read(img_coord + int2 {
 			direction == 0 ? i : 0,
 			direction == 0 ? 0 : i,
 		});
 	}
 	
-	write(out_img, img_coord, color);
+	out_img.write(img_coord, color);
 }
 
-kernel void image_blur_dumb_horizontal(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									   wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
+kernel void image_blur_dumb_horizontal(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	image_blur_dumb<0>(in_img, out_img);
 }
 
-kernel void image_blur_dumb_vertical(ro_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> in_img,
-									 wo_image<COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8> out_img) {
+kernel void image_blur_dumb_vertical(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	image_blur_dumb<1>(in_img, out_img);
 }
 

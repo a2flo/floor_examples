@@ -170,13 +170,8 @@ static void create_textures() {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-#if 1
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
 						 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
-#else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, scene_fbo.dim.x, scene_fbo.dim.y, 0,
-						 GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
-#endif
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, scene_fbo.depth[i], 0);
 		
 			//
@@ -223,7 +218,7 @@ static void create_textures() {
 											   COMPUTE_MEMORY_FLAG::READ_WRITE);
 	for(size_t i = 0, count = size(scene_fbo.fbo); i < count; ++i) {
 		compute_scene_color[i] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.color[i], GL_TEXTURE_2D,
-															COMPUTE_MEMORY_FLAG::READ );
+															COMPUTE_MEMORY_FLAG::READ);
 		compute_scene_depth[i] = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.depth[i], GL_TEXTURE_2D,
 															COMPUTE_MEMORY_FLAG::READ);
 		compute_scene_motion[i * 2] = warp_state.ctx->wrap_image(warp_state.dev,
@@ -291,10 +286,9 @@ static void create_skybox() {
 					 skybox_surfaces[i]->w, skybox_surfaces[i]->h,
 					 0, GL_RGB, GL_UNSIGNED_BYTE,
 					 skybox_surfaces[i]->pixels);
-		
 	}
-	
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
 
 static void destroy_skybox() {

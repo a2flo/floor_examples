@@ -155,16 +155,6 @@ static bool compile_program() {
 			}
 		},
 		{
-			"warp_scatter_patch",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
 			"warp_gather",
 			{
 				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
@@ -205,11 +195,7 @@ static bool compile_program() {
 	
 	// NOTE: corresponds to WARP_KERNEL
 	static const char* kernel_names[warp_kernel_count()] {
-#if 1
 		"warp_scatter_simple",
-#else
-		"warp_scatter_patch",
-#endif
 		"warp_scatter_depth",
 		"warp_scatter_color",
 		"warp_scatter_bidir_depth",

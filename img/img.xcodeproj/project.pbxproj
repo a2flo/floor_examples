@@ -48,7 +48,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C0071911A91EF7E00F4711D /* img.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = img.app; path = imgd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071911A91EF7E00F4711D /* imgd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = imgd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
 		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
@@ -157,7 +157,7 @@
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
 				5C8FD0B91AD3392500215230 /* osx */,
-				5C0071911A91EF7E00F4711D /* img.app */,
+				5C0071911A91EF7E00F4711D /* imgd.app */,
 				5C8FD0941AD3366800215230 /* imgd.app */,
 			);
 			sourceTree = "<group>";
@@ -194,7 +194,7 @@
 			);
 			name = img_ios;
 			productName = img_ios;
-			productReference = 5C0071911A91EF7E00F4711D /* img.app */;
+			productReference = 5C0071911A91EF7E00F4711D /* imgd.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5C8FD0931AD3366800215230 /* img_osx */ = {
