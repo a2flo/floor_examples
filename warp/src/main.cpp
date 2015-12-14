@@ -19,6 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/gl_shader.hpp>
+#include <libwarp/libwarp.h>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "obj_loader.hpp"
@@ -41,6 +42,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "command line options:" << endl;
 		cout << "\t--scatter: warp in scatter mode" << endl;
 		cout << "\t--gather: warp in gather mode" << endl;
+		cout << "\t--gather-forward: warp in gather forward-only mode" << endl;
 		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal)" << endl;
 		cout << "\t                  NOTE: obviously an upper limit" << endl;
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
@@ -69,11 +71,18 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 	}},
 	{ "--scatter", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = true;
+		warp_state.is_gather_forward = false;
 		cout << "using scatter" << endl;
 	}},
 	{ "--gather", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = false;
+		warp_state.is_gather_forward = false;
 		cout << "using gather" << endl;
+	}},
+	{ "--gather-forward", [](warp_option_context&, char**&) {
+		warp_state.is_scatter = false;
+		warp_state.is_gather_forward = true;
+		cout << "using gather-forward" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -94,6 +103,8 @@ static bool compile_program() {
 														  " -DSCREEN_WIDTH=" + to_string(floor::get_physical_width()) +
 														  " -DSCREEN_HEIGHT=" + to_string(floor::get_physical_height()) +
 														  " -DSCREEN_FOV=" + to_string(warp_state.fov) +
+														  " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) +
+														  " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) +
 														  " -DTILE_SIZE_X=" + to_string(warp_state.tile_size.x) +
 														  " -DTILE_SIZE_Y=" + to_string(warp_state.tile_size.y));
 #else
@@ -213,6 +224,11 @@ static bool compile_program() {
 			return false;
 		}
 	}
+	
+#if defined(USE_LIBWARP)
+	// also reset libwarp programs/kernels
+	libwarp_cleanup();
+#endif
 	
 	// all okay
 	warp_state.prog = new_warp_prog;

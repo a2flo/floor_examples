@@ -19,6 +19,9 @@
 #include "gl_renderer.hpp"
 #include <floor/core/gl_shader.hpp>
 #include <floor/core/timer.hpp>
+#if defined(USE_LIBWARP)
+#include <libwarp/libwarp.h>
+#endif
 
 #if !defined(FLOOR_IOS)
 
@@ -214,6 +217,7 @@ static void create_textures() {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 	
+#if !defined(USE_LIBWARP)
 	compute_color = warp_state.ctx->wrap_image(warp_state.dev, scene_fbo.compute_color, GL_TEXTURE_2D,
 											   COMPUTE_MEMORY_FLAG::READ_WRITE);
 	for(size_t i = 0, count = size(scene_fbo.fbo); i < count; ++i) {
@@ -238,6 +242,7 @@ static void create_textures() {
 	// create appropriately sized s/w depth buffer
 	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(sizeof(float) *
 																	size_t(scene_fbo.dim.x) * size_t(scene_fbo.dim.y));
+#endif
 }
 
 static void create_skybox() {
@@ -430,6 +435,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 		time_keeper = now;
 		warp_frame_num = 0;
 		
+#if !defined(USE_LIBWARP)
 		compute_scene_color[0]->release_opengl_object(warp_state.dev_queue);
 		compute_scene_depth[0]->release_opengl_object(warp_state.dev_queue);
 		if(warp_state.is_scatter && !warp_state.is_bidir_scatter) {
@@ -445,11 +451,13 @@ bool gl_renderer::render(const gl_obj_model& model,
 			compute_scene_motion_depth[0]->release_opengl_object(warp_state.dev_queue);
 			compute_scene_motion_depth[1]->release_opengl_object(warp_state.dev_queue);
 		}
+#endif
 		
 		render_full_scene(model, cam);
 		
 		blit(warp_state.is_render_full);
 		
+#if !defined(USE_LIBWARP)
 		compute_scene_color[0]->acquire_opengl_object(warp_state.dev_queue);
 		compute_scene_depth[0]->acquire_opengl_object(warp_state.dev_queue);
 		if(warp_state.is_scatter && !warp_state.is_bidir_scatter) {
@@ -466,6 +474,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 			compute_scene_motion_depth[0]->acquire_opengl_object(warp_state.dev_queue);
 			compute_scene_motion_depth[1]->acquire_opengl_object(warp_state.dev_queue);
 		}
+#endif
 		
 		return true;
 	}
@@ -482,13 +491,17 @@ void gl_renderer::blit(const bool full_scene) {
 							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
 		else {
+#if !defined(USE_LIBWARP)
 			compute_color->release_opengl_object(warp_state.dev_queue);
+#endif
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 							  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+#if !defined(USE_LIBWARP)
 			compute_color->acquire_opengl_object(warp_state.dev_queue);
+#endif
 		}
 	}
 	else {
@@ -513,13 +526,17 @@ void gl_renderer::blit(const bool full_scene) {
 							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
 		}
 		else {
+#if !defined(USE_LIBWARP)
 			compute_color->release_opengl_object(warp_state.dev_queue);
+#endif
 			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
 							  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
 							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+#if !defined(USE_LIBWARP)
 			compute_color->acquire_opengl_object(warp_state.dev_queue);
+#endif
 		}
 	}
 }
@@ -559,6 +576,38 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		relative_delta = dbg_delta;
 	}
 	
+#if defined(USE_LIBWARP) // use libwarp
+	const libwarp_camera_setup cam_setup {
+		.screen_width = floor::get_physical_width(),
+		.screen_height = floor::get_physical_height(),
+		.field_of_view = warp_state.fov,
+		.near_plane = warp_state.near_far_plane.x,
+		.far_plane = warp_state.near_far_plane.y,
+		.depth_type = LIBWARP_DEPTH_NORMALIZED
+	};
+	LIBWARP_ERROR_CODE err = LIBWARP_SUCCESS;
+	if(warp_state.is_scatter) {
+		err = libwarp_scatter(&cam_setup, relative_delta,
+							  scene_fbo.color[0], scene_fbo.depth[0], scene_fbo.motion[0],
+							  scene_fbo.compute_color);
+	}
+	else {
+		if(warp_state.is_gather_forward) {
+			err = libwarp_gather_forward_only(&cam_setup, relative_delta,
+											  scene_fbo.color[0], scene_fbo.motion[0],
+											  scene_fbo.compute_color);
+		}
+		else {
+			err = libwarp_gather(&cam_setup, relative_delta,
+								 scene_fbo.color[1u - warp_state.cur_fbo], scene_fbo.depth[1u - warp_state.cur_fbo],
+								 scene_fbo.color[warp_state.cur_fbo], scene_fbo.depth[warp_state.cur_fbo],
+								 scene_fbo.motion[warp_state.cur_fbo * 2], scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
+								 scene_fbo.motion_depth[warp_state.cur_fbo], scene_fbo.motion_depth[1u - warp_state.cur_fbo],
+								 scene_fbo.compute_color);
+		}
+	}
+	if(err != LIBWARP_SUCCESS) log_error("libwarp error: %u", err);
+#else // use kernels of this project
 	if(warp_state.is_scatter) {
 		// clear if enabled + always clear the first frame
 		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
@@ -655,6 +704,7 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);
 	}
+#endif
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
@@ -723,7 +773,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glUseProgram(shd.program.program);
 	
 	const matrix4f pm { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-											   0.5f, warp_state.view_distance) };
+											   warp_state.near_far_plane.x, warp_state.near_far_plane.y) };
 	const matrix4f rmvm {
 		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)

@@ -76,26 +76,6 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 			frag_color = color;
 		}
 	)RAWSTR" };
-	static const string blur_v_fs_text { u8R"RAWSTR(#version 150 core
-		uniform sampler2D tex;
-		in vec2 tex_coord;
-		out vec4 frag_color;
-		void main() {
-			const float offsets[17] = float[17]()RAWSTR"
-			+ offsets.str() +
-			u8R"RAWSTR();
-			const float coeffs[17] = float[17](0.00437766, 0.00984974, 0.0196995, 0.0351776,
-											   0.0562842, 0.0809086, 0.104705, 0.122156,
-											   0.128585,
-											   0.122156, 0.104705, 0.0809086, 0.0562842,
-											   0.0351776, 0.0196995, 0.00984974, 0.00437766);
-			vec4 color = vec4(0.0);
-			for(int i = 0; i < 17; ++i) {
-				color += coeffs[i] * texture(tex, tex_coord + vec2(0.0, offsets[i]));
-			}
-			frag_color = color;
-		}
-	)RAWSTR" };
 
 	const auto hshd = floor_compile_shader("BLUR_HORIZONTAL", blur_vs_text, blur_fs_text.c_str(), 150,
 										   { { "BLUR_HORIZONTAL", 1 } });

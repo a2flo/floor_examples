@@ -44,7 +44,7 @@ namespace warp_camera {
 	static constexpr const float up_vec { -_up_vec };
 #endif
 	// [near, far] plane, needed for depth correction
-	static constexpr const float2 near_far_plane { 0.5f, 500.0f };
+	static constexpr const float2 near_far_plane { WARP_NEAR_PLANE, WARP_FAR_PLANE };
 	
 	// reconstructs a 3D position from a 2D screen coordinate and its associated real world depth
 	static float3 reconstruct_position(const uint2& coord, const float& linear_depth) {

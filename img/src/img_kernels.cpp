@@ -28,7 +28,7 @@
 
 // sample pattern must be: <even number> <middle> <even number>
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
-// a tap count of 21 results in an effictive tap count of 63 (31px radius), due to the fact that 8-bit values
+// a tap count of 21 results in an effective tap count of 63 (31px radius), due to the fact that 8-bit values
 // multiplied with the resp. binomial coefficient have no contribution (or almost none) to the final image
 // 3 -> 3, 5 -> 5, 7 -> 7, 9 -> 11, 11 -> 15, 13 -> 21, 15 -> 29, 17 -> 39, 19 -> 51, 21 -> 63
 // also: math at that range gets very wonky, so 21 is a good cutoff choice
@@ -36,7 +36,7 @@ static_assert(TAP_COUNT >= 3u && TAP_COUNT <= 21, "tap count must be a value bet
 
 template <uint32_t tap_count>
 static constexpr uint32_t find_effective_n() {
-	// minimal contribution a fully white pixel must have to effect the blur result
+	// minimal contribution a fully white pixel must have to affect the blur result
 	// (ignoring the fact that 0.5 gets rounded up to 1 and that multiple outer pixels combined can produce values > 1)
 	constexpr const auto min_contribution = 1.0L / 255.0L;
 	
@@ -48,7 +48,7 @@ static constexpr uint32_t find_effective_n() {
 			const auto coeff = const_math::binomial(count - 1u, i);
 			// is the coefficient large enough to produce a visible result?
 			if((sum_div * (long double)coeff) > min_contribution) {
-				// if so, check how many usable values this row has now (should be == tap count)
+				// if so, check how many usable values this row has now (should be >= desired tap count)
 				if((count - i * 2) < tap_count) {
 					break;
 				}

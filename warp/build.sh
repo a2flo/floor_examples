@@ -329,13 +329,29 @@ else
 	fi
 fi
 
+# link against libwarp (note: libwarp debug lib is suffixed by "d")
+if [ $BUILD_MODE == "debug" ]; then
+	if [ $BUILD_OS == "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -lwarpd_static"
+	else
+		LDFLAGS="${LDFLAGS} -lwarpd"
+	fi
+else
+	if [ $BUILD_OS == "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -lwarp_static"
+	else
+		LDFLAGS="${LDFLAGS} -lwarp"
+	fi
+fi
+
 # use pkg-config (and some manual libs/includes) on all platforms except osx/ios
 if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# need to make kernel symbols visible for dlsym
 	LDFLAGS="${LDFLAGS} -rdynamic"
 
-	# find libfloor*.so, w/o the need to have it in PATH/"LD PATH"
+	# find libfloor*.so and libwarp*.so, w/o the need to have it in PATH/"LD PATH"
 	LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
+	LDFLAGS="${LDFLAGS} -rpath /opt/libwarp/lib" # otherwise expected in /usr/lib
 
 	# use PIC
 	LDFLAGS="${LDFLAGS} -fPIC"
@@ -466,7 +482,8 @@ else
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /opt/floor/lib"
-	
+	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /opt/libwarp/lib"
+
 	# probably necessary
 	LDFLAGS="${LDFLAGS} -fobjc-link-runtime"
 	
@@ -494,7 +511,7 @@ fi
 
 # just in case, also add these rather default ones (should also go after all previous libs/includes,
 # in case a local or otherwise set up lib is overwriting a system lib and should be used instead)
-LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
+LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib -L/opt/libwarp/lib"
 INCLUDES="${INCLUDES}"
 # don't automatically add /usr/include and /usr/local/include on mingw/msys (these will lead to the wrong headers being included)
 if [ $BUILD_OS != "mingw" ]; then
@@ -641,7 +658,7 @@ COMMON_FLAGS="${COMMON_FLAGS} -fparse-all-comments -fno-elide-type -fdiagnostics
 # includes + replace all "-I"s with "-isystem"s so that we don't get warnings in external headers
 COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
-COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I${SRC_DIR}"
+COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I/opt/libwarp/include -I${SRC_DIR}"
 
 # mingw sdl fixes
 if [ $BUILD_OS == "mingw" ]; then

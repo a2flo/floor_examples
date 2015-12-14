@@ -19,6 +19,9 @@
 #ifndef __FLOOR_WARP_WARP_STATE_HPP__
 #define __FLOOR_WARP_WARP_STATE_HPP__
 
+// use libwarp or builtin kernels?
+#define USE_LIBWARP 1
+
 enum WARP_KERNEL : uint32_t {
 	KERNEL_SCATTER_SIMPLE = 0,
 	KERNEL_SCATTER_DEPTH_PASS,
@@ -60,6 +63,7 @@ struct warp_state_struct {
 	
 	//
 	bool is_scatter { false };
+	bool is_gather_forward { false };
 	bool is_warping { true };
 	bool is_render_full { true };
 	bool is_clear_frame { false };
@@ -75,8 +79,8 @@ struct warp_state_struct {
 	uint32_t gather_dbg { 0 };
 	
 	//
-	const float view_distance { 500.0f };
 	const float fov { 72.0f };
+	const float2 near_far_plane { 0.5f, 500.0f };
 	uint2 tile_size { 32, 16 };
 	
 	// input frame rate: amount of frames per second that will actually be rendered

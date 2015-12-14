@@ -25,6 +25,8 @@
 // SCREEN_WIDTH: screen width in px
 // SCREEN_HEIGHT: screen height in px
 // SCREEN_FOV: camera/projection-matrix field of view
+// WARP_NEAR_PLANE: near plane
+// WARP_FAR_PLANE: far plane
 #if !defined(SCREEN_WIDTH)
 #define SCREEN_WIDTH 1280
 #endif
@@ -33,6 +35,12 @@
 #endif
 #if !defined(SCREEN_FOV)
 #define SCREEN_FOV 72.0f
+#endif
+#if !defined(WARP_NEAR_PLANE)
+#define WARP_NEAR_PLANE 0.5f
+#endif
+#if !defined(WARP_FAR_PLANE)
+#define WARP_FAR_PLANE 500.0f
 #endif
 
 // screen origin is left bottom for opengl, left top for metal (and directx)

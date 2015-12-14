@@ -113,11 +113,12 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
 		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
+		cout << "\tHD 4000:      ~148 gflops (--count 32768 --tile-size 128)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
-		cout << "\tHD 4000:      ~85 gflops (--count 32768 --tile-size 512)" << endl;
-		cout << "\ti7-4770:      ~76 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-4770:      ~78 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4)" << endl;
+		cout << "\tiPhone A8:    ~28 gflops (--count 16384 --tile-size 512)" << endl;
 		cout << "\tiPad A7:      ~20 gflops (--count 16384 --tile-size 512)" << endl;
 		cout << endl;
 	}},
@@ -362,6 +363,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 }
 
 void init_system() {
+	// finish up old execution before we start with anything new
+	dev_queue->finish();
+	
 	auto positions = (float4*)position_buffers[0]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 	auto velocities = (float3*)velocity_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 	if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {

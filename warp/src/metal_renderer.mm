@@ -28,6 +28,9 @@
 #include <floor/darwin/darwin_helper.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
+#if defined(USE_LIBWARP)
+#include <libwarp/libwarp.h>
+#endif
 
 static id <MTLLibrary> metal_shd_lib;
 struct metal_shader_object {
@@ -38,13 +41,17 @@ static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 
 static id <MTLRenderPipelineState> render_pipeline_state_scatter;
 static id <MTLRenderPipelineState> render_pipeline_state_gather;
+static id <MTLRenderPipelineState> render_pipeline_state_gather_fwd;
 static MTLRenderPassDescriptor* render_pass_desc_scatter { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc_gather { nullptr };
+static MTLRenderPassDescriptor* render_pass_desc_gather_fwd { nullptr };
 
 static id <MTLRenderPipelineState> skybox_pipeline_state_scatter;
 static id <MTLRenderPipelineState> skybox_pipeline_state_gather;
+static id <MTLRenderPipelineState> skybox_pipeline_state_gather_fwd;
 static MTLRenderPassDescriptor* skybox_pass_desc_scatter { nullptr };
 static MTLRenderPassDescriptor* skybox_pass_desc_gather { nullptr };
+static MTLRenderPassDescriptor* skybox_pass_desc_gather_fwd { nullptr };
 
 static id <MTLRenderPipelineState> shadow_pipeline_state;
 static MTLRenderPassDescriptor* shadow_pass_desc { nullptr };
@@ -154,6 +161,16 @@ static void create_textures() {
 		skybox_pass_desc_scatter.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[0].get())->get_metal_image();
 		skybox_pass_desc_scatter.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
 		skybox_pass_desc_scatter.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
+	}
+	if(render_pass_desc_gather_fwd != nil) {
+		render_pass_desc_gather_fwd.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[0].get())->get_metal_image();
+		render_pass_desc_gather_fwd.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
+		render_pass_desc_gather_fwd.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
+	}
+	if(skybox_pass_desc_gather_fwd != nil) {
+		skybox_pass_desc_gather_fwd.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[0].get())->get_metal_image();
+		skybox_pass_desc_gather_fwd.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[0].get())->get_metal_image();
+		skybox_pass_desc_gather_fwd.depthAttachment.texture = ((metal_image*)scene_fbo.depth[0].get())->get_metal_image();
 	}
 	
 	// create appropriately sized s/w depth buffer
@@ -278,6 +295,28 @@ bool metal_renderer::init() {
 				return false;
 			}
 		}
+		// gather forward-only
+		{
+			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
+			pipeline_desc.label = @"warp scene pipeline (gather forward-only)";
+			pipeline_desc.sampleCount = 1;
+			pipeline_desc.vertexFunction = shader_objects["SCENE_GATHER_FWD"]->vertex_program;
+			pipeline_desc.fragmentFunction = shader_objects["SCENE_GATHER_FWD"]->fragment_program;
+			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
+			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].blendingEnabled = false;
+			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
+			pipeline_desc.colorAttachments[1].blendingEnabled = false;
+			
+			NSError* error = nullptr;
+			render_pipeline_state_gather_fwd = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
+			if(!render_pipeline_state_gather_fwd) {
+				log_error("failed to create (gather forward-only) scene pipeline state: %s",
+						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
+				return false;
+			}
+		}
 		
 		// scatter pass desc
 		{
@@ -322,6 +361,25 @@ bool metal_renderer::init() {
 			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_gather.depthAttachment;
+			depth_attachment.loadAction = MTLLoadActionClear;
+			depth_attachment.clearDepth = 1.0;
+			depth_attachment.storeAction = MTLStoreActionStore;
+		}
+		
+		// gather forward-only pass desc
+		{
+			render_pass_desc_gather_fwd = [MTLRenderPassDescriptor renderPassDescriptor];
+			MTLRenderPassColorAttachmentDescriptor* color_attachment = render_pass_desc_gather_fwd.colorAttachments[0];
+			color_attachment.loadAction = MTLLoadActionClear;
+			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+			color_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_attachment = render_pass_desc_gather_fwd.colorAttachments[1];
+			motion_attachment.loadAction = MTLLoadActionClear;
+			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_gather_fwd.depthAttachment;
 			depth_attachment.loadAction = MTLLoadActionClear;
 			depth_attachment.clearDepth = 1.0;
 			depth_attachment.storeAction = MTLStoreActionStore;
@@ -378,6 +436,28 @@ bool metal_renderer::init() {
 				return false;
 			}
 		}
+		// gather forward-only
+		{
+			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
+			pipeline_desc.label = @"warp skybox pipeline (gather forward-only)";
+			pipeline_desc.sampleCount = 1;
+			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER_FWD"]->vertex_program;
+			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER_FWD"]->fragment_program;
+			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
+			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].blendingEnabled = false;
+			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
+			pipeline_desc.colorAttachments[1].blendingEnabled = false;
+			
+			NSError* error = nullptr;
+			skybox_pipeline_state_gather_fwd = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
+			if(!skybox_pipeline_state_gather_fwd) {
+				log_error("failed to create (gather forward-only) skybox pipeline state: %s",
+						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
+				return false;
+			}
+		}
 		
 		// scatter pass desc
 		{
@@ -422,6 +502,25 @@ bool metal_renderer::init() {
 			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather.depthAttachment;
+			depth_attachment.loadAction = MTLLoadActionLoad;
+			depth_attachment.clearDepth = 1.0;
+			depth_attachment.storeAction = MTLStoreActionStore;
+		}
+		
+		// gather forward-only pass desc
+		{
+			skybox_pass_desc_gather_fwd = [MTLRenderPassDescriptor renderPassDescriptor];
+			MTLRenderPassColorAttachmentDescriptor* color_attachment = skybox_pass_desc_gather_fwd.colorAttachments[0];
+			color_attachment.loadAction = MTLLoadActionLoad;
+			color_attachment.clearColor = MTLClearColorMake(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+			color_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassColorAttachmentDescriptor* motion_attachment = skybox_pass_desc_gather_fwd.colorAttachments[1];
+			motion_attachment.loadAction = MTLLoadActionLoad;
+			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.storeAction = MTLStoreActionStore;
+			
+			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather_fwd.depthAttachment;
 			depth_attachment.loadAction = MTLLoadActionLoad;
 			depth_attachment.clearDepth = 1.0;
 			depth_attachment.storeAction = MTLStoreActionStore;
@@ -804,6 +903,45 @@ static void render_kernels(const float& delta, const float& render_delta,
 		relative_delta = dbg_delta;
 	}
 	
+#if defined(USE_LIBWARP) // use libwarp
+	const libwarp_camera_setup cam_setup {
+		.screen_width = floor::get_physical_width(),
+		.screen_height = floor::get_physical_height(),
+		.field_of_view = warp_state.fov,
+		.near_plane = warp_state.near_far_plane.x,
+		.far_plane = warp_state.near_far_plane.y,
+		.depth_type = LIBWARP_DEPTH_NORMALIZED
+	};
+	LIBWARP_ERROR_CODE err = LIBWARP_SUCCESS;
+	if(warp_state.is_scatter) {
+		err = libwarp_scatter_metal(&cam_setup, relative_delta,
+									((metal_image*)scene_fbo.color[0].get())->get_metal_image(),
+									((metal_image*)scene_fbo.depth[0].get())->get_metal_image(),
+									((metal_image*)scene_fbo.motion[0].get())->get_metal_image(),
+									((metal_image*)scene_fbo.compute_color.get())->get_metal_image());
+	}
+	else {
+		if(warp_state.is_gather_forward) {
+			err = libwarp_gather_forward_only_metal(&cam_setup, relative_delta,
+													((metal_image*)scene_fbo.color[0].get())->get_metal_image(),
+													((metal_image*)scene_fbo.motion[0].get())->get_metal_image(),
+													((metal_image*)scene_fbo.compute_color.get())->get_metal_image());
+		}
+		else {
+			err = libwarp_gather_metal(&cam_setup, relative_delta,
+									   ((metal_image*)scene_fbo.color[1u - warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.depth[1u - warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.depth[warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.motion_depth[warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.motion_depth[1u - warp_state.cur_fbo].get())->get_metal_image(),
+									   ((metal_image*)scene_fbo.compute_color.get())->get_metal_image());
+		}
+	}
+	if(err != LIBWARP_SUCCESS) log_error("libwarp error: %u", err);
+#else // use kernels of this project
 	if(warp_state.is_scatter) {
 		// clear if enabled + always clear the first frame
 		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
@@ -813,7 +951,7 @@ static void render_kernels(const float& delta, const float& render_delta,
 										  scene_fbo.compute_color, clear_color);
 		}
 		
-#if 1
+#if 0
 		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_SIMPLE],
 									  scene_fbo.dim_multiple,
 									  warp_state.tile_size,
@@ -875,6 +1013,7 @@ static void render_kernels(const float& delta, const float& render_delta,
 									  warp_state.gather_eps_2,
 									  warp_state.gather_dbg);
 	}
+#endif
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
@@ -930,7 +1069,7 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 	{
 		// set/compute uniforms
 		pm = matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-									0.5f, warp_state.view_distance);
+									warp_state.near_far_plane.x, warp_state.near_far_plane.y);
 		rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 				matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
 		mvm = matrix4f::translation(cam.get_position()) * rmvm;
@@ -958,8 +1097,8 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			.light_pos = light_pos,
 		};
 		
-		// for gather rendering, this switches every frame
-		if(!warp_state.is_scatter) {
+		// for bidirectional gather rendering, this switches every frame
+		if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 			render_pass_desc_gather.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image();
 			render_pass_desc_gather.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image();
 			render_pass_desc_gather.colorAttachments[2].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
@@ -970,7 +1109,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		//
 		id <MTLRenderCommandEncoder> encoder = [cmd_buffer renderCommandEncoderWithDescriptor:(warp_state.is_scatter ?
 																							   render_pass_desc_scatter :
-																							   render_pass_desc_gather)];
+																							   (warp_state.is_gather_forward ?
+																								render_pass_desc_gather_fwd :
+																								render_pass_desc_gather))];
 		encoder.label = @"warp scene encoder";
 		[encoder setDepthStencilState:depth_state];
 		[encoder setCullMode:MTLCullModeBack];
@@ -980,6 +1121,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		[encoder pushDebugGroup:@"scene"];
 		if(warp_state.is_scatter) {
 			[encoder setRenderPipelineState:render_pipeline_state_scatter];
+		}
+		else if(warp_state.is_gather_forward) {
+			[encoder setRenderPipelineState:render_pipeline_state_gather_fwd];
 		}
 		else {
 			[encoder setRenderPipelineState:render_pipeline_state_gather];
@@ -1035,8 +1179,8 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			.m1 = (warp_state.is_scatter ? matrix4f() : prev_mvpm),
 		};
 		
-		// for gather rendering, this switches every frame
-		if(!warp_state.is_scatter) {
+		// for bidirectional gather rendering, this switches every frame
+		if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 			skybox_pass_desc_gather.colorAttachments[0].texture = ((metal_image*)scene_fbo.color[warp_state.cur_fbo].get())->get_metal_image();
 			skybox_pass_desc_gather.colorAttachments[1].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2].get())->get_metal_image();
 			skybox_pass_desc_gather.colorAttachments[2].texture = ((metal_image*)scene_fbo.motion[warp_state.cur_fbo * 2 + 1].get())->get_metal_image();
@@ -1047,7 +1191,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		//
 		id <MTLRenderCommandEncoder> encoder = [cmd_buffer renderCommandEncoderWithDescriptor:(warp_state.is_scatter ?
 																							   skybox_pass_desc_scatter :
-																							   skybox_pass_desc_gather)];
+																							   (warp_state.is_gather_forward ?
+																								skybox_pass_desc_gather_fwd :
+																								skybox_pass_desc_gather))];
 		encoder.label = @"warp sky box encoder";
 		[encoder setDepthStencilState:skybox_depth_state];
 		[encoder setCullMode:MTLCullModeBack];
@@ -1057,6 +1203,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		[encoder pushDebugGroup:@"sky box"];
 		if(warp_state.is_scatter) {
 			[encoder setRenderPipelineState:skybox_pipeline_state_scatter];
+		}
+		else if(warp_state.is_gather_forward) {
+			[encoder setRenderPipelineState:skybox_pipeline_state_gather_fwd];
 		}
 		else {
 			[encoder setRenderPipelineState:skybox_pipeline_state_gather];
@@ -1072,7 +1221,7 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 	}
 	
 	// end
-	if(!warp_state.is_scatter) {
+	if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 		// flip state
 		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
 	}
@@ -1111,6 +1260,12 @@ bool metal_renderer::compile_shaders() {
 	}
 	{
 		auto shd = make_shared<metal_shader_object>();
+		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"scene_gather_vs"];
+		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"scene_gather_fwd_fs"];
+		shader_objects.emplace("SCENE_GATHER_FWD", shd);
+	}
+	{
+		auto shd = make_shared<metal_shader_object>();
 		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_vs"];
 		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_fs"];
 		shader_objects.emplace("SKYBOX_SCATTER", shd);
@@ -1120,6 +1275,12 @@ bool metal_renderer::compile_shaders() {
 		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_vs"];
 		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_fs"];
 		shader_objects.emplace("SKYBOX_GATHER", shd);
+	}
+	{
+		auto shd = make_shared<metal_shader_object>();
+		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_vs"];
+		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_fwd_fs"];
+		shader_objects.emplace("SKYBOX_GATHER_FWD", shd);
 	}
 	{
 		auto shd = make_shared<metal_shader_object>();

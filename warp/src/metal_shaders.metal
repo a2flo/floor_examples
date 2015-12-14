@@ -134,6 +134,7 @@ vertex scene_scatter_in_out scene_scatter_vs(device const packed_float3* in_posi
 	return out;
 }
 
+// also used for forward-only
 vertex scene_gather_in_out scene_gather_vs(device const packed_float3* in_position [[buffer(0)]],
 										   device const packed_float2* in_tex_coord [[buffer(1)]],
 										   device const packed_float3* in_normal [[buffer(2)]],
@@ -311,6 +312,19 @@ fragment scene_gather_fragment_out scene_gather_fs(const scene_gather_in_out in 
 	};
 }
 
+fragment scene_scatter_fragment_out /* reuse */ scene_gather_fwd_fs(const scene_gather_in_out in [[stage_in]],
+																	const sampler smplr [[sampler(0)]],
+																	texture2d<half> diff_tex [[texture(0)]],
+																	texture2d<half> spec_tex [[texture(1)]],
+																	texture2d<half> norm_tex [[texture(2)]],
+																	texture2d<half> mask_tex [[texture(3)]],
+																	depth2d<float> shadow_tex [[texture(4)]]) {
+	return {
+		scene_fs((const thread scene_base_in_out*)&in, smplr, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
+	};
+}
+
 //////////////////////////////////////////
 // shadow map
 
@@ -399,6 +413,7 @@ vertex skybox_scatter_in_out skybox_scatter_vs(constant skybox_scatter_uniforms_
 	return out;
 }
 
+// also used for forward-only
 vertex skybox_gather_in_out skybox_gather_vs(constant skybox_gather_uniforms_t& uniforms [[buffer(0)]],
 											 const unsigned int vid [[vertex_id]]) {
 	skybox_gather_in_out out;
@@ -444,6 +459,14 @@ fragment scene_gather_fragment_out skybox_gather_fs(const skybox_gather_in_out i
 			(half)((in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w)),
 			(half)((in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w))
 		}
+	};
+}
+
+fragment scene_scatter_fragment_out /* reuse */ skybox_gather_fwd_fs(const skybox_gather_in_out in [[stage_in]],
+																	 texturecube<half> skybox_tex [[texture(0)]]) {
+	return {
+		skybox_fs((const thread skybox_base_in_out*)&in, skybox_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }
 

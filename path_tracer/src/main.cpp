@@ -71,12 +71,7 @@ int main(int, char* argv[]) {
 			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
 			const auto gamma_correct = [](const float3& color) {
 				static constexpr const float gamma { 2.2f };
-				float3 gamma_corrected {
-					powf(color.r, 1.0f / gamma) * 255.0f,
-					powf(color.g, 1.0f / gamma) * 255.0f,
-					powf(color.b, 1.0f / gamma) * 255.0f
-				};
-				gamma_corrected.clamp(0.0f, 255.0f);
+				const float3 gamma_corrected { (color.powed(1.0f / gamma) * 255.0f).clamp(0.0f, 255.0f) };
 				return uchar3 { (uint8_t)gamma_corrected.x, (uint8_t)gamma_corrected.y, (uint8_t)gamma_corrected.z };
 			};
 			
