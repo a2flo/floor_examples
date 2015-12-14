@@ -45,12 +45,7 @@ static struct {
 static struct {
 	GLuint fbo { 0u };
 	GLuint shadow_tex { 0u };
-#if defined(__APPLE__)
 	int2 dim { 2048 };
-#else
-	// "anything worth doing, is worth overdoing!"
-	int2 dim { 8192 };
-#endif
 } shadow_map;
 static GLuint skybox_tex { 0u };
 static float3 light_pos;

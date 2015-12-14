@@ -84,7 +84,7 @@ struct warp_state_struct {
 	uint2 tile_size { 32, 16 };
 	
 	// input frame rate: amount of frames per second that will actually be rendered
-	uint32_t render_frame_count { 10 };
+	uint32_t render_frame_count { 20 };
 	// target frame rate: if set (>0), this will use a constant time delta for each
 	//                    computed frame instead of a variable delta
 	uint32_t target_frame_count { 0 };
