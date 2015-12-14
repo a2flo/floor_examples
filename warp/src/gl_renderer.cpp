@@ -594,10 +594,14 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		}
 		else {
 			err = libwarp_gather(&cam_setup, relative_delta,
-								 scene_fbo.color[1u - warp_state.cur_fbo], scene_fbo.depth[1u - warp_state.cur_fbo],
-								 scene_fbo.color[warp_state.cur_fbo], scene_fbo.depth[warp_state.cur_fbo],
-								 scene_fbo.motion[warp_state.cur_fbo * 2], scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
-								 scene_fbo.motion_depth[warp_state.cur_fbo], scene_fbo.motion_depth[1u - warp_state.cur_fbo],
+								 scene_fbo.color[1u - warp_state.cur_fbo],
+								 scene_fbo.depth[1u - warp_state.cur_fbo],
+								 scene_fbo.color[warp_state.cur_fbo],
+								 scene_fbo.depth[warp_state.cur_fbo],
+								 scene_fbo.motion[warp_state.cur_fbo * 2],
+								 scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
+								 scene_fbo.motion_depth[warp_state.cur_fbo],
+								 scene_fbo.motion_depth[1u - warp_state.cur_fbo],
 								 scene_fbo.compute_color);
 		}
 	}
@@ -919,7 +923,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glDrawBuffers(1, &draw_buffers[0]); // reset to 1 draw buffer
 	
 	// end
-	if(warp_state.is_bidir_scatter || !warp_state.is_scatter) {
+	if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 		// flip state
 		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
 	}
