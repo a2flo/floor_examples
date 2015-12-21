@@ -383,7 +383,7 @@ int main(int, char* argv[]) {
 		log_debug("running %scompute blur ...", (dumb ? "dumb " : ""));
 		for(size_t i = 0; i < run_count; ++i) {
 			if(!dumb) {
-				const auto blur_start = floor_timer2::start();
+				const auto blur_start = floor_timer::start();
 				dev_queue->execute(image_blur,
 								   // total amount of work:
 								   img_global_size,
@@ -392,11 +392,11 @@ int main(int, char* argv[]) {
 								   // kernel arguments:
 								   imgs[0], imgs[1]);
 				dev_queue->finish();
-				const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
+				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
 				log_debug("blur run in %fms", double(blur_end) / 1000.0);
 			}
 			else {
-				const auto blur_start = floor_timer2::start();
+				const auto blur_start = floor_timer::start();
 				dev_queue->execute(image_blur_dumb_h,
 								   // total amount of work:
 								   image_size,
@@ -412,7 +412,7 @@ int main(int, char* argv[]) {
 								   // kernel arguments:
 								   imgs[2], imgs[1]);
 				dev_queue->finish();
-				const auto blur_end = floor_timer2::stop<chrono::microseconds>(blur_start);
+				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
 				log_debug("dumb blur run in %fms", double(blur_end) / 1000.0);
 			}
 		}
@@ -434,10 +434,10 @@ int main(int, char* argv[]) {
 		
 		log_debug("running gl blur ...");
 		for(size_t i = 0; i < run_count; ++i) {
-			const auto gl_blur_start = floor_timer2::start();
+			const auto gl_blur_start = floor_timer::start();
 			gl_blur::blur(imgs[0]->get_opengl_object(), imgs[1]->get_opengl_object(), imgs[2]->get_opengl_object(), vbo_fullscreen_triangle);
 			glFlush(); glFinish();
-			const auto gl_blur_end = floor_timer2::stop<chrono::microseconds>(gl_blur_start);
+			const auto gl_blur_end = floor_timer::stop<chrono::microseconds>(gl_blur_start);
 			log_debug("blur run in %fms", double(gl_blur_end) / 1000.0);
 		}
 	}
