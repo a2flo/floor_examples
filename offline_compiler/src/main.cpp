@@ -48,6 +48,7 @@ struct option_context {
 	bool double_support { true };
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
+	bool sub_groups { false };
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
@@ -77,6 +78,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
+				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
@@ -152,6 +154,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--ext-64-bit-atomics", [](option_context& ctx, char**&) {
 		ctx.extended_64_atomics = true;
+	}},
+	{ "--sub-groups", [](option_context& ctx, char**&) {
+		ctx.sub_groups = true;
 	}},
 	{ "--test", [](option_context& ctx, char**&) {
 		ctx.test = true;
@@ -236,6 +241,7 @@ int main(int, char* argv[]) {
 				}
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
+				if(option_ctx.sub_groups) device->sub_group_support = true;
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 			} break;
 			case llvm_compute::TARGET::PTX:
