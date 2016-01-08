@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -528,21 +528,12 @@ int main(int, char* argv[]) {
 		nbody_state.tile_size = NBODY_TILE_SIZE;
 	}
 	
-	// init renderers
+	// init gl renderer
 #if !defined(FLOOR_IOS)
 	if(!nbody_state.no_opengl) {
 		// setup renderer
 		if(!gl_renderer::init()) {
 			log_error("error during opengl initialization!");
-			return -1;
-		}
-	}
-#endif
-#if defined(__APPLE__)
-	if(!nbody_state.no_metal && nbody_state.no_opengl) {
-		// setup renderer
-		if(!metal_renderer::init(fastest_device)) {
-			log_error("error during metal initialization!");
 			return -1;
 		}
 	}
@@ -592,6 +583,19 @@ int main(int, char* argv[]) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
+	
+	// init metal renderer (need compiled prog first)
+#if defined(__APPLE__)
+	if(!nbody_state.no_metal && nbody_state.no_opengl) {
+		// setup renderer
+		if(!metal_renderer::init(fastest_device,
+								 nbody_prog->get_kernel("lighting_vertex"),
+								 nbody_prog->get_kernel("lighting_fragment"))) {
+			log_error("error during metal initialization!");
+			return -1;
+		}
+	}
+#endif
 	
 	// create nbody position and velocity buffers
 	for(size_t i = 0; i < pos_buffer_count; ++i) {

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -148,5 +148,71 @@ kernel void nbody_raster(buffer<const float4> positions,
 		}
 	}
 }
+
+// shader: metal only for now
+#if defined(FLOOR_COMPUTE_METAL)
+static float4 compute_gradient(const float& interpolator) {
+	static constexpr const float4 gradients[] {
+		{ 1.0f, 0.2f, 0.0f, 1.0f },
+		{ 1.0f, 1.0f, 0.0f, 1.0f },
+		{ 1.0f, 1.0f, 1.0f, 1.0f },
+		{ 0.5f, 1.0f, 1.0f, 1.0f }
+	};
+	static_assert(size(gradients) == 4, "need known size, b/c of vs limitations");
+	
+#if 0 // could use this on nvidia, but horribly broken on intel due to dynamic indexing?
+	// scale from [0, 1] to [0, range]
+	const auto scaled_interp = interpolator * float(size(gradients));
+	// determine lower gradient idx (can't even do proper dynamic indexing on nvidia :/)
+	const auto gradient_idx = (scaled_interp > 2.0f ? 2 : (scaled_interp > 1.0f ? 1 : 0));
+	// interp range is [0, 1] between gradients, just need to wrap/mod it
+	const auto wrapped_interp = const_math::wrap(scaled_interp, 1.0f);
+	// linear interpolation between gradients
+	return gradients[gradient_idx].interpolated(gradients[gradient_idx + 1u], wrapped_interp);
+#else
+	const auto interp = fmod((interpolator * float(size(gradients) - 1u)), 1.0f);
+	if(interpolator < 0.33333f) {
+		return gradients[0].interpolated(gradients[1], interp);
+	}
+	else if(interpolator < 0.66666f) {
+		return gradients[1].interpolated(gradients[2], interp);
+	}
+	return gradients[2].interpolated(gradients[3], interp);
+#endif
+}
+
+struct uniforms_t {
+	matrix4f mvpm;
+	matrix4f mvm;
+	float2 mass_minmax;
+};
+
+struct stage_in_out {
+	// TODO: non clang vec types
+	clang_float4 position [[position]];
+	float size [[point_size]];
+	clang_float4 color;
+};
+
+vertex stage_in_out lighting_vertex(buffer<const float4> vertex_array,
+									param<uniforms_t> uniforms) {
+	const auto vid = get_vertex_id();
+	const auto in_vertex = vertex_array[vid];
+	float size = 128.0f / (1.0f - (float4 { in_vertex.xyz, 1.0f } * uniforms.mvm).z);
+	float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
+	mass_scale *= mass_scale; // ^2
+	size *= mass_scale;
+	return {
+		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpm,
+		.size = const_math::clamp(size, 2.0f, 255.0f),
+		.color = compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x))
+	};
+}
+
+fragment clang_float4 lighting_fragment(stage_in_out in [[stage_input]],
+										const_image_2d<float> tex) {
+	return tex.read_linear(get_point_coord()) * float4(in.color);
+}
+#endif
 
 #endif

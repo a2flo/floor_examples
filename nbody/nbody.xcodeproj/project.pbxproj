@@ -24,10 +24,8 @@
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
-		5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
-		5C8646261C19B2A4000518C7 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; };
 		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5C8646291C19B2A4000518C7 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
@@ -52,7 +50,6 @@
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
-		5CD1D7D31B2DE275005C43FB /* metal_shaders.metal in Resources */ = {isa = PBXBuildFile; fileRef = 5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */; };
 		5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 /* End PBXBuildFile section */
@@ -112,7 +109,6 @@
 		5C8FD0941AD3366800215230 /* nbodyd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
-		5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.metal; path = metal_shaders.metal; sourceTree = "<group>"; };
 		5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = nbody_state.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -235,7 +231,6 @@
 				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
 				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
 				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
-				5CA84FB21B2DBD66009F4780 /* metal_shaders.metal */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -362,7 +357,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5CD1D7D31B2DE275005C43FB /* metal_shaders.metal in Resources */,
 				5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -418,7 +412,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C4447E81B2DC26B003CF03E /* metal_shaders.metal in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C0071C21A91F2BD00F4711D /* nbody.cpp in Sources */,
@@ -429,7 +422,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5C8646261C19B2A4000518C7 /* metal_shaders.metal in Sources */,
 				5C8646271C19B2A4000518C7 /* main.cpp in Sources */,
 				5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */,
 				5C8646291C19B2A4000518C7 /* nbody.cpp in Sources */,
@@ -945,6 +937,7 @@
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1030,6 +1023,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
 				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_UNROLL_LOOPS = YES;

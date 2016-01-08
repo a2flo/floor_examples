@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,14 +30,6 @@
 // renderer
 static id <MTLRenderPipelineState> pipeline_state;
 static id <MTLDepthStencilState> depth_state;
-
-static id <MTLLibrary> metal_shd_lib;
-struct metal_shader_object {
-	id <MTLFunction> vertex_program;
-	id <MTLFunction> fragment_program;
-};
-
-static unordered_map<string, shared_ptr<metal_shader_object>> shader_objects;
 
 static metal_view* view { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
@@ -82,17 +74,39 @@ static void create_textures(shared_ptr<compute_device> dev) {
 	}
 }
 
-bool metal_renderer::init(shared_ptr<compute_device> dev) {
+bool metal_renderer::init(shared_ptr<compute_device> dev,
+						  shared_ptr<compute_kernel> vs,
+						  shared_ptr<compute_kernel> fs) {
 	auto device = ((metal_device*)dev.get())->device;
 	create_textures(dev);
-	if(!compile_shaders(dev)) return false;
+	
+	// check vs/fs and get state
+	if(!vs) {
+		log_error("vertex shader not found");
+		return false;
+	}
+	if(!fs) {
+		log_error("fragment shader not found");
+		return false;
+	}
+	
+	const auto vs_entry = (const metal_kernel::metal_kernel_entry*)vs->get_kernel_entry(dev);
+	if(!vs_entry) {
+		log_error("no vertex shader for this device exists!");
+		return false;
+	}
+	const auto fs_entry = (const metal_kernel::metal_kernel_entry*)fs->get_kernel_entry(dev);
+	if(!fs_entry) {
+		log_error("no fragment shader for this device exists!");
+		return false;
+	}
 	
 	//
 	MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
 	pipelineStateDescriptor.label = @"nbody pipeline";
 	pipelineStateDescriptor.sampleCount = 1;
-	pipelineStateDescriptor.vertexFunction = shader_objects["SPRITE"]->vertex_program;
-	pipelineStateDescriptor.fragmentFunction = shader_objects["SPRITE"]->fragment_program;
+	pipelineStateDescriptor.vertexFunction = (__bridge id<MTLFunction>)vs_entry->kernel;
+	pipelineStateDescriptor.fragmentFunction = (__bridge id<MTLFunction>)fs_entry->kernel;
 	pipelineStateDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 	pipelineStateDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 	pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -188,25 +202,6 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		[commandBuffer presentDrawable:drawable];
 		[commandBuffer commit];
 	}
-}
-
-bool metal_renderer::compile_shaders(shared_ptr<compute_device> dev) {
-	id <MTLDevice> mtl_dev = ((metal_device*)dev.get())->device;
-#if defined(FLOOR_IOS)
-	metal_shd_lib = [mtl_dev newLibraryWithFile:@"default.metallib" error:nil];
-#else
-	metal_shd_lib = [mtl_dev newDefaultLibrary];
-#endif
-	if(!metal_shd_lib) {
-		log_error("failed to load default shader lib!");
-		return false;
-	}
-	
-	auto shd = make_shared<metal_shader_object>();
-	shd->vertex_program = [metal_shd_lib newFunctionWithName:@"lighting_vertex"];
-	shd->fragment_program = [metal_shd_lib newFunctionWithName:@"lighting_fragment"];
-	shader_objects.emplace("SPRITE", shd);
-	return true;
 }
 
 #endif
