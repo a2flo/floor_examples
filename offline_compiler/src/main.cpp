@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -316,6 +316,13 @@ int main(int, char* argv[]) {
 					default: break;
 				}
 				
+				switch(info.args[i].special_type) {
+					case llvm_compute::kernel_info::SPECIAL_TYPE::STAGE_INPUT:
+						info_str += "stage_input ";
+						break;
+					default: break;
+				}
+				
 				if(info.args[i].address_space != llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE) {
 					info_str += to_string(info.args[i].size);
 				}
@@ -400,7 +407,11 @@ int main(int, char* argv[]) {
 				info_str += (i + 1 < count ? ", " : " ");
 			}
 			info_str = core::trim(info_str);
-			log_msg("compiled kernel: %s (%s)", info.name, info_str);
+			log_msg("compiled %s function: %s (%s)",
+					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL ? "kernel" :
+					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::VERTEX ? "vertex" :
+					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
+					info.name, info_str);
 		}
 		
 		// output
