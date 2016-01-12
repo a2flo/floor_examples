@@ -997,6 +997,7 @@
 					"-Wno-date-time",
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
 				);
 			};
 			name = Debug;
@@ -1077,6 +1078,7 @@
 					"-Wno-date-time",
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
 				);
 			};
 			name = Release;

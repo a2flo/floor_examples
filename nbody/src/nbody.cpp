@@ -151,7 +151,7 @@ kernel void nbody_raster(buffer<const float4> positions,
 
 // shader: metal only for now
 #if defined(FLOOR_COMPUTE_METAL)
-static float4 compute_gradient(const float& interpolator) {
+static auto compute_gradient(const float& interpolator) {
 	static constexpr const float4 gradients[] {
 		{ 1.0f, 0.2f, 0.0f, 1.0f },
 		{ 1.0f, 1.0f, 0.0f, 1.0f },
@@ -188,10 +188,9 @@ struct uniforms_t {
 };
 
 struct stage_in_out {
-	// TODO: non clang vec types
-	clang_float4 position [[position]];
+	float4 position [[position]];
 	float size [[point_size]];
-	clang_float4 color;
+	float4 color;
 };
 
 vertex stage_in_out lighting_vertex(buffer<const float4> vertex_array,
@@ -211,7 +210,7 @@ vertex stage_in_out lighting_vertex(buffer<const float4> vertex_array,
 
 fragment clang_float4 lighting_fragment(stage_in_out in [[stage_input]],
 										const_image_2d<float> tex) {
-	return tex.read_linear(get_point_coord()) * float4::from_clang_vector(in.color);
+	return tex.read_linear(get_point_coord()) * in.color;
 }
 #endif
 
