@@ -193,23 +193,23 @@ struct stage_in_out {
 	float4 color;
 };
 
-vertex stage_in_out lighting_vertex(buffer<const float4> vertex_array,
-									param<uniforms_t> uniforms) {
+vertex auto lighting_vertex(buffer<const float4> vertex_array,
+							param<uniforms_t> uniforms) {
 	const auto vid = get_vertex_id();
 	const auto in_vertex = vertex_array[vid];
 	float size = 128.0f / (1.0f - (float4 { in_vertex.xyz, 1.0f } * uniforms.mvm).z);
 	float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
 	mass_scale *= mass_scale; // ^2
 	size *= mass_scale;
-	return {
+	return stage_in_out {
 		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpm,
 		.size = const_math::clamp(size, 2.0f, 255.0f),
 		.color = compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x))
 	};
 }
 
-fragment clang_float4 lighting_fragment(stage_in_out in [[stage_input]],
-										const_image_2d<float> tex) {
+fragment auto lighting_fragment(stage_in_out in [[stage_input]],
+								const_image_2d<float> tex) {
 	return tex.read_linear(get_point_coord()) * in.color;
 }
 #endif
