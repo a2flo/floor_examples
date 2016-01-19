@@ -335,7 +335,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	LDFLAGS="${LDFLAGS} -rdynamic"
 
 	# find libfloor*.so, w/o the need to have it in PATH/"LD PATH"
-	LDFLAGS="${LDFLAGS} -rpath /opt/floor/lib"
+	LDFLAGS="${LDFLAGS} -rpath ../../lib -rpath /opt/floor/lib"
 
 	# use PIC
 	LDFLAGS="${LDFLAGS} -fPIC"
@@ -463,6 +463,7 @@ else
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker @loader_path/../Resources"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker @loader_path/../Frameworks"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /Library/Frameworks"
+	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker @executable_path/../../lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /opt/floor/lib"
