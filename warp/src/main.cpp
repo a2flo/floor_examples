@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -96,143 +96,8 @@ static void cam_dump() {
 }
 
 static bool compile_program() {
-	// compile the program and get the kernel functions
-#if !defined(FLOOR_IOS)
-	auto new_warp_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp.cpp"),
-														  "-I" + floor::data_path("../warp/src") +
-														  " -DSCREEN_WIDTH=" + to_string(floor::get_physical_width()) +
-														  " -DSCREEN_HEIGHT=" + to_string(floor::get_physical_height()) +
-														  " -DSCREEN_FOV=" + to_string(warp_state.fov) +
-														  " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) +
-														  " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) +
-														  " -DTILE_SIZE_X=" + to_string(warp_state.tile_size.x) +
-														  " -DTILE_SIZE_Y=" + to_string(warp_state.tile_size.y));
-#else
-	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::kernel_info> kernel_infos {
-		{
-			"warp_scatter_simple",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"warp_scatter_depth",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"warp_scatter_color",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"warp_scatter_bidir_depth",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"warp_scatter_bidir_color",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"warp_gather",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"single_px_fixup",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-			}
-		},
-		{
-			"img_clear",
-			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 16, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-	};
-	auto new_warp_prog = warp_state.ctx->add_precompiled_program_file(floor::data_path("warp.metallib"), kernel_infos);
-#endif
-	if(new_warp_prog == nullptr) {
-		log_error("program compilation failed");
-		return false;
-	}
-	
-	// NOTE: corresponds to WARP_KERNEL
-	static const char* kernel_names[warp_kernel_count()] {
-		"warp_scatter_simple",
-		"warp_scatter_depth",
-		"warp_scatter_color",
-		"warp_scatter_bidir_depth",
-		"warp_scatter_bidir_color",
-		"img_clear",
-		"single_px_fixup",
-		"warp_gather",
-	};
-	
-	array<shared_ptr<compute_kernel>, warp_kernel_count()> new_kernels;
-	for(size_t i = 0; i < warp_kernel_count(); ++i) {
-		new_kernels[i] = new_warp_prog->get_kernel(kernel_names[i]);
-		if(new_kernels[i] == nullptr) {
-			log_error("failed to retrieve kernel \"%s\" from program", kernel_names[i]);
-			return false;
-		}
-	}
-	
-#if defined(USE_LIBWARP)
-	// also reset libwarp programs/kernels
+	// reset libwarp programs/kernels
 	libwarp_cleanup();
-#endif
-	
-	// all okay
-	warp_state.prog = new_warp_prog;
-	warp_state.kernels = new_kernels;
 	return true;
 }
 
@@ -386,106 +251,116 @@ int main(int, char* argv[]) {
 	floor::set_caption("warp");
 	
 	// opengl and floor context handling
-	floor::acquire_context();
-	
-	// add event handlers
+	struct floor_ctx_guard {
+		floor_ctx_guard() {
+			floor::acquire_context();
+		}
+		~floor_ctx_guard() {
+			floor::release_context();
+		}
+	};
 	event::handler evt_handler_fnctr(&evt_handler);
-	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-												   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-												   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
-												   EVENT_TYPE::WINDOW_RESIZE);
-	
-	cam = make_unique<camera>();
-	
-	if(!warp_state.is_auto_cam) {
-		cam->set_mouse_input(true);
-		cam->set_wasd_input(true);
-		cam->set_rotation_wrapping(false);
-	}
-	else {
-		cam->set_mouse_input(false);
-		cam->set_wasd_input(false);
-	}
-	
-	cam->set_position(-115.0f, -15.0f, 0.0f);
-	cam->set_rotation(0.0f, -90.0f, 0.0f);
-	last_cam_pos = cam->get_position();
-	
-	// get the compute context that has been automatically created (opencl/cuda/metal/host)
-	warp_state.ctx = floor::get_compute_context();
-	
-	// create a compute queue (aka command queue or stream) for the fastest device in the context
-	warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
-	warp_state.dev_queue = warp_state.ctx->create_queue(warp_state.dev);
-	
-	// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
-	// compute the appropriate value according to the render/input frame rate and display refresh rate
-	if((floor::get_vsync() || warp_state.ctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
-	   warp_state.target_frame_count == 0) {
-		SDL_DisplayMode mode;
-		if(SDL_GetWindowDisplayMode(floor::get_window(), &mode) != 0) {
-			log_error("failed to retrieve display mode: %s", SDL_GetError());
-			warp_state.target_frame_count = 60; // simply assume 60hz
+	shared_ptr<obj_model> model;
+	{
+		floor_ctx_guard grd;
+		
+		// add event handlers
+		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
+													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
+													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
+													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
+													   EVENT_TYPE::WINDOW_RESIZE);
+		
+		cam = make_unique<camera>();
+		
+		if(!warp_state.is_auto_cam) {
+			cam->set_mouse_input(true);
+			cam->set_wasd_input(true);
+			cam->set_rotation_wrapping(false);
 		}
 		else {
-			if(mode.refresh_rate == 0) {
-				log_warn("failed to retrieve display refresh rate, assuming 60 Hz");
-				warp_state.target_frame_count = 60;
+			cam->set_mouse_input(false);
+			cam->set_wasd_input(false);
+		}
+		
+		cam->set_position(-115.0f, -15.0f, 0.0f);
+		cam->set_rotation(0.0f, -90.0f, 0.0f);
+		last_cam_pos = cam->get_position();
+		
+		// get the compute context that has been automatically created (opencl/cuda/metal/host)
+		warp_state.ctx = floor::get_compute_context();
+		
+		// create a compute queue (aka command queue or stream) for the fastest device in the context
+		warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
+		warp_state.dev_queue = warp_state.ctx->create_queue(warp_state.dev);
+		
+		// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
+		// compute the appropriate value according to the render/input frame rate and display refresh rate
+		if((floor::get_vsync() || warp_state.ctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
+		   warp_state.target_frame_count == 0) {
+			SDL_DisplayMode mode;
+			if(SDL_GetWindowDisplayMode(floor::get_window(), &mode) != 0) {
+				log_error("failed to retrieve display mode: %s", SDL_GetError());
+				warp_state.target_frame_count = 60; // simply assume 60hz
 			}
 			else {
-				warp_state.target_frame_count = (uint32_t)mode.refresh_rate;
+				if(mode.refresh_rate == 0) {
+					log_warn("failed to retrieve display refresh rate, assuming 60 Hz");
+					warp_state.target_frame_count = 60;
+				}
+				else {
+					warp_state.target_frame_count = (uint32_t)mode.refresh_rate;
+				}
 			}
 		}
-	}
-	if(warp_state.target_frame_count > 0) {
-		log_debug("using target frame rate: %u", warp_state.target_frame_count);
-	}
-	else log_debug("using a variable target frame rate");
-	
-	//
-	if(!compile_program()) {
-		return -1;
-	}
-	
-	// setup renderer
-	if(warp_state.ctx->get_compute_type() != COMPUTE_TYPE::METAL) {
-		if(warp_state.no_opengl) {
-			log_error("opengl renderer required!");
-			return -1;
+		if(warp_state.target_frame_count > 0) {
+			log_debug("using target frame rate: %u", warp_state.target_frame_count);
 		}
-		warp_state.no_metal = true;
+		else log_debug("using a variable target frame rate");
 		
-		if(!gl_renderer::init()) {
-			log_error("error during opengl initialization!");
+		//
+		if(!compile_program()) {
 			return -1;
 		}
-	}
+		
+		// setup renderer
+		if(warp_state.ctx->get_compute_type() != COMPUTE_TYPE::METAL) {
+			if(warp_state.no_opengl) {
+				log_error("opengl renderer required!");
+				return -1;
+			}
+			warp_state.no_metal = true;
+			
+			if(!gl_renderer::init()) {
+				log_error("error during opengl initialization!");
+				return -1;
+			}
+		}
 #if defined(__APPLE__)
-	else {
-		if(warp_state.no_metal) {
-			log_error("metal renderer required!");
-			return -1;
+		else {
+			if(warp_state.no_metal) {
+				log_error("metal renderer required!");
+				return -1;
+			}
+			warp_state.no_opengl = true;
+			
+			if(!metal_renderer::init()) {
+				log_error("error during metal initialization!");
+				return -1;
+			}
 		}
-		warp_state.no_opengl = true;
-		
-		if(!metal_renderer::init()) {
-			log_error("error during metal initialization!");
-			return -1;
-		}
-	}
 #endif
+		
+		//
+		bool model_success { false };
+		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success, !warp_state.no_opengl);
+		if(!model_success) {
+			return -1;
+		}
 	
-	//
-	bool model_success { false };
-	auto model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success, !warp_state.no_opengl);
-	if(!model_success) {
-		return -1;
+		// init done, release context
 	}
-	
-	// init done, release context
-	floor::release_context();
 	
 	// main loop
 	log_debug("first frame");

@@ -10,7 +10,6 @@
 		5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
 		5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
 		5C0071C11A91F2BD00F4711D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C0071C21A91F2BD00F4711D /* warp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* warp.cpp */; };
 		5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
 		5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
 		5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
@@ -100,7 +99,6 @@
 		5C8646481C19BFB6000518C7 /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
 		5C8646491C19BFB6000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C86464A1C19BFB6000518C7 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
-		5C86464B1C19BFB6000518C7 /* warp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* warp.cpp */; };
 		5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
 		5C86464D1C19BFB6000518C7 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */; };
 		5C86464E1C19BFB6000518C7 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D31AEAC07C00836CC4 /* obj_loader.cpp */; };
@@ -188,7 +186,6 @@
 		5C8646A71C19BFB6000518C7 /* readme.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEC1BCED83F000732F9 /* readme.txt */; };
 		5C88A63B1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
 		5C88A63C1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
-		5C8FD0B41AD3389B00215230 /* warp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* warp.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
@@ -196,6 +193,9 @@
 		5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
 		5CC330D51AEAC07C00836CC4 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D31AEAC07C00836CC4 /* obj_loader.cpp */; };
 		5CC330D61AEAC07C00836CC4 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D31AEAC07C00836CC4 /* obj_loader.cpp */; };
+		5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
+		5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
+		5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -551,7 +551,6 @@
 		5C56D5131BB2F6690024467C /* vase_round_ddn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_ddn.png; path = ../data/sponza/textures/vase_round_ddn.png; sourceTree = "<group>"; };
 		5C56D5141BB2F6690024467C /* vase_round_spec.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_spec.png; path = ../data/sponza/textures/vase_round_spec.png; sourceTree = "<group>"; };
 		5C56D5151BB2F6690024467C /* vase_round.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round.png; path = ../data/sponza/textures/vase_round.png; sourceTree = "<group>"; };
-		5C7467131A5828D000999E78 /* warp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp.cpp; sourceTree = "<group>"; };
 		5C8646AB1C19BFB6000518C7 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C88A6391AEB82170061B84B /* camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = camera.cpp; sourceTree = "<group>"; };
 		5C88A63A1AEB82170061B84B /* camera.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = camera.hpp; sourceTree = "<group>"; };
@@ -567,7 +566,7 @@
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CD737F51B00123700D9815E /* warp_state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp_state.hpp; sourceTree = "<group>"; };
-		5CE49F1E1B53B9E00059ACC5 /* warp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp.hpp; sourceTree = "<group>"; };
+		5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp_shaders.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -830,8 +829,7 @@
 			children = (
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5CD737F51B00123700D9815E /* warp_state.hpp */,
-				5C7467131A5828D000999E78 /* warp.cpp */,
-				5CE49F1E1B53B9E00059ACC5 /* warp.hpp */,
+				5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */,
 				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
 				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
 				5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */,
@@ -1032,8 +1030,8 @@
 				5C88A63C1AEB82180061B84B /* camera.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5C2F83721B654FF600B27BE3 /* metal_shaders.metal in Sources */,
-				5C0071C21A91F2BD00F4711D /* warp.cpp in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
+				5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5C2F836F1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
 				5CC330D61AEAC07C00836CC4 /* obj_loader.cpp in Sources */,
 			);
@@ -1047,8 +1045,8 @@
 				5C8646481C19BFB6000518C7 /* camera.cpp in Sources */,
 				5C8646491C19BFB6000518C7 /* main.cpp in Sources */,
 				5C86464A1C19BFB6000518C7 /* metal_shaders.metal in Sources */,
-				5C86464B1C19BFB6000518C7 /* warp.cpp in Sources */,
 				5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */,
+				5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5C86464D1C19BFB6000518C7 /* metal_renderer.mm in Sources */,
 				5C86464E1C19BFB6000518C7 /* obj_loader.cpp in Sources */,
 			);
@@ -1064,7 +1062,7 @@
 				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
-				5C8FD0B41AD3389B00215230 /* warp.cpp in Sources */,
+				5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5C88A63B1AEB82180061B84B /* camera.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1480,7 +1478,6 @@
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_FAST_MATH = YES;
-				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -1621,6 +1618,7 @@
 					"-Wno-date-time",
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
 				);
 			};
 			name = Debug;
@@ -1647,6 +1645,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -1698,6 +1697,7 @@
 					"-Wno-date-time",
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
 				);
 			};
 			name = Release;

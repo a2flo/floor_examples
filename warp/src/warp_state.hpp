@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,31 +19,10 @@
 #ifndef __FLOOR_WARP_WARP_STATE_HPP__
 #define __FLOOR_WARP_WARP_STATE_HPP__
 
-// use libwarp or builtin kernels?
-#define USE_LIBWARP 1
-
-enum WARP_KERNEL : uint32_t {
-	KERNEL_SCATTER_SIMPLE = 0,
-	KERNEL_SCATTER_DEPTH_PASS,
-	KERNEL_SCATTER_COLOR_DEPTH_TEST,
-	KERNEL_SCATTER_BIDIR_DEPTH_PASS,
-	KERNEL_SCATTER_BIDIR_COLOR_DEPTH_TEST,
-	KERNEL_SCATTER_CLEAR,
-	KERNEL_SCATTER_FIXUP,
-	KERNEL_GATHER,
-	__MAX_WARP_KERNEL
-};
-floor_inline_always static constexpr size_t warp_kernel_count() {
-	return (size_t)WARP_KERNEL::__MAX_WARP_KERNEL;
-}
-
 struct warp_state_struct {
 	shared_ptr<compute_context> ctx;
 	shared_ptr<compute_queue> dev_queue;
 	shared_ptr<compute_device> dev;
-	
-	shared_ptr<compute_program> prog;
-	array<shared_ptr<compute_kernel>, warp_kernel_count()> kernels;
 	
 	//
 	bool done { false };
@@ -81,6 +60,7 @@ struct warp_state_struct {
 	//
 	const float fov { 72.0f };
 	const float2 near_far_plane { 0.5f, 500.0f };
+	const float2 shadow_near_far_plane { 1.0f, 260.0f };
 	uint2 tile_size { 32, 16 };
 	
 	// input frame rate: amount of frames per second that will actually be rendered

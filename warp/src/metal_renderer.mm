@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 
 #include "metal_renderer.hpp"
 
+#define USE_OLD_SHADERS 1
+
 #if !defined(FLOOR_NO_METAL)
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
@@ -28,9 +30,7 @@
 #include <floor/darwin/darwin_helper.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
-#if defined(USE_LIBWARP)
 #include <libwarp/libwarp.h>
-#endif
 
 static id <MTLLibrary> metal_shd_lib;
 struct metal_shader_object {
@@ -88,6 +88,33 @@ static matrix4f prev_mvm, prev_prev_mvm;
 static matrix4f prev_rmvm, prev_prev_rmvm;
 static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
 static bool first_frame { true };
+
+enum WARP_SHADER : uint32_t {
+	SCENE_SCATTER_VS = 0,
+	SCENE_SCATTER_FS,
+	SCENE_GATHER_VS,
+	SCENE_GATHER_FS,
+	SCENE_GATHER_FWD_VS,
+	SCENE_GATHER_FWD_FS,
+	SKYBOX_SCATTER_VS,
+	SKYBOX_SCATTER_FS,
+	SKYBOX_GATHER_VS,
+	SKYBOX_GATHER_FS,
+	SKYBOX_GATHER_FWD_VS,
+	SKYBOX_GATHER_FWD_FS,
+	SHADOW_VS,
+	BLIT_VS,
+	BLIT_FS,
+	BLIT_SWIZZLE_VS,
+	BLIT_SWIZZLE_FS,
+	__MAX_WARP_SHADER
+};
+floor_inline_always static constexpr size_t warp_shader_count() {
+	return (size_t)WARP_SHADER::__MAX_WARP_SHADER;
+}
+static shared_ptr<compute_program> shader_prog;
+static array<metal_kernel*, warp_shader_count()> shaders;
+static array<const metal_kernel::metal_kernel_entry*, warp_shader_count()> shader_entries;
 
 static void destroy_textures(bool is_resize) {
 	scene_fbo.compute_color = nullptr;
@@ -252,8 +279,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (scatter)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SCENE_SCATTER"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SCENE_SCATTER"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_SCATTER_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_SCATTER_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -274,8 +306,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (gather)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SCENE_GATHER"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SCENE_GATHER"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -300,8 +337,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (gather forward-only)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SCENE_GATHER_FWD"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SCENE_GATHER_FWD"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FWD_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FWD_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -393,8 +435,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (scatter)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SKYBOX_SCATTER"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_SCATTER"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_SCATTER_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_SCATTER_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -415,8 +462,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (gather)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -441,8 +493,13 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (gather forward-only)";
 			pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER_FWD"]->vertex_program;
 			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER_FWD"]->fragment_program;
+#else
+			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FWD_VS]->kernel;
+			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FWD_FS]->kernel;
+#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -541,7 +598,11 @@ bool metal_renderer::init() {
 		
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 		pipeline_desc.label = @"warp shadow pipeline";
+#if defined(USE_OLD_SHADERS)
 		pipeline_desc.vertexFunction = shader_objects["SHADOW"]->vertex_program;
+#else
+		pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SHADOW_VS]->kernel;
+#endif
 		pipeline_desc.fragmentFunction = nil; // only rendering z/depth
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
@@ -570,8 +631,13 @@ bool metal_renderer::init() {
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 		pipeline_desc.label = @"warp blit pipeline";
 		pipeline_desc.sampleCount = 1;
+#if defined(USE_OLD_SHADERS)
 		pipeline_desc.vertexFunction = shader_objects["BLIT"]->vertex_program;
 		pipeline_desc.fragmentFunction = shader_objects["BLIT"]->fragment_program;
+#else
+		pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[BLIT_VS]->kernel;
+		pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[BLIT_FS]->kernel;
+#endif
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -903,7 +969,6 @@ static void render_kernels(const float& delta, const float& render_delta,
 		relative_delta = dbg_delta;
 	}
 	
-#if defined(USE_LIBWARP) // use libwarp
 	const libwarp_camera_setup cam_setup {
 		.screen_width = floor::get_physical_width(),
 		.screen_height = floor::get_physical_height(),
@@ -941,79 +1006,6 @@ static void render_kernels(const float& delta, const float& render_delta,
 		}
 	}
 	if(err != LIBWARP_SUCCESS) log_error("libwarp error: %u", err);
-#else // use kernels of this project
-	if(warp_state.is_scatter) {
-		// clear if enabled + always clear the first frame
-		if(warp_state.is_clear_frame || (warp_frame_num == 0 && warp_state.is_fixup)) {
-			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_CLEAR],
-										  scene_fbo.dim_multiple,
-										  warp_state.tile_size,
-										  scene_fbo.compute_color, clear_color);
-		}
-		
-#if 0
-		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_SIMPLE],
-									  scene_fbo.dim_multiple,
-									  warp_state.tile_size,
-									  scene_fbo.color[0],
-									  scene_fbo.depth[0],
-									  scene_fbo.motion[0],
-									  scene_fbo.compute_color,
-									  relative_delta);
-#else
-		const float clear_depth = numeric_limits<float>::max();
-		warp_state.scatter_depth_buffer->fill(warp_state.dev_queue, &clear_depth, sizeof(clear_depth));
-		
-		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_DEPTH_PASS],
-									  scene_fbo.dim_multiple,
-									  warp_state.tile_size,
-									  scene_fbo.depth[0],
-									  scene_fbo.motion[0],
-									  warp_state.scatter_depth_buffer,
-									  relative_delta);
-		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_COLOR_DEPTH_TEST],
-									  scene_fbo.dim_multiple,
-									  warp_state.tile_size,
-									  scene_fbo.color[0],
-									  scene_fbo.depth[0],
-									  scene_fbo.motion[0],
-									  scene_fbo.compute_color,
-									  warp_state.scatter_depth_buffer,
-									  relative_delta);
-#endif
-	
-		if(warp_state.is_fixup) {
-			warp_state.dev_queue->execute(warp_state.kernels[KERNEL_SCATTER_FIXUP],
-										  scene_fbo.dim_multiple,
-										  warp_state.tile_size,
-										  scene_fbo.compute_color);
-		}
-	}
-	else {
-		warp_state.dev_queue->execute(warp_state.kernels[KERNEL_GATHER],
-									  scene_fbo.dim_multiple,
-									  warp_state.tile_size,
-									  // current frame (t)
-									  scene_fbo.color[1u - warp_state.cur_fbo],
-									  scene_fbo.depth[1u - warp_state.cur_fbo],
-									  // previous frame (t-1)
-									  scene_fbo.color[warp_state.cur_fbo],
-									  scene_fbo.depth[warp_state.cur_fbo],
-									  // forward from prev frame, t-1 -> t
-									  scene_fbo.motion[warp_state.cur_fbo * 2],
-									  // backward from cur frame, t -> t-1
-									  scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
-									  // packed depth: { fwd t-1 -> t (used here), bwd t-1 -> t-2 (unused here) }
-									  scene_fbo.motion_depth[warp_state.cur_fbo],
-									  // packed depth: { fwd t+1 -> t (unused here), bwd t -> t-1 (used here) }
-									  scene_fbo.motion_depth[1u - warp_state.cur_fbo],
-									  scene_fbo.compute_color,
-									  relative_delta,
-									  warp_state.gather_eps_1,
-									  warp_state.gather_eps_2,
-									  warp_state.gather_dbg);
-	}
-#endif
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
@@ -1027,7 +1019,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 	
 	matrix4f light_bias_mvpm;
 	{
-		const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f, 1.0f, 260.0f) };
+		const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f,
+														 warp_state.shadow_near_far_plane.x,
+														 warp_state.shadow_near_far_plane.y) };
 		const matrix4f light_mvm {
 			matrix4f::translation(-light_pos) *
 			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
@@ -1081,6 +1075,23 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		const matrix4f next_mvpm { mvm * pm }; // gather
 		const matrix4f prev_mvpm { prev_prev_mvm * pm }; // gather
 		
+#if !defined(USE_OLD_SHADERS)
+		const struct __attribute__((packed)) {
+			matrix4f mvpm;
+			matrix4f light_bias_mvpm;
+			float3 cam_pos;
+			float3 light_pos;
+			matrix4f m0; // mvm (scatter), next_mvpm (gather)
+			matrix4f m1; // prev_mvm (scatter), prev_mvpm (gather)
+		} uniforms {
+			.mvpm = mvpm,
+			.light_bias_mvpm = light_bias_mvpm,
+			.cam_pos = -cam.get_position(),
+			.light_pos = light_pos,
+			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
+			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),
+		};
+#else
 		const struct {
 			matrix4f mvpm;
 			matrix4f m0; // mvm (scatter), next_mvpm (gather)
@@ -1090,12 +1101,13 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			float3 light_pos;
 		} uniforms {
 			.mvpm = mvpm,
-			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
-			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),
 			.light_bias_mvpm = light_bias_mvpm,
 			.cam_pos = -cam.get_position(),
 			.light_pos = light_pos,
+			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
+			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),
 		};
+#endif
 		
 		// for bidirectional gather rendering, this switches every frame
 		if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
@@ -1135,7 +1147,9 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		[encoder setVertexBuffer:((metal_buffer*)model.tangents_buffer.get())->get_metal_buffer() offset:0 atIndex:4];
 		[encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:5];
 		
+#if defined(USE_OLD_SHADERS)
 		[encoder setFragmentSamplerState:sampler_state atIndex:0];
+#endif
 		[encoder setFragmentTexture:((metal_image*)shadow_map.shadow_image.get())->get_metal_image() atIndex:4];
 		for(const auto& obj : model.objects) {
 			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].diffuse)->get_metal_image() atIndex:0];
@@ -1306,6 +1320,56 @@ bool metal_renderer::compile_shaders() {
 		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"warp_gather"];
 		shader_objects.emplace("WARP_GATHER", shd);
 	}
+	
+	/////
+	shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
+												   "-I" + floor::data_path("../warp/src") +
+												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) +
+												   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) +
+												   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) +
+												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y));
+	
+	if(shader_prog == nullptr) {
+		log_error("shader compilation failed");
+		return false;
+	}
+	
+	// NOTE: corresponds to WARP_SHADER
+	static const char* shader_names[warp_shader_count()] {
+		"scene_scatter_vs",
+		"scene_scatter_fs",
+		"scene_gather_vs",
+		"scene_gather_fs",
+		"scene_gather_vs",
+		"scene_gather_fwd_fs",
+		"skybox_scatter_vs",
+		"skybox_scatter_fs",
+		"skybox_gather_vs",
+		"skybox_gather_fs",
+		"skybox_gather_vs",
+		"skybox_gather_fwd_fs",
+		"shadow_vs", // NOTE: there is no shadow_fs
+		"blit_vs",
+		"blit_fs",
+		"blit_vs",
+		"blit_swizzle_fs",
+	};
+	
+	for(size_t i = 0; i < warp_shader_count(); ++i) {
+		shaders[i] = (metal_kernel*)shader_prog->get_kernel(shader_names[i]).get();
+		if(shaders[i] == nullptr) {
+			log_error("failed to retrieve shader \"%s\" from program", shader_names[i]);
+			//return false;
+			continue;
+		}
+		shader_entries[i] = (const metal_kernel::metal_kernel_entry*)shaders[i]->get_kernel_entry(warp_state.dev);
+		if(shader_entries[i] == nullptr) {
+			log_error("failed to retrieve shader entry \"%s\" for the current device", shader_names[i]);
+			//return false;
+			continue;
+		}
+	}
+	
 	return true;
 }
 
