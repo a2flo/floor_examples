@@ -161,8 +161,8 @@ static auto compute_gradient(const float& interpolator) {
 	
 	// scale from [0, 1] to [0, range]
 	const auto scaled_interp = interpolator * float(size(gradients));
-	// determine lower gradient idx (can't even do proper dynamic indexing on nvidia :/)
-	const auto gradient_idx = (scaled_interp > 2.0f ? 2 : (scaled_interp > 1.0f ? 1 : 0));
+	// determine lower gradient idx
+	const auto gradient_idx = min(uint32_t(scaled_interp), uint32_t(size(gradients) - 2));
 	// interp range is [0, 1] between gradients, just need to wrap/mod it
 	const auto wrapped_interp = math::wrap(scaled_interp, 1.0f);
 	// linear interpolation between gradients
