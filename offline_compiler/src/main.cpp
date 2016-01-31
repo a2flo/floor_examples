@@ -600,7 +600,7 @@ int main(int, char* argv[]) {
 						const auto kernel_name = core::trim(program_data.first.substr(start_pos, end_pos - start_pos));
 						
 						kernels.push_back(llvm_compute::kernel_info {
-							kernel_name, {}
+							kernel_name, llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL, {}
 						});
 					}
 					

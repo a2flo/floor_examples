@@ -158,27 +158,15 @@ static auto compute_gradient(const float& interpolator) {
 		{ 1.0f, 1.0f, 1.0f, 1.0f },
 		{ 0.5f, 1.0f, 1.0f, 1.0f }
 	};
-	static_assert(size(gradients) == 4, "need known size, b/c of vs limitations");
 	
-#if 0 // could use this on nvidia, but horribly broken on intel due to dynamic indexing?
 	// scale from [0, 1] to [0, range]
 	const auto scaled_interp = interpolator * float(size(gradients));
 	// determine lower gradient idx (can't even do proper dynamic indexing on nvidia :/)
 	const auto gradient_idx = (scaled_interp > 2.0f ? 2 : (scaled_interp > 1.0f ? 1 : 0));
 	// interp range is [0, 1] between gradients, just need to wrap/mod it
-	const auto wrapped_interp = const_math::wrap(scaled_interp, 1.0f);
+	const auto wrapped_interp = math::wrap(scaled_interp, 1.0f);
 	// linear interpolation between gradients
 	return gradients[gradient_idx].interpolated(gradients[gradient_idx + 1u], wrapped_interp);
-#else
-	const auto interp = fmod((interpolator * float(size(gradients) - 1u)), 1.0f);
-	if(interpolator < 0.33333f) {
-		return gradients[0].interpolated(gradients[1], interp);
-	}
-	else if(interpolator < 0.66666f) {
-		return gradients[1].interpolated(gradients[2], interp);
-	}
-	return gradients[2].interpolated(gradients[3], interp);
-#endif
 }
 
 struct uniforms_t {
@@ -203,7 +191,7 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 	size *= mass_scale;
 	return stage_in_out {
 		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpm,
-		.size = const_math::clamp(size, 2.0f, 255.0f),
+		.size = math::clamp(size, 2.0f, 255.0f),
 		.color = compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x))
 	};
 }
