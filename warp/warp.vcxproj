@@ -16,14 +16,12 @@
     <ClCompile Include="src\gl_renderer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\obj_loader.cpp" />
-    <ClCompile Include="src\warp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\auto_cam.hpp" />
     <ClInclude Include="src\camera.hpp" />
     <ClInclude Include="src\gl_renderer.hpp" />
     <ClInclude Include="src\obj_loader.hpp" />
-    <ClInclude Include="src\warp.hpp" />
     <ClInclude Include="src\warp_state.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

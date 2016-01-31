@@ -30,9 +30,6 @@
     <ClCompile Include="src\obj_loader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\warp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\auto_cam.hpp">
@@ -45,9 +42,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\obj_loader.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\warp.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\warp_state.hpp">
