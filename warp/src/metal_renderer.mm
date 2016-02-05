@@ -86,7 +86,7 @@ static shared_ptr<compute_image> skybox_tex;
 static float3 light_pos;
 static matrix4f prev_mvm, prev_prev_mvm;
 static matrix4f prev_rmvm, prev_prev_rmvm;
-static constexpr const float4 clear_color { 0.215f, 0.412f, 0.6f, 0.0f };
+static constexpr const double4 clear_color { 0.215, 0.412, 0.6, 0.0 };
 static bool first_frame { true };
 
 enum WARP_SHADER : uint32_t {
@@ -370,7 +370,7 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_attachment = render_pass_desc_scatter.colorAttachments[1];
 			motion_attachment.loadAction = MTLLoadActionClear;
-			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_scatter.depthAttachment;
@@ -389,17 +389,17 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_fwd_attachment = render_pass_desc_gather.colorAttachments[1];
 			motion_fwd_attachment.loadAction = MTLLoadActionClear;
-			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_fwd_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_bwd_attachment = render_pass_desc_gather.colorAttachments[2];
 			motion_bwd_attachment.loadAction = MTLLoadActionClear;
-			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_bwd_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_depth_attachment = render_pass_desc_gather.colorAttachments[3];
 			motion_depth_attachment.loadAction = MTLLoadActionClear;
-			motion_depth_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_gather.depthAttachment;
@@ -418,7 +418,7 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_attachment = render_pass_desc_gather_fwd.colorAttachments[1];
 			motion_attachment.loadAction = MTLLoadActionClear;
-			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = render_pass_desc_gather_fwd.depthAttachment;
@@ -526,7 +526,7 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_attachment = skybox_pass_desc_scatter.colorAttachments[1];
 			motion_attachment.loadAction = MTLLoadActionLoad;
-			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_scatter.depthAttachment;
@@ -545,17 +545,17 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_fwd_attachment = skybox_pass_desc_gather.colorAttachments[1];
 			motion_fwd_attachment.loadAction = MTLLoadActionLoad;
-			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_fwd_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_fwd_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_bwd_attachment = skybox_pass_desc_gather.colorAttachments[2];
 			motion_bwd_attachment.loadAction = MTLLoadActionLoad;
-			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_bwd_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_bwd_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_depth_attachment = render_pass_desc_gather.colorAttachments[3];
 			motion_depth_attachment.loadAction = MTLLoadActionLoad;
-			motion_depth_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_depth_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_depth_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather.depthAttachment;
@@ -574,7 +574,7 @@ bool metal_renderer::init() {
 			
 			MTLRenderPassColorAttachmentDescriptor* motion_attachment = skybox_pass_desc_gather_fwd.colorAttachments[1];
 			motion_attachment.loadAction = MTLLoadActionLoad;
-			motion_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+			motion_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 			motion_attachment.storeAction = MTLStoreActionStore;
 			
 			MTLRenderPassDepthAttachmentDescriptor* depth_attachment = skybox_pass_desc_gather_fwd.depthAttachment;

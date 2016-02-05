@@ -46,22 +46,22 @@ void camera::run() {
 		if(keyboard_input) {
 			// ... recalculate the cameras position
 			if(key_state[0]) {
-				position.x += (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z -= (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.x += (float)sin((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z -= (float)cos((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[1]) {
-				position.x -= (float)sin((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z += (float)cos((rotation.y - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.x -= (float)sin((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z += (float)cos((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[2]) {
-				position.x -= (float)sin(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
-				position.y += (float)sin(rotation.x * const_math::PI_DIV_180<double>) * move_speed;
-				position.z += (float)cos(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
+				position.x -= (float)sin(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
+				position.y += (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z += (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 			if(key_state[3]) {
-				position.x += (float)sin(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
-				position.y -= (float)sin(rotation.x * const_math::PI_DIV_180<double>) * move_speed;
-				position.z -= (float)cos(rotation.y * const_math::PI_DIV_180<double>) * move_speed;
+				position.x += (float)sin(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
+				position.y -= (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>) * move_speed;
+				position.z -= (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
 			}
 		}
 		
@@ -316,9 +316,9 @@ float camera::get_cam_speed() const {
 /*! returns the cameras direction
  */
 const float3& camera::get_direction() const {
-	direction.x = (float)-sin(rotation.y * const_math::PI_DIV_180<double>);
-	direction.y = (float)sin(rotation.x * const_math::PI_DIV_180<double>);
-	direction.z = (float)cos(rotation.y * const_math::PI_DIV_180<double>);
+	direction.x = (float)-sin(double(rotation.y) * const_math::PI_DIV_180<double>);
+	direction.y = (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>);
+	direction.z = (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>);
 	return direction;
 }
 

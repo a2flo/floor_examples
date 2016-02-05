@@ -19,6 +19,14 @@
 // only metal for now
 #if defined(FLOOR_COMPUTE_METAL)
 
+#if !defined(WARP_SHADOW_NEAR_PLANE)
+#define WARP_SHADOW_NEAR_PLANE 1.0f
+#endif
+
+#if !defined(WARP_SHADOW_FAR_PLANE)
+#define WARP_SHADOW_FAR_PLANE 260.0f
+#endif
+
 //////////////////////////////////////////
 // scene
 
@@ -162,7 +170,6 @@ static uint32_t encode_3d_motion(const float3& motion) {
 static uint32_t encode_2d_motion(const float2& motion) {
 	const auto cmotion = short2((motion * 32767.0f).clamp(-32767.0f, 32767.0f)); // +/- 2^15 - 1, fit into 16 bits
 	return *(uint32_t*)&cmotion;
-
 }
 
 static float4 scene_fs(const scene_base_in_out& in,
@@ -173,12 +180,12 @@ static float4 scene_fs(const scene_base_in_out& in,
 					   const_image_2d_depth<float> shadow_tex) {
 	const auto tex_coord = in.tex_coord;
 	
-	if(mask_tex.read(tex_coord/*, level { 0.0f }*/) < 0.5f) { // TODO: linear?
+	if(mask_tex.read_lod_linear(tex_coord, 0) < 0.5f) {
 		discard_fragment();
 	}
 	
-	//const gradient2d tex_grad { dfdx(tex_coord), dfdy(tex_coord) };
-	auto diff = diff_tex.read_linear(tex_coord/*, tex_grad*/);
+	const auto tex_grad = dfdx_dfdy_gradient(tex_coord);
+	auto diff = diff_tex.read_gradient_linear(tex_coord, tex_grad);
 	
 	//
 	constexpr float fixed_bias = 0.001f;
@@ -191,7 +198,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 	const auto norm_view_dir = in.view_dir.normalized();
 	const auto norm_light_dir = in.light_dir.normalized();
 	const auto norm_half_dir = (norm_view_dir + norm_light_dir).normalized();
-	const auto normal = norm_tex.read_linear(tex_coord/*, tex_grad*/).xyz * 2.0f - 1.0f;
+	const auto normal = norm_tex.read_gradient_linear(tex_coord, tex_grad).xyz * 2.0f - 1.0f;
 	
 	const auto lambert = normal.dot(norm_light_dir);
 	if(lambert > 0.0f) {
@@ -206,7 +213,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 		if(in.shadow_coord.w > 0.0f) {
 			light_vis = shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy, shadow_coord.z - shadow_bias);
 		}
-#elif 0 // TODO/NOTE: this horribly breaks stuff, don't use it yet
+#elif 1 // TODO/NOTE: this horribly breaks stuff, don't use it yet
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
 		// TODO: don't emit global linkage for constexpr
 		static constexpr const float2 poisson_disk[] {
@@ -239,7 +246,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 		lighting += lambert;
 		
 		// specular
-		const auto spec = spec_tex.read_linear(tex_coord/*, tex_grad*/).x;
+		const auto spec = spec_tex.read_gradient_linear(tex_coord, tex_grad).x;
 		const auto specular = pow(max(norm_half_dir.dot(normal), 0.0f), spec * 10.0f);
 		lighting += specular;
 		
