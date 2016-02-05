@@ -259,6 +259,7 @@ int main(int, char* argv[]) {
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
 					}
 				}
+				else option_ctx.sub_target = "sm_20";
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
@@ -446,10 +447,12 @@ int main(int, char* argv[]) {
 			" -o " + cubin_filename + ".cubin " +
 			option_ctx.output_filename
 		};
+		if(floor::get_compute_log_binaries()) log_debug("ptxas cmd: %s", ptxas_cmd);
 		const string cuobjdump_cmd {
 			"cuobjdump --dump-sass " + cubin_filename + ".cubin" +
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
+		if(floor::get_compute_log_binaries()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
 		string ptxas_output = "", cuobjdump_output = "";
 		core::system(ptxas_cmd, ptxas_output);
 		cout << ptxas_output << endl;
