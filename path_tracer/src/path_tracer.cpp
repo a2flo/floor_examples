@@ -330,39 +330,33 @@ protected:
 };
 
 //
-struct camera {
-	const float3 point { 27.8f, 27.3f, -80.0f };
-	float3 screen_origin, step_x, step_y;
-	
-	void init(const float2& resolution) {
-		constexpr const float rad_angle = const_math::deg_to_rad(35.0f);
-		constexpr const float3 forward { 0.0f, 0.0f, 1.0f };
-		constexpr const float3 right { forward.crossed(float3 { 0.0f, 1.0f, 0.0f } /* up */).normalized() };
-		constexpr const float3 up { -right.crossed(forward).normalized() };
-		constexpr const float3 right_vector = 2.0f * right * const_math::tan(rad_angle * 0.5f);
-		constexpr const float3 up_vector = 2.0f * up * const_math::tan(rad_angle * 0.5f);
-		
-		const float aspect_ratio = resolution.x / resolution.y;
-		const float3 row_vector = right_vector * aspect_ratio;
-		step_x = row_vector / resolution.x;
-		step_y = up_vector / resolution.y;
-		screen_origin = forward - row_vector * 0.5f - up_vector * 0.5f;
-	}
+namespace camera {
+	static constexpr const float3 point { 27.8f, 27.3f, -80.0f };
+	static constexpr const float rad_angle = const_math::deg_to_rad(35.0f);
+	static constexpr const float3 forward { 0.0f, 0.0f, 1.0f };
+	static constexpr const float3 right { forward.crossed(float3 { 0.0f, 1.0f, 0.0f } /* up */).normalized() };
+	static constexpr const float3 up { -right.crossed(forward).normalized() };
+	static constexpr const float3 right_vector = 2.0f * right * const_math::tan(rad_angle * 0.5f);
+	static constexpr const float3 up_vector = 2.0f * up * const_math::tan(rad_angle * 0.5f);
+	static constexpr const float aspect_ratio = SCREEN_WIDTH / SCREEN_HEIGHT;
+	static constexpr const float3 row_vector = right_vector * aspect_ratio;
+	static constexpr const float3 step_x { row_vector / SCREEN_WIDTH };
+	static constexpr const float3 step_y { up_vector / SCREEN_HEIGHT };
+	static constexpr const float3 screen_origin { forward - row_vector * 0.5f - up_vector * 0.5f };
 };
 
 kernel void path_trace(buffer<float4> img,
 					   param<uint32_t> iteration,
-					   param<uint32_t> seed,
-					   param<uint2> img_size) {
+					   param<uint32_t> seed) {
 	const auto idx = global_id.x;
-	const uint2 pixel { idx % img_size.x, idx / img_size.y };
-	if(pixel.y >= img_size.y) return;
+	const uint2 pixel { idx % SCREEN_WIDTH, idx / SCREEN_HEIGHT };
+	if(pixel.y >= SCREEN_HEIGHT) return;
 	
 	// this is hard ... totally random
 	uint32_t random_seed = seed;
 	random_seed += {
 		(random_seed ^ (idx << (random_seed & ((idx + iteration) & 0x1F)))) +
-		((idx + random_seed) * img_size.x * img_size.y) ^ 0x52FBD9EC
+		((idx + random_seed) * SCREEN_WIDTH * SCREEN_HEIGHT) ^ 0x52FBD9EC
 	};
 	simple_path_tracer pt(random_seed);
 	
@@ -370,13 +364,9 @@ kernel void path_trace(buffer<float4> img,
 	const float2 pixel_sample { float2(pixel) + float2(pt.rand_0_1(), pt.rand_0_1()) };
 	
 	//
-	camera cam;
-	cam.init(float2(img_size));
-	
-	//
-	ray r {
-		.origin = cam.point,
-		.direction = cam.screen_origin + pixel_sample.x * cam.step_x + pixel_sample.y * cam.step_y
+	const ray r {
+		.origin = camera::point,
+		.direction = camera::screen_origin + pixel_sample.x * camera::step_x + pixel_sample.y * camera::step_y
 	};
 	float3 color = pt.compute_radiance(r, true);
 

@@ -23,7 +23,10 @@ int main(int, char* argv[]) {
 	
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
-	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"), "-I" + floor::data_path("../path_tracer/src"));
+	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"),
+														  "-I" + floor::data_path("../path_tracer/src") +
+														  " -DSCREEN_WIDTH=" + to_string(img_size.x) +
+														  " -DSCREEN_HEIGHT=" + to_string(img_size.y));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
