@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -238,10 +238,13 @@ floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, im
 	float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
 	for(int i = -overlap; i <= overlap; ++i) {
-		color += coeffs[size_t(overlap + i)] * in_img.read(img_coord + int2 {
-			direction == 0 ? i : 0,
-			direction == 0 ? 0 : i,
-		});
+		color += (coeffs[size_t(overlap + i)] *
+#if TAP_COUNT <= 15 // can use texel offset here, TAP_COUNT == 15 has an offset range of [-7, 7]
+				  in_img.read(img_coord, int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i })
+#else // else: need to resort to integer math
+				  in_img.read(img_coord + int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i })
+#endif
+				  );
 	}
 	
 	out_img.write(img_coord, color);

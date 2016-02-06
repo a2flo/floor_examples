@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #include <floor/core/essentials.hpp>
 
 #if !defined(TAP_COUNT)
-#define TAP_COUNT 17
-#define INNER_TILE_SIZE 16
+#define TAP_COUNT 15
+#define INNER_TILE_SIZE 14
 #define TILE_SIZE (INNER_TILE_SIZE + ((TAP_COUNT / 2) * 2))
 #endif
 

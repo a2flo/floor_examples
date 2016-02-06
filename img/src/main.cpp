@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2015 Florian Ziesche
+ *  Copyright (C) 2004 - 2016 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@ static bool dumb {
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { TAP_COUNT };
+static constexpr const uint32_t inner_tile_size { INNER_TILE_SIZE };// -> effective tile size
 
 //! option -> function map
 template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handler::options {
@@ -271,7 +272,6 @@ int main(int, char* argv[]) {
 	// compile the program and get the kernel functions
 	static_assert(tap_count % 2u == 1u, "tap count must be an odd number!");
 	static constexpr const uint32_t overlap { tap_count / 2u };
-	static constexpr const uint32_t inner_tile_size { 16u }; // -> effective tile size
 	static constexpr const uint32_t tile_size { inner_tile_size + overlap * 2u };
 	static const uint2 img_global_size { (image_size / inner_tile_size) * tile_size };
 	log_debug("running blur kernel on an %v image, with a tap count of %u, inner tile size of %v and work-group tile size of %v -> global work size: %v -> %u texture fetches",
