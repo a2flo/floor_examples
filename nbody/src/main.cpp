@@ -111,7 +111,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tGTX 780:      ~2200 gflops (--count 98304 --tile-size 512)" << endl;
 		cout << "\tR9 285:       ~850 gflops (--count 131072 --tile-size 64)" << endl;
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
-		cout << "\tGT 650M:      ~340 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tGT 650M:      ~344 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
 		cout << "\tHD 4000:      ~148 gflops (--count 32768 --tile-size 128)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
@@ -412,7 +412,7 @@ void init_system() {
 				const auto xi_y = core::rand(-1.0f, 1.0f);
 				const auto sqrt_term = sqrt(1.0f - xi_y * xi_y);
 				const auto rad = core::rand(-1.0f, 1.0f);
-				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0 ? -1.0f : 1.0f);
+				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0f ? -1.0f : 1.0f);
 				positions[i].xyz = {
 					cos(theta) * rnd_rad * sqrt_term,
 					sin(theta) * rnd_rad * sqrt_term,
@@ -439,7 +439,7 @@ void init_system() {
 				const auto sqrt_term = sqrt(1.0f - xi_y * xi_y);
 				const auto rad = (core::rand(rad_per_shell * float(shell), rad_per_shell * float(shell + 1)) *
 								  (core::rand(0, 15) % 2 == 0 ? 1.0f : -1.0f));
-				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0 ? -1.0f : 1.0f);
+				const auto rnd_rad = sphere_scale * sqrt(1.0f - rad * rad) * (rad < 0.0f ? -1.0f : 1.0f);
 				positions[i].xyz = {
 					cos(theta) * rnd_rad * sqrt_term,
 					sin(theta) * rnd_rad * sqrt_term,
@@ -712,7 +712,17 @@ int main(int, char* argv[]) {
 		
 		// s/w rendering
 		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
-			const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
+			struct {
+				const matrix4f mview;
+				const uint2 img_size;
+				const float2 mass_minmax;
+				const uint32_t body_count;
+			} raster_params {
+				.mview = nbody_state.cam_rotation.to_matrix4() * matrix4f::translation(0.0f, 0.0f, -nbody_state.distance),
+				.img_size = img_size,
+				.mass_minmax = nbody_state.mass_minmax,
+				.body_count = nbody_state.body_count,
+			};
 			img_buffer_flip_flop = 1 - img_buffer_flip_flop;
 			dev_queue->execute(nbody_raster,
 							   // total amount of work:
@@ -726,9 +736,7 @@ int main(int, char* argv[]) {
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
 							   /* img: */				img_buffers[img_buffer_flip_flop],
 							   /* img_old: */			img_buffers[1 - img_buffer_flip_flop],
-							   /* img_size: */			img_size,
-							   /* body_count: */		nbody_state.body_count,
-							   /* mview: */				mview);
+							   /* raster_params: */		raster_params);
 			
 			// grab the current image buffer data (read-only + blocking) ...
 			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);

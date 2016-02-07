@@ -104,59 +104,12 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 	velocities[idx] = velocity;
 }
 
-kernel void nbody_raster(buffer<const float4> positions,
-						 buffer<uint32_t> img,
-						 buffer<uint32_t> img_old,
-						 param<uint2> img_size,
-						 param<uint32_t> body_count,
-						 param<matrix4f> mview) {
-	const auto idx = global_id.x;
-	img_old[idx] = 0;
-	
-	if(idx < body_count) {
-		const matrix4f mproj { matrix4f().perspective(90.0f, float(img_size.x) / float(img_size.y), 0.25f, 2500.0f) };
-		
-		// transform vector (*TMVP)
-		const float3 position = positions[idx].xyz;
-		const float3 mview_vec = position * mview;
-		float3 proj_vec = mview_vec * mproj;
-		
-		// check if point is not behind cam
-		if(mview_vec.z < 0.0f) {
-			proj_vec *= -1.0f / mview_vec.z;
-			
-			// and finally: compute window position
-			const int2 pixel {
-				(int32_t)(float(img_size.x) * (proj_vec.x * 0.5f + 0.5f)),
-				(int32_t)(float(img_size.y) * (proj_vec.y * 0.5f + 0.5f))
-			};
-			if(pixel.x < 0 || pixel.y < 0) return;
-			
-			const uint2 upixel { pixel };
-			if(upixel.x < img_size.x && upixel.y < img_size.y) {
-#if 0 // just add/override previous value, this will overflow of course
-				img[upixel.y * img_size->x + upixel.x] += 0x404040;
-#else // use atomics and max out at 0xFFFFFF
-				uint32_t color, cur_color;
-				do {
-					cur_color = img[upixel.y * img_size.x + upixel.x];
-					if(cur_color >= 0xFFFFFFu) break; // overflow
-					color = std::min(cur_color + 0x404040u, 0xFFFFFFu);
-				} while(atomic_cmpxchg(&img[upixel.y * img_size.x + upixel.x], cur_color, color) != cur_color);
-#endif
-			}
-		}
-	}
-}
-
-// shader: metal only for now
-#if defined(FLOOR_COMPUTE_METAL)
-static auto compute_gradient(const float& interpolator) {
-	static constexpr const float4 gradients[] {
-		{ 1.0f, 0.2f, 0.0f, 1.0f },
-		{ 1.0f, 1.0f, 0.0f, 1.0f },
-		{ 1.0f, 1.0f, 1.0f, 1.0f },
-		{ 0.5f, 1.0f, 1.0f, 1.0f }
+static float3 compute_gradient(const float& interpolator) {
+	static constexpr const float3 gradients[] {
+		{ 1.0f, 0.2f, 0.0f },
+		{ 1.0f, 1.0f, 0.0f },
+		{ 1.0f, 1.0f, 1.0f },
+		{ 0.5f, 1.0f, 1.0f },
 	};
 	
 	// scale from [0, 1] to [0, range]
@@ -169,6 +122,54 @@ static auto compute_gradient(const float& interpolator) {
 	return gradients[gradient_idx].interpolated(gradients[gradient_idx + 1u], wrapped_interp);
 }
 
+struct raster_params {
+	const matrix4f mview;
+	const uint2 img_size;
+	const float2 mass_minmax;
+	const uint32_t body_count;
+};
+
+kernel void nbody_raster(buffer<const float4> positions,
+						 buffer<uint32_t> img,
+						 buffer<uint32_t> img_old,
+						 param<raster_params> params) {
+	const auto idx = global_id.x;
+	img_old[idx] = 0;
+	
+	if(idx >= params.body_count) return;
+	
+	const matrix4f mproj { matrix4f::perspective(90.0f, float(params.img_size.x) / float(params.img_size.y), 0.25f, 2500.0f) };
+	
+	// transform vector (*TMVP)
+	const float3 mview_vec = positions[idx].xyz * params.mview;
+	float3 proj_vec = mview_vec * mproj;
+	
+	// check if point is not behind cam
+	if(mview_vec.z >= 0.0f) return;
+	proj_vec *= -1.0f / mview_vec.z;
+	
+	// and finally: compute window position
+	const int2 pixel {
+		(int32_t)(float(params.img_size.x) * (proj_vec.x * 0.5f + 0.5f)),
+		(int32_t)(float(params.img_size.y) * (proj_vec.y * 0.5f + 0.5f))
+	};
+	
+	const uint2 upixel { pixel }; // this also makes sure that negative positions are ignored
+	if(upixel.x < params.img_size.x && upixel.y < params.img_size.y) {
+		// compute gradient color, will just ignore alpha blending here
+		const auto color_f = (compute_gradient((positions[idx].w - params.mass_minmax.x) /
+											   (params.mass_minmax.y - params.mass_minmax.x)) * 255.0f).floor();
+		const uint32_t color = (((uint32_t(color_f.z) & 0xFFu) << 16u) |
+								((uint32_t(color_f.y) & 0xFFu) << 8u) |
+								(uint32_t(color_f.x) & 0xFFu));
+		
+		// OR the color value, this is kind of hack, but it works quite well with the colors we have (and faster than a add+CAS loop)
+		atomic_or(&img[upixel.y * params.img_size.x + upixel.x], color);
+	}
+}
+
+// shader: metal only for now
+#if defined(FLOOR_COMPUTE_METAL)
 struct uniforms_t {
 	matrix4f mvpm;
 	matrix4f mvm;
@@ -192,7 +193,7 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 	return stage_in_out {
 		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpm,
 		.size = math::clamp(size, 2.0f, 255.0f),
-		.color = compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x))
+		.color = float4 { compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x)), 1.0f }
 	};
 }
 

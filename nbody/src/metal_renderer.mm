@@ -144,7 +144,7 @@ bool metal_renderer::init(shared_ptr<compute_device> dev,
 	MTLRenderPassColorAttachmentDescriptor* color_attachment = render_pass_desc.colorAttachments[0];
 	// color_attachment.texture set later
 	color_attachment.loadAction = MTLLoadActionClear;
-	color_attachment.clearColor = MTLClearColorMake(0.0f, 0.0f, 0.0f, 0.0f);
+	color_attachment.clearColor = MTLClearColorMake(0.0, 0.0, 0.0, 0.0);
 	color_attachment.storeAction = MTLStoreActionStore;
 	
 	return true;
