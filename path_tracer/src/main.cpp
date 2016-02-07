@@ -64,7 +64,7 @@ int main(int, char* argv[]) {
 						   // work per work-group:
 						   uint1 { fastest_device->max_work_group_size },
 						   // kernel arguments:
-						   img_buffer, iteration, core::rand<uint32_t>(), img_size);
+						   img_buffer, iteration, core::rand<uint32_t>());
 
 		// draw every 10th frame (except for the first 10 frames)
 		if(iteration < 10 || iteration % 10 == 0) {
