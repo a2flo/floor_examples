@@ -49,7 +49,7 @@
 
 	// general compute and compute toolchain settings, and specific backend settings further down
 	"compute": {
-		// opencl, cuda, metal or host (NOTE: default backend depends on the OS)
+		// opencl, cuda, metal, host or vulkan (NOTE: default backend depends on the OS)
 		"backend": "",
 		// if true, creates an opengl sharing context (only affects opencl right now, opengl sharing is always enabled with cuda and host)
 		"gl_sharing": false,
@@ -139,6 +139,15 @@
 		"host": {
 			// single (single-threaded), mt-item (multi-threaded, 1 cpu : 1 work-item), mt-group (multi-threaded, 1 cpu : 1 group)
 			"exec_model": "mt-group"
+		},
+		
+		// vulkan backend settings
+		"vulkan": {
+			// the vulkan platform index
+			"platform": 0,
+			// if non-empty: only devices with names matching any of the names in this list will be used
+			// NOTE: capitalization is ignored, names can be partially matched
+			"whitelist": []
 		}
 	}
 }
