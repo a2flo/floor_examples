@@ -478,9 +478,13 @@ int main(int, char* argv[]) {
 	floor::init(argv[0], (const char*)"data/");
 	nbody_state.body_count = 8192;
 #endif
+	
+	// if vulkan is used, this currently needs some workarounds to work properly
+	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
+	
 	// disable opengl renderer when using metal
 	if(!nbody_state.no_opengl) {
-		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+		nbody_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL) || is_vulkan;
 	}
 #if defined(FLOOR_NO_METAL)
 	// disable metal renderer if it's not available
@@ -540,13 +544,46 @@ int main(int, char* argv[]) {
 #endif
 	
 	// compile the program and get the kernel functions
+	shared_ptr<compute_program> nbody_prog, nbody_raster_prog;
 #if !defined(FLOOR_IOS)
-	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"),
-													"-I" + floor::data_path("../nbody/src") +
-													" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
-													" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-													" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" /*+
-													" -gline-tables-only"*/);
+	if(!is_vulkan) {
+		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"),
+												   "-I" + floor::data_path("../nbody/src") +
+												   " -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
+												   " -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
+												   " -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" /*+
+												   " -gline-tables-only"*/);
+	}
+	else {
+		// can't have two different entry points in a glsl shader right now, so this is split into two binaries, each with a "main" function
+		const vector<llvm_compute::kernel_info> kernel_infos {
+			{
+				"main",
+				llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL,
+				{
+					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				}
+			},
+		};
+		nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_compute.spv"), kernel_infos);
+		
+		const vector<llvm_compute::kernel_info> kernel_infos_raster {
+			{
+				"main",
+				llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL,
+				{
+					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
+					llvm_compute::kernel_info::kernel_arg_info { .size = 84, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				}
+			},
+		};
+		nbody_raster_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_raster.spv"), kernel_infos_raster);
+	}
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::kernel_info> kernel_infos {
@@ -563,22 +600,27 @@ int main(int, char* argv[]) {
 			"nbody_raster",
 			{
 				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 8, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 64, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
+				llvm_compute::kernel_info::kernel_arg_info { .size = 84, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 	};
-	auto nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), kernel_infos);
+	nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), kernel_infos);
 #endif
 	if(nbody_prog == nullptr) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto nbody_compute = nbody_prog->get_kernel("nbody_compute");
-	auto nbody_raster = nbody_prog->get_kernel("nbody_raster");
+	shared_ptr<compute_kernel> nbody_compute, nbody_raster;
+	if(!is_vulkan) {
+		nbody_compute = nbody_prog->get_kernel("nbody_compute");
+		nbody_raster = nbody_prog->get_kernel("nbody_raster");
+	}
+	else {
+		nbody_compute = nbody_prog->get_kernel("main");
+		nbody_raster = nbody_raster_prog->get_kernel("main");
+	}
 	if(nbody_compute == nullptr || nbody_raster == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
@@ -668,6 +710,9 @@ int main(int, char* argv[]) {
 			}
 		};
 		
+		// there is no proper dependency tracking yet, so always need to manually finish right now
+		if(is_vulkan) dev_queue->finish();
+		
 		// flip/flop buffer indices
 		const size_t cur_buffer = buffer_flip_flop;
 		const size_t next_buffer = (buffer_flip_flop + 1) % pos_buffer_count;
@@ -709,6 +754,9 @@ int main(int, char* argv[]) {
 							   							nbody_state.time_step);
 			buffer_flip_flop = next_buffer;
 		}
+		
+		// there is no proper dependency tracking yet, so always need to manually finish right now
+		if(is_vulkan) dev_queue->finish();
 		
 		// s/w rendering
 		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {

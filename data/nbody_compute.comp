@@ -1,0 +1,53 @@
+#version 450 core
+
+#define NBODY_TILE_SIZE 512u
+#define NBODY_SOFTENING 0.01f
+#define NBODY_DAMPING 0.999f
+
+layout(local_size_x = NBODY_TILE_SIZE, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 0) buffer in_pos_buffer_t {
+	vec4 in_positions[];
+} in_pos_buffer;
+layout(set = 0, binding = 1) buffer out_pos_buffer_t {
+	vec4 out_positions[];
+} out_pos_buffer;
+layout(set = 0, binding = 2) buffer vel_buffer_t {
+	vec3 velocities[];
+} vel_buffer;
+layout(set = 0, binding = 3) buffer constants_t {
+	float delta;
+} constants;
+
+shared vec4 local_body_positions[NBODY_TILE_SIZE];
+
+void main() {
+	const uint local_idx = gl_LocalInvocationID.x;
+	const uint idx = NBODY_TILE_SIZE * gl_WorkGroupID.x + local_idx;
+	const uint body_count = NBODY_TILE_SIZE * gl_NumWorkGroups.x;
+	
+	vec4 position = in_pos_buffer.in_positions[idx];
+	vec3 velocity = vel_buffer.velocities[idx];
+	vec3 acceleration;
+	
+	for(uint i = 0, tile = 0, count = body_count; i < count; i += NBODY_TILE_SIZE, ++tile) {
+		local_body_positions[local_idx] = in_pos_buffer.in_positions[tile * NBODY_TILE_SIZE + local_idx];
+		barrier();
+
+		for(uint j = 0; j < NBODY_TILE_SIZE; ++j) {
+			const vec3 r = local_body_positions[j].xyz - position.xyz;
+			const float dist_sq = dot(r, r) + (NBODY_SOFTENING * NBODY_SOFTENING);
+			const float inv_dist = inversesqrt(dist_sq);
+			const float s = local_body_positions[j].w * inv_dist * inv_dist * inv_dist;
+			acceleration += r * s;
+		}
+		barrier();
+	}
+	
+	velocity += acceleration * constants.delta;
+	velocity *= NBODY_DAMPING;
+	position.xyz += velocity * constants.delta;
+	
+	out_pos_buffer.out_positions[idx] = position;
+	vel_buffer.velocities[idx] = velocity;
+}

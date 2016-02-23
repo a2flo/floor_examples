@@ -215,7 +215,6 @@ static float4 scene_fs(const scene_base_in_out& in,
 		}
 #elif 1 // TODO/NOTE: this horribly breaks stuff, don't use it yet
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
-		// TODO: don't emit global linkage for constexpr
 		static constexpr const float2 poisson_disk[] {
 			{ -0.94201624f, -0.39906216f },
 			{ 0.94558609f, -0.76890725f },
@@ -355,7 +354,7 @@ static void skybox_vs(skybox_base_in_out& out, const skybox_base_uniforms_t& uni
 		case 0: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
 		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 2: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
-		// default: will zero init
+		default: floor_unreachable();
 	}
 	out.cube_tex_coord = (out.position * uniforms.imvpm).xyz;
 }
@@ -426,10 +425,10 @@ struct blit_in_out {
 
 vertex blit_in_out blit_vs() {
 	switch(vertex_id) {
-		default:
 		case 0: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
 		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
 		case 2: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
+		default: floor_unreachable();
 	}
 }
 
