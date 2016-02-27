@@ -95,6 +95,8 @@
 			"platform": 0,
 			// run the spir-verifier after compiling a spir binary
 			"verify_spir": false,
+			// run the spirv-validator after compiling a spir-v binary
+			"verify_spirv": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched,
 			//       can also use "CPU", "GPU" or "ACCELERATOR" to only match these types of devices
@@ -108,7 +110,15 @@
 			// the compute spir-verifier binary name
 			"spir-verifier": "spir-verifier",
 			// the compute applecl-encoder binary name
-			"applecl-encoder": "applecl-encoder"
+			"applecl-encoder": "applecl-encoder",
+			// the compute spir-v encoder binary name
+			"spirv-encoder": "llvm-spirv",
+			// the compute spir-v assembler binary name
+			"spirv-as": "spirv-as",
+			// the compute spir-v disassembler binary name
+			"spirv-dis": "spirv-dis",
+			// the compute spir-v validator binary name
+			"spirv-validator": "spirv-val"
 		},
 		
 		// cuda backend settings
@@ -143,9 +153,20 @@
 		
 		// vulkan backend settings
 		"vulkan": {
+			// run the spirv-validator after compiling a spir-v binary
+			"verify_spirv": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
-			"whitelist": []
+			"whitelist": [],
+			
+			// the compute spir-v encoder binary name
+			"spirv-encoder": "llvm-spirv",
+			// the compute spir-v assembler binary name
+			"spirv-as": "spirv-as",
+			// the compute spir-v disassembler binary name
+			"spirv-dis": "spirv-dis",
+			// the compute spir-v validator binary name
+			"spirv-validator": "spirv-val"
 		}
 	}
 }
