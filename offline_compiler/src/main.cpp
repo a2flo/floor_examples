@@ -36,6 +36,9 @@
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
 
+#include <floor/compute/vulkan/vulkan_compute.hpp>
+#include <floor/compute/vulkan/vulkan_device.hpp>
+
 #define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
 #define FLOOR_OCC_FULL_VERSION_STR "offline compute compiler v" FLOOR_OCC_VERSION_STR
 
@@ -52,7 +55,9 @@ struct option_context {
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
+	bool spirv_text { false };
 	string cuda_sass_filename { "" };
+	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
 	string additional_options { "" };
 	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
@@ -68,18 +73,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
-				 "\t--target [spir|ptx|air|applecl]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR or Apple-OpenCL\n"
+				 "\t--target [spir|ptx|air|applecl|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Apple-OpenCL, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu], defaults to gpu\n"
 				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
+				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
+				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
@@ -124,6 +131,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		else if(target == "applecl") {
 			ctx.target = llvm_compute::TARGET::APPLECL;
+		}
+		else if(target == "spirv") {
+			ctx.target = llvm_compute::TARGET::SPIRV_VULKAN;
 		}
 		else {
 			cerr << "invalid target: " << target << endl;
@@ -179,6 +189,15 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.cuda_sass_filename = *arg_ptr;
 		ctx.cuda_sass = true;
 	}},
+	{ "--spirv-text", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.spirv_text_filename = *arg_ptr;
+		ctx.spirv_text = true;
+	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
 	}},
@@ -214,6 +233,14 @@ int main(int, char* argv[]) {
 	floor::init(argv[0], (const char*)"data/", true);
 #endif
 	
+	// handle spir-v target change
+	if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN &&
+	   (option_ctx.sub_target == "opencl" ||
+		option_ctx.sub_target == "opencl-gpu" ||
+		option_ctx.sub_target == "opencl-cpu")) {
+		option_ctx.target = llvm_compute::TARGET::SPIRV_OPENCL;
+	}
+	
 	pair<string, vector<llvm_compute::kernel_info>> program_data;
 	if(!option_ctx.test_bin) {
 		// post-checking
@@ -226,13 +253,17 @@ int main(int, char* argv[]) {
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::APPLECL: {
-				const char* target_name = (option_ctx.target == llvm_compute::TARGET::SPIR ? "SPIR" : "APPLECL");
+			case llvm_compute::TARGET::APPLECL:
+			case llvm_compute::TARGET::SPIRV_OPENCL: {
+				const char* target_name = (option_ctx.target == llvm_compute::TARGET::SPIR ? "SPIR" :
+										   option_ctx.target == llvm_compute::TARGET::APPLECL ? "APPLECL" :
+										   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
 				device = make_shared<opencl_device>();
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu") {
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu" ||
+				   option_ctx.sub_target == "opencl" || option_ctx.sub_target == "opencl-gpu") {
 					device->type = compute_device::TYPE::GPU;
 				}
-				else if(option_ctx.sub_target == "cpu") {
+				else if(option_ctx.sub_target == "cpu" || option_ctx.sub_target == "opencl-cpu") {
 					device->type = compute_device::TYPE::CPU;
 				}
 				else {
@@ -298,6 +329,23 @@ int main(int, char* argv[]) {
 				}
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
+			case llvm_compute::TARGET::SPIRV_VULKAN:
+				device = make_shared<vulkan_device>();
+				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
+					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
+					return -4;
+				}
+				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
+				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
+				if(option_ctx.sub_groups) device->sub_group_support = true;
+				// enable common image support
+				device->image_support = true;
+				device->image_depth_support = true;
+				device->image_msaa_support = true;
+				device->image_mipmap_support = true;
+				device->image_mipmap_write_support = true;
+				log_debug("compiling to SPIR-V Vulkan ...");
+				break;
 		}
 		device->bitness = option_ctx.bitness;
 		device->double_support = option_ctx.double_support;
@@ -433,6 +481,8 @@ int main(int, char* argv[]) {
 				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				case llvm_compute::TARGET::AIR: option_ctx.output_filename = "metal.ll"; break;
 				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
+				case llvm_compute::TARGET::SPIRV_VULKAN: option_ctx.output_filename = "spirv_vulkan.bc"; break;
+				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = "spirv_opencl.bc"; break;
 			}
 		}
 		file_io::string_to_file(option_ctx.output_filename, program_data.first);
@@ -465,12 +515,24 @@ int main(int, char* argv[]) {
 		core::system(cuobjdump_cmd, cuobjdump_output);
 		cout << cuobjdump_output << endl;
 	}
+	
+	// handle spir-v text assembly output
+	if(option_ctx.spirv_text) {
+		const auto& spirv_dis = (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
+								 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis());
+		string spirv_dis_output = "";
+		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
+		if(spirv_dis_output != "") {
+			log_error("spirv-dis: %s", spirv_dis_output);
+		}
+	}
 
 	// test the compiled binary (if this was specified)
 	if(option_ctx.test || option_ctx.test_bin) {
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::APPLECL: {
+			case llvm_compute::TARGET::APPLECL:
+			case llvm_compute::TARGET::SPIRV_OPENCL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
 				auto ctx = make_shared<opencl_compute>(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
@@ -515,9 +577,8 @@ int main(int, char* argv[]) {
 				
 				// ... and build it
 				const string build_options {
-#if !defined(__APPLE__)
-					+ " -x spir -spir-std=1.2"
-#endif
+					// TODO: spir-v options?
+					(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 				};
 				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
 									  build_err, "failed to build opencl program", {});
@@ -559,7 +620,7 @@ int main(int, char* argv[]) {
 						break;
 					}
 					
-					if(!llvm_compute::get_floor_metadata(program_data.first, program_data.second)) {
+					if(!llvm_compute::get_floor_metadata(program_data.first, program_data.second, floor::get_metal_toolchain_version())) {
 						log_error("failed to extract floor metadata from specified test binary %s", option_ctx.test_bin_filename);
 						break;
 					}
@@ -572,9 +633,8 @@ int main(int, char* argv[]) {
 #else
 				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
 #endif
-				break;
-			}
-			case llvm_compute::TARGET::PTX:
+			} break;
+			case llvm_compute::TARGET::PTX: {
 #if !defined(FLOOR_NO_CUDA)
 				auto ctx = make_shared<cuda_compute>(floor::get_cuda_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
@@ -627,7 +687,13 @@ int main(int, char* argv[]) {
 #else
 				log_error("cuda testing not supported on this platform (or disabled during floor compilation)");
 #endif
-				break;
+			} break;
+			case llvm_compute::TARGET::SPIRV_VULKAN: {
+//#if !defined(FLOOR_NO_VULKAN)
+//#else
+				log_error("vulkan testing not supported on this platform (or disabled during floor compilation)");
+//#endif
+			} break;
 		}
 	}
 	
