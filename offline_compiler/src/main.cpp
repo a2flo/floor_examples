@@ -472,7 +472,17 @@ int main(int, char* argv[]) {
 		// output
 		if(option_ctx.output_filename == "-") {
 			// print to console, as well as to file!
-			cout << program_data.first << endl;
+			if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
+			   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+				string output = "";
+				core::system("\"" + (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
+									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
+							 "\" " + program_data.first, output);
+				cout << output << endl;
+			}
+			else {
+				cout << program_data.first << endl;
+			}
 		}
 		if(option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
 			option_ctx.output_filename = "unknown.bin";
@@ -481,11 +491,20 @@ int main(int, char* argv[]) {
 				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				case llvm_compute::TARGET::AIR: option_ctx.output_filename = "metal.ll"; break;
 				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
-				case llvm_compute::TARGET::SPIRV_VULKAN: option_ctx.output_filename = "spirv_vulkan.bc"; break;
-				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = "spirv_opencl.bc"; break;
+				// don't do anything for spir-v, it's already stored in a file
+				case llvm_compute::TARGET::SPIRV_VULKAN:
+				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
 			}
 		}
-		file_io::string_to_file(option_ctx.output_filename, program_data.first);
+		if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
+		   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+			// program_data.first always contains the spir-v binary filename
+			// -> just move the file if an output file was actually requested
+			if(option_ctx.output_filename != "") {
+				core::system("mv \"" + program_data.first + "\" \"" + option_ctx.output_filename + "\"");
+			}
+		}
+		else file_io::string_to_file(option_ctx.output_filename, program_data.first);
 	}
 	
 	// handle cuda sass generation
