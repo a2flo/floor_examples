@@ -48,6 +48,7 @@ struct option_context {
 	llvm_compute::TARGET target { llvm_compute::TARGET::SPIR };
 	string sub_target;
 	uint32_t bitness { 64 };
+	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	bool double_support { true };
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
@@ -81,6 +82,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
+				 "\t--cl-std <1.2|2.0|2.1>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
@@ -155,6 +157,21 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.bitness = stou(*arg_ptr);
+	}},
+	{ "--cl-std", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string cl_version_str = *arg_ptr;
+		if(cl_version_str == "1.2") { ctx.cl_std = OPENCL_VERSION::OPENCL_1_2; }
+		else if(cl_version_str == "2.0") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_0; }
+		else if(cl_version_str == "2.1") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_1; }
+		else {
+			cerr << "invalid --cl-std argument" << endl;
+			return;
+		}
 	}},
 	{ "--no-double", [](option_context& ctx, char**&) {
 		ctx.double_support = false;
@@ -270,6 +287,8 @@ int main(int, char* argv[]) {
 					log_error("invalid %s sub-target: %s", target_name, option_ctx.sub_target);
 					return -4;
 				}
+				((opencl_device*)device.get())->cl_version = option_ctx.cl_std;
+				((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				if(option_ctx.sub_groups) device->sub_group_support = true;
@@ -503,6 +522,7 @@ int main(int, char* argv[]) {
 			if(option_ctx.output_filename != "") {
 				core::system("mv \"" + program_data.first + "\" \"" + option_ctx.output_filename + "\"");
 			}
+			else option_ctx.output_filename = program_data.first;
 		}
 		else file_io::string_to_file(option_ctx.output_filename, program_data.first);
 	}
@@ -542,7 +562,7 @@ int main(int, char* argv[]) {
 		string spirv_dis_output = "";
 		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
 		if(spirv_dis_output != "") {
-			log_error("spirv-dis: %s", spirv_dis_output);
+			log_msg("spirv-dis: %s", spirv_dis_output);
 		}
 	}
 
@@ -585,18 +605,33 @@ int main(int, char* argv[]) {
 				
 				// create the program object ...
 				cl_int create_err = CL_SUCCESS;
-				const cl_program program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
-																	 &binary_length, &binary_ptr, &status, &create_err);
-				if(create_err != CL_SUCCESS) {
-					log_error("failed to create opencl program: %u", create_err);
-					log_error("devices binary status: %s", status);
-					return {};
+				cl_program program { nullptr };
+				if(option_ctx.target != llvm_compute::TARGET::SPIRV_OPENCL) {
+					program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
+														&binary_length, &binary_ptr, &status, &create_err);
+					if(create_err != CL_SUCCESS) {
+						log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
+						log_error("devices binary status: %s", status);
+						return {};
+					}
+					else log_debug("successfully created opencl program!");
 				}
-				else log_debug("successfully created opencl program!");
+				else {
+#if !defined(CL_VERSION_2_1)
+					log_error("need to compile occ with OpenCL 2.1 support to build SPIR-V binaries");
+					return {};
+#else
+					program = clCreateProgramWithIL(ctx, (const void*)binary_ptr, binary_length, &create_err);
+					if(create_err != CL_SUCCESS) {
+						log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
+						return ret;
+					}
+					else log_debug("successfully created opencl program (from IL/SPIR-V)!");
+#endif
+				}
 				
 				// ... and build it
 				const string build_options {
-					// TODO: spir-v options?
 					(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 				};
 				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
@@ -645,7 +680,7 @@ int main(int, char* argv[]) {
 					}
 				}
 				
-				auto prog_entry = ctx->create_program_entry(dev, program_data);
+				auto prog_entry = ctx->create_program_entry(dev, program_data, llvm_compute::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
