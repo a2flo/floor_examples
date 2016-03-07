@@ -108,10 +108,10 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		// performance stats
 		cout << "expected performace (with --benchmark):" << endl;
 		cout << "\tGTX 970:      ~2600 gflops (--count 131072 --tile-size 256)" << endl;
-		cout << "\tGTX 780:      ~2200 gflops (--count 98304 --tile-size 512)" << endl;
+		cout << "\tGTX 780:      ~2275 gflops (--count 98304 --tile-size 512)" << endl;
 		cout << "\tR9 285:       ~850 gflops (--count 131072 --tile-size 64)" << endl;
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
-		cout << "\tGT 650M:      ~344 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tGT 650M:      ~375 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
 		cout << "\tHD 4000:      ~148 gflops (--count 32768 --tile-size 128)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
