@@ -258,7 +258,7 @@ int main(int, char* argv[]) {
 		option_ctx.target = llvm_compute::TARGET::SPIRV_OPENCL;
 	}
 	
-	pair<string, vector<llvm_compute::kernel_info>> program_data;
+	pair<string, vector<llvm_compute::function_info>> program_data;
 	if(!option_ctx.test_bin) {
 		// post-checking
 		if(option_ctx.filename.empty()) {
@@ -375,40 +375,40 @@ int main(int, char* argv[]) {
 			string info_str = "";
 			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
 				switch(info.args[i].address_space) {
-					case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::GLOBAL:
+					case llvm_compute::function_info::ARG_ADDRESS_SPACE::GLOBAL:
 						info_str += "global ";
 						break;
-					case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::LOCAL:
+					case llvm_compute::function_info::ARG_ADDRESS_SPACE::LOCAL:
 						info_str += "local ";
 						break;
-					case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT:
+					case llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT:
 						info_str += "constant ";
 						break;
-					case llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE:
+					case llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE:
 						info_str += "image ";
 						break;
 					default: break;
 				}
 				
 				switch(info.args[i].special_type) {
-					case llvm_compute::kernel_info::SPECIAL_TYPE::STAGE_INPUT:
+					case llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT:
 						info_str += "stage_input ";
 						break;
 					default: break;
 				}
 				
-				if(info.args[i].address_space != llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE) {
+				if(info.args[i].address_space != llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE) {
 					info_str += to_string(info.args[i].size);
 				}
 				else {
 					switch(info.args[i].image_access) {
-						case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::READ:
+						case llvm_compute::function_info::ARG_IMAGE_ACCESS::READ:
 							info_str += "read_only ";
 							break;
-						case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::WRITE:
+						case llvm_compute::function_info::ARG_IMAGE_ACCESS::WRITE:
 							info_str += "write_only ";
 							break;
-						case llvm_compute::kernel_info::ARG_IMAGE_ACCESS::READ_WRITE:
+						case llvm_compute::function_info::ARG_IMAGE_ACCESS::READ_WRITE:
 							info_str += "read_write ";
 							break;
 						default:
@@ -423,52 +423,52 @@ int main(int, char* argv[]) {
 					}
 					else {
 						switch(info.args[i].image_type) {
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D:
 								info_str += "1D";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
 								info_str += "1D array";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
 								info_str += "1D buffer";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D:
 								info_str += "2D";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
 								info_str += "2D array";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
 								info_str += "2D depth";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
 								info_str += "2D array depth";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
 								info_str += "2D msaa";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
 								info_str += "2D array msaa";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
 								info_str += "2D msaa depth";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
 								info_str += "2D array msaa depth";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_3D:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_3D:
 								info_str += "3D";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
 								info_str += "cube";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
 								info_str += "cube array";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
 								info_str += "cube depth";
 								break;
-							case llvm_compute::kernel_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
+							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
 								info_str += "cube array depth";
 								break;
 							default:
@@ -482,9 +482,9 @@ int main(int, char* argv[]) {
 			}
 			info_str = core::trim(info_str);
 			log_msg("compiled %s function: %s (%s)",
-					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL ? "kernel" :
-					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::VERTEX ? "vertex" :
-					info.type == llvm_compute::kernel_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
+					info.type == llvm_compute::function_info::FUNCTION_TYPE::KERNEL ? "kernel" :
+					info.type == llvm_compute::function_info::FUNCTION_TYPE::VERTEX ? "vertex" :
+					info.type == llvm_compute::function_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
 					info.name, info_str);
 		}
 		
@@ -709,7 +709,7 @@ int main(int, char* argv[]) {
 					// can't grab non-existing floor metadata from a ptx file
 					// -> parse the ptx instead (only need the kernel function names when testing/compiling)
 					static const char ptx_kernel_func_marker[] { ".entry " };
-					vector<llvm_compute::kernel_info> kernels;
+					vector<llvm_compute::function_info> kernels;
 					for(size_t pos = 0; ; ++pos) {
 						pos = program_data.first.find(ptx_kernel_func_marker, pos);
 						if(pos == string::npos) break;
@@ -722,8 +722,8 @@ int main(int, char* argv[]) {
 						}
 						const auto kernel_name = core::trim(program_data.first.substr(start_pos, end_pos - start_pos));
 						
-						kernels.push_back(llvm_compute::kernel_info {
-							kernel_name, llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL, {}
+						kernels.push_back(llvm_compute::function_info {
+							kernel_name, llvm_compute::function_info::FUNCTION_TYPE::KERNEL, {}
 						});
 					}
 					

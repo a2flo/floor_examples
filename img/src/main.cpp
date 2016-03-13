@@ -285,31 +285,31 @@ int main(int, char* argv[]) {
 												  (second_cache ? " -DSECOND_CACHE=1" : ""));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::kernel_info> kernel_infos {
+	const vector<llvm_compute::function_info> function_infos {
 		// non-functional right now
 		/*{
 			"image_blur_single_stage",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},*/
 		{
 			"image_blur_dumb_horizontal",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},
 		{
 			"image_blur_dumb_vertical",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 0, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},
 	};
-	auto img_prog = compute_ctx->add_precompiled_program_file(floor::data_path("img_kernels.metallib"), kernel_infos);
+	auto img_prog = compute_ctx->add_precompiled_program_file(floor::data_path("img_kernels.metallib"), function_infos);
 #endif
 	if(img_prog == nullptr) {
 		log_error("program compilation failed");

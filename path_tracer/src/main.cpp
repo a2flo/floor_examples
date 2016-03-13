@@ -29,18 +29,18 @@ int main(int, char* argv[]) {
 														  " -DSCREEN_HEIGHT=" + to_string(img_size.y));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::kernel_info> kernel_infos {
+	const vector<llvm_compute::function_info> function_infos {
 		{
 			"path_trace",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 8, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::function_info::arg_info { .size = 16 },
+				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::function_info::arg_info { .size = 8, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		}
 	};
-	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("path_tracer.metallib"), kernel_infos);
+	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("path_tracer.metallib"), function_infos);
 #endif
 	if(path_tracer_prog == nullptr) {
 		log_error("program compilation failed");

@@ -73,7 +73,7 @@ public:
 
 class simple_path_tracer {
 public:
-	enum : uint32_t { max_recursion_depth = 2 };
+	enum : uint32_t { max_recursion_depth = 3 };
 	
 	simple_path_tracer(const uint32_t& random_seed) : seed(random_seed) {}
 	

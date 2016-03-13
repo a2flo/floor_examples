@@ -556,57 +556,57 @@ int main(int, char* argv[]) {
 	}
 	else {
 		// can't have two different entry points in a glsl shader right now, so this is split into two binaries, each with a "main" function
-		const vector<llvm_compute::kernel_info> kernel_infos {
+		const vector<llvm_compute::function_info> function_infos {
 			{
 				"main",
-				llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL,
+				llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
 				{
-					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+					llvm_compute::function_info::arg_info { .size = 16 },
+					llvm_compute::function_info::arg_info { .size = 16 },
+					llvm_compute::function_info::arg_info { .size = 12 },
+					llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 				}
 			},
 		};
-		nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_compute.spv"), kernel_infos);
+		nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_compute.spv"), function_infos);
 		
-		const vector<llvm_compute::kernel_info> kernel_infos_raster {
+		const vector<llvm_compute::function_info> function_infos_raster {
 			{
 				"main",
-				llvm_compute::kernel_info::FUNCTION_TYPE::KERNEL,
+				llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
 				{
-					llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
-					llvm_compute::kernel_info::kernel_arg_info { .size = 84, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+					llvm_compute::function_info::arg_info { .size = 16 },
+					llvm_compute::function_info::arg_info { .size = 4 },
+					llvm_compute::function_info::arg_info { .size = 4 },
+					llvm_compute::function_info::arg_info { .size = 84, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 				}
 			},
 		};
-		nbody_raster_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_raster.spv"), kernel_infos_raster);
+		nbody_raster_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_raster.spv"), function_infos_raster);
 	}
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::kernel_info> kernel_infos {
+	const vector<llvm_compute::function_info> function_infos {
 		{
 			"nbody_compute",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 12 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::function_info::arg_info { .size = 16 },
+				llvm_compute::function_info::arg_info { .size = 16 },
+				llvm_compute::function_info::arg_info { .size = 12 },
+				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 		{
 			"nbody_raster",
 			{
-				llvm_compute::kernel_info::kernel_arg_info { .size = 16 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 4 },
-				llvm_compute::kernel_info::kernel_arg_info { .size = 84, llvm_compute::kernel_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_compute::function_info::arg_info { .size = 16 },
+				llvm_compute::function_info::arg_info { .size = 4 },
+				llvm_compute::function_info::arg_info { .size = 4 },
+				llvm_compute::function_info::arg_info { .size = 84, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 	};
-	nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), kernel_infos);
+	nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), function_infos);
 #endif
 	if(nbody_prog == nullptr) {
 		log_error("program compilation failed");
