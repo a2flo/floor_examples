@@ -5,7 +5,7 @@
 * image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
 * build with "./build.sh" inside the folder
 * gather-based warping ref: http://www.cs.virginia.edu/~gfx/pmwiki/index.php?n=Pubs.Yang2011IBB
-* NOTE: in addition to floor + dependencies, this requires SDL2_image with libpng, as well as "https://github.com/a2flo/libwarp":libwarp
+* NOTE: in addition to floor + dependencies, this requires SDL2_image with libpng, as well as "libwarp":https://github.com/a2flo/libwarp
 * video:
 "!http://img.youtube.com/vi/PmfJ2kzC49A/0.jpg!":https://www.youtube.com/watch?v=PmfJ2kzC49A
 
