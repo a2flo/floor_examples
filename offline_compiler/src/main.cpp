@@ -60,6 +60,7 @@ struct option_context {
 	string cuda_sass_filename { "" };
 	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
+	string ffi_filename { "" };
 	string additional_options { "" };
 	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
 	string config_path { "../../data/" };
@@ -90,7 +91,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
-				 "\t--test-bin <input-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
+				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--version: prints the occ/floor version\n"
@@ -191,10 +192,18 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--test-bin", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			cerr << "invalid argument!" << endl;
+			cerr << "invalid argument after --test-bin!" << endl;
 			return;
 		}
 		ctx.test_bin_filename = *arg_ptr;
+		
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after second --test-bin parameter!" << endl;
+			return;
+		}
+		ctx.ffi_filename = *arg_ptr;
+		
 		ctx.test_bin = true;
 	}},
 	{ "--cuda-sass", [](option_context& ctx, char**& arg_ptr) {
@@ -668,14 +677,10 @@ int main(int, char* argv[]) {
 				
 				//
 				if(option_ctx.test_bin) {
-					program_data.first = "";
-					if(!file_io::file_to_string(option_ctx.test_bin_filename, program_data.first)) {
-						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
-						break;
-					}
+					program_data.first = option_ctx.test_bin_filename;
 					
-					if(!llvm_compute::get_floor_metadata(program_data.first, program_data.second, floor::get_metal_toolchain_version())) {
-						log_error("failed to extract floor metadata from specified test binary %s", option_ctx.test_bin_filename);
+					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program_data.second, floor::get_metal_toolchain_version())) {
+						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
 						break;
 					}
 				}
@@ -706,32 +711,10 @@ int main(int, char* argv[]) {
 						break;
 					}
 					
-					// can't grab non-existing floor metadata from a ptx file
-					// -> parse the ptx instead (only need the kernel function names when testing/compiling)
-					static const char ptx_kernel_func_marker[] { ".entry " };
-					vector<llvm_compute::function_info> kernels;
-					for(size_t pos = 0; ; ++pos) {
-						pos = program_data.first.find(ptx_kernel_func_marker, pos);
-						if(pos == string::npos) break;
-						
-						const auto start_pos = pos + size(ptx_kernel_func_marker) - 1 /* \0 */;
-						const auto end_pos = program_data.first.find('(', start_pos);
-						if(end_pos == string::npos) {
-							log_error("kernel function name end not found (@pos: %u)", pos);
-							continue;
-						}
-						const auto kernel_name = core::trim(program_data.first.substr(start_pos, end_pos - start_pos));
-						
-						kernels.push_back(llvm_compute::function_info {
-							kernel_name, llvm_compute::function_info::FUNCTION_TYPE::KERNEL, {}
-						});
+					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program_data.second, floor::get_cuda_toolchain_version())) {
+						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
+						break;
 					}
-					
-					if(kernels.empty()) {
-						log_error("no kernels found in binary %s", option_ctx.test_bin_filename);
-					}
-					
-					program_data.second = kernels;
 				}
 				
 				auto prog_entry = ctx->create_cuda_program(program_data);
