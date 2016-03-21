@@ -74,7 +74,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"
-				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.ll,applecl.bc})\n"
+				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air,applecl.bc})\n"
 				 "\t--target [spir|ptx|air|applecl|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Apple-OpenCL, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
@@ -403,6 +403,9 @@ int main(int, char* argv[]) {
 					case llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT:
 						info_str += "stage_input ";
 						break;
+					case llvm_compute::function_info::SPECIAL_TYPE::PUSH_CONSTANT:
+						info_str += "push_constant ";
+						break;
 					default: break;
 				}
 				
@@ -498,35 +501,26 @@ int main(int, char* argv[]) {
 		}
 		
 		// output
-		if(option_ctx.output_filename == "-") {
-			// print to console, as well as to file!
-			if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
-			   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
-				string output = "";
-				core::system("\"" + (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
-									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
-							 "\" " + program_data.first, output);
-				cout << output << endl;
-			}
-			else {
-				cout << program_data.first << endl;
-			}
-		}
+		const bool wants_console_output = (option_ctx.output_filename == "-");
 		if(option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
+			// output file name?
 			option_ctx.output_filename = "unknown.bin";
 			switch(option_ctx.target) {
 				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
 				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
-				case llvm_compute::TARGET::AIR: option_ctx.output_filename = "metal.ll"; break;
 				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
-				// don't do anything for spir-v, it's already stored in a file
+					// don't do anything for air and spir-v, it's already stored in a file
+				case llvm_compute::TARGET::AIR:
 				case llvm_compute::TARGET::SPIRV_VULKAN:
 				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
 			}
 		}
-		if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
+		
+		// write to file
+		if(option_ctx.target == llvm_compute::TARGET::AIR ||
+		   option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
 		   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
-			// program_data.first always contains the spir-v binary filename
+			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
 			if(option_ctx.output_filename != "") {
 				core::system("mv \"" + program_data.first + "\" \"" + option_ctx.output_filename + "\"");
@@ -534,6 +528,31 @@ int main(int, char* argv[]) {
 			else option_ctx.output_filename = program_data.first;
 		}
 		else file_io::string_to_file(option_ctx.output_filename, program_data.first);
+		
+		// print to console, as well as to file!
+		if(wants_console_output) {
+			if(option_ctx.target == llvm_compute::TARGET::AIR) {
+				string output = "";
+				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
+				cout << output << endl;
+			}
+			else if(option_ctx.target == llvm_compute::TARGET::SPIR) {
+				string output = "";
+				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
+				cout << output << endl;
+			}
+			else if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
+					option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+				string output = "";
+				core::system("\"" + (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
+									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
+							 "\" " + option_ctx.output_filename, output);
+				cout << output << endl;
+			}
+			else {
+				cout << program_data.first << endl;
+			}
+		}
 	}
 	
 	// handle cuda sass generation
