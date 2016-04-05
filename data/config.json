@@ -127,6 +127,8 @@
 			"force_driver_sm": "",
 			// forces the sm target to sm_xy when compiling to ptx
 			"force_compile_sm": "",
+			// forces the ptx version to ptx x.y when emitting ptx (e.g. "50" to get ptx 5.0)
+			"force_ptx": "",
 			// max amount of registers that may be used by a cuda thread / work-item
 			"max_registers": 32,
 			// if enabled, this will create a verbose error and info log when jitting ptx code
