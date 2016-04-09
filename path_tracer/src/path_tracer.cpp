@@ -61,7 +61,7 @@ public:
 			}
 		}
 		
-		return intersection {
+		return {
 			.hit_point = r.origin + r.direction * distance,
 			.normal = normal,
 			.distance = distance,
@@ -82,7 +82,7 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(FLOOR_COMPUTE_METAL) && 1
+#if defined(FLOOR_COMPUTE_METAL)
 		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
 		// so do a software 32-bit * 16-bit multiply instead
 		uint32_t low = (seed & 0xFFFFu) * 16807u;
@@ -127,7 +127,7 @@ public:
 protected:
 	uint32_t seed;
 	
-	typedef struct { const float3 dir; const float prob; } hemisphere_dir_type;
+	struct hemisphere_dir_type { const float3 dir; const float prob; };
 	
 	template <uint32_t depth>
 	float3 compute_indirect_illumination(const ray& r,
@@ -332,14 +332,14 @@ protected:
 //
 namespace camera {
 	static constexpr const float3 point { 27.8f, 27.3f, -80.0f };
-	static constexpr const float rad_angle = const_math::deg_to_rad(35.0f);
+	static constexpr const float rad_angle { const_math::deg_to_rad(35.0f) };
 	static constexpr const float3 forward { 0.0f, 0.0f, 1.0f };
 	static constexpr const float3 right { forward.crossed(float3 { 0.0f, 1.0f, 0.0f } /* up */).normalized() };
 	static constexpr const float3 up { -right.crossed(forward).normalized() };
-	static constexpr const float3 right_vector = 2.0f * right * const_math::tan(rad_angle * 0.5f);
-	static constexpr const float3 up_vector = 2.0f * up * const_math::tan(rad_angle * 0.5f);
-	static constexpr const float aspect_ratio = SCREEN_WIDTH / SCREEN_HEIGHT;
-	static constexpr const float3 row_vector = right_vector * aspect_ratio;
+	static constexpr const float3 right_vector { 2.0f * right * const_math::tan(rad_angle * 0.5f) };
+	static constexpr const float3 up_vector { 2.0f * up * const_math::tan(rad_angle * 0.5f) };
+	static constexpr const float aspect_ratio { SCREEN_WIDTH / SCREEN_HEIGHT };
+	static constexpr const float3 row_vector { right_vector * aspect_ratio };
 	static constexpr const float3 step_x { row_vector / SCREEN_WIDTH };
 	static constexpr const float3 step_y { up_vector / SCREEN_HEIGHT };
 	static constexpr const float3 screen_origin { forward - row_vector * 0.5f - up_vector * 0.5f };
