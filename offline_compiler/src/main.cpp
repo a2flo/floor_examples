@@ -77,7 +77,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air,applecl.bc})\n"
 				 "\t--target [spir|ptx|air|applecl|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Apple-OpenCL, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53], defaults to sm_20\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu], defaults to gpu\n"
 				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
@@ -509,7 +509,7 @@ int main(int, char* argv[]) {
 				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
 				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
-					// don't do anything for air and spir-v, it's already stored in a file
+				// don't do anything for air and spir-v, it's already stored in a file
 				case llvm_compute::TARGET::AIR:
 				case llvm_compute::TARGET::SPIRV_VULKAN:
 				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
