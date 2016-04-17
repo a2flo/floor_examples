@@ -80,7 +80,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu], defaults to gpu\n"
 				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios8|ios9|osx11][_family], family is optional and defaults to lowest available\n"
+				 "\t    Metal/AIR:     [ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
@@ -339,11 +339,7 @@ int main(int, char* argv[]) {
 					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
 				}
 				
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios8") {
-					dev->family = (family == 0 ? 1 : family);
-					dev->family_version = 1;
-				}
-				else if(option_ctx.sub_target == "ios9") {
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios9") {
 					dev->family = (family == 0 ? 1 : family);
 					dev->family_version = (family < 3 ? 2 : 1);
 				}
@@ -570,12 +566,12 @@ int main(int, char* argv[]) {
 			" -o " + cubin_filename + ".cubin " +
 			option_ctx.output_filename
 		};
-		if(floor::get_compute_log_binaries()) log_debug("ptxas cmd: %s", ptxas_cmd);
+		if(floor::get_compute_log_commands()) log_debug("ptxas cmd: %s", ptxas_cmd);
 		const string cuobjdump_cmd {
 			"cuobjdump --dump-sass " + cubin_filename + ".cubin" +
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
-		if(floor::get_compute_log_binaries()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
+		if(floor::get_compute_log_commands()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
 		string ptxas_output = "", cuobjdump_output = "";
 		core::system(ptxas_cmd, ptxas_output);
 		cout << ptxas_output << endl;
