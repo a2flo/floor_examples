@@ -33,7 +33,7 @@ static void compute_body_interaction(const float4& shared_body,
 	// 1 flop
 	const float inv_dist = rsqrt(dist_sq);
 	// 3 flops
-	const float s = shared_body.w * inv_dist * inv_dist * inv_dist; // .w is body mass
+	const float s = shared_body.w * (inv_dist * inv_dist * inv_dist); // .w is body mass
 	// 3 flops + 3 flops = 6 flops
 	acceleration += r * s;
 	// total: 19 flops + 4 shared/local load ops
@@ -45,7 +45,7 @@ static void compute_body_interaction(const float4& shared_body,
 	// 1 flop
 	const float inv_dist = rsqrt(dist_sq);
 	// 3 flops
-	const float s = shared_body.w * inv_dist * inv_dist * inv_dist;
+	const float s = shared_body.w * (inv_dist * inv_dist * inv_dist);
 	// 1 fma-op / 2 flops
 	acceleration.x = fma(r.x, s, acceleration.x);
 	// 1 fma-op / 2 flops

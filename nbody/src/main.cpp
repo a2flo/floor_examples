@@ -547,12 +547,15 @@ int main(int, char* argv[]) {
 	shared_ptr<compute_program> nbody_prog, nbody_raster_prog;
 #if !defined(FLOOR_IOS)
 	if(!is_vulkan) {
-		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"),
-												   "-I" + floor::data_path("../nbody/src") +
-												   " -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
-												   " -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-												   " -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f" /*+
-												   " -gline-tables-only"*/);
+		llvm_compute::compile_options options {
+			.cli = ("-I" + floor::data_path("../nbody/src") +
+					" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
+					" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
+					" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
+			// override max registers that can be used, this is beneficial here as it yields about +10% of performance
+			.cuda_max_registers = 36,
+		};
+		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
 	}
 	else {
 		// can't have two different entry points in a glsl shader right now, so this is split into two binaries, each with a "main" function
