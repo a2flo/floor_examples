@@ -83,7 +83,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Metal/AIR:     [ios9|osx11][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
-				 "\t--cl-std <1.2|2.0|2.1>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
+				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
@@ -169,6 +169,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if(cl_version_str == "1.2") { ctx.cl_std = OPENCL_VERSION::OPENCL_1_2; }
 		else if(cl_version_str == "2.0") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_0; }
 		else if(cl_version_str == "2.1") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_1; }
+		else if(cl_version_str == "2.2") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_2; }
 		else {
 			cerr << "invalid --cl-std argument" << endl;
 			return;
@@ -267,7 +268,7 @@ int main(int, char* argv[]) {
 		option_ctx.target = llvm_compute::TARGET::SPIRV_OPENCL;
 	}
 	
-	pair<string, vector<llvm_compute::function_info>> program_data;
+	llvm_compute::program_data program {};
 	if(!option_ctx.test_bin) {
 		// post-checking
 		if(option_ctx.filename.empty()) {
@@ -375,8 +376,12 @@ int main(int, char* argv[]) {
 		device->double_support = option_ctx.double_support;
 		
 		// compile
-		program_data = llvm_compute::compile_program_file(device, option_ctx.filename, option_ctx.additional_options, option_ctx.target);
-		for(const auto& info : program_data.second) {
+		llvm_compute::compile_options options {
+			.target = option_ctx.target,
+			.cli = option_ctx.additional_options,
+		};
+		program = llvm_compute::compile_program_file(device, option_ctx.filename, options);
+		for(const auto& info : program.functions) {
 			string info_str = "";
 			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
 				switch(info.args[i].address_space) {
@@ -519,11 +524,11 @@ int main(int, char* argv[]) {
 			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
 			if(option_ctx.output_filename != "") {
-				core::system("mv \"" + program_data.first + "\" \"" + option_ctx.output_filename + "\"");
+				core::system("mv \"" + program.data_or_filename + "\" \"" + option_ctx.output_filename + "\"");
 			}
-			else option_ctx.output_filename = program_data.first;
+			else option_ctx.output_filename = program.data_or_filename;
 		}
-		else file_io::string_to_file(option_ctx.output_filename, program_data.first);
+		else file_io::string_to_file(option_ctx.output_filename, program.data_or_filename);
 		
 		// print to console, as well as to file!
 		if(wants_console_output) {
@@ -546,7 +551,7 @@ int main(int, char* argv[]) {
 				cout << output << endl;
 			}
 			else {
-				cout << program_data.first << endl;
+				cout << program.data_or_filename << endl;
 			}
 		}
 	}
@@ -614,8 +619,8 @@ int main(int, char* argv[]) {
 				string binary_str = "";
 				cl_int status = CL_SUCCESS;
 				if(!option_ctx.test_bin) {
-					binary_length = program_data.first.size();
-					binary_ptr = (const unsigned char*)program_data.first.data();
+					binary_length = program.data_or_filename.size();
+					binary_ptr = (const unsigned char*)program.data_or_filename.data();
 				}
 				else {
 					if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
@@ -629,10 +634,10 @@ int main(int, char* argv[]) {
 				
 				// create the program object ...
 				cl_int create_err = CL_SUCCESS;
-				cl_program program { nullptr };
+				cl_program opencl_program { nullptr };
 				if(option_ctx.target != llvm_compute::TARGET::SPIRV_OPENCL) {
-					program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
-														&binary_length, &binary_ptr, &status, &create_err);
+					opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
+															   &binary_length, &binary_ptr, &status, &create_err);
 					if(create_err != CL_SUCCESS) {
 						log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
 						log_error("devices binary status: %s", status);
@@ -645,7 +650,7 @@ int main(int, char* argv[]) {
 					log_error("need to compile occ with OpenCL 2.1 support to build SPIR-V binaries");
 					return {};
 #else
-					program = clCreateProgramWithIL(ctx, (const void*)binary_ptr, binary_length, &create_err);
+					opencl_program = clCreateProgramWithIL(ctx, (const void*)binary_ptr, binary_length, &create_err);
 					if(create_err != CL_SUCCESS) {
 						log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
 						return ret;
@@ -658,21 +663,21 @@ int main(int, char* argv[]) {
 				const string build_options {
 					(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 				};
-				CL_CALL_ERR_PARAM_RET(clBuildProgram(program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
+				CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
 									  build_err, "failed to build opencl program", {});
 				log_debug("check"); logger::flush();
 				
 				
 				// print out build log
-				log_debug("build log: %s", cl_get_info<CL_PROGRAM_BUILD_LOG>(program, cl_dev));
+				log_debug("build log: %s", cl_get_info<CL_PROGRAM_BUILD_LOG>(opencl_program, cl_dev));
 				
 				// print kernel info
-				const auto kernel_count = cl_get_info<CL_PROGRAM_NUM_KERNELS>(program);
-				const auto kernel_names_str = cl_get_info<CL_PROGRAM_KERNEL_NAMES>(program);
+				const auto kernel_count = cl_get_info<CL_PROGRAM_NUM_KERNELS>(opencl_program);
+				const auto kernel_names_str = cl_get_info<CL_PROGRAM_KERNEL_NAMES>(opencl_program);
 				log_debug("got %u kernels in program: %s", kernel_count, kernel_names_str);
 				
 				// retrieve the compiled binaries again
-				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(program);
+				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(opencl_program);
 				for(size_t i = 0; i < binaries.size(); ++i) {
 					file_io::string_to_file("binary_" + to_string(i) + ".bin", binaries[i]);
 				}
@@ -692,15 +697,15 @@ int main(int, char* argv[]) {
 				
 				//
 				if(option_ctx.test_bin) {
-					program_data.first = option_ctx.test_bin_filename;
+					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program_data.second, floor::get_metal_toolchain_version())) {
+					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
 						break;
 					}
 				}
 				
-				auto prog_entry = ctx->create_program_entry(dev, program_data, llvm_compute::TARGET::AIR);
+				auto prog_entry = ctx->create_program_entry(dev, program, llvm_compute::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
@@ -720,19 +725,19 @@ int main(int, char* argv[]) {
 				
 				//
 				if(option_ctx.test_bin) {
-					program_data.first = "";
-					if(!file_io::file_to_string(option_ctx.test_bin_filename, program_data.first)) {
+					program.data_or_filename = "";
+					if(!file_io::file_to_string(option_ctx.test_bin_filename, program.data_or_filename)) {
 						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
 						break;
 					}
 					
-					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program_data.second, floor::get_cuda_toolchain_version())) {
+					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_cuda_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
 						break;
 					}
 				}
 				
-				auto prog_entry = ctx->create_cuda_program(program_data);
+				auto prog_entry = ctx->create_cuda_program(program);
 				if(!prog_entry.valid) {
 					log_error("program compilation failed!");
 				}
