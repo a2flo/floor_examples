@@ -740,7 +740,8 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 																	  image_type,
 																	  pixels,
 																	  COMPUTE_MEMORY_FLAG::READ |
-																	  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+																	  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+																	  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
 			
 			// assign tex ptr to tex filename
 			texture_filenames[filenames[i]].second = (*model_metal_textures)[i].get();

@@ -246,7 +246,8 @@ static void create_skybox() {
 											  image_type,
 											  skybox_pixels.get(),
 											  COMPUTE_MEMORY_FLAG::READ |
-											  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+											  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+											  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
 }
 
 static void destroy_skybox() {
