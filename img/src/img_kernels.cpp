@@ -43,7 +43,7 @@ static constexpr uint32_t find_effective_n() {
 	// start at the wanted tap count and go up by 2 "taps" if the row is unusable (and no point going beyond 64)
 	for(uint32_t count = tap_count; count < 64u; count += 2) {
 		// / 2^N for this row
-		const long double sum_div = 1.0L / (long double)(2ull << (count - 1));
+		const long double sum_div = 1.0L / (long double)const_math::pow(2ull, int(count - 1));
 		for(uint32_t i = 0u; i <= count; ++i) {
 			const auto coeff = const_math::binomial(count - 1u, i);
 			// is the coefficient large enough to produce a visible result?
@@ -67,7 +67,7 @@ static constexpr auto compute_coefficients() {
 	// compute binomial coefficients and divide them by 2^(effective tap count - 1)
 	// this is basically computing a row in pascal's triangle, using all values (or the middle part) as coefficients
 	const auto effective_n = find_effective_n<tap_count>();
-	const long double sum_div = 1.0L / (long double)(2ull << (effective_n - 1));
+	const long double sum_div = 1.0L / (long double)const_math::pow(2ull, int(effective_n - 1));
 	for(uint32_t i = 0u, k = (effective_n - tap_count) / 2u; i < tap_count; ++i, ++k) {
 		// coefficient_i = (n choose k) / 2^n
 		ret[i] = float(sum_div * (long double)const_math::binomial(effective_n - 1, k));
