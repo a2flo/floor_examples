@@ -201,7 +201,7 @@ static void create_textures() {
 	}
 	
 	// create appropriately sized s/w depth buffer
-	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(sizeof(float) *
+	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(warp_state.dev, sizeof(float) *
 																	size_t(scene_fbo.dim.x) * size_t(scene_fbo.dim.y));
 }
 
