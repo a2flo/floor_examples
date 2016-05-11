@@ -135,6 +135,8 @@
 			"jit_verbose": false,
 			// the optimization level that the jit compiler should use (range: 0 - 4)
 			"jit_opt_level": 4,
+			// try to make use of cuda internal api functionality if possible
+			"use_internal_api": true,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": []
