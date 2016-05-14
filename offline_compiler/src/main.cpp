@@ -53,6 +53,7 @@ struct option_context {
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
 	bool sub_groups { false };
+	bool sw_depth_compare { true };
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
@@ -88,6 +89,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
+				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only CUDA)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
@@ -186,6 +188,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--sub-groups", [](option_context& ctx, char**&) {
 		ctx.sub_groups = true;
+	}},
+	{ "--depth-compare", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string dc_mode = *arg_ptr;
+		if(dc_mode == "sw") { ctx.sw_depth_compare = true; }
+		else if(dc_mode == "hw") { ctx.sw_depth_compare = false; }
+		else {
+			cerr << "invalid --depth-compare argument" << endl;
+			return;
+		}
 	}},
 	{ "--test", [](option_context& ctx, char**&) {
 		ctx.test = true;
@@ -326,6 +342,7 @@ int main(int, char* argv[]) {
 					}
 				}
 				else option_ctx.sub_target = "sm_20";
+				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
