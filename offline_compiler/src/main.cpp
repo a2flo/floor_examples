@@ -667,10 +667,10 @@ int main(int, char* argv[]) {
 					log_error("need to compile occ with OpenCL 2.1 support to build SPIR-V binaries");
 					return {};
 #else
-					opencl_program = clCreateProgramWithIL(ctx, (const void*)binary_ptr, binary_length, &create_err);
+					opencl_program = clCreateProgramWithIL(cl_ctx, (const void*)binary_ptr, binary_length, &create_err);
 					if(create_err != CL_SUCCESS) {
 						log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
-						return ret;
+						return {};
 					}
 					else log_debug("successfully created opencl program (from IL/SPIR-V)!");
 #endif
