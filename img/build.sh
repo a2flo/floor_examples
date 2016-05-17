@@ -25,9 +25,12 @@ verbose() {
 if [ -z "${CXX}" ]; then
 	CXX=clang++
 fi
+command -v ${CXX} >/dev/null 2>&1 || error "clang++ binary not found, please set CXX to a valid clang++ binary"
+
 if [ -z "${CC}" ]; then
 	CC=clang
 fi
+command -v ${CC} >/dev/null 2>&1 || error "clang binary not found, please set CC to a valid clang binary"
 
 # check if clang is the compiler, fail if not
 CXX_VERSION=$(${CXX} -v 2>&1)
@@ -61,6 +64,7 @@ BUILD_CONF_CUDA=$((1 - $((${FLOOR_NO_CUDA}))))
 BUILD_CONF_OPENAL=$((1 - $((${FLOOR_NO_OPENAL}))))
 BUILD_CONF_HOST_COMPUTE=$((1 - $((${FLOOR_NO_HOST_COMPUTE}))))
 BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
+BUILD_CONF_VULKAN=$((1 - $((${FLOOR_NO_VULKAN}))))
 BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_XML=$((1 - $((${FLOOR_NO_XML}))))
 BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
@@ -379,6 +383,9 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	if [ ${BUILD_CONF_OPENCL} -gt 0 -a ${BUILD_CONF_POCL} -eq 0 ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} OpenCL"
 	fi
+	if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan"
+	fi
 
 	# add os specific libs
 	if [ $BUILD_OS == "linux" -o $BUILD_OS == "freebsd" -o $BUILD_OS == "openbsd" ]; then
@@ -492,14 +499,9 @@ else
 	fi
 fi
 
-# just in case, also add these rather default ones (should also go after all previous libs/includes,
+# just in case, also add these rather default ones (should also go after all previous libs,
 # in case a local or otherwise set up lib is overwriting a system lib and should be used instead)
 LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
-INCLUDES="${INCLUDES}"
-# don't automatically add /usr/include and /usr/local/include on mingw/msys (these will lead to the wrong headers being included)
-if [ $BUILD_OS != "mingw" ]; then
-    INCLUDES="${INCLUDES} -isystem /usr/include -isystem /usr/local/include"
-fi
 
 ##########################################
 # flags
@@ -513,7 +515,7 @@ else
 fi
 CFLAGS="${CFLAGS} -std=gnu11"
 
-OBJCFLAGS="${OBJCFLAGS}"
+OBJCFLAGS="${OBJCFLAGS} -fno-objc-exceptions"
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	OBJCFLAGS="${OBJCFLAGS} -fobjc-arc"
 fi
@@ -620,14 +622,14 @@ fi
 
 # hard-mode c++ ;) TODO: clean this up + explanations
 WARNINGS="${WARNINGS} -Weverything -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
-WARNINGS="${WARNINGS} -Wno-gnu -Wno-c++98-compat"
+WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat -Wno-c++98-compat"
 WARNINGS="${WARNINGS} -Wno-c++98-compat-pedantic -Wno-c99-extensions"
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation"
 WARNINGS="${WARNINGS} -Wno-system-headers -Wno-global-constructors -Wno-padded"
 WARNINGS="${WARNINGS} -Wno-packed -Wno-switch-enum -Wno-exit-time-destructors"
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option -Wno-nested-anon-types"
 WARNINGS="${WARNINGS} -Wno-old-style-cast -Wno-date-time -Wno-reserved-id-macro"
-WARNINGS="${WARNINGS} -Wno-documentation-unknown-command"
+WARNINGS="${WARNINGS} -Wno-documentation-unknown-command -Wno-partial-availability"
 if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
 	# ignore warnings about required alignment increases on 32-bit platforms (won't and can't fix)
 	WARNINGS="${WARNINGS} -Wno-cast-align"
@@ -672,10 +674,10 @@ for dir in ${SRC_SUB_DIRS}; do
 	fi
 
 	# source files
-	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.cpp')"
-	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.c')"
-	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.mm')"
-	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.m')"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.cpp' | grep -v "\._")"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.c' | grep -v "\._")"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.mm' | grep -v "\._")"
+	SRC_FILES="${SRC_FILES} $(find ${SRC_DIR}${dir} -maxdepth 1 -type f -name '*.m' | grep -v "\._")"
 	
 	# create resp. build folder
 	mkdir -p ${BUILD_DIR}/${SRC_DIR}${dir}
