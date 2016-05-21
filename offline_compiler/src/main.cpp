@@ -754,7 +754,7 @@ int main(int, char* argv[]) {
 					}
 				}
 				
-				auto prog_entry = ctx->create_cuda_program(program);
+				auto prog_entry = ctx->create_cuda_program((cuda_device*)dev.get(), program);
 				if(!prog_entry.valid) {
 					log_error("program compilation failed!");
 				}
