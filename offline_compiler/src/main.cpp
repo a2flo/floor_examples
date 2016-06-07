@@ -314,7 +314,6 @@ int main(int, char* argv[]) {
 					return -4;
 				}
 				((opencl_device*)device.get())->cl_version = option_ctx.cl_std;
-				((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				if(option_ctx.sub_groups) device->sub_group_support = true;
@@ -324,6 +323,11 @@ int main(int, char* argv[]) {
 				device->image_msaa_support = true;
 				device->image_mipmap_support = true;
 				device->image_mipmap_write_support = true;
+				if(option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
+					device->image_read_write_support = true;
+					device->param_workaround = true;
+				}
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 			} break;
 			case llvm_compute::TARGET::PTX:
