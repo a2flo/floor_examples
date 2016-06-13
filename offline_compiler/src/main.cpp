@@ -54,6 +54,7 @@ struct option_context {
 	bool extended_64_atomics { false };
 	bool sub_groups { false };
 	bool sw_depth_compare { true };
+	uint32_t image_rw_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
@@ -90,6 +91,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only CUDA)\n"
+				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
@@ -200,6 +202,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(dc_mode == "hw") { ctx.sw_depth_compare = false; }
 		else {
 			cerr << "invalid --depth-compare argument" << endl;
+			return;
+		}
+	}},
+	{ "--image-rw", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string rw_mode = *arg_ptr;
+		if(rw_mode == "sw") { ctx.image_rw_support = 2; }
+		else if(rw_mode == "hw") { ctx.image_rw_support = 1; }
+		else {
+			cerr << "invalid --image-rw argument" << endl;
 			return;
 		}
 	}},
@@ -325,8 +341,11 @@ int main(int, char* argv[]) {
 				device->image_mipmap_write_support = true;
 				if(option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
 					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
-					device->image_read_write_support = true;
+					device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
 					device->param_workaround = true;
+				}
+				else {
+					device->image_read_write_support = (option_ctx.image_rw_support == 1 ? true : false);
 				}
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 			} break;
@@ -390,6 +409,7 @@ int main(int, char* argv[]) {
 				device->image_msaa_support = true;
 				device->image_mipmap_support = true;
 				device->image_mipmap_write_support = true;
+				device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;
 		}
