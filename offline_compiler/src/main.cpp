@@ -82,7 +82,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu], defaults to gpu\n"
 				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios9|osx11][_family], family is optional and defaults to lowest available\n"
+				 "\t    Metal/AIR:     [ios9|ios10|osx11|osx12][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
@@ -380,11 +380,12 @@ int main(int, char* argv[]) {
 					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
 				}
 				
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios9") {
+				if(option_ctx.sub_target == "" ||
+				   option_ctx.sub_target.find("ios") != string::npos) {
 					dev->family = (family == 0 ? 1 : family);
 					dev->family_version = (family < 3 ? 2 : 1);
 				}
-				else if(option_ctx.sub_target == "osx11") {
+				else if(option_ctx.sub_target.find("osx") != string::npos) {
 					dev->family = (family == 0 ? 10000 : family);
 					dev->family_version = 1;
 				}
@@ -738,6 +739,7 @@ int main(int, char* argv[]) {
 				
 				//
 				if(option_ctx.test_bin) {
+					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
 					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
@@ -749,6 +751,11 @@ int main(int, char* argv[]) {
 				auto prog_entry = ctx->create_program_entry(dev, program, llvm_compute::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
+				}
+				
+				auto prog = ctx->create_metal_test_program(prog_entry);
+				if(prog == nullptr) {
+					log_error("device program compilation failed!");
 				}
 #else
 				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
