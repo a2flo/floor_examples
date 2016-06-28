@@ -15,13 +15,13 @@
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\gl_renderer.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\obj_loader.cpp" />
+    <ClCompile Include="..\common\obj\obj_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\auto_cam.hpp" />
     <ClInclude Include="src\camera.hpp" />
     <ClInclude Include="src\gl_renderer.hpp" />
-    <ClInclude Include="src\obj_loader.hpp" />
+    <ClInclude Include="..\common\obj\obj_loader.hpp" />
     <ClInclude Include="src\warp_state.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -58,15 +58,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;C:\Intel\INDE\code_builder_5.0.0.43\include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;C:\Intel\INDE\code_builder_5.0.0.43\lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;$(INTELOCLSDKROOT)lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;C:\Intel\INDE\code_builder_5.0.0.43\include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;C:\Intel\INDE\code_builder_5.0.0.43\lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;$(INTELOCLSDKROOT)lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
