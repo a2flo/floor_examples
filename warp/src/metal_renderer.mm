@@ -813,7 +813,7 @@ void metal_renderer::render(const metal_obj_model& model,
 		}
 		
 		// blit to window
-		auto drawable = darwin_helper::get_metal_next_drawable(view);
+		auto drawable = darwin_helper::get_metal_next_drawable(view, cmd_buffer);
 		if(drawable == nil) {
 			log_error("drawable is nil!");
 			return;

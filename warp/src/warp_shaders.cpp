@@ -209,7 +209,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 		
 		float3 shadow_coord = in.shadow_coord.xyz / in.shadow_coord.w;
 		shadow_coord.y = 1.0f - shadow_coord.y; // why metal, why?
-#if 0
+#if 1
 		if(in.shadow_coord.w > 0.0f) {
 			light_vis = shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy, shadow_coord.z - shadow_bias);
 		}

@@ -49,7 +49,7 @@ static bool dumb {
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { TAP_COUNT };
-static constexpr const uint32_t inner_tile_size { INNER_TILE_SIZE };// -> effective tile size
+static constexpr const uint32_t inner_tile_size { INNER_TILE_SIZE }; // -> effective tile size
 
 //! option -> function map
 template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handler::options {

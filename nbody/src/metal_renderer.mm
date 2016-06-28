@@ -70,7 +70,8 @@ static void create_textures(shared_ptr<compute_device> dev) {
 																			  COMPUTE_IMAGE_TYPE::READ,
 																			  &pixel_data[0],
 																			  COMPUTE_MEMORY_FLAG::READ |
-																			  COMPUTE_MEMORY_FLAG::HOST_WRITE));
+																			  COMPUTE_MEMORY_FLAG::HOST_WRITE |
+																			  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS));
 	}
 }
 
@@ -153,7 +154,13 @@ bool metal_renderer::init(shared_ptr<compute_device> dev,
 void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 							shared_ptr<compute_buffer> position_buffer) {
 	@autoreleasepool {
-		auto drawable = darwin_helper::get_metal_next_drawable(view);
+		//
+		auto mtl_queue = ((metal_queue*)dev_queue.get())->get_queue();
+		
+		id <MTLCommandBuffer> cmd_buffer = [mtl_queue commandBuffer];
+		cmd_buffer.label = @"nbody render";
+		
+		auto drawable = darwin_helper::get_metal_next_drawable(view, cmd_buffer);
 		if(drawable == nil) {
 			log_error("drawable is nil!");
 			return;
@@ -175,13 +182,7 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		};
 		
 		//
-		auto mtl_queue = ((metal_queue*)dev_queue.get())->get_queue();
-		
-		id <MTLCommandBuffer> commandBuffer = [mtl_queue commandBuffer];
-		commandBuffer.label = @"nbody render";
-		
-		//
-		id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:render_pass_desc];
+		id <MTLRenderCommandEncoder> renderEncoder = [cmd_buffer renderCommandEncoderWithDescriptor:render_pass_desc];
 		renderEncoder.label = @"nbody RenderEncoder";
 		[renderEncoder setDepthStencilState:depth_state];
 		
@@ -199,8 +200,8 @@ void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
 		[renderEncoder endEncoding];
 		[renderEncoder popDebugGroup];
 		
-		[commandBuffer presentDrawable:drawable];
-		[commandBuffer commit];
+		[cmd_buffer presentDrawable:drawable];
+		[cmd_buffer commit];
 	}
 }
 

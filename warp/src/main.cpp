@@ -299,19 +299,9 @@ int main(int, char* argv[]) {
 		// compute the appropriate value according to the render/input frame rate and display refresh rate
 		if((floor::get_vsync() || warp_state.ctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
 		   warp_state.target_frame_count == 0) {
-			SDL_DisplayMode mode;
-			if(SDL_GetWindowDisplayMode(floor::get_window(), &mode) != 0) {
-				log_error("failed to retrieve display mode: %s", SDL_GetError());
-				warp_state.target_frame_count = 60; // simply assume 60hz
-			}
-			else {
-				if(mode.refresh_rate == 0) {
-					log_warn("failed to retrieve display refresh rate, assuming 60 Hz");
-					warp_state.target_frame_count = 60;
-				}
-				else {
-					warp_state.target_frame_count = (uint32_t)mode.refresh_rate;
-				}
+			warp_state.target_frame_count = floor::get_window_refresh_rate();
+			if(warp_state.target_frame_count == 0) {
+				warp_state.target_frame_count = 60;
 			}
 		}
 		if(warp_state.target_frame_count > 0) {
@@ -354,7 +344,8 @@ int main(int, char* argv[]) {
 		
 		//
 		bool model_success { false };
-		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success, !warp_state.no_opengl);
+		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success,
+								 warp_state.ctx, warp_state.dev);
 		if(!model_success) {
 			return -1;
 		}

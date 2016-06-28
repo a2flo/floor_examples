@@ -17,7 +17,6 @@
  */
 
 #include "obj_loader.hpp"
-#include "warp_state.hpp"
 
 //#define FLOOR_DEBUG_PARSER 1
 //#define FLOOR_DEBUG_PARSER_SET_NAMES 1
@@ -481,7 +480,9 @@ struct mtl_grammar {
 					  ctx.tu.file_name, line_and_column.first, line_and_column.second, error_msg);
 			return {};
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("mtl parsing done");
+#endif
 		
 		// done
 		success = true;
@@ -617,7 +618,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  // metal tex objects
 						  vector<shared_ptr<compute_image>>* model_metal_textures,
 						  // path prefix
-						  const string& prefix) {
+						  const string& prefix,
+						  shared_ptr<compute_context> ctx,
+						  shared_ptr<compute_device> dev) {
 	// load textures
 	const auto filenames = core::keys(texture_filenames);
 	alignas(128) vector<obj_loader::texture> textures(filenames.size());
@@ -651,7 +654,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	while(active_workers != 0) {
 		this_thread::sleep_for(10ms);
 	}
+#if defined(FLOOR_DEBUG)
 	log_debug("%u textures loaded to mem", textures.size());
+#endif
 	
 #if !defined(FLOOR_IOS)
 	if(is_opengl) {
@@ -690,7 +695,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 				log_error("gl error in texture #%u: %X", i, gl_error);
 			}
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("gl textures created");
+#endif
 	}
 	else
 #endif
@@ -735,18 +742,20 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						   COMPUTE_IMAGE_TYPE::READ |
 						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
 			
-			(*model_metal_textures)[i] = warp_state.ctx->create_image(warp_state.dev,
-																	  dim,
-																	  image_type,
-																	  pixels,
-																	  COMPUTE_MEMORY_FLAG::READ |
-																	  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-																	  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+			(*model_metal_textures)[i] = ctx->create_image(dev,
+														   dim,
+														   image_type,
+														   pixels,
+														   COMPUTE_MEMORY_FLAG::READ |
+														   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+														   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
 			
 			// assign tex ptr to tex filename
 			texture_filenames[filenames[i]].second = (*model_metal_textures)[i].get();
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("metal textures created");
+#endif
 	}
 	
 	// cleanup
@@ -811,7 +820,7 @@ struct obj_grammar {
 		static constexpr literal_matcher<const char*, SOURCE_TOKEN_TYPE::IDENTIFIER> IDENTIFIER {};
 		
 		//
-		static constexpr keyword_matcher VERTEX("v"), FACE("f"), TEX_COORD("vt"), NORMAL("vn"), SUB_OBJECT("g"), MTLLIB("mtllib"), USEMTL("usemtl"), SMOOTH("s"), SMOOTH_OFF("off");
+		static constexpr keyword_matcher VERTEX("v"), FACE("f"), TEX_COORD("vt"), NORMAL("vn"), SUB_OBJECT("o"), SUB_GROUP("g"), MTLLIB("mtllib"), USEMTL("usemtl"), SMOOTH("s"), SMOOTH_OFF("off");
 		static constexpr literal_matcher<FLOOR_PUNCTUATOR, SOURCE_TOKEN_TYPE::PUNCTUATOR> SLASH { FLOOR_PUNCTUATOR::DIV };
 		
 #if defined(FLOOR_DEBUG_PARSER) || defined(FLOOR_DEBUG_PARSER_SET_NAMES)
@@ -825,7 +834,7 @@ struct obj_grammar {
 		vertex = VERTEX & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT & ~FP_CONSTANT;
 		tex_coord = TEX_COORD & FP_CONSTANT & ~(FP_CONSTANT & ~FP_CONSTANT);
 		normal = NORMAL & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT;
-		sub_object = SUB_OBJECT & IDENTIFIER;
+		sub_object = (SUB_OBJECT | SUB_GROUP) & IDENTIFIER;
 		smooth = SMOOTH & (FP_CONSTANT | SMOOTH_OFF);
 		mtllib = MTLLIB & IDENTIFIER;
 		usemtl = USEMTL & IDENTIFIER;
@@ -895,19 +904,19 @@ struct obj_grammar {
 					return {};
 			}
 			
-			static const array<uint3, 4> v_offsets {{
+			static constexpr const array<uint3, 4> v_offsets {{
 				{ 1, 2, 3 },
 				{ 1, 4, 7 },
 				{ 1, 5, 9 },
 				{ 1, 6, 11 },
 			}};
-			static const array<uint3, 4> tc_offsets {{
+			static constexpr const array<uint3, 4> tc_offsets {{
 				{ 0, 0, 0 },
 				{ 3, 6, 9 },
 				{ 0, 0, 0 },
 				{ 3, 8, 13 },
 			}};
-			static const array<uint3, 4> n_offsets {{
+			static constexpr const array<uint3, 4> n_offsets {{
 				{ 0, 0, 0 },
 				{ 0, 0, 0 },
 				{ 4, 8, 12 },
@@ -953,19 +962,19 @@ struct obj_grammar {
 					return {};
 			}
 			
-			static const array<uint4, 4> v_offsets {{
+			static constexpr const array<uint4, 4> v_offsets {{
 				{ 1, 2, 3, 4 },
 				{ 1, 4, 7, 10 },
 				{ 1, 5, 9, 13 },
 				{ 1, 6, 11, 16 },
 			}};
-			static const array<uint4, 4> tc_offsets {{
+			static constexpr const array<uint4, 4> tc_offsets {{
 				{ 0, 0, 0, 0 },
 				{ 3, 6, 9, 12 },
 				{ 0, 0, 0, 0 },
 				{ 3, 8, 13, 18 },
 			}};
-			static const array<uint4, 4> n_offsets {{
+			static constexpr const array<uint4, 4> n_offsets {{
 				{ 0, 0, 0, 0 },
 				{ 0, 0, 0, 0 },
 				{ 4, 8, 12, 16 },
@@ -1028,7 +1037,8 @@ struct obj_grammar {
 		});
 	}
 	
-	void parse(parser_context& ctx, bool& success, const bool is_opengl, shared_ptr<obj_model> model) {
+	void parse(parser_context& ctx, bool& success, const bool is_opengl, const bool is_load_textures, shared_ptr<obj_model> model,
+			   shared_ptr<compute_context> comp_ctx, shared_ptr<compute_device> dev) {
 		// clear all
 		vertices.clear();
 		tex_coords.clear();
@@ -1058,7 +1068,9 @@ struct obj_grammar {
 					  ctx.tu.file_name, line_and_column.first, line_and_column.second, error_msg);
 			return;
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("parsing done");
+#endif
 		
 		// create proper model
 		model->vertices.reserve(vertices.size());
@@ -1067,7 +1079,9 @@ struct obj_grammar {
 		model->binormals.reserve(vertices.size());
 		model->tangents.reserve(vertices.size());
 		model->objects.reserve(sub_objects.size());
+#if defined(FLOOR_DEBUG)
 		log_debug("alloc #0");
+#endif
 		
 		struct reassign_entry {
 			struct target {
@@ -1095,12 +1109,19 @@ struct obj_grammar {
 			}
 		};
 		vector<reassign_entry> index_reassign(vertices.size() + 1);
+#if defined(FLOOR_DEBUG)
 		log_debug("alloc #1");
+#endif
+		
+		// if a model doesn't contain any texture coordinates, add at least one dummy/default one
+		if(tex_coords.empty()) {
+			tex_coords.emplace_back(float2 {});
+		}
 		
 		uint32_t index_counter = 1u; // start off at 1, 0 is the "invalid"/zero data
-		static const auto reassign = [this, &model, &index_reassign, &index_counter](const uint32_t& v_idx,
-																					 const uint32_t& tc_idx,
-																					 const uint32_t& n_idx) {
+		const auto reassign = [this, &model, &index_reassign, &index_counter](const uint32_t& v_idx,
+																			  const uint32_t& tc_idx,
+																			  const uint32_t& n_idx) {
 			auto& entry = index_reassign[v_idx];
 			for(uint32_t i = 0; i < entry.used; ++i) {
 				if(entry.targets[i].tc_idx == tc_idx /*&&
@@ -1111,8 +1132,8 @@ struct obj_grammar {
 			
 			// not found, create a new target
 			const uint32_t dst = index_counter++;
-			model->vertices.push_back(vertices[v_idx - 1].xyz);
-			model->tex_coords.push_back(tex_coords[tc_idx - 1].xy);
+			model->vertices.push_back(vertices[v_idx > 0 ? v_idx - 1 : v_idx].xyz);
+			model->tex_coords.push_back(tex_coords[tc_idx > 0 ? tc_idx - 1 : tc_idx].xy);
 			model->normals.push_back(float3 {});
 			model->binormals.push_back(float3 {});
 			model->tangents.push_back(float3 {});
@@ -1152,8 +1173,10 @@ struct obj_grammar {
 			
 			model->objects.emplace_back(move(sobj));
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("objects done");
 		log_debug("indices: %u -> %u", vertices.size(), index_counter);
+#endif
 		
 		//
 		for(const auto& obj : model->objects) {
@@ -1196,7 +1219,9 @@ struct obj_grammar {
 			if(slash_pos != string::npos) {
 				prefix = ctx.tu.file_name.substr(0, slash_pos + 1);
 			}
+#if defined(FLOOR_DEBUG)
 			log_debug("loading mat: %s", mat_filename);
+#endif
 			string mat_data = "";
 			if(!file_io::file_to_string(prefix + mat_filename, mat_data)) {
 				log_error("failed to load .mtl file: %s", prefix + mat_filename);
@@ -1209,7 +1234,9 @@ struct obj_grammar {
 			lexer::map_characters(*mat_tu);
 			obj_lexer::lex(*mat_tu);
 			obj_lexer::assign_token_sub_types(*mat_tu);
+#if defined(FLOOR_DEBUG)
 			log_debug("mat lexed");
+#endif
 			
 			parser_context mtl_parser_ctx { *mat_tu };
 			mtl_grammar mtl_grammar_parser;
@@ -1219,7 +1246,9 @@ struct obj_grammar {
 				return;
 			}
 			success = false; // reset for further processing
+#if defined(FLOOR_DEBUG)
 			log_debug("mtl parsed");
+#endif
 			
 			// create a map of all texture file names
 			// value: at first use count, later: gl tex id
@@ -1254,7 +1283,9 @@ struct obj_grammar {
 			// kill unused
 			core::erase_if(texture_filenames, [](const auto& iter) -> bool {
 				if(iter->second.first == 0) {
+#if defined(FLOOR_DEBUG)
 					log_debug("killing unused texture \"%s\"", iter->first);
+#endif
 				}
 				return (iter->second.first == 0);
 			});
@@ -1272,10 +1303,12 @@ struct obj_grammar {
 			}
 			else metal_model->materials.resize(mats.size());
 			model->material_infos.resize(mats.size());
-			load_textures(texture_filenames, is_opengl,
-						  is_opengl ? &gl_model->textures : nullptr,
-						  !is_opengl ? &metal_model->textures : nullptr,
-						  prefix);
+			if(is_load_textures) {
+				load_textures(texture_filenames, is_opengl,
+							  is_opengl ? &gl_model->textures : nullptr,
+							  !is_opengl ? &metal_model->textures : nullptr,
+							  prefix, comp_ctx, dev);
+			}
 			
 			// assign textures/materials
 			unordered_map<string, uint32_t> mat_map; // mat name -> mat idx in model
@@ -1312,7 +1345,9 @@ struct obj_grammar {
 			for(size_t i = 0, count = sub_objects.size(); i < count; ++i) {
 				model->objects[i]->mat_idx = mat_map[sub_objects[i]->mat];
 			}
+#if defined(FLOOR_DEBUG)
 			log_debug("materials assigned");
+#endif
 		}
 		
 		// done
@@ -1321,7 +1356,13 @@ struct obj_grammar {
 	
 };
 
-shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, const bool is_opengl) {
+shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
+									   shared_ptr<compute_context> ctx,
+									   shared_ptr<compute_device> dev,
+									   const float scale,
+									   const bool cleanup_cpu_data,
+									   const bool is_load_textures) {
+	const bool is_opengl = (ctx->get_compute_type() != COMPUTE_TYPE::METAL);
 	success = false;
 	
 	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
@@ -1338,7 +1379,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 			log_error("failed to load .obj file: %s", file_name);
 			return {};
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("loaded");
+#endif
 		
 		auto tu = make_unique<translation_unit>(file_name);
 		tu->source.insert(0, obj_data.c_str(), obj_data.size());
@@ -1346,21 +1389,24 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		obj_lexer::map_characters(*tu);
 		obj_lexer::lex(*tu);
 		obj_lexer::assign_token_sub_types(*tu);
+#if defined(FLOOR_DEBUG)
 		log_debug("obj lexed");
+#endif
 		
 		parser_context parser_ctx { *tu };
 		obj_grammar obj_grammar_parser;
-		obj_grammar_parser.parse(parser_ctx, success, is_opengl, model);
+		obj_grammar_parser.parse(parser_ctx, success, is_opengl, is_load_textures, model, ctx, dev);
 		if(!success) {
 			log_error("obj parsing failed");
 			return {};
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("obj parsed");
+#endif
 		
 		// scale vertices
-		static constexpr const float scale_factor { 0.1f };
 		for(auto& vertex : model->vertices) {
-			vertex *= scale_factor;
+			vertex *= scale;
 		}
 		
 		// write .bin
@@ -1430,7 +1476,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 	}
 	// -> load .obj.bin
 	else {
+#if defined(FLOOR_DEBUG)
 		log_debug("loading bin ...");
+#endif
 		
 		file_io bin_file(file_name + ".bin", file_io::OPEN_TYPE::READ_BINARY);
 		if(!bin_file.is_open()) {
@@ -1487,10 +1535,12 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 			texture_filenames.emplace(mat.normal_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace(mat.mask_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 		}
-		load_textures(texture_filenames, is_opengl,
-					  is_opengl ? &gl_model->textures : nullptr,
-					  !is_opengl ? &metal_model->textures : nullptr,
-					  prefix);
+		if(is_load_textures) {
+			load_textures(texture_filenames, is_opengl,
+						  is_opengl ? &gl_model->textures : nullptr,
+						  !is_opengl ? &metal_model->textures : nullptr,
+						  prefix, ctx, dev);
+		}
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
 			auto& mdl_mat_info = model->material_infos[i];
@@ -1531,7 +1581,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 			
 			model->objects.emplace_back(move(obj));
 		}
+#if defined(FLOOR_DEBUG)
 		log_debug("loaded sub-objects");
+#endif
 		
 		for(uint32_t i = 0; i < vertex_count; ++i) {
 			float3 vtx;
@@ -1569,7 +1621,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		}
 		
 		success = true;
+#if defined(FLOOR_DEBUG)
 		log_debug("loaded model data");
+#endif
 	}
 	
 	// create model buffers
@@ -1602,9 +1656,6 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 		glFinish();
 	}
 	else {
-		auto ctx = floor::get_compute_context();
-		auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
-		
 		const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
 								  COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		metal_model->vertices_buffer = ctx->create_buffer(dev, metal_model->vertices, buffer_type);
@@ -1620,14 +1671,16 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success, c
 	}
 	
 	// clean up mem that isn't needed any more
-	model->vertices.clear();
-	model->tex_coords.clear();
-	model->normals.clear();
-	model->binormals.clear();
-	model->tangents.clear();
-	model->material_infos.clear();
-	for(auto& obj : model->objects) {
-		obj->indices.clear();
+	if(cleanup_cpu_data) {
+		model->vertices.clear();
+		model->tex_coords.clear();
+		model->normals.clear();
+		model->binormals.clear();
+		model->tangents.clear();
+		model->material_infos.clear();
+		for(auto& obj : model->objects) {
+			obj->indices.clear();
+		}
 	}
 	
 	return model;

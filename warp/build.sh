@@ -265,7 +265,10 @@ TARGET_STATIC_BIN=${BIN_DIR}/${TARGET_STATIC_BIN_NAME}
 SRC_DIR="src"
 
 # all source code sub-directories, relative to SRC_DIR
-SRC_SUB_DIRS="."
+SRC_SUB_DIRS=". ../../common/obj"
+
+# add common include folder (relative to .)
+INCLUDES="${INCLUDES} -I../common/obj"
 
 # build directory where all temporary files are stored (*.o, etc.)
 BUILD_DIR=build

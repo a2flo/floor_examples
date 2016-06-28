@@ -87,7 +87,12 @@ struct metal_obj_model : obj_model {
 
 class obj_loader {
 public:
-	static shared_ptr<obj_model> load(const string& file_name, bool& success, const bool is_opengl);
+	static shared_ptr<obj_model> load(const string& file_name, bool& success,
+									  shared_ptr<compute_context> ctx,
+									  shared_ptr<compute_device> dev,
+									  const float scale = 0.1f,
+									  const bool cleanup_cpu_data = true,
+									  const bool is_load_textures = true);
 	
 	struct pvrtc_texture {
 		uint2 dim;
