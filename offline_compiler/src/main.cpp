@@ -49,6 +49,7 @@ struct option_context {
 	string sub_target;
 	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
+	bool warnings { false };
 	bool double_support { true };
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
@@ -86,6 +87,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
+				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
@@ -178,6 +180,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			cerr << "invalid --cl-std argument" << endl;
 			return;
 		}
+	}},
+	{ "--warnings", [](option_context& ctx, char**&) {
+		ctx.warnings = true;
 	}},
 	{ "--no-double", [](option_context& ctx, char**&) {
 		ctx.double_support = false;
@@ -421,6 +426,7 @@ int main(int, char* argv[]) {
 		llvm_compute::compile_options options {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
+			.enable_warnings = option_ctx.warnings,
 		};
 		program = llvm_compute::compile_program_file(device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
