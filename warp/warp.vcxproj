@@ -12,14 +12,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\auto_cam.cpp" />
-    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="..\common\camera\camera.cpp" />
     <ClCompile Include="src\gl_renderer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="..\common\obj\obj_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\auto_cam.hpp" />
-    <ClInclude Include="src\camera.hpp" />
+    <ClInclude Include="..\common\camera\camera.hpp" />
     <ClInclude Include="src\gl_renderer.hpp" />
     <ClInclude Include="..\common\obj\obj_loader.hpp" />
     <ClInclude Include="src\warp_state.hpp" />

@@ -177,8 +177,23 @@ void obj_lexer::lex(translation_unit& tu) {
 		char_iter != src_end;
 		/* NOTE: char_iter is incremented in the individual lex_* functions or whitespace case: */) {
 		switch(*char_iter) {
+			// '-' can start either decimal constant or keyword/identifier (in .mtl, always decimal in .obj)
+			case '-': {
+				auto next_char = char_iter + 1;
+				if(next_char != src_end) {
+					switch(*next_char) {
+						case '0': case '1': case '2': case '3':
+						case '4': case '5': case '6': case '7':
+						case '8': case '9':
+							goto decimal_constant;
+						default: break;
+					}
+				}
+				goto keyword_or_identifier;
+			}
+
 			// keyword or identifier
-			case '_':
+			case '_': case '.':
 			case 'a': case 'b': case 'c': case 'd':
 			case 'e': case 'f': case 'g': case 'h':
 			case 'i': case 'j': case 'k': case 'l':
@@ -193,6 +208,7 @@ void obj_lexer::lex(translation_unit& tu) {
 			case 'Q': case 'R': case 'S': case 'T':
 			case 'U': case 'V': case 'W': case 'X':
 			case 'Y': case 'Z': {
+keyword_or_identifier:
 				source_range range { char_iter, char_iter };
 				const auto ret = lex_keyword_or_identifier(tu, char_iter, src_end);
 				if(!ret.first) break;
@@ -202,10 +218,10 @@ void obj_lexer::lex(translation_unit& tu) {
 			}
 				
 			// decimal constant
-			case '-': case '.':
 			case '0': case '1': case '2': case '3':
 			case '4': case '5': case '6': case '7':
 			case '8': case '9': {
+decimal_constant:
 				source_range range { char_iter, char_iter };
 				const auto ret = lex_decimal_constant(tu, char_iter, src_end);
 				if(!ret.first) break;
@@ -379,7 +395,8 @@ struct mtl_grammar {
 	FLOOR_MTL_GRAMMAR_OBJECTS(global_scope, statement, newmtl,
 							  ns, ni, d, tr, tf, illum,
 							  ka, kd, ks, ke,
-							  map_ka, map_kd, map_ks, map_bump, map_d)
+							  map_ka, map_kd, map_ks, map_ke, map_bump, map_d,
+							  map_options)
 	
 	struct obj_material {
 		string ambient { "" };
@@ -397,7 +414,8 @@ struct mtl_grammar {
 		static constexpr literal_matcher<const char*, SOURCE_TOKEN_TYPE::IDENTIFIER> IDENTIFIER {};
 		
 		//
-		static constexpr keyword_matcher NEWMTL("newmtl"), NS("Ns"), NI("Ni"), D("d"), TR("Tr"), TF("Tf"), ILLUM("illum"), KA("Ka"), KD("Kd"), KS("Ks"), KE("Ke"), MAP_KA("map_Ka"), MAP_KD("map_Kd"), MAP_KS("map_Ks"), MAP_BUMP("map_bump"), BUMP("bump"), MAP_D("map_d");
+		static constexpr keyword_matcher NEWMTL("newmtl"), NS("Ns"), NI("Ni"), D("d"), TR("Tr"), TF("Tf"), ILLUM("illum"), KA("Ka"), KD("Kd"), KS("Ks"), KE("Ke"), MAP_KA("map_Ka"), MAP_KD("map_Kd"), MAP_KS("map_Ks"), MAP_KE("map_Ke"), MAP_BUMP("map_bump"), MAP_BUMP2("map_Bump"), BUMP("bump"), MAP_D("map_d");
+		static constexpr keyword_matcher MAP_OPT_BM("-bm");
 		static constexpr literal_matcher<FLOOR_PUNCTUATOR, SOURCE_TOKEN_TYPE::PUNCTUATOR> SLASH { FLOOR_PUNCTUATOR::DIV };
 		
 #if defined(FLOOR_DEBUG_PARSER) || defined(FLOOR_DEBUG_PARSER_SET_NAMES)
@@ -407,7 +425,7 @@ struct mtl_grammar {
 		// grammar:
 		// ref: http://paulbourke.net/dataformats/mtl/
 		global_scope = *statement;
-		statement = (newmtl | ns | ni | d | tr | tf | illum | ka | kd | ks | ke | map_ka | map_kd | map_ks | map_bump | map_d);
+		statement = (newmtl | ns | ni | d | tr | tf | illum | ka | kd | ks | ke | map_ka | map_kd | map_ks | map_ke | map_bump | map_d);
 		newmtl = NEWMTL & IDENTIFIER;
 		ns = NS & FP_CONSTANT;
 		ni = NI & FP_CONSTANT;
@@ -419,11 +437,13 @@ struct mtl_grammar {
 		kd = KD & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT;
 		ks = KS & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT;
 		ke = KE & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT;
-		map_ka = MAP_KA & IDENTIFIER;
-		map_kd = MAP_KD & IDENTIFIER;
-		map_ks = MAP_KS & IDENTIFIER;
-		map_bump = (MAP_BUMP | BUMP) & IDENTIFIER;
-		map_d = MAP_D & IDENTIFIER;
+		map_ka = MAP_KA & *map_options & IDENTIFIER;
+		map_kd = MAP_KD & *map_options & IDENTIFIER;
+		map_ks = MAP_KS & *map_options & IDENTIFIER;
+		map_ke = MAP_KE & *map_options & IDENTIFIER;
+		map_bump = (MAP_BUMP | MAP_BUMP2 | BUMP) & *map_options & IDENTIFIER;
+		map_d = MAP_D & *map_options & IDENTIFIER;
+		map_options = MAP_OPT_BM & FP_CONSTANT; // TODO: more
 		
 		//
 		newmtl.on_match([this](auto& matches) -> parser_context::match_list {
@@ -434,23 +454,26 @@ struct mtl_grammar {
 			return {};
 		});
 		map_ka.on_match([this](auto& matches) -> parser_context::match_list {
-			cur_mtl->ambient = matches[1].token->second.to_string();
+			cur_mtl->ambient = matches.back().token->second.to_string();
 			return {};
 		});
 		map_kd.on_match([this](auto& matches) -> parser_context::match_list {
-			cur_mtl->diffuse = matches[1].token->second.to_string();
+			cur_mtl->diffuse = matches.back().token->second.to_string();
 			return {};
 		});
 		map_ks.on_match([this](auto& matches) -> parser_context::match_list {
-			cur_mtl->specular = matches[1].token->second.to_string();
+			cur_mtl->specular = matches.back().token->second.to_string();
 			return {};
 		});
 		map_bump.on_match([this](auto& matches) -> parser_context::match_list {
-			cur_mtl->normal = matches[1].token->second.to_string();
+			cur_mtl->normal = matches.back().token->second.to_string();
 			return {};
 		});
 		map_d.on_match([this](auto& matches) -> parser_context::match_list {
-			cur_mtl->mask = matches[1].token->second.to_string();
+			cur_mtl->mask = matches.back().token->second.to_string();
+			return {};
+		});
+		map_options.on_match([this](auto& matches floor_unused) -> parser_context::match_list {
 			return {};
 		});
 	}
@@ -791,7 +814,7 @@ struct obj_grammar {
 	FLOOR_OBJ_GRAMMAR_OBJECTS(global_scope, statement,
 							  vertex, tex_coord, normal,
 							  face_3, face_4, index_triplet1, index_triplet2, index_triplet2_vn, index_triplet3,
-							  sub_object,
+							  sub_object, sub_group,
 							  smooth,
 							  mtllib, usemtl)
 	
@@ -830,11 +853,12 @@ struct obj_grammar {
 		// grammar:
 		// ref: http://www.martinreddy.net/gfx/3d/OBJ.spec
 		global_scope = *statement;
-		statement = (vertex | tex_coord | normal | face_4 | face_3 | sub_object | smooth | mtllib | usemtl);
+		statement = (vertex | tex_coord | normal | face_4 | face_3 | sub_object | sub_group | smooth | mtllib | usemtl);
 		vertex = VERTEX & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT & ~FP_CONSTANT;
 		tex_coord = TEX_COORD & FP_CONSTANT & ~(FP_CONSTANT & ~FP_CONSTANT);
 		normal = NORMAL & FP_CONSTANT & FP_CONSTANT & FP_CONSTANT;
-		sub_object = (SUB_OBJECT | SUB_GROUP) & IDENTIFIER;
+		sub_object = SUB_OBJECT & IDENTIFIER;
+		sub_group = SUB_GROUP & IDENTIFIER;
 		smooth = SMOOTH & (FP_CONSTANT | SMOOTH_OFF);
 		mtllib = MTLLIB & IDENTIFIER;
 		usemtl = USEMTL & IDENTIFIER;
@@ -1011,11 +1035,14 @@ struct obj_grammar {
 		index_triplet2.on_match(push_to_parent);
 		index_triplet2_vn.on_match(push_to_parent);
 		index_triplet3.on_match(push_to_parent);
-		sub_object.on_match([this](auto& matches) -> parser_context::match_list {
+		sub_group.on_match([this](auto& matches) -> parser_context::match_list {
 			auto obj = make_unique<obj_sub_object>(obj_sub_object { .name = matches[1].token->second.to_string() });
 			sub_objects.emplace_back(move(obj));
 			cur_obj = sub_objects.back().get();
 			return {};
+		});
+		sub_object.on_match([](auto& matches floor_unused) -> parser_context::match_list {
+			return {}; // ignore
 		});
 		mtllib.on_match([this](auto& matches) -> parser_context::match_list {
 #if !defined(FLOOR_IOS)
@@ -1361,7 +1388,8 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 									   shared_ptr<compute_device> dev,
 									   const float scale,
 									   const bool cleanup_cpu_data,
-									   const bool is_load_textures) {
+									   const bool is_load_textures,
+									   const bool create_gpu_buffers) {
 	const bool is_opengl = (ctx->get_compute_type() != COMPUTE_TYPE::METAL);
 	success = false;
 	
@@ -1627,46 +1655,49 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 	}
 	
 	// create model buffers
-	if(is_opengl) {
-		glGenBuffers(1, &gl_model->vertices_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, gl_model->vertices_vbo);
-		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->vertices.size() * sizeof(float3)), &gl_model->vertices[0], GL_STATIC_DRAW);
-		glGenBuffers(1, &gl_model->tex_coords_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, gl_model->tex_coords_vbo);
-		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tex_coords.size() * sizeof(float2)), &gl_model->tex_coords[0], GL_STATIC_DRAW);
-		glGenBuffers(1, &gl_model->normals_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, gl_model->normals_vbo);
-		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->normals.size() * sizeof(float3)), &gl_model->normals[0], GL_STATIC_DRAW);
-		glGenBuffers(1, &gl_model->binormals_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, gl_model->binormals_vbo);
-		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->binormals.size() * sizeof(float3)), &gl_model->binormals[0], GL_STATIC_DRAW);
-		glGenBuffers(1, &gl_model->tangents_vbo);
-		glBindBuffer(GL_ARRAY_BUFFER, gl_model->tangents_vbo);
-		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tangents.size() * sizeof(float3)), &gl_model->tangents[0], GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		
-		for(auto& obj : gl_model->objects) {
-			glGenBuffers(1, &obj->indices_gl_vbo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->indices.size() * sizeof(uint3)), &obj->indices[0], GL_STATIC_DRAW);
-			obj->index_count = (GLsizei)(obj->indices.size() * 3);
-		}
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		
-		glFinish();
+	for(auto& obj : (is_opengl ? gl_model->objects : metal_model->objects)) {
+		obj->index_count = (GLsizei)(obj->indices.size() * 3);
 	}
-	else {
-		const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
-								  COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		metal_model->vertices_buffer = ctx->create_buffer(dev, metal_model->vertices, buffer_type);
-		metal_model->tex_coords_buffer = ctx->create_buffer(dev, metal_model->tex_coords, buffer_type);
-		metal_model->normals_buffer = ctx->create_buffer(dev, metal_model->normals, buffer_type);
-		metal_model->binormals_buffer = ctx->create_buffer(dev, metal_model->binormals, buffer_type);
-		metal_model->tangents_buffer = ctx->create_buffer(dev, metal_model->tangents, buffer_type);
-		
-		for(auto& obj : metal_model->objects) {
-			obj->indices_metal_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
-			obj->index_count = (GLsizei)(obj->indices.size() * 3);
+	if(create_gpu_buffers) {
+		if(is_opengl) {
+			glGenBuffers(1, &gl_model->vertices_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, gl_model->vertices_vbo);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->vertices.size() * sizeof(float3)), &gl_model->vertices[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &gl_model->tex_coords_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, gl_model->tex_coords_vbo);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tex_coords.size() * sizeof(float2)), &gl_model->tex_coords[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &gl_model->normals_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, gl_model->normals_vbo);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->normals.size() * sizeof(float3)), &gl_model->normals[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &gl_model->binormals_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, gl_model->binormals_vbo);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->binormals.size() * sizeof(float3)), &gl_model->binormals[0], GL_STATIC_DRAW);
+			glGenBuffers(1, &gl_model->tangents_vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, gl_model->tangents_vbo);
+			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tangents.size() * sizeof(float3)), &gl_model->tangents[0], GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			
+			for(auto& obj : gl_model->objects) {
+				glGenBuffers(1, &obj->indices_gl_vbo);
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->indices.size() * sizeof(uint3)), &obj->indices[0], GL_STATIC_DRAW);
+			}
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			
+			glFinish();
+		}
+		else {
+			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
+									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
+			metal_model->vertices_buffer = ctx->create_buffer(dev, metal_model->vertices, buffer_type);
+			metal_model->tex_coords_buffer = ctx->create_buffer(dev, metal_model->tex_coords, buffer_type);
+			metal_model->normals_buffer = ctx->create_buffer(dev, metal_model->normals, buffer_type);
+			metal_model->binormals_buffer = ctx->create_buffer(dev, metal_model->binormals, buffer_type);
+			metal_model->tangents_buffer = ctx->create_buffer(dev, metal_model->tangents, buffer_type);
+			
+			for(auto& obj : metal_model->objects) {
+				obj->indices_metal_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
+			}
 		}
 	}
 	

@@ -113,6 +113,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	else if(type == EVENT_TYPE::KEY_DOWN) {
 		switch(static_pointer_cast<key_down_event>(obj)->key) {
 			case SDLK_LSHIFT:
+			case SDLK_RSHIFT:
 				cam->set_cam_speed(cam_speeds.y);
 				break;
 			case SDLK_LCTRL:
@@ -150,6 +151,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.done = true;
 				break;
 			case SDLK_LSHIFT:
+			case SDLK_RSHIFT:
 			case SDLK_LCTRL:
 			case SDLK_RCTRL:
 				cam->set_cam_speed(cam_speeds.x);

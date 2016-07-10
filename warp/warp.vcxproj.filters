@@ -18,7 +18,7 @@
     <ClCompile Include="src\auto_cam.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\camera.cpp">
+    <ClCompile Include="..\common\camera\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\gl_renderer.cpp">
@@ -35,7 +35,7 @@
     <ClInclude Include="src\auto_cam.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\camera.hpp">
+    <ClInclude Include="..\common\camera\camera.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\gl_renderer.hpp">

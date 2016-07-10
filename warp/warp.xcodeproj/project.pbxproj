@@ -96,7 +96,6 @@
 		5C5487851B608E280088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487831B608E110088272A /* config.json.local */; };
 		5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
 		5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
-		5C8646481C19BFB6000518C7 /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
 		5C8646491C19BFB6000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C86464A1C19BFB6000518C7 /* metal_shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 5C2F83701B654FF600B27BE3 /* metal_shaders.metal */; };
 		5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
@@ -183,8 +182,6 @@
 		5C8646A51C19BFB6000518C7 /* posy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEA1BCED83F000732F9 /* posy.png */; };
 		5C8646A61C19BFB6000518C7 /* posz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEB1BCED83F000732F9 /* posz.png */; };
 		5C8646A71C19BFB6000518C7 /* readme.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEC1BCED83F000732F9 /* readme.txt */; };
-		5C88A63B1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
-		5C88A63C1AEB82180061B84B /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C88A6391AEB82170061B84B /* camera.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
@@ -194,6 +191,11 @@
 		5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
 		5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
 		5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
+		5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
+		5CF9489E1D2AB40600FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
+		5CF9489F1D2AB40600FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
+		5CF948A01D2AB41600FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
+		5CF948A11D2AB41600FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -550,8 +552,6 @@
 		5C56D5141BB2F6690024467C /* vase_round_spec.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_spec.png; path = ../data/sponza/textures/vase_round_spec.png; sourceTree = "<group>"; };
 		5C56D5151BB2F6690024467C /* vase_round.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round.png; path = ../data/sponza/textures/vase_round.png; sourceTree = "<group>"; };
 		5C8646AB1C19BFB6000518C7 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		5C88A6391AEB82170061B84B /* camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = camera.cpp; sourceTree = "<group>"; };
-		5C88A63A1AEB82170061B84B /* camera.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = camera.hpp; sourceTree = "<group>"; };
 		5C8FD0941AD3366800215230 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
@@ -565,6 +565,8 @@
 		5CE8AEC31D1F356400369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj/obj_loader.cpp; sourceTree = "<group>"; };
 		5CE8AEC41D1F356400369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj/obj_loader.hpp; sourceTree = "<group>"; };
 		5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp_shaders.cpp; sourceTree = "<group>"; };
+		5CF948921D2AB15800FEA7AE /* camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = camera.cpp; path = ../../common/camera/camera.cpp; sourceTree = "<group>"; };
+		5CF948931D2AB15800FEA7AE /* camera.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = camera.hpp; path = ../../common/camera/camera.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -835,8 +837,8 @@
 				5C2F83701B654FF600B27BE3 /* metal_shaders.metal */,
 				5CE8AEC31D1F356400369136 /* obj_loader.cpp */,
 				5CE8AEC41D1F356400369136 /* obj_loader.hpp */,
-				5C88A6391AEB82170061B84B /* camera.cpp */,
-				5C88A63A1AEB82170061B84B /* camera.hpp */,
+				5CF948921D2AB15800FEA7AE /* camera.cpp */,
+				5CF948931D2AB15800FEA7AE /* camera.hpp */,
 				5C8FEF411AF22325001D47BF /* auto_cam.cpp */,
 				5C8FEF421AF22325001D47BF /* auto_cam.hpp */,
 			);
@@ -1024,8 +1026,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CF9489E1D2AB40600FEA7AE /* obj_loader.cpp in Sources */,
+				5CF9489F1D2AB40600FEA7AE /* camera.cpp in Sources */,
 				5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */,
-				5C88A63C1AEB82180061B84B /* camera.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5C2F83721B654FF600B27BE3 /* metal_shaders.metal in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
@@ -1038,8 +1041,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5CF948A01D2AB41600FEA7AE /* obj_loader.cpp in Sources */,
+				5CF948A11D2AB41600FEA7AE /* camera.cpp in Sources */,
 				5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */,
-				5C8646481C19BFB6000518C7 /* camera.cpp in Sources */,
 				5C8646491C19BFB6000518C7 /* main.cpp in Sources */,
 				5C86464A1C19BFB6000518C7 /* metal_shaders.metal in Sources */,
 				5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */,
@@ -1056,10 +1060,10 @@
 				5C2F83711B654FF600B27BE3 /* metal_shaders.metal in Sources */,
 				5C2F836E1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
 				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
+				5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
 				5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
-				5C88A63B1AEB82180061B84B /* camera.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

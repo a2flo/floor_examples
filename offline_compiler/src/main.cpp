@@ -50,6 +50,7 @@ struct option_context {
 	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	bool warnings { false };
+	bool workarounds { false };
 	bool double_support { true };
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
@@ -88,6 +89,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
+				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
@@ -183,6 +185,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--warnings", [](option_context& ctx, char**&) {
 		ctx.warnings = true;
+	}},
+	{ "--workarounds", [](option_context& ctx, char**&) {
+		ctx.workarounds = true;
 	}},
 	{ "--no-double", [](option_context& ctx, char**&) {
 		ctx.double_support = false;
@@ -347,7 +352,7 @@ int main(int, char* argv[]) {
 				if(option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
 					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
 					device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
-					device->param_workaround = true;
+					device->param_workaround = option_ctx.workarounds;
 				}
 				else {
 					device->image_read_write_support = (option_ctx.image_rw_support == 1 ? true : false);
@@ -393,6 +398,9 @@ int main(int, char* argv[]) {
 				else if(option_ctx.sub_target.find("osx") != string::npos) {
 					dev->family = (family == 0 ? 10000 : family);
 					dev->family_version = 1;
+					if(option_ctx.workarounds) {
+						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
+					}
 				}
 				else {
 					log_error("invalid AIR sub-target: %s", option_ctx.sub_target);

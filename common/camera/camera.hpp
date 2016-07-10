@@ -16,8 +16,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __WARP_A2E_CAMERA_HPP__
-#define __WARP_A2E_CAMERA_HPP__
+#ifndef __FLOOR_CAMERA_HPP__
+#define __FLOOR_CAMERA_HPP__
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/core.hpp>
@@ -25,7 +25,7 @@
 #include <floor/math/quaternion.hpp>
 #include <chrono>
 
-//! a2e camera functions
+//! floor camera functions
 class camera {
 public:
 	camera();

@@ -92,7 +92,8 @@ public:
 									  shared_ptr<compute_device> dev,
 									  const float scale = 0.1f,
 									  const bool cleanup_cpu_data = true,
-									  const bool is_load_textures = true);
+									  const bool is_load_textures = true,
+									  const bool create_gpu_buffers = true);
 	
 	struct pvrtc_texture {
 		uint2 dim;
