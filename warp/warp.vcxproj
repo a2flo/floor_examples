@@ -58,14 +58,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\common\obj;$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <IncludePath>..\common\obj;..\common\camera;$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
     <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;$(INTELOCLSDKROOT)lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\common\obj;$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
+    <IncludePath>..\common\obj;..\common\camera;$(ProgramW6432)\floor\include;$(ProgramW6432)\libwarp\include;C:\deps\include;$(AMDAPPSDKROOT)include;$(INTELOCLSDKROOT)include;$(VC_IncludePath);$(UniversalCRT_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath)</IncludePath>
     <LibraryPath>$(ProgramW6432)\floor\lib;$(ProgramW6432)\libwarp\lib;C:\deps\lib\x86;$(AMDAPPSDKROOT)lib\x86;$(INTELOCLSDKROOT)lib\x86;$(UniversalCRT_LibraryPath_x86);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\</OutDir>
   </PropertyGroup>
