@@ -1,0 +1,15 @@
+# Blender MTL File: 'golem_clean.blend'
+# Material Count: 1
+
+newmtl golem_mat
+Ns 194.117647
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.050000 0.050000 0.050000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Bump -bm 0.700000 .
+map_Kd  .
+map_Ke  textures/golem_emit.png

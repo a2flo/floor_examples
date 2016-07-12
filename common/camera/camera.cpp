@@ -126,9 +126,6 @@ void camera::run() {
 		
 		if(cursor_delta.x != 0.0 || cursor_delta.y != 0.0) {
 			if(!ignore_next_rotation) {
-				//single_frame_rotation.x -= ypos * (double)rotation_speed;
-				//single_frame_rotation.y -= xpos * (double)rotation_speed;
-				
 				// multiply by desired rotation speed
 				delta *= (double)rotation_speed;
 				
@@ -163,20 +160,7 @@ const quaternionf& camera::get_single_frame_rotation() const {
 float3 camera::get_single_frame_direction() const {
 	const auto forward = get_direction();
 	const float3 right { forward.crossed(float3 { 0.0f, 1.0f, 0.0f } /* up */).normalized() };
-	//const float3 up { -right.crossed(forward).normalized() };
-	
-	/*log_debug("cam setup: %v, %v, %v -> %v",
-			  forward, right, up,
-			  right * single_frame_direction.x + up * single_frame_direction.y);*/
-
-#if 0
-	const auto orig_pos = -forward;
-	const auto rot_pos = orig_pos * single_frame_quat.to_matrix4();
-	return rot_pos - orig_pos;
-#else
 	return right * single_frame_direction.y + forward * single_frame_direction.x;
-	//return forward * single_frame_quat.to_matrix4();
-#endif
 }
 
 /*! sets the position of the camera

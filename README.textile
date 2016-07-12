@@ -16,6 +16,12 @@
 * video:
 "!http://img.youtube.com/vi/DoLe1c-eokI/0.jpg!":https://www.youtube.com/watch?v=DoLe1c-eokI
 
+*hlbvh:*
+* triangle/triangle collision detection of animated meshes using HLBVH (constructed per-step/frame)
+* build with "./build.sh" inside the folder
+* ref: https://research.nvidia.com/sites/default/files/publications/karras2012hpg_paper.pdf
+!https://raw.githubusercontent.com/a2flo/floor_examples/master/hlbvh/hlbvh.gif(sinbad tries slicing golems back, but faceplants into golems back instead, 'cause golem don't giv' no f's)!
+
 *path_tracer:*
 * a simple path tracer to demonstrate SPIR/PTX/Metal/CPU compilation and execution, as well as some mildly complex C++14 code
 * build with "./build.sh" inside the folder
