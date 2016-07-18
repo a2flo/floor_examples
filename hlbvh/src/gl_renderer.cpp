@@ -41,9 +41,6 @@ bool gl_renderer::init() {
 }
 
 void gl_renderer::render(const vector<unique_ptr<animation>>& models,
-#if COLLIDING_TRIANGLES_VIS
-						 floor_unused
-#endif
 						 const vector<uint32_t>& collisions,
 						 const bool cam_mode,
 						 const camera& cam) {
@@ -70,9 +67,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 	static const auto pos_b_location = (GLuint)shd.program.attributes["in_position_b"].location;
 	static const auto norm_a_location = (GLuint)shd.program.attributes["in_normal_a"].location;
 	static const auto norm_b_location = (GLuint)shd.program.attributes["in_normal_b"].location;
-#if COLLIDING_TRIANGLES_VIS
-	static const auto is_collision_location = (GLuint)shd.program.attributes["is_collision"].location;
-#endif
+	static const auto is_collision_location = (hlbvh_state.triangle_vis ? (GLuint)shd.program.attributes["is_collision"].location : 0);
 	
 	const matrix4f mproj {
 		matrix4f().perspective(72.0f, float(floor::get_width()) / float(floor::get_height()),
@@ -110,20 +105,21 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		const auto cur_frame = (const gl_obj_model*)mdl->frames[mdl->cur_frame].get();
 		const auto next_frame = (const gl_obj_model*)mdl->frames[mdl->next_frame].get();
 		
-#if !COLLIDING_TRIANGLES_VIS
-		glUniform4fv(default_color_location, 1,
-					 collisions[i] == 0 ? uniforms.default_color.data() : collision_color.data());
-#else
-		glUniform4fv(default_color_location, 1, uniforms.default_color.data());
-#endif
+		if(!hlbvh_state.triangle_vis) {
+			glUniform4fv(default_color_location, 1,
+						 collisions[i] == 0 ? uniforms.default_color.data() : collision_color.data());
+		}
+		else {
+			glUniform4fv(default_color_location, 1, uniforms.default_color.data());
+		}
 		glUniform1f(delta_location, mdl->step);
 		
-#if COLLIDING_TRIANGLES_VIS
-		mdl->colliding_vertices->release_opengl_object(hlbvh_state.dev_queue);
-		glBindBuffer(GL_ARRAY_BUFFER, mdl->colliding_vertices->get_opengl_object());
-		glEnableVertexAttribArray(is_collision_location);
-		glVertexAttribPointer(is_collision_location, 1, GL_UNSIGNED_INT, GL_FALSE, 0, nullptr);
-#endif
+		if(hlbvh_state.triangle_vis) {
+			mdl->colliding_vertices->release_opengl_object(hlbvh_state.dev_queue);
+			glBindBuffer(GL_ARRAY_BUFFER, mdl->colliding_vertices->get_opengl_object());
+			glEnableVertexAttribArray(is_collision_location);
+			glVertexAttribPointer(is_collision_location, 1, GL_UNSIGNED_INT, GL_FALSE, 0, nullptr);
+		}
 		
 		glBindBuffer(GL_ARRAY_BUFFER, cur_frame->vertices_vbo);
 		glEnableVertexAttribArray(pos_a_location);
@@ -146,9 +142,9 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 			glDrawElements(GL_TRIANGLES, obj->index_count, GL_UNSIGNED_INT, nullptr);
 		}
 		
-#if COLLIDING_TRIANGLES_VIS
-		mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.dev_queue);
-#endif
+		if(hlbvh_state.triangle_vis) {
+			mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.dev_queue);
+		}
 	}
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -247,7 +243,7 @@ bool gl_renderer::compile_shaders() {
 											  hlbvh_vs_text.c_str(),
 											  hlbvh_fs_text.c_str(),
 											  150,
-											  { { "COLLIDING_TRIANGLES_VIS", COLLIDING_TRIANGLES_VIS } });
+											  { { "COLLIDING_TRIANGLES_VIS", hlbvh_state.triangle_vis ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}

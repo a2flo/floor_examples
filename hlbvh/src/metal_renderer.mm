@@ -137,9 +137,6 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 }
 
 void metal_renderer::render(const vector<unique_ptr<animation>>& models,
-#if COLLIDING_TRIANGLES_VIS
-							floor_unused
-#endif
 							const vector<uint32_t>& collisions,
 							const bool cam_mode,
 							const camera& cam) {
@@ -201,11 +198,12 @@ void metal_renderer::render(const vector<unique_ptr<animation>>& models,
 			
 			static constexpr const float4 default_color { 0.9f, 0.9f, 0.9f, 1.0f };
 			static constexpr const float4 collision_color { 1.0f, 0.0f, 0.0f, 1.0f };
-#if !COLLIDING_TRIANGLES_VIS
-			uniforms.default_color = (collisions[i] == 0 ? default_color : collision_color);
-#else
-			uniforms.default_color = default_color;
-#endif
+			if(!hlbvh_state.triangle_vis) {
+				uniforms.default_color = (collisions[i] == 0 ? default_color : collision_color);
+			}
+			else {
+				uniforms.default_color = default_color;
+			}
 			
 			[encoder pushDebugGroup:@"model"];
 			[encoder setVertexBuffer:((metal_buffer*)cur_frame->vertices_buffer.get())->get_metal_buffer() offset:0 atIndex:0];
@@ -214,9 +212,9 @@ void metal_renderer::render(const vector<unique_ptr<animation>>& models,
 			[encoder setVertexBuffer:((metal_buffer*)next_frame->normals_buffer.get())->get_metal_buffer() offset:0 atIndex:3];
 			[encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:4];
 			[encoder setVertexBytes:&mdl->step length:sizeof(float) atIndex:5];
-#if COLLIDING_TRIANGLES_VIS
-			[encoder setVertexBuffer:((metal_buffer*)mdl->colliding_vertices.get())->get_metal_buffer() offset:0 atIndex:6];
-#endif
+			if(hlbvh_state.triangle_vis) {
+				[encoder setVertexBuffer:((metal_buffer*)mdl->colliding_vertices.get())->get_metal_buffer() offset:0 atIndex:6];
+			}
 			
 			for(const auto& obj : cur_frame->objects) {
 				[encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle

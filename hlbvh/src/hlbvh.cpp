@@ -447,29 +447,27 @@ static const_array<float3, 3> read_triangle(buffer<const float3> triangles, cons
 	}};
 }
 
-kernel void collide_bvhs(// the leaves of bvh A that we want to collide with bvh B
-						 param<uint32_t> leaf_count_a,
-						 buffer<const float3> bvh_aabbs_leaves_a,
-						 buffer<const float3> triangles_a,
-						 buffer<const uint2> morton_codes_a,
-						 // the complete bvh B
-						 param<uint32_t> internal_node_count_b floor_unused,
-						 buffer<const uint3> bvh_internal_b,
-						 buffer<const float3> bvh_aabbs_b,
-						 buffer<const float3> bvh_aabbs_leaves_b,
-						 buffer<const float3> triangles_b,
-						 buffer<const uint2> morton_codes_b,
-						 // mesh indices of A and B
-						 param<uint32_t> mesh_idx_a,
-						 param<uint32_t> mesh_idx_b,
-						 // flags if resp. mesh A/B collides with anything
-						 // also (ab)used as an abort condition here
-						 buffer<uint32_t> collision_flags
-#if COLLIDING_TRIANGLES_VIS
-						 , buffer<uint32_t> colliding_triangles_a
-						 , buffer<uint32_t> colliding_triangles_b
-#endif
-) {
+template <bool triangle_vis>
+floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want to collide with bvh B
+											 const uint32_t leaf_count_a,
+											 buffer<const float3> bvh_aabbs_leaves_a,
+											 buffer<const float3> triangles_a,
+											 buffer<const uint2> morton_codes_a,
+											 // the complete bvh B
+											 const uint32_t internal_node_count_b floor_unused,
+											 buffer<const uint3> bvh_internal_b,
+											 buffer<const float3> bvh_aabbs_b,
+											 buffer<const float3> bvh_aabbs_leaves_b,
+											 buffer<const float3> triangles_b,
+											 buffer<const uint2> morton_codes_b,
+											 // mesh indices of A and B
+											 const uint32_t mesh_idx_a,
+											 const uint32_t mesh_idx_b,
+											 // flags if resp. mesh A/B collides with anything
+											 // also (ab)used as an abort condition here
+											 buffer<uint32_t> collision_flags,
+											 buffer<uint32_t> colliding_triangles_a,
+											 buffer<uint32_t> colliding_triangles_b) {
 	const auto idx = global_id.x;
 	if(idx >= leaf_count_a) {
 		return;
@@ -488,12 +486,16 @@ kernel void collide_bvhs(// the leaves of bvh A that we want to collide with bvh
 	uint32_t node = 0;
 	uint32_t iters = 0;
 	do {
-#if !COLLIDING_TRIANGLES_VIS
-		// check abort condition (no need to do further checking when a collision has been found already)
-		// NOTE: need to check both, because either could have been set previously
-		// NOTE: if both have been set to true previously, this will also immediately return (as it should)
-		if(collision_flags[mesh_idx_a] > 0 && collision_flags[mesh_idx_b] > 0) break;
+		if
+#if defined(FLOOR_CXX17)
+			constexpr
 #endif
+			(!triangle_vis) {
+			// check abort condition (no need to do further checking when a collision has been found already)
+			// NOTE: need to check both, because either could have been set previously
+			// NOTE: if both have been set to true previously, this will also immediately return (as it should)
+			if(collision_flags[mesh_idx_a] > 0 && collision_flags[mesh_idx_b] > 0) break;
+		}
 		
 		bool traverse = false;
 #pragma unroll
@@ -522,10 +524,14 @@ kernel void collide_bvhs(// the leaves of bvh A that we want to collide with bvh
 					if(check_triangle_intersection(v[0], v[1], v[2], ov[0], ov[1], ov[2])) {
 						atomic_inc(&collision_flags[mesh_idx_a]);
 						atomic_inc(&collision_flags[mesh_idx_b]);
-#if COLLIDING_TRIANGLES_VIS
-						atomic_inc(&colliding_triangles_a[triangle_idx]);
-						atomic_inc(&colliding_triangles_b[overlap_triangle_idx]);
+						if
+#if defined(FLOOR_CXX17)
+							constexpr
 #endif
+							(triangle_vis) {
+							atomic_inc(&colliding_triangles_a[triangle_idx]);
+							atomic_inc(&colliding_triangles_b[overlap_triangle_idx]);
+						}
 					}
 				}
 				else {
@@ -546,6 +552,45 @@ kernel void collide_bvhs(// the leaves of bvh A that we want to collide with bvh
 		}
 		++iters;
 	} while(node != 0);
+}
+
+
+kernel void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
+									buffer<const float3> bvh_aabbs_leaves_a,
+									buffer<const float3> triangles_a,
+									buffer<const uint2> morton_codes_a,
+									param<uint32_t> internal_node_count_b,
+									buffer<const uint3> bvh_internal_b,
+									buffer<const float3> bvh_aabbs_b,
+									buffer<const float3> bvh_aabbs_leaves_b,
+									buffer<const float3> triangles_b,
+									buffer<const uint2> morton_codes_b,
+									param<uint32_t> mesh_idx_a,
+									param<uint32_t> mesh_idx_b,
+									buffer<uint32_t> collision_flags) {
+	collide_bvhs<false>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
+						internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
+						mesh_idx_a, mesh_idx_b, collision_flags, nullptr, nullptr);
+}
+
+kernel void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
+								 buffer<const float3> bvh_aabbs_leaves_a,
+								 buffer<const float3> triangles_a,
+								 buffer<const uint2> morton_codes_a,
+								 param<uint32_t> internal_node_count_b,
+								 buffer<const uint3> bvh_internal_b,
+								 buffer<const float3> bvh_aabbs_b,
+								 buffer<const float3> bvh_aabbs_leaves_b,
+								 buffer<const float3> triangles_b,
+								 buffer<const uint2> morton_codes_b,
+								 param<uint32_t> mesh_idx_a,
+								 param<uint32_t> mesh_idx_b,
+								 buffer<uint32_t> collision_flags,
+								 buffer<uint32_t> colliding_triangles_a,
+								 buffer<uint32_t> colliding_triangles_b) {
+	collide_bvhs<true>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
+					   internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
+					   mesh_idx_a, mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
 }
 
 kernel void collide_root_aabbs(buffer<const float3> aabbs,
@@ -592,16 +637,13 @@ kernel void map_collided_triangles(buffer<const uint32_t> colliding_triangles,
 
 kernel void radix_sort_count(buffer<const uint2> data,
 							 param<uint32_t> size,
-							 param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_SIZE
+							 param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
 							 param<uint32_t> mask_op_bit,
 							 buffer<uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	
-	// 16-bit is enough (8-bit would be too, but most h/w doesn't have native 8-bit integer math)
-	local_buffer<uint16_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
 	uint16_t counter = 0;
-	
 	for(uint32_t pair_id = lid + gid * size_per_group;
 		pair_id < ((gid + 1u) * size_per_group) && pair_id < size;
 		pair_id += COMPACTION_GROUP_SIZE) {
@@ -611,7 +653,8 @@ kernel void radix_sort_count(buffer<const uint2> data,
 	}
 	
 	// reduce + write final result (group sum)
-	const auto reduced_value = compute_algorithm::reduce<COMPACTION_GROUP_SIZE>(counter, lmem, plus<uint16_t> {});
+	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	const auto reduced_value = compute_algorithm::reduce<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem, plus<> {});
 	if(lid == 0) {
 		valid_counts[gid] = reduced_value;
 	}
@@ -634,7 +677,7 @@ kernel void radix_sort_prefix_sum(buffer<uint32_t> in_out,
 kernel void radix_sort_stream_split(buffer<const uint2> data,
 									buffer<uint2> out,
 									param<uint32_t> size,
-									param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_SIZE
+									param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
 									param<uint32_t> mask_op_bit,
 									buffer<const uint32_t> valid_counts) {
 	const auto lid = local_id.x;
@@ -642,19 +685,27 @@ kernel void radix_sort_stream_split(buffer<const uint2> data,
 	auto valid_elem_offset = (gid == 0 ? 0 : valid_counts[gid - 1]);
 	auto invalid_elem_offset = valid_counts[COMPACTION_GROUP_COUNT - 1] + gid * size_per_group - valid_elem_offset;
 	
+	// since we're using barriers in here, all work-items must always execute this
+	// -> only abort once the base id is out of range
 	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
-	
-	for(uint32_t pair_id = lid + gid * size_per_group;
-		pair_id < ((gid + 1u) * size_per_group) && pair_id < size;
-		pair_id += COMPACTION_GROUP_SIZE) {
-		const auto current = data[pair_id];
-		const auto valid = ((data[pair_id].x & mask_op_bit) == 0u ? 1u : 0u);
+	for(uint32_t base_id = gid * size_per_group;
+		base_id < ((gid + 1u) * size_per_group) && base_id < size;
+		base_id += COMPACTION_GROUP_SIZE) {
+		// pair id/offset for this work-item + check if it is actually active
+		const auto pair_id = base_id + lid;
+		const auto is_active = (pair_id < ((gid + 1u) * size_per_group) && pair_id < size);
+		
+		const auto current = data[is_active ? pair_id : base_id /* base is always valid */];
+		const auto valid = (is_active && (current.x & mask_op_bit) == 0u ? 1u : 0u);
 		
 		local_barrier();
 		const auto result = compute_algorithm::inclusive_scan<COMPACTION_GROUP_SIZE>(valid, plus<> {}, lmem);
 		
-		if(valid) out[valid_elem_offset + result - 1] = current;
-		else out[invalid_elem_offset + lid + 1 - result - 1] = current;
+		if(is_active) {
+			out[valid ?
+				valid_elem_offset + result - 1 :
+				invalid_elem_offset + lid + 1 - result - 1] = current;
+		}
 		
 		// NOTE: scan already does a local_barrier() at the end, so another one is unnecessary here
 		if(lid == COMPACTION_GROUP_SIZE - 1) {

@@ -48,6 +48,7 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		cout << "\t--no-metal: disables metal rendering" << endl;
 #endif
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
+		cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << endl;
 		hlbvh_state.done = true;
 		
 		cout << endl;
@@ -76,9 +77,14 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		hlbvh_state.no_metal = true;
 		cout << "metal disabled" << endl;
 	}},
+	{ "--no-triangle-vis", [](hlbvh_option_context&, char**&) {
+		hlbvh_state.triangle_vis = false;
+		cout << "triangle collision visualization disabled" << endl;
+	}},
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_opengl = true; // also disable opengl
 		hlbvh_state.no_metal = true; // also disable metal
+		hlbvh_state.triangle_vis = false; // triangle visualization is unnecessary here
 		hlbvh_state.benchmark = true;
 		cout << "benchmark mode enabled" << endl;
 	}},
@@ -291,7 +297,8 @@ int main(int, char* argv[]) {
 		{ "build_bvh", {} },
 		{ "build_bvh_aabbs_leaves", {} },
 		{ "build_bvh_aabbs", {} },
-		{ "collide_bvhs", {} },
+		{ "collide_bvhs_no_tri_vis", {} },
+		{ "collide_bvhs_tri_vis", {} },
 		{ "map_collided_triangles", {} },
 		{ "radix_sort_count", {} },
 		{ "radix_sort_prefix_sum", {} },
@@ -320,7 +327,7 @@ int main(int, char* argv[]) {
 	shared_ptr<compute_program> shader_prog;
 	if(!hlbvh_state.no_metal && hlbvh_state.no_opengl) {
 		shader_prog = hlbvh_state.ctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
-														"-DCOLLIDING_TRIANGLES_VIS=" + to_string(COLLIDING_TRIANGLES_VIS));
+														"-DCOLLIDING_TRIANGLES_VIS="s + (hlbvh_state.triangle_vis ? "1" : "0"));
 		if(shader_prog == nullptr) {
 			log_error("shader program compilation failed");
 			return -1;

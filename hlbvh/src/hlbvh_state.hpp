@@ -26,12 +26,6 @@
 #define HW_MAX_GROUP_SIZE 1024u
 #define ROOT_AABB_GROUP_SIZE 256u
 
-// if 1: draw collided triangles red (note that this is slower than
-//       "just doing collision detection" due the necessity to copy/transform
-//       data so that it can be used by opengl/metal), also still some inaccuracies
-// if 0: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
-#define COLLIDING_TRIANGLES_VIS 1
-
 #include <floor/math/quaternion.hpp>
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
 #include <floor/compute/compute_context.hpp>
@@ -54,6 +48,13 @@ struct hlbvh_state_struct {
 	bool no_opengl { false };
 	bool no_metal { false };
 	bool benchmark { false };
+	
+	
+	// if true:  draw collided triangles red (note that this is slower than
+	//           "just doing collision detection" due the necessity to copy/transform
+	//           data so that it can be used by opengl/metal), also still some inaccuracies
+	// if false: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
+	bool triangle_vis { true };
 	
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
 	// main compute context

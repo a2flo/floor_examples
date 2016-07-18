@@ -34,9 +34,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	frames_centroids.resize(frame_count);
 	frames_triangles_buffer.resize(frame_count);
 	frames_centroids_buffer.resize(frame_count);
-#if COLLIDING_TRIANGLES_VIS
-	frames_indices.resize(frame_count);
-#endif
+	if(hlbvh_state.triangle_vis) {
+		frames_indices.resize(frame_count);
+	}
 	atomic<uint32_t> done { frame_count };
 	atomic<uint32_t> load_valid { 1u };
 	atomic<uint32_t> max_vertex_count { 0 };
@@ -78,9 +78,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				// TODO: reorder triangles based on morton code?
 				auto mdl_triangles = make_shared<vector<float3>>();
 				auto mdl_centroids = make_shared<vector<float3>>();
-#if COLLIDING_TRIANGLES_VIS
 				auto mdl_indices = make_shared<vector<uint3>>();
-#endif
 				
 				uint32_t triangle_count = 0;
 				for(const auto& sub_obj : model->objects) {
@@ -88,9 +86,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				}
 				mdl_triangles->reserve(triangle_count * 3);
 				mdl_centroids->reserve(triangle_count);
-#if COLLIDING_TRIANGLES_VIS
-				mdl_indices->reserve(triangle_count);
-#endif
+				if(hlbvh_state.triangle_vis) {
+					mdl_indices->reserve(triangle_count);
+				}
 				
 				size_t idx_count = 0;
 				for(const auto& sub_obj : model->objects) {
@@ -104,9 +102,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 						mdl_triangles->emplace_back(tri[1]);
 						mdl_triangles->emplace_back(tri[2]);
 						mdl_centroids->emplace_back((tri[0] + tri[1] + tri[2]) * (1.0f / 3.0f));
-#if COLLIDING_TRIANGLES_VIS
-						mdl_indices->emplace_back(idx);
-#endif
+						if(hlbvh_state.triangle_vis) {
+							mdl_indices->emplace_back(idx);
+						}
 					}
 					idx_count += sub_obj->indices.size();
 				}
@@ -116,8 +114,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				// upload key-frame data for this animation
 				frames_triangles_buffer[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_triangles);
 				frames_centroids_buffer[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_centroids);
-#if COLLIDING_TRIANGLES_VIS
-				frames_indices[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_indices);
+				if(hlbvh_state.triangle_vis) {
+					frames_indices[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_indices);
+				}
 				
 				//
 				const auto vertex_count = (uint32_t)model->vertices.size();
@@ -126,7 +125,6 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 					if(expected >= vertex_count) break;
 					if(max_vertex_count.compare_exchange_strong(expected, vertex_count)) break;
 				}
-#endif
 			}
 			--done;
 #if THREADED_OBJ_LOAD
@@ -158,7 +156,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	// now that we have the max triangle count, allocate the morton codes + ping buffer with this max size.
 	// note that radix sort requires a multiple of 8192 (32 * 256) elements to function.
 	static const size_t rs_alignment = 32u * COMPACTION_GROUP_SIZE * sizeof(uint2);
-	auto morton_codes_size = tri_count * sizeof(uint32_t) * 2;
+	auto morton_codes_size = tri_count * sizeof(uint2);
 	if(morton_codes_size % rs_alignment != 0) {
 		morton_codes_size = ((morton_codes_size / rs_alignment) + 1) * rs_alignment;
 	}
@@ -175,8 +173,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	bvh_aabbs_counters = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, (tri_count - 1u) * sizeof(uint32_t));
 	
 	// for visualization purposes
-#if COLLIDING_TRIANGLES_VIS
-	if(!hlbvh_state.no_opengl || !hlbvh_state.no_metal) {
+	if(hlbvh_state.triangle_vis) {
 		log_debug("max vertex count: %u", max_vertex_count.load());
 		colliding_vertices = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, max_vertex_count * sizeof(uint32_t),
 															COMPUTE_MEMORY_FLAG::READ_WRITE |
@@ -186,7 +183,6 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 		colliding_triangles = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
 		log_debug("check tri col buffer: %u, %u", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
 	}
-#endif
 }
 
 void animation::do_step() {
