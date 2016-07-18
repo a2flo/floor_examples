@@ -23,7 +23,6 @@
 #define COMPACTION_GROUP_COUNT 256u
 #define COMPACTION_GROUP_SIZE 256u
 #define PREFIX_SUM_GROUP_SIZE 256u
-#define HW_MAX_GROUP_SIZE 1024u
 #define ROOT_AABB_GROUP_SIZE 256u
 
 #include <floor/math/quaternion.hpp>
@@ -65,6 +64,7 @@ struct hlbvh_state_struct {
 	shared_ptr<compute_queue> dev_queue;
 	// collision/hlbvh kernels
 	unordered_map<string, shared_ptr<compute_kernel>> kernels;
+	unordered_map<string, uint32_t> kernel_max_local_size;
 #endif
 	
 };
