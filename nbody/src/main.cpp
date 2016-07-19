@@ -783,7 +783,7 @@ int main(int, char* argv[]) {
 							   // work per work-group:
 							   uint1 {
 								   nbody_state.render_size == 0 ?
-								   fastest_device->max_work_group_size : nbody_state.render_size
+								   nbody_raster->get_kernel_entry(fastest_device)->max_local_work_size : nbody_state.render_size
 							   },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],

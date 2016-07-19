@@ -97,6 +97,8 @@
 			"verify_spir": false,
 			// run the spirv-validator after compiling a spir-v binary
 			"validate_spirv": false,
+			// disables spir-v usage and uses spir instead
+			"disable_spirv": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched,
 			//       can also use "CPU", "GPU" or "ACCELERATOR" to only match these types of devices
