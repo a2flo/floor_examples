@@ -69,6 +69,7 @@ struct option_context {
 	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
 	string config_path { "../../data/" };
 	bool done { false };
+	bool native_cl { false };
 };
 typedef option_handler<option_context> occ_opt_handler;
 
@@ -145,6 +146,11 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		else if(target == "spirv") {
 			ctx.target = llvm_compute::TARGET::SPIRV_VULKAN;
+		}
+		else if(target == "native-cl") {
+			// very hacky and undocumented way of compiling std opencl c on the native opencl platform
+			ctx.target = llvm_compute::TARGET::SPIR;
+			ctx.native_cl = true;
 		}
 		else {
 			cerr << "invalid target: " << target << endl;
@@ -311,7 +317,7 @@ int main(int, char* argv[]) {
 	}
 	
 	llvm_compute::program_data program {};
-	if(!option_ctx.test_bin) {
+	if(!option_ctx.test_bin && !option_ctx.native_cl) {
 		// post-checking
 		if(option_ctx.filename.empty()) {
 			log_error("no source file set!");
@@ -652,7 +658,7 @@ int main(int, char* argv[]) {
 	}
 
 	// test the compiled binary (if this was specified)
-	if(option_ctx.test || option_ctx.test_bin) {
+	if(option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
 			case llvm_compute::TARGET::APPLECL:
@@ -669,60 +675,79 @@ int main(int, char* argv[]) {
 				log_debug("using device: %s", dev->name);
 				auto cl_dev = ((opencl_device*)dev.get())->device_id;
 				
-				// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
-				size_t binary_length;
-				const unsigned char* binary_ptr;
-				string binary_str = "";
-				cl_int status = CL_SUCCESS;
-				if(!option_ctx.test_bin) {
-					binary_length = program.data_or_filename.size();
-					binary_ptr = (const unsigned char*)program.data_or_filename.data();
+				cl_program opencl_program { nullptr };
+				if(!option_ctx.native_cl) {
+					// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
+					size_t binary_length;
+					const unsigned char* binary_ptr;
+					string binary_str = "";
+					cl_int status = CL_SUCCESS;
+					if(!option_ctx.test_bin) {
+						binary_length = program.data_or_filename.size();
+						binary_ptr = (const unsigned char*)program.data_or_filename.data();
+					}
+					else {
+						if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
+							log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+							break;
+						}
+						binary_length = binary_str.size();
+						binary_ptr = (const unsigned char*)binary_str.data();
+					}
+					logger::flush();
+					
+					// create the program object ...
+					cl_int create_err = CL_SUCCESS;
+					if(option_ctx.target != llvm_compute::TARGET::SPIRV_OPENCL) {
+						opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
+																   &binary_length, &binary_ptr, &status, &create_err);
+						if(create_err != CL_SUCCESS) {
+							log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
+							log_error("devices binary status: %s", status);
+							return {};
+						}
+						else log_debug("successfully created opencl program!");
+					}
+					else {
+#if !defined(CL_VERSION_2_1)
+						log_error("need to compile occ with OpenCL 2.1 support to build SPIR-V binaries");
+						return {};
+#else
+						opencl_program = clCreateProgramWithIL(cl_ctx, (const void*)binary_ptr, binary_length, &create_err);
+						if(create_err != CL_SUCCESS) {
+							log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
+							return {};
+						}
+						else log_debug("successfully created opencl program (from IL/SPIR-V)!");
+#endif
+					}
+					
+					// ... and build it
+					const string build_options {
+						(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
+					};
+					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
+										  build_err, "failed to build opencl program", {});
+					log_debug("check"); logger::flush();
 				}
 				else {
-					if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
-						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
-						break;
-					}
-					binary_length = binary_str.size();
-					binary_ptr = (const unsigned char*)binary_str.data();
-				}
-				logger::flush();
-				
-				// create the program object ...
-				cl_int create_err = CL_SUCCESS;
-				cl_program opencl_program { nullptr };
-				if(option_ctx.target != llvm_compute::TARGET::SPIRV_OPENCL) {
-					opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
-															   &binary_length, &binary_ptr, &status, &create_err);
+					// build std opencl c source code (for testing/dev purposes)
+					const auto src = file_io::file_to_string(option_ctx.filename);
+					const char* src_ptr = src.c_str();
+					const auto src_size = src.size();
+					cl_int create_err = CL_SUCCESS;
+					opencl_program = clCreateProgramWithSource(cl_ctx, 1, &src_ptr, &src_size, &create_err);
 					if(create_err != CL_SUCCESS) {
 						log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
-						log_error("devices binary status: %s", status);
 						return {};
 					}
 					else log_debug("successfully created opencl program!");
+					
+					const string build_options = option_ctx.additional_options;
+					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
+										  build_err, "failed to build opencl program", {});
+					log_debug("check"); logger::flush();
 				}
-				else {
-#if !defined(CL_VERSION_2_1)
-					log_error("need to compile occ with OpenCL 2.1 support to build SPIR-V binaries");
-					return {};
-#else
-					opencl_program = clCreateProgramWithIL(cl_ctx, (const void*)binary_ptr, binary_length, &create_err);
-					if(create_err != CL_SUCCESS) {
-						log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
-						return {};
-					}
-					else log_debug("successfully created opencl program (from IL/SPIR-V)!");
-#endif
-				}
-				
-				// ... and build it
-				const string build_options {
-					(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
-				};
-				CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
-									  build_err, "failed to build opencl program", {});
-				log_debug("check"); logger::flush();
-				
 				
 				// print out build log
 				log_debug("build log: %s", cl_get_info<CL_PROGRAM_BUILD_LOG>(opencl_program, cl_dev));
@@ -735,7 +760,7 @@ int main(int, char* argv[]) {
 				// retrieve the compiled binaries again
 				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(opencl_program);
 				for(size_t i = 0; i < binaries.size(); ++i) {
-					file_io::string_to_file("binary_" + to_string(i) + ".bin", binaries[i]);
+					file_io::string_to_file("binary_" + core::to_file_name(dev->name) + ".bin", binaries[i]);
 				}
 #else
 				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
