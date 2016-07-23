@@ -299,7 +299,7 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 	log_if_debug("radix sort: size: %u", size);
 	for(uint32_t bit = 0u; bit < max_bit; ++bit) {
 		const auto mask_op_bit = uint32_t(1u << bit);
-		log_if_debug("radix sort: %u, %X, size: %u", bit, mask_op_bit, size);
+		//log_if_debug("radix sort: %u, %X, size: %u", bit, mask_op_bit, size);
 		
 		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["radix_sort_count"],
 									   uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },

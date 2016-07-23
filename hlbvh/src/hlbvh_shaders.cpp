@@ -25,8 +25,7 @@
 struct scene_in_out {
 	float4 position [[position]];
 	float4 color;
-	// TODO: fix float3 normal being broken
-	float4 normal;
+	float3 normal;
 #if COLLIDING_TRIANGLES_VIS
 	float collision;
 #endif
@@ -58,11 +57,11 @@ vertex auto hlbvh_vertex(buffer<const float3> in_position_a,
 	out.position = pos * uniforms.mvpm;
 	if(uniforms.repl_color.w > 0.0f) {
 		out.color = uniforms.repl_color;
-		out.normal = { uniforms.light_dir, 1.0f };
+		out.normal = { uniforms.light_dir };
 	}
 	else {
 		out.color = uniforms.default_color;
-		out.normal = { in_normal_a[vertex_id].interpolated(in_normal_b[vertex_id], delta), 1.0f };
+		out.normal = { in_normal_a[vertex_id].interpolated(in_normal_b[vertex_id], delta) };
 	}
 	
 #if COLLIDING_TRIANGLES_VIS
@@ -74,7 +73,7 @@ vertex auto hlbvh_vertex(buffer<const float3> in_position_a,
 
 fragment auto hlbvh_fragment(const scene_in_out in [[stage_input]],
 							 param<scene_uniforms_t> uniforms) {
-	const auto intensity = uniforms.light_dir.dot(in.normal.xyz);
+	const auto intensity = uniforms.light_dir.dot(in.normal);
 	float4 color;
 #if COLLIDING_TRIANGLES_VIS
 	if(in.collision >= 0.999f) {

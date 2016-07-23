@@ -18,8 +18,6 @@
 
 #include "metal_renderer.hpp"
 
-#define USE_OLD_SHADERS 1
-
 #if !defined(FLOOR_NO_METAL)
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/metal/metal_device.hpp>
@@ -65,7 +63,6 @@ static MTLRenderPassDescriptor* warp_gather_pass_desc { nullptr };
 static id <MTLDepthStencilState> depth_state;
 static id <MTLDepthStencilState> passthrough_depth_state;
 static id <MTLDepthStencilState> skybox_depth_state;
-static id <MTLSamplerState> sampler_state;
 static metal_view* view { nullptr };
 
 static struct {
@@ -280,13 +277,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (scatter)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SCENE_SCATTER"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SCENE_SCATTER"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_SCATTER_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_SCATTER_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -307,13 +299,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (gather)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SCENE_GATHER"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SCENE_GATHER"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -338,13 +325,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp scene pipeline (gather forward-only)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SCENE_GATHER_FWD"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SCENE_GATHER_FWD"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FWD_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SCENE_GATHER_FWD_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -436,13 +418,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (scatter)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SKYBOX_SCATTER"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_SCATTER"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_SCATTER_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_SCATTER_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -463,13 +440,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (gather)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -494,13 +466,8 @@ bool metal_renderer::init() {
 			MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 			pipeline_desc.label = @"warp skybox pipeline (gather forward-only)";
 			pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-			pipeline_desc.vertexFunction = shader_objects["SKYBOX_GATHER_FWD"]->vertex_program;
-			pipeline_desc.fragmentFunction = shader_objects["SKYBOX_GATHER_FWD"]->fragment_program;
-#else
 			pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FWD_VS]->kernel;
 			pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[SKYBOX_GATHER_FWD_FS]->kernel;
-#endif
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -599,11 +566,7 @@ bool metal_renderer::init() {
 		
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 		pipeline_desc.label = @"warp shadow pipeline";
-#if defined(USE_OLD_SHADERS)
-		pipeline_desc.vertexFunction = shader_objects["SHADOW"]->vertex_program;
-#else
 		pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[SHADOW_VS]->kernel;
-#endif
 		pipeline_desc.fragmentFunction = nil; // only rendering z/depth
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
@@ -632,13 +595,8 @@ bool metal_renderer::init() {
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 		pipeline_desc.label = @"warp blit pipeline";
 		pipeline_desc.sampleCount = 1;
-#if defined(USE_OLD_SHADERS)
-		pipeline_desc.vertexFunction = shader_objects["BLIT"]->vertex_program;
-		pipeline_desc.fragmentFunction = shader_objects["BLIT"]->fragment_program;
-#else
 		pipeline_desc.vertexFunction = (__bridge id<MTLFunction>)shader_entries[BLIT_VS]->kernel;
 		pipeline_desc.fragmentFunction = (__bridge id<MTLFunction>)shader_entries[BLIT_FS]->kernel;
-#endif
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -661,13 +619,14 @@ bool metal_renderer::init() {
 		color_attachment.texture = nil;
 	}
 	
+#if 0
 	// warp gather setup (for testing purposes)
 	{
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
 		pipeline_desc.label = @"gather pipeline";
 		pipeline_desc.sampleCount = 1;
-		pipeline_desc.vertexFunction = shader_objects["WARP_GATHER"]->vertex_program;
-		pipeline_desc.fragmentFunction = shader_objects["WARP_GATHER"]->fragment_program;
+		//pipeline_desc.vertexFunction = shader_objects["WARP_GATHER"]->vertex_program; // TODO: needs equivalent
+		//pipeline_desc.fragmentFunction = shader_objects["WARP_GATHER"]->fragment_program;
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -689,6 +648,7 @@ bool metal_renderer::init() {
 		color_attachment.storeAction = MTLStoreActionStore;
 		color_attachment.texture = nil;
 	}
+#endif
 	
 	// used by scene, shadow and skybox renderer
 	MTLDepthStencilDescriptor* depth_state_desc = [[MTLDepthStencilDescriptor alloc] init];
@@ -710,24 +670,6 @@ bool metal_renderer::init() {
 		log_error("failed to create metal view!");
 		return false;
 	}
-	
-	// need an actual sampler object, because anisotropy can't be specified for constexpr in-shader samplers
-	MTLSamplerDescriptor* sampler_desc = [[MTLSamplerDescriptor alloc] init];
-	sampler_desc.minFilter = MTLSamplerMinMagFilterLinear;
-	sampler_desc.magFilter = MTLSamplerMinMagFilterLinear;
-#if !defined(FLOOR_IOS)
-	sampler_desc.mipFilter = MTLSamplerMipFilterLinear;
-	sampler_desc.maxAnisotropy = 16;
-#else // less quality, but quite faster
-	sampler_desc.mipFilter = MTLSamplerMipFilterNearest;
-	sampler_desc.maxAnisotropy = 1;
-#endif
-	sampler_desc.normalizedCoordinates = true;
-	sampler_desc.lodMinClamp = 0.0f;
-	sampler_desc.lodMaxClamp = numeric_limits<float>::max();
-	sampler_desc.sAddressMode = MTLSamplerAddressModeRepeat;
-	sampler_desc.tAddressMode = MTLSamplerAddressModeRepeat;
-	sampler_state = [device newSamplerStateWithDescriptor:sampler_desc];
 	
 	// sky box
 	create_skybox();
@@ -1076,7 +1018,6 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		const matrix4f next_mvpm { mvm * pm }; // gather
 		const matrix4f prev_mvpm { prev_prev_mvm * pm }; // gather
 		
-#if !defined(USE_OLD_SHADERS)
 		const struct __attribute__((packed)) {
 			matrix4f mvpm;
 			matrix4f light_bias_mvpm;
@@ -1092,23 +1033,6 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
 			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),
 		};
-#else
-		const struct {
-			matrix4f mvpm;
-			matrix4f m0; // mvm (scatter), next_mvpm (gather)
-			matrix4f m1; // prev_mvm (scatter), prev_mvpm (gather)
-			matrix4f light_bias_mvpm;
-			float3 cam_pos;
-			float3 light_pos;
-		} uniforms {
-			.mvpm = mvpm,
-			.light_bias_mvpm = light_bias_mvpm,
-			.cam_pos = -cam.get_position(),
-			.light_pos = light_pos,
-			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
-			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),
-		};
-#endif
 		
 		// for bidirectional gather rendering, this switches every frame
 		if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
@@ -1148,9 +1072,6 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 		[encoder setVertexBuffer:((metal_buffer*)model.tangents_buffer.get())->get_metal_buffer() offset:0 atIndex:4];
 		[encoder setVertexBytes:&uniforms length:sizeof(uniforms) atIndex:5];
 		
-#if defined(USE_OLD_SHADERS)
-		[encoder setFragmentSamplerState:sampler_state atIndex:0];
-#endif
 		[encoder setFragmentTexture:((metal_image*)shadow_map.shadow_image.get())->get_metal_image() atIndex:4];
 		for(const auto& obj : model.objects) {
 			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].diffuse)->get_metal_image() atIndex:0];
@@ -1249,86 +1170,14 @@ static void render_full_scene(const metal_obj_model& model, const camera& cam, i
 }
 
 bool metal_renderer::compile_shaders() {
-	id <MTLDevice> mtl_dev = ((metal_device*)warp_state.dev.get())->device;
-#if defined(FLOOR_IOS)
-	metal_shd_lib = [mtl_dev newLibraryWithFile:@"default.metallib" error:nil];
-#else
-	metal_shd_lib = [mtl_dev newDefaultLibrary];
-#endif
-	if(!metal_shd_lib) {
-		log_error("failed to load default shader lib!");
-		return false;
-	}
-	
-	
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"scene_scatter_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"scene_scatter_fs"];
-		shader_objects.emplace("SCENE_SCATTER", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"scene_gather_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"scene_gather_fs"];
-		shader_objects.emplace("SCENE_GATHER", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"scene_gather_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"scene_gather_fwd_fs"];
-		shader_objects.emplace("SCENE_GATHER_FWD", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_scatter_fs"];
-		shader_objects.emplace("SKYBOX_SCATTER", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_fs"];
-		shader_objects.emplace("SKYBOX_GATHER", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"skybox_gather_fwd_fs"];
-		shader_objects.emplace("SKYBOX_GATHER_FWD", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"shadow_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"shadow_fs"];
-		shader_objects.emplace("SHADOW", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"blit_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"blit_fs"];
-		shader_objects.emplace("BLIT", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"blit_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"blit_swizzle_fs"];
-		shader_objects.emplace("BLIT_SWIZZLE", shd);
-	}
-	{
-		auto shd = make_shared<metal_shader_object>();
-		shd->vertex_program = [metal_shd_lib newFunctionWithName:@"blit_vs"];
-		shd->fragment_program = [metal_shd_lib newFunctionWithName:@"warp_gather"];
-		shader_objects.emplace("WARP_GATHER", shd);
-	}
-	
-	/////
 	shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
 												   "-I" + floor::data_path("../warp/src") +
 												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) +
 												   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) +
 												   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) +
-												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y));
+												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) +
+												   // a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
+												   " -DFLOOR_METAL_ADDRESS_MODE=metal_image::sampler::ADDRESS_MODE::REPEAT");
 	
 	if(shader_prog == nullptr) {
 		log_error("shader compilation failed");

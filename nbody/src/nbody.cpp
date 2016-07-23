@@ -82,7 +82,7 @@ kernel void nbody_compute(buffer<const float4> in_positions,
 #elif defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL)
 #pragma clang loop unroll_count(4)
 #elif defined(FLOOR_COMPUTE_HOST)
-#pragma clang loop unroll_count(8) vectorize(enable) interleave(enable)
+#pragma clang loop unroll_count(8) vectorize(enable)
 #endif
 		for(uint32_t j = 0; j < NBODY_TILE_SIZE; ++j) {
 			compute_body_interaction(local_body_positions[j], position, acceleration);
