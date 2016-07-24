@@ -362,6 +362,9 @@ int main(int, char* argv[]) {
 				}
 				else {
 					device->image_read_write_support = (option_ctx.image_rw_support == 1 ? true : false);
+					if(option_ctx.target == llvm_compute::TARGET::SPIR && option_ctx.workarounds) {
+						option_ctx.additional_options += " -Xclang -cl-spir-intel-workarounds ";
+					}
 				}
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 			} break;
