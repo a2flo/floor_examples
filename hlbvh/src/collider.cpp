@@ -64,14 +64,16 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 	
 	if(hlbvh_state.triangle_vis) {
 		for(const auto& mdl : models) {
-			mdl->colliding_triangles->zero(hlbvh_state.dev_queue);
+			// swap + clear
+			mdl->colliding_triangles_idx = 1 - mdl->colliding_triangles_idx;
+			mdl->colliding_triangles[mdl->colliding_triangles_idx]->zero(hlbvh_state.dev_queue);
 		}
 	}
 	
 	vector<float3> init_aabbs(model_count * 2);
 	for(size_t i = 0; i < model_count; ++i) {
-		init_aabbs[i * 2] = float3(numeric_limits<float>::max());
-		init_aabbs[i * 2 + 1] = float3(numeric_limits<float>::lowest());
+		init_aabbs[i * 2] = float3(__FLT_MAX__);
+		init_aabbs[i * 2 + 1] = float3(-__FLT_MAX__);
 	}
 	aabbs->write(hlbvh_state.dev_queue, init_aabbs);
 	
@@ -219,8 +221,8 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 										   // flags if resp. mesh A/B collides with anything
 										   // also (ab)used as an abort condition here
 										   collision_flags,
-										   mdl_i->colliding_triangles,
-										   mdl_j->colliding_triangles);
+										   mdl_i->colliding_triangles[mdl_i->colliding_triangles_idx],
+										   mdl_j->colliding_triangles[mdl_j->colliding_triangles_idx]);
 		}
 		else {
 			hlbvh_state.dev_queue->execute(hlbvh_state.kernels["collide_bvhs_no_tri_vis"],
@@ -276,7 +278,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 				hlbvh_state.dev_queue->execute(hlbvh_state.kernels["map_collided_triangles"],
 											   uint1 { triangle_count },
 											   uint1 { hlbvh_state.kernel_max_local_size["map_collided_triangles"] },
-											   mdl->colliding_triangles,
+											   mdl->colliding_triangles[mdl->colliding_triangles_idx],
 											   mdl->frames_indices[cur_frame],
 											   mdl->colliding_vertices,
 											   triangle_count);

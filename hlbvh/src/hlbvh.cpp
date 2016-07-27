@@ -554,7 +554,6 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	} while(node != 0);
 }
 
-
 kernel void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
 									buffer<const float3> bvh_aabbs_leaves_a,
 									buffer<const float3> triangles_a,

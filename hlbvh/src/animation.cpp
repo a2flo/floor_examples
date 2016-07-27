@@ -180,7 +180,8 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 															COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
 															COMPUTE_MEMORY_FLAG::OPENGL_SHARING,
 															GL_ARRAY_BUFFER);
-		colliding_triangles = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
+		colliding_triangles[0] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
+		colliding_triangles[1] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
 		log_debug("check tri col buffer: %u, %u", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
 	}
 }
