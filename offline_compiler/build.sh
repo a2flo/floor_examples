@@ -34,17 +34,22 @@ command -v ${CC} >/dev/null 2>&1 || error "clang binary not found, please set CC
 
 # check if clang is the compiler, fail if not
 CXX_VERSION=$(${CXX} -v 2>&1)
+CXX17_CAPABLE=0
 if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
+	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
 		# apple xcode/llvm/clang versioning scheme -> at least 6.1.0 is required (ships with Xcode 6.3)
-		if expr "$(echo ${CXX_VERSION} | head -n 1 | sed -E "s/Apple LLVM version ([0-9.]+) .*/\1/")" \< "6.1.0" >/dev/null; then
+		if [ $CLANG_MAJOR -lt 6 ] || [ $CLANG_MAJOR -eq 6 -a $CLANG_MINOR -lt 1 ]; then
 			error "at least Xcode 6.3 / clang/LLVM 6.1.0 is required to compile this project!"
 		fi
 	else
 		# standard clang versioning scheme -> at least 3.5.0 is required
-		if expr "$(echo ${CXX_VERSION} | head -n 1 | sed -E "s/.*clang version ([0-9.]+) .*/\1/")" \< "3.5.0" >/dev/null; then
+		if [ $CLANG_MAJOR -lt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -lt 5 ]; then
 			error "at least clang 3.5.0 is required to compile this project!"
+		fi
+		if [ $CLANG_MAJOR -gt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -ge 9 ]; then
+			CXX17_CAPABLE=1
 		fi
 	fi
 else
@@ -70,12 +75,18 @@ BUILD_CONF_XML=$((1 - $((${FLOOR_NO_XML}))))
 BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
+BUILD_CONF_CXX17=$((${FLOOR_CXX17}))
+BUILD_CONF_NATIVE=0
 
 BUILD_CONF_SANITIZERS=0
 BUILD_CONF_ASAN=0
 BUILD_CONF_MSAN=0
 BUILD_CONF_TSAN=0
 BUILD_CONF_UBSAN=0
+
+if [ ${BUILD_CONF_CXX17} -gt ${CXX17_CAPABLE} ]; then
+	error "libfloor was compiled with C++17 support, but the current compiler is not C++17 capable"
+fi
 
 BUILD_ARCH_SIZE="x64"
 BUILD_ARCH=$(${CC} -dumpmachine | sed "s/-.*//")
@@ -106,6 +117,7 @@ for arg in "$@"; do
 			echo "	libstdc++          use libstdc++ instead of libc++ (highly discouraged unless building on mingw)"
 			echo "	x32                build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
 			echo "	x64                build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
+			echo "  native             optimize and specifically build for the host cpu"
 			echo ""
 			echo "sanitizers:"
 			echo "  asan               build with address sanitizer"
@@ -153,6 +165,9 @@ for arg in "$@"; do
 			;;
 		"x64")
 			BUILD_ARCH_SIZE="x64"
+			;;
+		"native")
+			BUILD_CONF_NATIVE=1
 			;;
 		"asan")
 			BUILD_CONF_SANITIZERS=1
@@ -336,14 +351,16 @@ fi
 # use pkg-config (and some manual libs/includes) on all platforms except osx/ios
 if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# need to make kernel symbols visible for dlsym
-	LDFLAGS="${LDFLAGS} -rdynamic"
+	if [ $BUILD_OS != "mingw" ]; then
+		LDFLAGS="${LDFLAGS} -rdynamic"
+	fi
 
 	# find libfloor*.so, w/o the need to have it in PATH/"LD PATH"
 	LDFLAGS="${LDFLAGS} -rpath ../../lib -rpath /opt/floor/lib"
 
 	# use PIC
 	LDFLAGS="${LDFLAGS} -fPIC"
-	COMMON_FLAGS="${COMMON_FLAGS} -fPIC"
+	COMMON_FLAGS="${COMMON_FLAGS} -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
 	PACKAGES="sdl2"
@@ -508,7 +525,11 @@ LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
 # flags
 
 # set up initial c++ and c flags
-CXXFLAGS="${CXXFLAGS} -std=gnu++14"
+if [ ${BUILD_CONF_CXX17} -eq 0 ]; then
+	CXXFLAGS="${CXXFLAGS} -std=gnu++14"
+else
+	CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
+fi
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -571,6 +592,11 @@ fi
 # c++ and c flags that apply to all build configurations
 COMMON_FLAGS="${COMMON_FLAGS} -ffast-math -fstrict-aliasing"
 
+# set flags when building for the native/host cpu
+if [ $BUILD_CONF_NATIVE -gt 0 ]; then
+	COMMON_FLAGS="${COMMON_FLAGS} -march=native -mtune=native"
+fi
+
 # debug flags, only used in the debug target
 DEBUG_FLAGS="-O0 -DFLOOR_DEBUG=1 -DDEBUG"
 if [ $BUILD_OS != "mingw" ]; then
@@ -580,9 +606,12 @@ else
 fi
 
 # release mode flags/optimizations
-# TODO: sse/avx selection/config? default to sse4.1 for now (core2)
-# TODO: also add -mtune option
-REL_FLAGS="-Ofast -funroll-loops -msse4.1"
+REL_FLAGS="-Ofast -funroll-loops"
+# if we're building for the native/host cpu, the appropriate sse/avx flags will already be set/used
+if [ $BUILD_CONF_NATIVE -eq 0 ]; then
+	# TODO: sse/avx selection/config? default to sse4.1 for now (core2)
+	REL_FLAGS="${REL_FLAGS} -msse4.1"
+fi
 
 # additional optimizations (used in addition to REL_CXX_FLAGS)
 REL_OPT_FLAGS="-flto"
@@ -621,16 +650,29 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 	fi
 fi
 
-# hard-mode c++ ;) TODO: clean this up + explanations
-WARNINGS="${WARNINGS} -Weverything -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
-WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat -Wno-c++98-compat"
-WARNINGS="${WARNINGS} -Wno-c++98-compat-pedantic -Wno-c99-extensions"
-WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation"
-WARNINGS="${WARNINGS} -Wno-system-headers -Wno-global-constructors -Wno-padded"
-WARNINGS="${WARNINGS} -Wno-packed -Wno-switch-enum -Wno-exit-time-destructors"
-WARNINGS="${WARNINGS} -Wno-unknown-warning-option -Wno-nested-anon-types"
-WARNINGS="${WARNINGS} -Wno-old-style-cast -Wno-date-time -Wno-reserved-id-macro"
-WARNINGS="${WARNINGS} -Wno-documentation-unknown-command -Wno-partial-availability"
+# hard-mode c++ ;)
+# let's start with everything
+WARNINGS="-Weverything ${WARNINGS}"
+# in case we're using warning options that aren't supported by other clang versions
+WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
+# remove std compat warnings (c++14 with gnu and clang extensions is required)
+WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-compat -Wno-c99-extensions -Wno-c11-extensions"
+WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
+# don't be too pedantic
+WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"
+WARNINGS="${WARNINGS} -Wno-global-constructors -Wno-exit-time-destructors -Wno-reserved-id-macro -Wno-date-time"
+# suppress warnings in system headers
+WARNINGS="${WARNINGS} -Wno-system-headers"
+# these two are only useful in certain situations, but are quite noisy
+WARNINGS="${WARNINGS} -Wno-packed -Wno-padded"
+# this conflicts with the other switch/case warning
+WARNINGS="${WARNINGS} -Wno-switch-enum"
+# quite useful feature/extension
+WARNINGS="${WARNINGS} -Wno-nested-anon-types"
+# this should be taken care of in a different way
+WARNINGS="${WARNINGS} -Wno-partial-availability"
+# enable thread-safety warnings
+WARNINGS="${WARNINGS} -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
 if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
 	# ignore warnings about required alignment increases on 32-bit platforms (won't and can't fix)
 	WARNINGS="${WARNINGS} -Wno-cast-align"
@@ -667,7 +709,7 @@ CFLAGS="${CFLAGS} ${COMMON_FLAGS}"
 
 # get all source files (c++/c/objective-c++/objective-c) and create build folders
 for dir in ${SRC_SUB_DIRS}; do
-	# hanlde paths correctly (don't want /./ or //)
+	# handle paths correctly (don't want /./ or //)
 	if [ ${dir} == "." ]; then
 		dir=""
 	else
