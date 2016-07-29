@@ -48,6 +48,7 @@ struct warp_state_struct {
 	bool is_clear_frame { false };
 	bool is_fixup { false };
 	bool is_bidir_scatter { false };
+	bool is_zw_depth { false };
 	
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)

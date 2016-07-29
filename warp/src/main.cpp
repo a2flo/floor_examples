@@ -47,6 +47,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t                  NOTE: obviously an upper limit" << endl;
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
 		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
+		cout << "\t--depth-zw: write depth as z/w into a separate color fbo attachment (use this if OpenGL/OpenCL depth buffer sharing is not supported or broken)" << endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
@@ -83,6 +84,10 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.is_scatter = false;
 		warp_state.is_gather_forward = true;
 		cout << "using gather-forward" << endl;
+	}},
+	{ "--depth-zw", [](warp_option_context&, char**&) {
+		warp_state.is_zw_depth = true;
+		cout << "using separate z/w depth buffer" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -336,6 +341,7 @@ int main(int, char* argv[]) {
 				return -1;
 			}
 			warp_state.no_opengl = true;
+			warp_state.is_zw_depth = false; // not applicable to metal
 			
 			if(!metal_renderer::init()) {
 				log_error("error during metal initialization!");

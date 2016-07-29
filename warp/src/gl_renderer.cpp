@@ -33,6 +33,8 @@ static struct {
 	GLuint motion[4] { 0u, 0u, 0u, 0u };
 	// if gather: packed 2x { forward, backward }
 	GLuint motion_depth[2] { 0u, 0u };
+	// separate z/w depth buffer to workaround depth buffer sharing issues (this is a color texture!)
+	GLuint depth_zw[2] { 0u, 0u };
 	
 	GLuint compute_fbo { 0u };
 	GLuint compute_color { 0u };
@@ -48,10 +50,6 @@ static struct {
 static GLuint skybox_tex { 0u };
 static float3 light_pos;
 static shared_ptr<compute_image> compute_color;
-static shared_ptr<compute_image> compute_scene_color[2];
-static shared_ptr<compute_image> compute_scene_depth[2];
-static shared_ptr<compute_image> compute_scene_motion[4];
-static shared_ptr<compute_image> compute_scene_motion_depth[2];
 static matrix4f prev_mvm, prev_prev_mvm;
 static matrix4f prev_rmvm, prev_prev_rmvm;
 static constexpr const float4 clear_color { 0.0f };
@@ -60,18 +58,6 @@ static bool first_frame { true };
 static void destroy_textures() {
 	// kill old shared/wrapped compute images (also makes sure these don't access the gl objects any more)
 	compute_color = nullptr;
-	for(auto& img : compute_scene_color) {
-		img = nullptr;
-	}
-	for(auto& img : compute_scene_motion) {
-		img = nullptr;
-	}
-	for(auto& img : compute_scene_motion_depth) {
-		img = nullptr;
-	}
-	for(auto& img : compute_scene_depth) {
-		img = nullptr;
-	}
 	
 	// kill gl stuff
 	for(auto& fbo : scene_fbo.fbo) {
@@ -99,6 +85,12 @@ static void destroy_textures() {
 		}
 	}
 	for(auto& tex : scene_fbo.depth) {
+		if(tex > 0) {
+			glDeleteTextures(1, &tex);
+			tex = 0;
+		}
+	}
+	for(auto& tex : scene_fbo.depth_zw) {
 		if(tex > 0) {
 			glDeleteTextures(1, &tex);
 			tex = 0;
@@ -159,6 +151,18 @@ static void create_textures() {
 						 GL_RG, GL_HALF_FLOAT, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, scene_fbo.motion_depth[i], 0);
 			
+			if(warp_state.is_zw_depth) {
+				glGenTextures(1, &scene_fbo.depth_zw[i]);
+				glBindTexture(GL_TEXTURE_2D, scene_fbo.depth_zw[i]);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+							 GL_RED, GL_FLOAT, nullptr);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, scene_fbo.depth_zw[i], 0);
+			}
+			
 			glGenTextures(1, &scene_fbo.depth[i]);
 			glBindTexture(GL_TEXTURE_2D, scene_fbo.depth[i]);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -169,7 +173,7 @@ static void create_textures() {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, scene_fbo.dim.x, scene_fbo.dim.y, 0,
 						 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, scene_fbo.depth[i], 0);
-		
+			
 			//
 			const auto err = glGetError();
 			const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -499,12 +503,13 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		.field_of_view = warp_state.fov,
 		.near_plane = warp_state.near_far_plane.x,
 		.far_plane = warp_state.near_far_plane.y,
-		.depth_type = LIBWARP_DEPTH_NORMALIZED
+		.depth_type = (!warp_state.is_zw_depth ? LIBWARP_DEPTH_NORMALIZED : LIBWARP_DEPTH_Z_DIV_W),
 	};
+	const uint32_t* depth_buffers = (!warp_state.is_zw_depth ? scene_fbo.depth : scene_fbo.depth_zw);
 	LIBWARP_ERROR_CODE err = LIBWARP_SUCCESS;
 	if(warp_state.is_scatter) {
 		err = libwarp_scatter(&cam_setup, relative_delta,
-							  scene_fbo.color[0], scene_fbo.depth[0], scene_fbo.motion[0],
+							  scene_fbo.color[0], depth_buffers[0], scene_fbo.motion[0],
 							  scene_fbo.compute_color);
 	}
 	else {
@@ -516,9 +521,9 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		else {
 			err = libwarp_gather(&cam_setup, relative_delta,
 								 scene_fbo.color[1u - warp_state.cur_fbo],
-								 scene_fbo.depth[1u - warp_state.cur_fbo],
+								 depth_buffers[1u - warp_state.cur_fbo],
 								 scene_fbo.color[warp_state.cur_fbo],
-								 scene_fbo.depth[warp_state.cur_fbo],
+								 depth_buffers[warp_state.cur_fbo],
 								 scene_fbo.motion[warp_state.cur_fbo * 2],
 								 scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
 								 scene_fbo.motion_depth[warp_state.cur_fbo],
@@ -537,13 +542,6 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam) {
 	//
 	glBindVertexArray(global_vao);
-	
-	static constexpr const GLenum draw_buffers[] {
-		GL_COLOR_ATTACHMENT0,
-		GL_COLOR_ATTACHMENT1,
-		GL_COLOR_ATTACHMENT2,
-		GL_COLOR_ATTACHMENT3,
-	};
 	
 	// draw shadow map
 	const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f,
@@ -583,7 +581,44 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	
 	// draw main scene
 	glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
-	glDrawBuffers(warp_state.is_scatter ? (!warp_state.is_bidir_scatter ? 2 : 3) : size(draw_buffers), &draw_buffers[0]);
+	int32_t draw_buffer_count = 0;
+	const GLenum* draw_buffers = nullptr;
+	if(!warp_state.is_scatter) {
+		// gather: always 4 attachments + 1 if z/w depth
+		static constexpr const GLenum gather_draw_buffers[] {
+			GL_COLOR_ATTACHMENT0,
+			GL_COLOR_ATTACHMENT1,
+			GL_COLOR_ATTACHMENT2,
+			GL_COLOR_ATTACHMENT3,
+			GL_COLOR_ATTACHMENT4,
+		};
+		draw_buffer_count = (!warp_state.is_zw_depth ? 4 : 5);
+		draw_buffers = &gather_draw_buffers[0];
+	}
+	else {
+		// normal scatter: always 2 attachments + 1 if z/w depth
+		if(!warp_state.is_bidir_scatter) {
+			static constexpr const GLenum scatter_draw_buffers[] {
+				GL_COLOR_ATTACHMENT0,
+				GL_COLOR_ATTACHMENT1,
+				GL_COLOR_ATTACHMENT4,
+			};
+			draw_buffer_count = (!warp_state.is_zw_depth ? 2 : 3);
+			draw_buffers = &scatter_draw_buffers[0];
+		}
+		// bidir scatter: always 3 attachments + 1 if z/w depth
+		else {
+			static constexpr const GLenum bidir_scatter_draw_buffers[] {
+				GL_COLOR_ATTACHMENT0,
+				GL_COLOR_ATTACHMENT1,
+				GL_COLOR_ATTACHMENT2,
+				GL_COLOR_ATTACHMENT4,
+			};
+			draw_buffer_count = (!warp_state.is_zw_depth ? 3 : 4);
+			draw_buffers = &bidir_scatter_draw_buffers[0];
+		}
+	}
+	glDrawBuffers(draw_buffer_count, draw_buffers);
 	glViewport(0, 0, scene_fbo.dim.x, scene_fbo.dim.y);
 	
 	// clear the color/depth buffer
@@ -860,13 +895,20 @@ bool gl_renderer::compile_shaders() {
 #if defined(WARP_SCATTER_BIDIR)
 		layout (location = 1) out uint motion_forward;
 		layout (location = 2) out uint motion_backward;
+#define DEPTH_Z_W_LOCATION 3
 #else
 		layout (location = 1) out uint motion_color;
+#define DEPTH_Z_W_LOCATION 2
 #endif
 #else
 		layout (location = 1) out uint motion_forward;
 		layout (location = 2) out uint motion_backward;
 		layout (location = 3) out vec2 motion_depth;
+#define DEPTH_Z_W_LOCATION 4
+#endif
+		
+#if DEPTH_Z_W == 1
+		layout (location = DEPTH_Z_W_LOCATION) out float frag_depth;
 #endif
 		
 		uint encode_3d_motion(in vec3 motion) {
@@ -977,6 +1019,10 @@ bool gl_renderer::compile_shaders() {
 			motion_depth = vec2((motion_next.z / motion_next.w) - (motion_now.z / motion_now.w),
 								(motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w));
 #endif
+			
+#if DEPTH_Z_W == 1
+			frag_depth = gl_FragCoord.z / gl_FragCoord.w;
+#endif
 		}
 	)RAWSTR"};
 	static const char shadow_map_vs_text[] { u8R"RAWSTR(
@@ -1045,11 +1091,23 @@ bool gl_renderer::compile_shaders() {
 		
 		layout (location = 0) out vec4 frag_color;
 #if !defined(WARP_GATHER)
+#if defined(WARP_SCATTER_BIDIR)
+		layout (location = 1) out uint motion_forward;
+		layout (location = 2) out uint motion_backward;
+#define DEPTH_Z_W_LOCATION 3
+#else
 		layout (location = 1) out uint motion_color;
+#define DEPTH_Z_W_LOCATION 2
+#endif
 #else
 		layout (location = 1) out uint motion_forward;
 		layout (location = 2) out uint motion_backward;
 		layout (location = 3) out vec2 motion_depth;
+#define DEPTH_Z_W_LOCATION 4
+#endif
+		
+#if DEPTH_Z_W == 1
+		layout (location = DEPTH_Z_W_LOCATION) out float frag_depth;
 #endif
 		
 		uint encode_3d_motion(in vec3 motion) {
@@ -1088,34 +1146,40 @@ bool gl_renderer::compile_shaders() {
 			motion_depth = vec2((motion_next.z / motion_next.w) - (motion_now.z / motion_now.w),
 								(motion_prev.z / motion_prev.w) - (motion_now.z / motion_now.w));
 #endif
+			
+#if DEPTH_Z_W == 1
+			frag_depth = gl_FragCoord.z / gl_FragCoord.w;
+#endif
 		}
 	)RAWSTR"};
 	
 	{
-		const auto shd = floor_compile_shader("SCENE_SCATTER", scene_vs_text, scene_fs_text, 330);
+		const auto shd = floor_compile_shader("SCENE_SCATTER", scene_vs_text, scene_fs_text, 330,
+											  { { "DEPTH_Z_W", warp_state.is_zw_depth ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
 		const auto shd = floor_compile_shader("SCENE_GATHER", scene_vs_text, scene_fs_text, 330,
-											  { { "WARP_GATHER", 1 } });
+											  { { "WARP_GATHER", 1 }, { "DEPTH_Z_W", warp_state.is_zw_depth ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
 		const auto shd = floor_compile_shader("SCENE_SCATTER_BIDIR", scene_vs_text, scene_fs_text, 330,
-											  { { "WARP_SCATTER_BIDIR", 1 } });
+											  { { "WARP_SCATTER_BIDIR", 1 }, { "DEPTH_Z_W", warp_state.is_zw_depth ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
-		const auto shd = floor_compile_shader("SKYBOX_SCATTER", skybox_vs_text, skybox_fs_text, 330);
+		const auto shd = floor_compile_shader("SKYBOX_SCATTER", skybox_vs_text, skybox_fs_text, 330,
+											  { { "DEPTH_Z_W", warp_state.is_zw_depth ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}
 	{
 		const auto shd = floor_compile_shader("SKYBOX_GATHER", skybox_vs_text, skybox_fs_text, 330,
-											  { { "WARP_GATHER", 1 } });
+											  { { "WARP_GATHER", 1 }, { "DEPTH_Z_W", warp_state.is_zw_depth ? 1 : 0 } });
 		if(!shd.first) return false;
 		shader_objects.emplace(shd.second.name, shd.second);
 	}
