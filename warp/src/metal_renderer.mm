@@ -886,6 +886,7 @@ static void render_kernels(const float& delta, const float& render_delta,
 #endif
 	
 	//
+	bool is_first_frame = (warp_frame_num == 0);
 	float relative_delta = delta / render_delta;
 	if(warp_state.target_frame_count > 0) {
 		const uint32_t in_between_frame_count = ((warp_state.target_frame_count - warp_state.render_frame_count) /
@@ -906,8 +907,12 @@ static void render_kernels(const float& delta, const float& render_delta,
 	if(warp_state.is_debug_delta) {
 		if(dbg_delta >= (1.0f - delta_eps)) {
 			dbg_delta = delta_eps;
+			is_first_frame = true;
 		}
-		else dbg_delta += delta_eps;
+		else {
+			is_first_frame = (dbg_delta == 0.0f);
+			dbg_delta += delta_eps;
+		}
 		
 		relative_delta = dbg_delta;
 	}
@@ -922,7 +927,7 @@ static void render_kernels(const float& delta, const float& render_delta,
 	};
 	LIBWARP_ERROR_CODE err = LIBWARP_SUCCESS;
 	if(warp_state.is_scatter) {
-		err = libwarp_scatter_metal(&cam_setup, relative_delta,
+		err = libwarp_scatter_metal(&cam_setup, relative_delta, is_first_frame && warp_state.is_clear_frame,
 									((metal_image*)scene_fbo.color[0].get())->get_metal_image(),
 									((metal_image*)scene_fbo.depth[0].get())->get_metal_image(),
 									((metal_image*)scene_fbo.motion[0].get())->get_metal_image(),
