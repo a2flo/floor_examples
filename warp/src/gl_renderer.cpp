@@ -407,6 +407,12 @@ bool gl_renderer::render(const gl_obj_model& model,
 		
 		render_full_scene(model, cam);
 		
+		// on opencl: need to make sure that the depth color buffer has finished drawing (oddly enough not needed for other color images)
+		if(warp_state.is_zw_depth &&
+		   warp_state.ctx->get_compute_type() == COMPUTE_TYPE::OPENCL) {
+			glFinish();
+		}
+		
 		blit(warp_state.is_render_full);
 		
 		return true;
