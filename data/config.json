@@ -99,6 +99,12 @@
 			"validate_spirv": false,
 			// disables spir-v usage and uses spir instead
 			"disable_spirv": false,
+			// forces spir-v usage even if the driver doesn't support opencl 2.1 or cl_khr_il_program
+			// NOTE: currently necessary for AMD drivers
+			"force_spirv": false,
+			// puts kernel parameters into constant address space to work around spec issues with struct parameters
+			// NOTE: not recommended in general (there are other driver issues that can crop up because of this)
+			"spirv_param_workaround": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched,
 			//       can also use "CPU", "GPU" or "ACCELERATOR" to only match these types of devices
