@@ -16,16 +16,15 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#if !defined(FLOOR_NO_OPENCL)
-#define FLOOR_OPENCL_INFO_FUNCS
-#endif
-
 #include <floor/floor/floor.hpp>
 #include <floor/floor/floor_version.hpp>
 #include <floor/compute/llvm_compute.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/core/option_handler.hpp>
 
+#if !defined(FLOOR_NO_OPENCL)
+#define FLOOR_OPENCL_INFO_FUNCS
+#endif
 #include <floor/compute/opencl/opencl_common.hpp>
 #include <floor/compute/opencl/opencl_compute.hpp>
 #include <floor/compute/opencl/opencl_device.hpp>
@@ -79,21 +78,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"
-				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air,applecl.bc})\n"
-				 "\t--target [spir|ptx|air|applecl|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Apple-OpenCL, or Vulkan/OpenCL SPIR-V\n"
+				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air})\n"
+				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu], defaults to gpu\n"
-				 "\t    Apple-OpenCL:  [gpu|cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios9|ios10|osx11|osx12][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-cpu|opencl-gpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
-				 "\t--no-double: explicitly disables double support (only SPIR and Apple-OpenCL)\n"
-				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR and Apple-OpenCL, always enabled on PTX)\n"
-				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR and Apple-OpenCL, enabled on PTX if sub-target >= sm_32)\n"
+				 "\t--no-double: explicitly disables double support (only SPIR/SPIR-V)\n"
+				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
+				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only CUDA)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
@@ -140,9 +138,6 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		else if(target == "air") {
 			ctx.target = llvm_compute::TARGET::AIR;
-		}
-		else if(target == "applecl") {
-			ctx.target = llvm_compute::TARGET::APPLECL;
 		}
 		else if(target == "spirv") {
 			ctx.target = llvm_compute::TARGET::SPIRV_VULKAN;
@@ -328,10 +323,8 @@ int main(int, char* argv[]) {
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::APPLECL:
 			case llvm_compute::TARGET::SPIRV_OPENCL: {
 				const char* target_name = (option_ctx.target == llvm_compute::TARGET::SPIR ? "SPIR" :
-										   option_ctx.target == llvm_compute::TARGET::APPLECL ? "APPLECL" :
 										   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
 				device = make_shared<opencl_device>();
 				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu" ||
@@ -574,7 +567,6 @@ int main(int, char* argv[]) {
 			switch(option_ctx.target) {
 				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
 				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
-				case llvm_compute::TARGET::APPLECL: option_ctx.output_filename = "applecl.bc"; break;
 				// don't do anything for air and spir-v, it's already stored in a file
 				case llvm_compute::TARGET::AIR:
 				case llvm_compute::TARGET::SPIRV_VULKAN:
@@ -664,7 +656,6 @@ int main(int, char* argv[]) {
 	if(option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
 			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::APPLECL:
 			case llvm_compute::TARGET::SPIRV_OPENCL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything

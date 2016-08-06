@@ -389,7 +389,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=nbody.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
+			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios9 --out nbody_unopt.air --no-double -vv --config ../../../data/ -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-opt nbody_unopt.air -o nbody.air\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
 		};
 		5C8646241C19B2A4000518C7 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -403,7 +403,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=nbody.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
+			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios9 --out nbody_unopt.air --no-double -vv --config ../../../data/ -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-opt nbody_unopt.air -o nbody.air\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -961,7 +961,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
 				MTL_OPTIMIZATION_LEVEL = s;
@@ -1044,7 +1044,7 @@
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				MTL_OPTIMIZATION_LEVEL = s;

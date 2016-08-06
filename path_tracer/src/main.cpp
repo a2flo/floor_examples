@@ -32,11 +32,11 @@ int main(int, char* argv[]) {
 	const vector<llvm_compute::function_info> function_infos {
 		{
 			"path_trace",
+			llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
 			{
 				llvm_compute::function_info::arg_info { .size = 16 },
 				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_compute::function_info::arg_info { .size = 8, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		}
 	};

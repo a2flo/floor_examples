@@ -111,7 +111,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tGTX 780:      ~2300 gflops (--count 131072 --tile-size 512)" << endl;
 		cout << "\tR9 285:       ~850 gflops (--count 131072 --tile-size 64)" << endl;
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
-		cout << "\tGT 650M:      ~375 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tGT 650M:      ~385 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\tHD 530:       ~242 gflops (--count 65536 --tile-size 128)" << endl;
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
 		cout << "\ti7-6700:      ~195 gflops (--count 32768 --tile-size 1024)" << endl;
@@ -594,6 +594,7 @@ int main(int, char* argv[]) {
 	const vector<llvm_compute::function_info> function_infos {
 		{
 			"nbody_compute",
+			llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
 			{
 				llvm_compute::function_info::arg_info { .size = 16 },
 				llvm_compute::function_info::arg_info { .size = 16 },
@@ -603,11 +604,47 @@ int main(int, char* argv[]) {
 		},
 		{
 			"nbody_raster",
+			llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
 			{
 				llvm_compute::function_info::arg_info { .size = 16 },
 				llvm_compute::function_info::arg_info { .size = 4 },
 				llvm_compute::function_info::arg_info { .size = 4 },
 				llvm_compute::function_info::arg_info { .size = 84, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
+		},
+		{
+			"lighting_vertex",
+			llvm_compute::function_info::FUNCTION_TYPE::VERTEX,
+			{
+				llvm_compute::function_info::arg_info { .size = 16 },
+				llvm_compute::function_info::arg_info { .size = 136, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+			}
+		},
+		{
+			"lighting_fragment",
+			llvm_compute::function_info::FUNCTION_TYPE::FRAGMENT,
+			{
+				llvm_compute::function_info::arg_info {
+					.size = 16,
+					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+				},
+				llvm_compute::function_info::arg_info {
+					.size = 4,
+					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+				},
+				llvm_compute::function_info::arg_info {
+					.size = 16,
+					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+				},
+				llvm_compute::function_info::arg_info {
+					.size = 0,
+					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE,
+					.image_type = llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D,
+					.image_access = llvm_compute::function_info::ARG_IMAGE_ACCESS::READ,
+				},
 			}
 		},
 	};

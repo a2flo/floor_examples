@@ -280,7 +280,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src path_tracer.cpp --target air --sub-target ios9 --no-double -vv --config ../../../data/\nmetal-as -o=path_tracer.air air_processed.ll\nmetal-ar r path_tracer.a path_tracer.air\nmetallib -o ../../data/path_tracer.metallib path_tracer.a\n";
+			shellScript = "cd src\nocc --src path_tracer.cpp --target air --sub-target ios9 --out path_tracer_unopt.air --no-double -vv --config ../../../data/\n${PLATFORM_DIR}/usr/bin/metal-opt path_tracer_unopt.air -o path_tracer.air\n${PLATFORM_DIR}/usr/bin/metal-ar r path_tracer.a path_tracer.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/path_tracer.metallib path_tracer.a\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

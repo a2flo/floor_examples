@@ -113,12 +113,6 @@
 			// NOTE: as mentioned above, toolchain settings can be overwritten here, e.g.:
 			// "compiler": "some_other_clang_binary"
 			
-			// the compute spir-encoder binary name
-			"spir-encoder": "spir-encoder",
-			// the compute spir-verifier binary name
-			"spir-verifier": "spir-verifier",
-			// the compute applecl-encoder binary name
-			"applecl-encoder": "applecl-encoder",
 			// the compute spir-v encoder binary name
 			"spirv-encoder": "llvm-spirv",
 			// the compute spir-v assembler binary name
