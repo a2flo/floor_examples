@@ -213,7 +213,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 		if(in.shadow_coord.w > 0.0f) {
 			light_vis = shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy, shadow_coord.z - shadow_bias);
 		}
-#elif 1 // TODO/NOTE: this horribly breaks stuff, don't use it yet
+#elif 1
 		// props to https://code.google.com/p/opengl-tutorial-org/source/browse/#hg%2Ftutorial16_shadowmaps for this
 		static constexpr const float2 poisson_disk[] {
 			{ -0.94201624f, -0.39906216f },
