@@ -168,8 +168,8 @@ kernel void nbody_raster(buffer<const float4> positions,
 	}
 }
 
-// shader: metal only for now
-#if defined(FLOOR_COMPUTE_METAL)
+// shader: metal and vulkan only
+#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN)
 struct uniforms_t {
 	matrix4f mvpm;
 	matrix4f mvm;

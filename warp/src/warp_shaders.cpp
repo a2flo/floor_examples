@@ -16,8 +16,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-// only metal for now
-#if defined(FLOOR_COMPUTE_METAL)
+// metal and vulkan only
+#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN)
 
 #if !defined(WARP_SHADOW_NEAR_PLANE)
 #define WARP_SHADOW_NEAR_PLANE 1.0f
