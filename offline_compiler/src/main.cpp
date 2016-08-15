@@ -16,15 +16,17 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <floor/core/essentials.hpp>
+#if !defined(FLOOR_NO_OPENCL)
+#define FLOOR_OPENCL_INFO_FUNCS
+#endif
+
 #include <floor/floor/floor.hpp>
 #include <floor/floor/floor_version.hpp>
 #include <floor/compute/llvm_compute.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/core/option_handler.hpp>
 
-#if !defined(FLOOR_NO_OPENCL)
-#define FLOOR_OPENCL_INFO_FUNCS
-#endif
 #include <floor/compute/opencl/opencl_common.hpp>
 #include <floor/compute/opencl/opencl_compute.hpp>
 #include <floor/compute/opencl/opencl_device.hpp>
