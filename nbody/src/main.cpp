@@ -546,49 +546,16 @@ int main(int, char* argv[]) {
 #endif
 	
 	// compile the program and get the kernel functions
-	shared_ptr<compute_program> nbody_prog, nbody_raster_prog;
 #if !defined(FLOOR_IOS)
-	if(!is_vulkan) {
-		llvm_compute::compile_options options {
-			.cli = ("-I" + floor::data_path("../nbody/src") +
-					" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
-					" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-					" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
-			// override max registers that can be used, this is beneficial here as it yields about +10% of performance
-			.cuda_max_registers = 36,
-		};
-		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
-	}
-	else {
-		// can't have two different entry points in a glsl shader right now, so this is split into two binaries, each with a "main" function
-		const vector<llvm_compute::function_info> function_infos {
-			{
-				"main",
-				llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
-				{
-					llvm_compute::function_info::arg_info { .size = 16 },
-					llvm_compute::function_info::arg_info { .size = 16 },
-					llvm_compute::function_info::arg_info { .size = 12 },
-					llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-				}
-			},
-		};
-		nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_compute.spv"), function_infos);
-		
-		const vector<llvm_compute::function_info> function_infos_raster {
-			{
-				"main",
-				llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
-				{
-					llvm_compute::function_info::arg_info { .size = 16 },
-					llvm_compute::function_info::arg_info { .size = 4 },
-					llvm_compute::function_info::arg_info { .size = 4 },
-					llvm_compute::function_info::arg_info { .size = 84, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-				}
-			},
-		};
-		nbody_raster_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody_raster.spv"), function_infos_raster);
-	}
+	llvm_compute::compile_options options {
+		.cli = ("-I" + floor::data_path("../nbody/src") +
+				" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
+				" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
+				" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
+		// override max registers that can be used, this is beneficial here as it yields about +10% of performance
+		.cuda_max_registers = 36,
+	};
+	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
 	const vector<llvm_compute::function_info> function_infos {
@@ -648,23 +615,16 @@ int main(int, char* argv[]) {
 			}
 		},
 	};
-	nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), function_infos);
+	auto nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), function_infos);
 #endif
 	if(nbody_prog == nullptr) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	shared_ptr<compute_kernel> nbody_compute, nbody_raster;
-	if(!is_vulkan) {
-		nbody_compute = nbody_prog->get_kernel("nbody_compute");
-		nbody_raster = nbody_prog->get_kernel("nbody_raster");
-	}
-	else {
-		nbody_compute = nbody_prog->get_kernel("main");
-		nbody_raster = nbody_raster_prog->get_kernel("main");
-	}
+	auto nbody_compute = nbody_prog->get_kernel("nbody_compute");
+	auto nbody_raster = nbody_prog->get_kernel("nbody_raster");
 	if(nbody_compute == nullptr || nbody_raster == nullptr) {
-		log_error("failed to retrieve kernel from program");
+		log_error("failed to retrieve kernel(s) from program");
 		return -1;
 	}
 	

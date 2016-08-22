@@ -467,6 +467,9 @@ int main(int, char* argv[]) {
 					case llvm_compute::function_info::SPECIAL_TYPE::PUSH_CONSTANT:
 						info_str += "push_constant ";
 						break;
+					case llvm_compute::function_info::SPECIAL_TYPE::SSBO:
+						info_str += "ssbo ";
+						break;
 					default: break;
 				}
 				
