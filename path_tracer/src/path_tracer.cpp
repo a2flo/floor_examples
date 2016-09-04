@@ -29,7 +29,7 @@ public:
 	static intersection intersect(const ray& r) {
 		float3 normal;
 		float distance { numeric_limits<float>::infinity() };
-		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_COUNT };
+		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_INVALID };
 		
 		for(uint32_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
 			const auto& index = cornell_indices[triangle_idx];
@@ -82,47 +82,54 @@ public:
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
 		float res;
-#if defined(FLOOR_COMPUTE_METAL)
-		// apple h/w or s/w seems to have trouble with doing 32-bit uint multiplies,
-		// so do a software 32-bit * 16-bit multiply instead
-		uint32_t low = (seed & 0xFFFFu) * 16807u;
-		uint32_t high = ((seed >> 16u) & 0xFFFFu) * 16807u;
-		seed = (high << 16u) + low;
-#else
 		seed *= 16807u;
-#endif
 		*((uint32_t*)&res) = (seed >> 9u) | 0x3F800000u;
 		return (res - 1.0f);
 	}
 	
 	// if you can't do normal recursion, do some template recursion instead! (at the cost of code bloat)
-	template <uint32_t depth = 0, enable_if_t<depth < max_recursion_depth, int> = 0>
+	// also: can do this inside a single function now with c++17
+	template <uint32_t depth = 0
+#if !defined(FLOOR_CXX17)
+			  , enable_if_t<depth < max_recursion_depth>* = nullptr
+#endif
+			  >
 	float3 compute_radiance(const ray& r, const bool sample_emission) {
-		// intersect
-		const auto p = simple_intersector::intersect(r);
-		if(p.object >= CORNELL_OBJECT::__OBJECT_COUNT) return {};
-		
-		//
-		float3 radiance;
-		const auto& mat = cornell_materials[(size_t)p.object];
-		
-		// emission (don't oversample for indirect illumination)
-		if(sample_emission) radiance += mat.emission.xyz;
-		
-		// compute direct illumination at given point
-		radiance += compute_direct_illumination(-r.direction, p, mat);
-		
-		// indirect
-		radiance += compute_indirect_illumination<depth>(r, p, mat);
-		
-		return radiance;
+#if defined(FLOOR_CXX17)
+		if constexpr(depth >= max_recursion_depth) {
+			return {};
+		}
+		else
+#endif
+		{
+			// intersect
+			const auto p = simple_intersector::intersect(r);
+			if(p.object >= CORNELL_OBJECT::__OBJECT_INVALID) return {};
+			
+			//
+			float3 radiance;
+			const auto& mat = cornell_materials[(size_t)p.object];
+			
+			// emission (don't oversample for indirect illumination)
+			if(sample_emission) radiance += mat.emission.xyz;
+			
+			// compute direct illumination at given point
+			radiance += compute_direct_illumination(-r.direction, p, mat);
+			
+			// indirect
+			radiance += compute_indirect_illumination<depth>(r, p, mat);
+			
+			return radiance;
+		}
 	}
 	
+#if !defined(FLOOR_CXX17)
 	// terminator
-	template <uint32_t depth, enable_if_t<depth >= max_recursion_depth, int> = 0>
+	template <uint32_t depth, enable_if_t<depth >= max_recursion_depth>* = nullptr>
 	float3 compute_radiance(const ray&, const bool) {
 		return {};
 	}
+#endif
 	
 protected:
 	uint32_t seed;
@@ -160,11 +167,11 @@ protected:
 																		 { rand_0_1(), rand_0_1() });
 			
 			radiance = mat.diffuse_reflectance.xyz;
-			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
+			radiance *= max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_diffuse, dir_and_prob, p.hit_point);
 		}
 		else if(rrr < (albedo_diffuse + albedo_specular)) {
-			const auto rnormal = float3::reflect(normal, r.direction).normalized();
+			const auto rnormal = r.direction.reflected(normal).normalized();
 			const auto tb = get_local_system(rnormal);
 			const auto dir_and_prob = generate_power_cosine_weighted_direction(rnormal, tb.first, tb.second,
 																			   { rand_0_1(), rand_0_1() },
@@ -176,8 +183,8 @@ protected:
 			}
 			
 			radiance = mat.specular_reflectance.xyz;
-			radiance *= pow(std::max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular.w);
-			radiance *= std::max(normal.dot(dir_and_prob.dir), 0.0f);
+			radiance *= pow(max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular.w);
+			radiance *= max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_specular, dir_and_prob, p.hit_point);
 		}
 		// else: rrr is 1.0f and the contribution is 0
@@ -219,27 +226,27 @@ protected:
 			
 			// cast shadow ray towards the light
 			const auto dir = sample_point - p.hit_point;
-			const auto dist_sqr = std::max(dir.dot(dir), INTERSECTION_EPS);
+			const auto dist_sqr = max(dir.dot(dir), INTERSECTION_EPS);
 			const ray r { p.hit_point, dir.normalized() };
 			const auto ret = simple_intersector::intersect(r);
-			if(ret.object >= CORNELL_OBJECT::__OBJECT_COUNT ||
+			if(ret.object >= CORNELL_OBJECT::__OBJECT_INVALID ||
 			   ret.distance >= sqrt(dist_sqr) - INTERSECTION_EPS ||
 			   ret.object == CORNELL_OBJECT::LIGHT) {
 				// didn't hit anything -> compute contribution
 				
 				// falloff formula: (.x falloff / dist^2) * intensity
 				const auto attenuation = 1.0f / dist_sqr; // here: 1 / dist^2
-				const auto elvis = std::max(-light.normal.dot(r.direction), 0.0f); // actually -r.d
-				const auto lambert = std::max(norm_surface.dot(r.direction), 0.0f);
+				const auto elvis = max(-light.normal.dot(r.direction), 0.0f); // actually -r.d
+				const auto lambert = max(norm_surface.dot(r.direction), 0.0f);
 				
 				// diffuse
 				float3 illum = mat.diffuse_reflectance.xyz;
 				
 				// specular (only do the computation if it actually has a spec coeff > 0)
 				if(!mat.specular.is_null()) {
-					const auto R = float3::reflect(norm_surface, -r.direction).normalized();
+					const auto R = (-r.direction).reflect(norm_surface).normalize();
 					illum += (mat.specular_reflectance.xyz *
-							  pow(std::max(R.dot(norm_eye_dir), 0.0f), mat.specular.w));
+							  pow(max(R.dot(norm_eye_dir), 0.0f), mat.specular.w));
 				}
 				
 				// mul by intensity and mul single floats separately
@@ -309,18 +316,18 @@ protected:
 		const float norm_c0 = norm_x_greater_y ? normal.x : normal.y;
 		const float sig = norm_x_greater_y ? -1.0f : 1.0f;
 		
-		const float invLen = sig / (norm_c0 * norm_c0 + normal.z * normal.z);
+		const float inv_len = sig / (norm_c0 * norm_c0 + normal.z * normal.z);
 		
 		float3 tangent;
 		if(norm_x_greater_y) {
-			tangent.x = normal.z * invLen;
+			tangent.x = normal.z * inv_len;
 			tangent.y = 0.0f;
 		}
 		else {
 			tangent.x = 0.0f;
-			tangent.y = normal.z * invLen;
+			tangent.y = normal.z * inv_len;
 		}
-		tangent.z = norm_c0 * -1.0f * invLen;
+		tangent.z = norm_c0 * -1.0f * inv_len;
 		tangent.normalize();
 		const float3 binormal = normal.crossed(tangent).normalize();
 		

@@ -5,7 +5,7 @@
 // ref: http://www.graphics.cornell.edu/online/box/data.html
 
 // cornell box, with some modifications:
-// * scaled by 0.1 (do avoid fp imprecision)
+// * scaled by 0.1 (to avoid fp imprecision)
 // * fixed x coordinates (should be the same / connect up everywhere)
 // * light moved down a little bit to avoid "z-fighting"
 alignas(16) static constant constexpr const float4 cornell_vertices[] {
@@ -158,6 +158,7 @@ enum class CORNELL_OBJECT : uint32_t {
 	SHORT_BLOCK,
 	TALL_BLOCK,
 	__OBJECT_COUNT,
+	__OBJECT_INVALID = __OBJECT_COUNT,
 };
 alignas(16) static constant constexpr const CORNELL_OBJECT cornell_object_map[size(cornell_indices)] {
 	CORNELL_OBJECT::FLOOR,

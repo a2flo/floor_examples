@@ -184,8 +184,7 @@ struct stage_in_out {
 
 vertex auto lighting_vertex(buffer<const float4> vertex_array,
 							param<uniforms_t> uniforms) {
-	const auto vid = get_vertex_id();
-	const auto in_vertex = vertex_array[vid];
+	const auto in_vertex = vertex_array[vertex_id];
 	float size = 128.0f / (1.0f - (float4 { in_vertex.xyz, 1.0f } * uniforms.mvm).z);
 	float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
 	mass_scale *= mass_scale; // ^2
@@ -200,12 +199,11 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 #if defined(FLOOR_COMPUTE_METAL)
 fragment auto lighting_fragment(stage_in_out in [[stage_input]],
 								const_image_2d<float> tex) {
-	return tex.read_linear(get_point_coord()) * in.color;
+	return tex.read_linear(point_coord) * in.color;
 }
 #else // no image support yet in vulkan
 fragment auto lighting_fragment(stage_in_out in [[stage_input]]) {
-	const auto dir = get_point_coord() * 2.0f - 1.0f;
-	return dir.dot() * in.color;
+	return (point_coord * 2.0f - 1.0f).dot() * in.color;
 }
 #endif
 

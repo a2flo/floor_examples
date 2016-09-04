@@ -511,7 +511,7 @@ int main(int, char* argv[]) {
 												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
 												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
 	
-	// get the compute context that has been automatically created (opencl/cuda/metal/host)
+	// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
 	auto compute_ctx = floor::get_compute_context();
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
