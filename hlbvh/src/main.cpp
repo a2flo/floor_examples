@@ -310,7 +310,7 @@ int main(int, char* argv[]) {
 			log_error("failed to retrieve kernel \"%s\" from program", kernel.first);
 			return -1;
 		}
-		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(hlbvh_state.dev)->max_local_work_size;
+		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(hlbvh_state.dev)->max_total_local_size;
 		log_debug("max local size for \"%s\": %u", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
 	}
 	

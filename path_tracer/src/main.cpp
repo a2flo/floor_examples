@@ -62,7 +62,7 @@ int main(int, char* argv[]) {
 						   // total amount of work:
 						   uint1 { pixel_count },
 						   // work per work-group:
-						   uint1 { fastest_device->max_work_group_size },
+						   uint1 { fastest_device->max_total_local_size },
 						   // kernel arguments:
 						   img_buffer, iteration, core::rand<uint32_t>());
 

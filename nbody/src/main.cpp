@@ -519,8 +519,8 @@ int main(int, char* argv[]) {
 	dev_queue = compute_ctx->create_queue(fastest_device);
 	
 	// parameter sanity check
-	if(nbody_state.tile_size > fastest_device->max_work_group_size) {
-		nbody_state.tile_size = (uint32_t)fastest_device->max_work_group_size;
+	if(nbody_state.tile_size > fastest_device->max_total_local_size) {
+		nbody_state.tile_size = (uint32_t)fastest_device->max_total_local_size;
 		log_error("tile size too large, > max possible work-group size! - setting tile size to %u now", nbody_state.tile_size);
 	}
 	if((nbody_state.body_count % nbody_state.tile_size) != 0u) {
@@ -780,7 +780,7 @@ int main(int, char* argv[]) {
 							   // work per work-group:
 							   uint1 {
 								   nbody_state.render_size == 0 ?
-								   nbody_raster->get_kernel_entry(fastest_device)->max_local_work_size : nbody_state.render_size
+								   nbody_raster->get_kernel_entry(fastest_device)->max_total_local_size : nbody_state.render_size
 							   },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
