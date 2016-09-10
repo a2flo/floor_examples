@@ -52,7 +52,7 @@ static void create_textures() {
 													COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 													COMPUTE_IMAGE_TYPE::D32F |
 													COMPUTE_IMAGE_TYPE::READ_WRITE |
-													COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+													COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 													COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
 	if(render_pass_desc != nil) {
