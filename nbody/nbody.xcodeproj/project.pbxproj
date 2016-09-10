@@ -23,6 +23,7 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C180F771D8063A500AF91E7 /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
@@ -98,6 +99,8 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vulkan_renderer.cpp; sourceTree = "<group>"; };
+		5C180F761D8063A500AF91E7 /* vulkan_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vulkan_renderer.hpp; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* nbody.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = nbody.metallib; path = ../data/nbody.metallib; sourceTree = "<group>"; };
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
@@ -231,11 +234,30 @@
 				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
 				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
 				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
+				5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */,
+				5C180F761D8063A500AF91E7 /* vulkan_renderer.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		5C180F711D80623A00AF91E7 /* nbody_remote */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "floor_remote \"cd ~/floor_examples_remote/nbody && export FLOOR_DEV=1 && export NO_COLOR=1 && if [ '${CONFIGURATION}' == 'Debug' ]; then ./build.sh $(ACTION) debug; else ./build.sh $(ACTION); fi\"";
+			buildConfigurationList = 5C180F741D80623A00AF91E7 /* Build configuration list for PBXLegacyTarget "nbody_remote" */;
+			buildPhases = (
+			);
+			buildToolPath = ssh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = nbody_remote;
+			passBuildSettingsInEnvironment = 1;
+			productName = nbody_remote;
+		};
+/* End PBXLegacyTarget section */
 
 /* Begin PBXNativeTarget section */
 		5C0071901A91EF7E00F4711D /* nbody_ios */ = {
@@ -306,6 +328,10 @@
 					5C0071901A91EF7E00F4711D = {
 						CreatedOnToolsVersion = 6.3;
 					};
+					5C180F711D80623A00AF91E7 = {
+						CreatedOnToolsVersion = 8.0;
+						ProvisioningStyle = Automatic;
+					};
 					5C8646231C19B2A4000518C7 = {
 						DevelopmentTeam = S63YFDZ98S;
 					};
@@ -330,6 +356,7 @@
 				5C8FD0931AD3366800215230 /* nbody_osx */,
 				5C0071901A91EF7E00F4711D /* nbody_ios */,
 				5C8646231C19B2A4000518C7 /* nbody_ios_sideload */,
+				5C180F711D80623A00AF91E7 /* nbody_remote */,
 			);
 		};
 /* End PBXProject section */
@@ -433,6 +460,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
+				5C180F771D8063A500AF91E7 /* vulkan_renderer.cpp in Sources */,
 				5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */,
 				5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
@@ -592,6 +620,42 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 				VALID_ARCHS = "arm64 armv7s";
+			};
+			name = Release;
+		};
+		5C180F721D80623A00AF91E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		5C180F731D80623A00AF91E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -1096,6 +1160,14 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		5C180F741D80623A00AF91E7 /* Build configuration list for PBXLegacyTarget "nbody_remote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C180F721D80623A00AF91E7 /* Debug */,
+				5C180F731D80623A00AF91E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 		5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "nbody_ios_sideload" */ = {
 			isa = XCConfigurationList;

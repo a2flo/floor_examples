@@ -66,6 +66,7 @@ struct nbody_state_struct {
 	//
 	bool no_opengl { false };
 	bool no_metal { false };
+	bool no_vulkan { false };
 	bool benchmark { false };
 	
 };

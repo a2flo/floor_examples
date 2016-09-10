@@ -102,7 +102,7 @@ bool metal_renderer::init(shared_ptr<compute_device> dev,
 		return false;
 	}
 	
-	//
+	// create/init pipeline
 	MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
 	pipelineStateDescriptor.label = @"nbody pipeline";
 	pipelineStateDescriptor.sampleCount = 1;

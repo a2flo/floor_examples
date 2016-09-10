@@ -203,7 +203,7 @@ fragment auto lighting_fragment(stage_in_out in [[stage_input]],
 }
 #else // no image support yet in vulkan
 fragment auto lighting_fragment(stage_in_out in [[stage_input]]) {
-	return (point_coord * 2.0f - 1.0f).dot() * in.color;
+	return (1.0f - (point_coord * 2.0f - 1.0f).dot()) * in.color;
 }
 #endif
 

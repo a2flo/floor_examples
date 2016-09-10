@@ -143,14 +143,14 @@ static void create_textures() {
 													   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 													   COMPUTE_IMAGE_TYPE::BGRA8UI_NORM |
 													   COMPUTE_IMAGE_TYPE::READ_WRITE |
-													   COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+													   COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 													   COMPUTE_MEMORY_FLAG::READ_WRITE);
 		
 		scene_fbo.depth[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
 														  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 														  COMPUTE_IMAGE_TYPE::D32F |
 														  COMPUTE_IMAGE_TYPE::READ |
-														  COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+														  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 														  COMPUTE_MEMORY_FLAG::READ);
 		
 		for(size_t j = 0; j < 2; ++j) {
@@ -158,7 +158,7 @@ static void create_textures() {
 																	   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																	   COMPUTE_IMAGE_TYPE::R32UI |
 																	   COMPUTE_IMAGE_TYPE::READ_WRITE |
-																	   COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+																	   COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 																	   COMPUTE_MEMORY_FLAG::READ_WRITE);
 		}
 		
@@ -166,7 +166,7 @@ static void create_textures() {
 																 COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																 COMPUTE_IMAGE_TYPE::RG16F |
 																 COMPUTE_IMAGE_TYPE::READ_WRITE |
-																 COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+																 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 																 COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	
@@ -561,7 +561,7 @@ bool metal_renderer::init() {
 															   COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 															   COMPUTE_IMAGE_TYPE::D32F |
 															   COMPUTE_IMAGE_TYPE::READ |
-															   COMPUTE_IMAGE_TYPE::FLAG_RENDERBUFFER,
+															   COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 															   COMPUTE_MEMORY_FLAG::READ);
 		
 		MTLRenderPipelineDescriptor* pipeline_desc = [[MTLRenderPipelineDescriptor alloc] init];
