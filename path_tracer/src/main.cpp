@@ -2,12 +2,18 @@
 #include <floor/floor/floor.hpp>
 
 int main(int, char* argv[]) {
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				false, "config.json", true);
+		.data_path = "../../data/",
 #else
-	floor::init(argv[0], (const char*)"data/");
+		.data_path = "data/",
 #endif
+		.app_name = "path tracer",
+		// NOTE: don't need a specific renderer here, so just use the defaults
+	})) {
+		return -1;
+	}
 	
 	// get the compute context that has been automatically created (opencl/cuda/metal/host, depending on the config)
 	auto compute_ctx = floor::get_compute_context();

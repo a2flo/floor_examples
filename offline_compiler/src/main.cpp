@@ -299,11 +299,17 @@ int main(int, char* argv[]) {
 	// preempt floor logger init
 	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
 	
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
-	floor::init(argv[0], option_ctx.config_path.c_str(), true); // call path, data path, console-only
+		.data_path = option_ctx.config_path.c_str(),
 #else
-	floor::init(argv[0], (const char*)"data/", true);
+		.data_path = "data/",
 #endif
+		.console_only = true,
+	})) {
+		return -1;
+	}
 	
 	// handle spir-v target change
 	if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN &&

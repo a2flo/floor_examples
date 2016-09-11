@@ -47,6 +47,7 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 #if defined(__APPLE__)
 		cout << "\t--no-metal: disables metal rendering" << endl;
 #endif
+		cout << "\t--no-vulkan: disables vulkan rendering" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << endl;
 		hlbvh_state.done = true;
@@ -77,6 +78,10 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		hlbvh_state.no_metal = true;
 		cout << "metal disabled" << endl;
 	}},
+	{ "--no-vulkan", [](hlbvh_option_context&, char**&) {
+		hlbvh_state.no_vulkan = true;
+		cout << "vulkan disabled" << endl;
+	}},
 	{ "--no-triangle-vis", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.triangle_vis = false;
 		cout << "triangle collision visualization disabled" << endl;
@@ -84,6 +89,7 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_opengl = true; // also disable opengl
 		hlbvh_state.no_metal = true; // also disable metal
+		hlbvh_state.no_vulkan = true; // also disable vulkan
 		hlbvh_state.triangle_vis = false; // triangle visualization is unnecessary here
 		hlbvh_state.benchmark = true;
 		cout << "benchmark mode enabled" << endl;
@@ -224,32 +230,72 @@ int main(int, char* argv[]) {
 	hlbvh_opt_handler::parse_options(argv + 1, option_ctx);
 	if(hlbvh_state.done) return 0;
 	
-	// init floor
-#if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				hlbvh_state.benchmark, "config.json", // console-mode, config name
-				hlbvh_state.benchmark ^ true); // use opengl 3.3+ (core)
-#else
-	floor::init(argv[0], (const char*)"data/");
-#endif
-	
-	// disable opengl renderer when using metal
-	if(!hlbvh_state.no_opengl) {
-		hlbvh_state.no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
-	}
+	// disable renderers that aren't available
 #if defined(FLOOR_NO_METAL)
-	// disable metal renderer if it's not available
 	hlbvh_state.no_metal = true;
-#else
-	if(!hlbvh_state.no_metal) {
-		hlbvh_state.no_metal = (floor::get_compute_context()->get_compute_type() != COMPUTE_TYPE::METAL);
-	}
+#endif
+#if defined(FLOOR_NO_VULKAN)
+	hlbvh_state.no_vulkan = true;
 #endif
 	
-	floor::set_caption("hlbvh");
+	// init floor
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
+#if !defined(FLOOR_IOS)
+		.data_path = "../../data/",
+#else
+		.data_path = "data/",
+#endif
+		.app_name = "hlbvh",
+		.console_only = hlbvh_state.benchmark,
+		.renderer = (// no renderer when running in console-only mode
+					 hlbvh_state.benchmark ? floor::RENDERER::NONE :
+					 // if neither opengl or vulkan is disabled, use the default
+					 // (this will choose vulkan if the config compute backend is vulkan)
+					 (!hlbvh_state.no_opengl && !hlbvh_state.no_vulkan) ? floor::RENDERER::DEFAULT :
+					 // else: choose a specific one
+					 !hlbvh_state.no_vulkan ? floor::RENDERER::VULKAN :
+					 !hlbvh_state.no_opengl ? floor::RENDERER::OPENGL :
+					 // both opengl and vulkan are disabled
+					 floor::RENDERER::NONE),
+	})) {
+		return -1;
+	}
 	
-	// opengl and floor context handling
-	if(hlbvh_state.no_opengl) floor::set_use_gl_context(false);
+	
+	// disable resp. other renderers when using opengl/metal/vulkan
+	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
+	const auto floor_renderer = floor::get_renderer();
+	
+	if(is_metal) {
+		hlbvh_state.no_opengl = true;
+		hlbvh_state.no_vulkan = true;
+	}
+	else {
+		hlbvh_state.no_metal = true;
+	}
+	
+	if(is_vulkan) {
+		if(floor_renderer == floor::RENDERER::VULKAN) {
+			hlbvh_state.no_opengl = true;
+			hlbvh_state.no_metal = true;
+		}
+		// can't use OpenGL with Vulkan
+		else {
+			hlbvh_state.no_opengl = true;
+		}
+	}
+	else {
+		hlbvh_state.no_vulkan = true;
+	}
+	
+	log_debug("using %s",
+			  (!hlbvh_state.no_opengl ? "opengl renderer" :
+			   !hlbvh_state.no_metal ? "metal renderer" :
+			   !hlbvh_state.no_vulkan ? "vulkan renderer" : "no renderer at all"));
+	
+	// floor context handling
 	floor::acquire_context();
 	
 	// add event handlers
@@ -327,7 +373,7 @@ int main(int, char* argv[]) {
 	// init metal renderer (need compiled prog first)
 #if defined(__APPLE__)
 	shared_ptr<compute_program> shader_prog;
-	if(!hlbvh_state.no_metal && hlbvh_state.no_opengl) {
+	if(!hlbvh_state.no_metal) {
 		shader_prog = hlbvh_state.ctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
 														"-DCOLLIDING_TRIANGLES_VIS="s + (hlbvh_state.triangle_vis ? "1" : "0"));
 		if(shader_prog == nullptr) {
@@ -341,6 +387,14 @@ int main(int, char* argv[]) {
 			log_error("error during metal initialization!");
 			return -1;
 		}
+	}
+#endif
+	// init vulkan renderer
+#if !defined(FLOOR_NO_VULKAN)
+	if(!hlbvh_state.no_vulkan) {
+		// TODO: implement vulkan renderer
+		log_error("vulkan render is not implemented yet");
+		return -1;
 	}
 #endif
 	
@@ -394,19 +448,26 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if(hlbvh_state.no_opengl && hlbvh_state.no_metal) {
+		if(hlbvh_state.no_opengl && hlbvh_state.no_metal && hlbvh_state.no_vulkan) {
 			// nope
 		}
-		// opengl/metal rendering
-		else if((!hlbvh_state.no_opengl || !hlbvh_state.no_metal)) {
-			floor::start_draw();
+		// opengl/metal/vulkan rendering
+		else if(!hlbvh_state.no_opengl || !hlbvh_state.no_metal || !hlbvh_state.no_vulkan) {
+			floor::start_frame();
 			if(!hlbvh_state.no_opengl) {
 				gl_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
 			}
 #if defined(__APPLE__)
-			else metal_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
+			else if(!hlbvh_state.no_metal) {
+				metal_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
+			}
 #endif
-			floor::stop_draw();
+#if !defined(FLOOR_NO_VULKAN)
+			else if(!hlbvh_state.no_vulkan) {
+				hlbvh_state.done = true;
+			}
+#endif
+			floor::end_frame();
 		}
 	}
 	
@@ -421,7 +482,7 @@ int main(int, char* argv[]) {
 		floor::release_context();
 	}
 #if defined(__APPLE__)
-	if(!hlbvh_state.no_metal && hlbvh_state.no_opengl) {
+	if(!hlbvh_state.no_metal) {
 		metal_renderer::destroy();
 	}
 #endif

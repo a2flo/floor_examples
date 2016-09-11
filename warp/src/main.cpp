@@ -247,17 +247,73 @@ int main(int, char* argv[]) {
 	warp_opt_handler::parse_options(argv + 1, option_ctx);
 	if(warp_state.done) return 0;
 	
-	// init floor
-#if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				false, "config.json", // console-mode, config name
-				true); // use opengl 3.3+ (core)
-#else
-	floor::init(argv[0], (const char*)"data/");
+	// disable renderers that aren't available
+#if defined(FLOOR_NO_METAL)
+	warp_state.no_metal = true;
 #endif
-	floor::set_caption("warp");
+#if defined(FLOOR_NO_VULKAN)
+	warp_state.no_vulkan = true;
+#endif
 	
-	// opengl and floor context handling
+	// init floor
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
+#if !defined(FLOOR_IOS)
+		.data_path = "../../data/",
+#else
+		.data_path = "data/",
+#endif
+		.app_name = "warp",
+		.renderer = (// if neither opengl or vulkan is disabled, use the default
+					 // (this will choose vulkan if the config compute backend is vulkan)
+					 (!warp_state.no_opengl && !warp_state.no_vulkan) ? floor::RENDERER::DEFAULT :
+					 // else: choose a specific one
+					 !warp_state.no_vulkan ? floor::RENDERER::VULKAN :
+					 !warp_state.no_opengl ? floor::RENDERER::OPENGL :
+					 // both opengl and vulkan are disabled
+					 floor::RENDERER::NONE),
+	})) {
+		return -1;
+	}
+	
+	// disable resp. other renderers when using opengl/metal/vulkan
+	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
+	const auto floor_renderer = floor::get_renderer();
+	
+	if(floor_renderer == floor::RENDERER::NONE) {
+		log_error("no renderer was initialized");
+		return -2;
+	}
+	
+	if(is_metal) {
+		warp_state.no_opengl = true;
+		warp_state.no_vulkan = true;
+	}
+	else {
+		warp_state.no_metal = true;
+	}
+	
+	if(is_vulkan) {
+		if(floor_renderer == floor::RENDERER::VULKAN) {
+			warp_state.no_opengl = true;
+			warp_state.no_metal = true;
+		}
+		// can't use OpenGL with Vulkan
+		else {
+			warp_state.no_opengl = true;
+		}
+	}
+	else {
+		warp_state.no_vulkan = true;
+	}
+	
+	log_debug("using %s",
+			  (!warp_state.no_opengl ? "opengl renderer" :
+			   !warp_state.no_metal ? "metal renderer" :
+			   !warp_state.no_vulkan ? "vulkan renderer" : "no renderer at all"));
+	
+	// floor context handling
 	struct floor_ctx_guard {
 		floor_ctx_guard() {
 			floor::acquire_context();
@@ -322,31 +378,27 @@ int main(int, char* argv[]) {
 		}
 		
 		// setup renderer
-		if(warp_state.ctx->get_compute_type() != COMPUTE_TYPE::METAL) {
-			if(warp_state.no_opengl) {
-				log_error("opengl renderer required!");
-				return -1;
-			}
-			warp_state.no_metal = true;
-			
+		if(!warp_state.no_opengl) {
 			if(!gl_renderer::init()) {
 				log_error("error during opengl initialization!");
 				return -1;
 			}
 		}
 #if defined(__APPLE__)
-		else {
-			if(warp_state.no_metal) {
-				log_error("metal renderer required!");
-				return -1;
-			}
-			warp_state.no_opengl = true;
+		else if(!warp_state.no_metal) {
 			warp_state.is_zw_depth = false; // not applicable to metal
 			
 			if(!metal_renderer::init()) {
 				log_error("error during metal initialization!");
 				return -1;
 			}
+		}
+#endif
+#if !defined(FLOOR_NO_VULKAN)
+		else if(!warp_state.no_vulkan) {
+			// TODO: implement vulkan renderer
+			log_error("vulkan render is not implemented yet");
+			return -1;
 		}
 #endif
 		
@@ -386,19 +438,26 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if(warp_state.no_opengl && warp_state.no_metal) {
+		if(warp_state.no_opengl && warp_state.no_metal && warp_state.no_vulkan) {
 			// nope
 		}
-		// opengl/metal rendering
-		else if((!warp_state.no_opengl || !warp_state.no_metal) && !warp_state.stop) {
-			floor::start_draw();
+		// opengl/metal/vulkan rendering
+		else if((!warp_state.no_opengl || !warp_state.no_metal || !warp_state.no_vulkan) && !warp_state.stop) {
+			floor::start_frame();
 			if(!warp_state.no_opengl) {
 				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
 			}
 #if defined(__APPLE__)
-			else metal_renderer::render((const metal_obj_model&)*model.get(), *cam.get());
+			else if(!warp_state.no_metal) {
+				metal_renderer::render((const metal_obj_model&)*model.get(), *cam.get());
+			}
 #endif
-			floor::stop_draw();
+#if !defined(FLOOR_NO_VULKAN)
+			else if(!warp_state.no_vulkan) {
+				warp_state.done = true;
+			}
+#endif
+			floor::end_frame();
 		}
 	}
 	log_msg("done!");

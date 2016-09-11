@@ -29,6 +29,7 @@ struct warp_state_struct {
 	bool stop { false };
 	bool no_opengl { false };
 	bool no_metal { false };
+	bool no_vulkan { false };
 	bool is_auto_cam {
 #if !defined(FLOOR_IOS)
 		false

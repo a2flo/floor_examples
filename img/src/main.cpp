@@ -229,22 +229,31 @@ int main(int, char* argv[]) {
 	if(done) return 0;
 	
 	// init floor
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				false, "config.json", // console-mode, config name
-				true); // use opengl 3.3+ (core)
+		.data_path = "../../data/",
 #else
-	floor::init(argv[0], (const char*)"data/");
+		.data_path = "data/",
 #endif
-	floor::set_caption("img");
-	
-	// disable opengl when using metal
-	if(!no_opengl) {
-		no_opengl = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+		.app_name = "img",
+		.renderer = (no_opengl ? floor::RENDERER::NONE : floor::RENDERER::OPENGL),
+	})) {
+		return -1;
 	}
 	
-	// opengl and floor context handling
-	if(no_opengl) floor::set_use_gl_context(false);
+	// disable opengl when using metal/vulkan
+	if(!no_opengl) {
+		no_opengl = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL) ||
+					 (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN));
+	}
+	
+	if(no_opengl && run_gl_blur) {
+		log_error("can't run opengl blur, because opengl renderer is not available");
+		run_gl_blur = false;
+	}
+	
+	// floor context handling
 	floor::acquire_context();
 	
 	if(!no_opengl) {
@@ -372,7 +381,9 @@ int main(int, char* argv[]) {
 	}
 	
 	// flush/finish everything (init, data copy) before running the benchmark
-	glFlush(); glFinish();
+	if(!no_opengl) {
+		glFlush(); glFinish();
+	}
 	dev_queue->finish();
 	
 	//
@@ -480,11 +491,11 @@ int main(int, char* argv[]) {
 		}
 		// opengl rendering
 		else if(!no_opengl) {
-			floor::start_draw();
+			floor::start_frame();
 #if !defined(FLOOR_IOS)
 			gl_render(dev_queue, imgs[cur_image]);
 #endif
-			floor::stop_draw();
+			floor::end_frame();
 		}
 	}
 	log_msg("done!");

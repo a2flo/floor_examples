@@ -494,7 +494,11 @@ int main(int, char* argv[]) {
 	// init floor
 	if(!floor::init(floor::init_state {
 		.call_path = argv[0],
+#if !defined(FLOOR_IOS)
 		.data_path = "../../data/",
+#else
+		.data_path = "data/",
+#endif
 		.app_name = "nbody",
 		.console_only = nbody_state.benchmark,
 		.renderer = (// no renderer when running in console-only mode
@@ -507,7 +511,6 @@ int main(int, char* argv[]) {
 					 !nbody_state.no_opengl ? floor::RENDERER::OPENGL :
 					 // both opengl and vulkan are disabled
 					 floor::RENDERER::NONE),
-		.use_opengl_33 = true,
 	})) {
 		return -1;
 	}
@@ -865,30 +868,26 @@ int main(int, char* argv[]) {
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());
 		}
-		// opengl rendering
-		else if(!nbody_state.no_opengl) {
+		// opengl/metal/vulkan rendering
+		else if(!nbody_state.no_opengl || !nbody_state.no_metal || !nbody_state.no_vulkan) {
 			floor::start_frame();
+			if(!nbody_state.no_opengl) {
 #if !defined(FLOOR_IOS)
-			gl_renderer::render(dev_queue, position_buffers[cur_buffer]);
+				gl_renderer::render(dev_queue, position_buffers[cur_buffer]);
 #endif
-			floor::end_frame();
-		}
+			}
 #if defined(__APPLE__)
-		// metal rendering
-		else if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
-			floor::start_frame();
-			metal_renderer::render(dev_queue, position_buffers[cur_buffer]);
-			floor::end_frame();
-		}
+			else if(!nbody_state.no_metal) {
+				metal_renderer::render(dev_queue, position_buffers[cur_buffer]);
+			}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
-		// vulkan rendering
-		else if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
-			floor::start_frame();
-			vulkan_renderer::render(compute_ctx, fastest_device, dev_queue, position_buffers[cur_buffer]);
+			else if(!nbody_state.no_vulkan) {
+				vulkan_renderer::render(compute_ctx, fastest_device, dev_queue, position_buffers[cur_buffer]);
+			}
+#endif
 			floor::end_frame();
 		}
-#endif
 	}
 	log_msg("done!");
 	
