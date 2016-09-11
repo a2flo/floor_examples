@@ -839,7 +839,7 @@ int main(int, char* argv[]) {
 			} break;
 			case llvm_compute::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
-				auto ctx = make_shared<vulkan_compute>(floor::get_vulkan_whitelist());
+				auto ctx = make_shared<vulkan_compute>(false, floor::get_vulkan_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
