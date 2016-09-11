@@ -112,11 +112,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\gl_renderer.cpp" />
+    <ClCompile Include="src\vulkan_renderer.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\nbody.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\gl_renderer.hpp" />
+    <ClInclude Include="src\vulkan_renderer.hpp" />
     <ClInclude Include="src\nbody.hpp" />
     <ClInclude Include="src\nbody_state.hpp" />
   </ItemGroup>

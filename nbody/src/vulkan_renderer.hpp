@@ -23,11 +23,12 @@
 #include <floor/compute/compute_context.hpp>
 
 struct vulkan_renderer {
-	static bool init(shared_ptr<compute_device> dev,
-					 shared_ptr<compute_queue> dev_queue,
+	static bool init(shared_ptr<compute_context> ctx,
+					 shared_ptr<compute_device> dev,
 					 shared_ptr<compute_kernel> vs,
 					 shared_ptr<compute_kernel> fs);
-	static void render(shared_ptr<compute_device> dev,
+	static void render(shared_ptr<compute_context> ctx,
+					   shared_ptr<compute_device> dev,
 					   shared_ptr<compute_queue> dev_queue,
 					   shared_ptr<compute_buffer> position_buffer);
 };

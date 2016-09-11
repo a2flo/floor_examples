@@ -478,17 +478,12 @@ int main(int, char* argv[]) {
 	nbody_opt_handler::parse_options(argv + 1, option_ctx);
 	if(nbody_state.done) return 0;
 	
-	// init floor
-#if !defined(FLOOR_IOS)
-	floor::init(argv[0], (const char*)"../../data/", // call path, data path
-				nbody_state.benchmark, "config.json", // console-mode, config name
-				nbody_state.benchmark ^ true); // use opengl 3.3+ (core)
-#else
-	floor::init(argv[0], (const char*)"data/");
+	// use less bodies on iOS
+#if defined(FLOOR_IOS)
 	nbody_state.body_count = 8192;
 #endif
 	
-	// disable resp. other renderers when using opengl/metal/vulkan
+	// disable renderers that aren't available
 #if defined(FLOOR_NO_METAL)
 	nbody_state.no_metal = true;
 #endif
@@ -496,7 +491,32 @@ int main(int, char* argv[]) {
 	nbody_state.no_vulkan = true;
 #endif
 	
+	// init floor
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
+		.data_path = "../../data/",
+		.app_name = "nbody",
+		.console_only = nbody_state.benchmark,
+		.renderer = (// no renderer when running in console-only mode
+					 nbody_state.benchmark ? floor::RENDERER::NONE :
+					 // if neither opengl or vulkan is disabled, use the default
+					 // (this will choose vulkan if the config compute backend is vulkan)
+					 (!nbody_state.no_opengl && !nbody_state.no_vulkan) ? floor::RENDERER::DEFAULT :
+					 // else: choose a specific one
+					 !nbody_state.no_vulkan ? floor::RENDERER::VULKAN :
+					 !nbody_state.no_opengl ? floor::RENDERER::OPENGL :
+					 // both opengl and vulkan are disabled
+					 floor::RENDERER::NONE),
+		.use_opengl_33 = true,
+	})) {
+		return -1;
+	}
+	
+	// disable resp. other renderers when using opengl/metal/vulkan
 	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
+	const auto floor_renderer = floor::get_renderer();
+	
 	if(is_metal) {
 		nbody_state.no_opengl = true;
 		nbody_state.no_vulkan = true;
@@ -505,17 +525,17 @@ int main(int, char* argv[]) {
 		nbody_state.no_metal = true;
 	}
 	
-	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
 	if(is_vulkan) {
-		nbody_state.no_opengl = true;
-		nbody_state.no_metal = true;
+		if(floor_renderer == floor::RENDERER::VULKAN) {
+			nbody_state.no_opengl = true;
+			nbody_state.no_metal = true;
+		}
+		// can't use OpenGL with Vulkan
+		else {
+			nbody_state.no_opengl = true;
+		}
 	}
 	else {
-		nbody_state.no_vulkan = true;
-	}
-	
-	if(!nbody_state.no_opengl) {
-		nbody_state.no_metal = true;
 		nbody_state.no_vulkan = true;
 	}
 	
@@ -524,11 +544,7 @@ int main(int, char* argv[]) {
 			   !nbody_state.no_metal ? "metal renderer" :
 			   !nbody_state.no_vulkan ? "vulkan renderer" : "s/w rasterizer"));
 	
-	//
-	floor::set_caption("nbody");
-	
-	// opengl and floor context handling
-	if(nbody_state.no_opengl) floor::set_use_gl_context(false);
+	// floor context handling
 	floor::acquire_context();
 	
 	// add event handlers
@@ -671,8 +687,8 @@ int main(int, char* argv[]) {
 #if !defined(FLOOR_NO_VULKAN)
 	if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
 		// setup renderer
-		if(!vulkan_renderer::init(fastest_device,
-								  dev_queue,
+		if(!vulkan_renderer::init(compute_ctx,
+								  fastest_device,
 								  nbody_prog->get_kernel("lighting_vertex"),
 								  nbody_prog->get_kernel("lighting_fragment"))) {
 			log_error("error during vulkan initialization!");
@@ -851,28 +867,26 @@ int main(int, char* argv[]) {
 		}
 		// opengl rendering
 		else if(!nbody_state.no_opengl) {
-			floor::start_draw();
+			floor::start_frame();
 #if !defined(FLOOR_IOS)
 			gl_renderer::render(dev_queue, position_buffers[cur_buffer]);
 #endif
-			floor::stop_draw();
+			floor::end_frame();
 		}
 #if defined(__APPLE__)
 		// metal rendering
 		else if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
-			floor::start_draw();
+			floor::start_frame();
 			metal_renderer::render(dev_queue, position_buffers[cur_buffer]);
-			floor::stop_draw();
+			floor::end_frame();
 		}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
 		// vulkan rendering
 		else if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
-			//floor::start_draw();
-			floor::acquire_context(); // TODO: want both vulkan and gl support in start_draw/stop_draw!
-			vulkan_renderer::render(fastest_device, dev_queue, position_buffers[cur_buffer]);
-			//floor::stop_draw();
-			floor::release_context();
+			floor::start_frame();
+			vulkan_renderer::render(compute_ctx, fastest_device, dev_queue, position_buffers[cur_buffer]);
+			floor::end_frame();
 		}
 #endif
 	}
