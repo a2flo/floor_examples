@@ -903,6 +903,11 @@ int main(int, char* argv[]) {
 	for(auto img_buffer : img_buffers) {
 		img_buffer = nullptr;
 	}
+#if !defined(FLOOR_NO_VULKAN)
+	if(!nbody_state.no_vulkan) {
+		vulkan_renderer::destroy(compute_ctx, fastest_device);
+	}
+#endif
 	floor::release_context();
 	
 	// kthxbye

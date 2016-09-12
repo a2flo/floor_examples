@@ -27,6 +27,8 @@ struct vulkan_renderer {
 					 shared_ptr<compute_device> dev,
 					 shared_ptr<compute_kernel> vs,
 					 shared_ptr<compute_kernel> fs);
+	static void destroy(shared_ptr<compute_context> ctx,
+						shared_ptr<compute_device> dev);
 	static void render(shared_ptr<compute_context> ctx,
 					   shared_ptr<compute_device> dev,
 					   shared_ptr<compute_queue> dev_queue,

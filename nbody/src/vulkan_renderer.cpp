@@ -329,6 +329,15 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 	return true;
 }
 
+void vulkan_renderer::destroy(shared_ptr<compute_context> ctx,
+							  shared_ptr<compute_device> dev) {
+	for(auto& tex : body_textures) {
+		tex = nullptr;
+	}
+	
+	// TODO: clean up renderer stuff
+}
+
 void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 							 shared_ptr<compute_device> dev,
 							 shared_ptr<compute_queue> dev_queue,
