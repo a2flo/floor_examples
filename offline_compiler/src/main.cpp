@@ -354,6 +354,7 @@ int main(int, char* argv[]) {
 				device->image_support = true;
 				device->image_depth_support = true;
 				device->image_msaa_support = true;
+				device->image_msaa_array_support = true;
 				device->image_mipmap_support = true;
 				device->image_mipmap_write_support = true;
 				if(option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
@@ -426,14 +427,11 @@ int main(int, char* argv[]) {
 				}
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
-				if(option_ctx.sub_groups) device->sub_group_support = true;
-				// enable common image support
-				device->image_support = true;
-				device->image_depth_support = true;
-				device->image_msaa_support = true;
-				device->image_mipmap_support = true;
-				device->image_mipmap_write_support = true;
-				device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
+				
+				// not supported right now
+				//if(option_ctx.sub_groups) device->sub_group_support = true;
+				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
+				
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;
 		}

@@ -196,16 +196,10 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 	};
 }
 
-#if defined(FLOOR_COMPUTE_METAL)
 fragment auto lighting_fragment(stage_in_out in [[stage_input]],
 								const_image_2d<float> tex) {
 	return tex.read_linear(point_coord) * in.color;
 }
-#else // no image support yet in vulkan
-fragment auto lighting_fragment(stage_in_out in [[stage_input]]) {
-	return (1.0f - (point_coord * 2.0f - 1.0f).dot()) * in.color;
-}
-#endif
 
 #endif
 

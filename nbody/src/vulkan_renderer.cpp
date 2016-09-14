@@ -80,7 +80,8 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 						   shared_ptr<compute_kernel> vs,
 						   shared_ptr<compute_kernel> fs) {
 	auto vk_ctx = (vulkan_compute*)ctx.get();
-	auto device = ((vulkan_device*)dev.get())->device;
+	auto vk_dev = (vulkan_device*)dev.get();
+	auto device = vk_dev->device;
 	create_textures(dev);
 	
 	// check vs/fs and get state
@@ -151,6 +152,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 	
 	// create the pipeline layout
 	vector<VkDescriptorSetLayout> desc_set_layouts;
+	desc_set_layouts.emplace_back(vk_dev->fixed_sampler_desc_set_layout);
 	if(vs_entry->desc_set_layout != nullptr) {
 		desc_set_layouts.emplace_back(vs_entry->desc_set_layout);
 	}
@@ -162,7 +164,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.pNext = nullptr,
 		.flags = 0,
 		.setLayoutCount = uint32_t(desc_set_layouts.size()),
-		.pSetLayouts = (!desc_set_layouts.empty() ? desc_set_layouts.data() : nullptr),
+		.pSetLayouts = desc_set_layouts.data(),
 		.pushConstantRangeCount = 0,
 		.pPushConstantRanges = nullptr,
 	};
@@ -344,7 +346,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 							 shared_ptr<compute_buffer> position_buffer) {
 	auto vk_ctx = (vulkan_compute*)ctx.get();
 	auto vk_queue = (vulkan_queue*)dev_queue.get();
-	auto vk_device = (vulkan_device*)dev.get();
+	auto vk_dev = (vulkan_device*)dev.get();
 	
 	//
 	auto drawable_ret = vk_ctx->acquire_next_image();
@@ -381,18 +383,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	};
 	vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
 	
-#if 0 // for testing purposes
-	const float4 clear_color { 1.0f, 0.0f, 0.0f, 1.0f };
-	const VkImageSubresourceRange range {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0,
-		.levelCount = 1,
-		.baseArrayLayer = 0,
-		.layerCount = 1,
-	};
-	vkCmdClearColorImage(cmd_buffer.cmd_buffer, screen_image, VK_IMAGE_LAYOUT_GENERAL,
-						 (const VkClearColorValue*)&clear_color, 1, &range);
-#else
 	const VkClearValue clear_value {
 		.color = {
 			.float32 = { 0.0f, 0.0f, 0.0f, 0.0f },
@@ -414,13 +404,29 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	vkCmdBindPipeline(cmd_buffer.cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 	
 	// bind/update descs
-	const auto write_desc_count = 2;
+	const auto write_desc_count = 4;
 	vector<VkWriteDescriptorSet> write_descs(write_desc_count);
 	vector<uint32_t> dyn_offsets;
+	uint32_t write_idx = 0;
 	
-	// arg #0
+	// fixed sampler set
 	{
-		auto& write_desc = write_descs[0];
+		auto& write_desc = write_descs[write_idx++];
+		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_desc.pNext = nullptr;
+		write_desc.dstSet = vk_dev->fixed_sampler_desc_set;
+		write_desc.dstBinding = 0;
+		write_desc.dstArrayElement = 0;
+		write_desc.descriptorCount = (uint32_t)vk_dev->fixed_sampler_set.size();
+		write_desc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+		write_desc.pImageInfo = vk_dev->fixed_sampler_image_info.data();
+		write_desc.pBufferInfo = nullptr;
+		write_desc.pTexelBufferView = nullptr;
+	}
+	
+	// vs arg #0
+	{
+		auto& write_desc = write_descs[write_idx++];
 		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_desc.pNext = nullptr;
 		write_desc.dstSet = vs_entry->desc_set;
@@ -450,12 +456,12 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		.mass_minmax = nbody_state.mass_minmax
 	};
 	
-	// arg #1
-	shared_ptr<compute_buffer> constant_buffer = make_shared<vulkan_buffer>(vk_device, sizeof(uniforms), (void*)&uniforms,
+	// vs arg #1
+	shared_ptr<compute_buffer> constant_buffer = make_shared<vulkan_buffer>(vk_dev, sizeof(uniforms), (void*)&uniforms,
 																			COMPUTE_MEMORY_FLAG::READ |
 																			COMPUTE_MEMORY_FLAG::HOST_WRITE);
 	{
-		auto& write_desc = write_descs[1];
+		auto& write_desc = write_descs[write_idx++];
 		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_desc.pNext = nullptr;
 		write_desc.dstSet = vs_entry->desc_set;
@@ -471,23 +477,41 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		dyn_offsets.emplace_back(0);
 	}
 	
-	// only need to set vertex shader stuff here (fragment shader doesn't use any descs right now, b/c of missing image support)
-	vkUpdateDescriptorSets(vk_device->device,
+	// fs arg #0
+	{
+		auto& write_desc = write_descs[write_idx++];
+		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_desc.pNext = nullptr;
+		write_desc.dstSet = fs_entry->desc_set;
+		write_desc.dstBinding = 0;
+		write_desc.dstArrayElement = 0;
+		write_desc.descriptorCount = 1;
+		write_desc.descriptorType = fs_entry->desc_types[0];
+		write_desc.pImageInfo = ((vulkan_image*)body_textures[0].get())->get_vulkan_image_info();
+		write_desc.pBufferInfo = nullptr;
+		write_desc.pTexelBufferView = nullptr;
+	}
+	
+	vkUpdateDescriptorSets(vk_dev->device,
 						   write_desc_count, write_descs.data(),
 						   0, nullptr);
+	const VkDescriptorSet desc_sets[3] {
+		vk_dev->fixed_sampler_desc_set,
+		vs_entry->desc_set,
+		fs_entry->desc_set,
+	};
 	vkCmdBindDescriptorSets(cmd_buffer.cmd_buffer,
 							VK_PIPELINE_BIND_POINT_GRAPHICS,
 							pipeline_layout,
 							0,
-							1,
-							&vs_entry->desc_set,
+							(uint32_t)size(desc_sets),
+							desc_sets,
 							(uint32_t)dyn_offsets.size(),
 							dyn_offsets.data());
 	
 	vkCmdDraw(cmd_buffer.cmd_buffer, nbody_state.body_count, 1, 0, 0);
 	
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
-#endif
 	
 	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
 	vk_queue->submit_command_buffer(cmd_buffer, true);
