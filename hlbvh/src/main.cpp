@@ -323,7 +323,7 @@ int main(int, char* argv[]) {
 	
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
-	const llvm_compute::compile_options options {
+	const llvm_toolchain::compile_options options {
 		.enable_warnings = true,
 	};
 	auto prog = hlbvh_state.ctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);

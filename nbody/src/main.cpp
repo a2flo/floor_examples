@@ -594,7 +594,7 @@ int main(int, char* argv[]) {
 	
 	// compile the program and get the kernel functions
 #if !defined(FLOOR_IOS)
-	llvm_compute::compile_options options {
+	llvm_toolchain::compile_options options {
 		.cli = ("-I" + floor::data_path("../nbody/src") +
 				" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 				" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
@@ -605,59 +605,59 @@ int main(int, char* argv[]) {
 	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::function_info> function_infos {
+	const vector<llvm_toolchain::function_info> function_infos {
 		{
 			"nbody_compute",
-			llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
+			llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL,
 			{
-				llvm_compute::function_info::arg_info { .size = 16 },
-				llvm_compute::function_info::arg_info { .size = 16 },
-				llvm_compute::function_info::arg_info { .size = 12 },
-				llvm_compute::function_info::arg_info { .size = 4, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_toolchain::function_info::arg_info { .size = 16 },
+				llvm_toolchain::function_info::arg_info { .size = 16 },
+				llvm_toolchain::function_info::arg_info { .size = 12 },
+				llvm_toolchain::function_info::arg_info { .size = 4, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 		{
 			"nbody_raster",
-			llvm_compute::function_info::FUNCTION_TYPE::KERNEL,
+			llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL,
 			{
-				llvm_compute::function_info::arg_info { .size = 16 },
-				llvm_compute::function_info::arg_info { .size = 4 },
-				llvm_compute::function_info::arg_info { .size = 4 },
-				llvm_compute::function_info::arg_info { .size = 84, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_toolchain::function_info::arg_info { .size = 16 },
+				llvm_toolchain::function_info::arg_info { .size = 4 },
+				llvm_toolchain::function_info::arg_info { .size = 4 },
+				llvm_toolchain::function_info::arg_info { .size = 84, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 		{
 			"lighting_vertex",
-			llvm_compute::function_info::FUNCTION_TYPE::VERTEX,
+			llvm_toolchain::function_info::FUNCTION_TYPE::VERTEX,
 			{
-				llvm_compute::function_info::arg_info { .size = 16 },
-				llvm_compute::function_info::arg_info { .size = 136, llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT },
+				llvm_toolchain::function_info::arg_info { .size = 16 },
+				llvm_toolchain::function_info::arg_info { .size = 136, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
 			}
 		},
 		{
 			"lighting_fragment",
-			llvm_compute::function_info::FUNCTION_TYPE::FRAGMENT,
+			llvm_toolchain::function_info::FUNCTION_TYPE::FRAGMENT,
 			{
-				llvm_compute::function_info::arg_info {
+				llvm_toolchain::function_info::arg_info {
 					.size = 16,
-					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
 				},
-				llvm_compute::function_info::arg_info {
+				llvm_toolchain::function_info::arg_info {
 					.size = 4,
-					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
 				},
-				llvm_compute::function_info::arg_info {
+				llvm_toolchain::function_info::arg_info {
 					.size = 16,
-					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT
+					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
+					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
 				},
-				llvm_compute::function_info::arg_info {
+				llvm_toolchain::function_info::arg_info {
 					.size = 0,
-					.address_space = llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE,
-					.image_type = llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D,
-					.image_access = llvm_compute::function_info::ARG_IMAGE_ACCESS::READ,
+					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE,
+					.image_type = llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D,
+					.image_access = llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ,
 				},
 			}
 		},

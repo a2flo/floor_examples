@@ -23,7 +23,7 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/floor/floor_version.hpp>
-#include <floor/compute/llvm_compute.hpp>
+#include <floor/compute/llvm_toolchain.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/core/option_handler.hpp>
 
@@ -46,7 +46,7 @@
 struct option_context {
 	string filename { "" };
 	string output_filename { "" };
-	llvm_compute::TARGET target { llvm_compute::TARGET::SPIR };
+	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
 	string sub_target;
 	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
@@ -133,20 +133,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		
 		const string target = *arg_ptr;
 		if(target == "spir") {
-			ctx.target = llvm_compute::TARGET::SPIR;
+			ctx.target = llvm_toolchain::TARGET::SPIR;
 		}
 		else if(target == "ptx") {
-			ctx.target = llvm_compute::TARGET::PTX;
+			ctx.target = llvm_toolchain::TARGET::PTX;
 		}
 		else if(target == "air") {
-			ctx.target = llvm_compute::TARGET::AIR;
+			ctx.target = llvm_toolchain::TARGET::AIR;
 		}
 		else if(target == "spirv") {
-			ctx.target = llvm_compute::TARGET::SPIRV_VULKAN;
+			ctx.target = llvm_toolchain::TARGET::SPIRV_VULKAN;
 		}
 		else if(target == "native-cl") {
 			// very hacky and undocumented way of compiling std opencl c on the native opencl platform
-			ctx.target = llvm_compute::TARGET::SPIR;
+			ctx.target = llvm_toolchain::TARGET::SPIR;
 			ctx.native_cl = true;
 		}
 		else {
@@ -312,14 +312,14 @@ int main(int, char* argv[]) {
 	}
 	
 	// handle spir-v target change
-	if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN &&
+	if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN &&
 	   (option_ctx.sub_target == "opencl" ||
 		option_ctx.sub_target == "opencl-gpu" ||
 		option_ctx.sub_target == "opencl-cpu")) {
-		option_ctx.target = llvm_compute::TARGET::SPIRV_OPENCL;
+		option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
 	}
 	
-	llvm_compute::program_data program {};
+	llvm_toolchain::program_data program {};
 	if(!option_ctx.test_bin && !option_ctx.native_cl) {
 		// post-checking
 		if(option_ctx.filename.empty()) {
@@ -330,10 +330,10 @@ int main(int, char* argv[]) {
 		// create target specific device
 		shared_ptr<compute_device> device;
 		switch(option_ctx.target) {
-			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::SPIRV_OPENCL: {
-				const char* target_name = (option_ctx.target == llvm_compute::TARGET::SPIR ? "SPIR" :
-										   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
+			case llvm_toolchain::TARGET::SPIR:
+			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
+				const char* target_name = (option_ctx.target == llvm_toolchain::TARGET::SPIR ? "SPIR" :
+										   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
 				device = make_shared<opencl_device>();
 				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu" ||
 				   option_ctx.sub_target == "opencl" || option_ctx.sub_target == "opencl-gpu") {
@@ -357,20 +357,20 @@ int main(int, char* argv[]) {
 				device->image_msaa_array_support = true;
 				device->image_mipmap_support = true;
 				device->image_mipmap_write_support = true;
-				if(option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+				if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
 					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
 					device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
 					device->param_workaround = option_ctx.workarounds;
 				}
 				else {
 					device->image_read_write_support = (option_ctx.image_rw_support == 1 ? true : false);
-					if(option_ctx.target == llvm_compute::TARGET::SPIR && option_ctx.workarounds) {
+					if(option_ctx.target == llvm_toolchain::TARGET::SPIR && option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -cl-spir-intel-workarounds ";
 					}
 				}
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 			} break;
-			case llvm_compute::TARGET::PTX:
+			case llvm_toolchain::TARGET::PTX:
 				device = make_shared<cuda_device>();
 				if(option_ctx.sub_target != "") {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
@@ -391,7 +391,7 @@ int main(int, char* argv[]) {
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
-			case llvm_compute::TARGET::AIR: {
+			case llvm_toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
 				const auto family_pos = option_ctx.sub_target.rfind('_');
@@ -419,7 +419,7 @@ int main(int, char* argv[]) {
 				}
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
-			case llvm_compute::TARGET::SPIRV_VULKAN:
+			case llvm_toolchain::TARGET::SPIRV_VULKAN:
 				device = make_shared<vulkan_device>();
 				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
 					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
@@ -439,56 +439,56 @@ int main(int, char* argv[]) {
 		device->double_support = option_ctx.double_support;
 		
 		// compile
-		llvm_compute::compile_options options {
+		llvm_toolchain::compile_options options {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings,
 		};
-		program = llvm_compute::compile_program_file(device, option_ctx.filename, options);
+		program = llvm_toolchain::compile_program_file(device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
 			string info_str = "";
 			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
 				switch(info.args[i].address_space) {
-					case llvm_compute::function_info::ARG_ADDRESS_SPACE::GLOBAL:
+					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::GLOBAL:
 						info_str += "global ";
 						break;
-					case llvm_compute::function_info::ARG_ADDRESS_SPACE::LOCAL:
+					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::LOCAL:
 						info_str += "local ";
 						break;
-					case llvm_compute::function_info::ARG_ADDRESS_SPACE::CONSTANT:
+					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT:
 						info_str += "constant ";
 						break;
-					case llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE:
+					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE:
 						info_str += "image ";
 						break;
 					default: break;
 				}
 				
 				switch(info.args[i].special_type) {
-					case llvm_compute::function_info::SPECIAL_TYPE::STAGE_INPUT:
+					case llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT:
 						info_str += "stage_input ";
 						break;
-					case llvm_compute::function_info::SPECIAL_TYPE::PUSH_CONSTANT:
+					case llvm_toolchain::function_info::SPECIAL_TYPE::PUSH_CONSTANT:
 						info_str += "push_constant ";
 						break;
-					case llvm_compute::function_info::SPECIAL_TYPE::SSBO:
+					case llvm_toolchain::function_info::SPECIAL_TYPE::SSBO:
 						info_str += "ssbo ";
 						break;
 					default: break;
 				}
 				
-				if(info.args[i].address_space != llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE) {
+				if(info.args[i].address_space != llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE) {
 					info_str += to_string(info.args[i].size);
 				}
 				else {
 					switch(info.args[i].image_access) {
-						case llvm_compute::function_info::ARG_IMAGE_ACCESS::READ:
+						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ:
 							info_str += "read_only ";
 							break;
-						case llvm_compute::function_info::ARG_IMAGE_ACCESS::WRITE:
+						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::WRITE:
 							info_str += "write_only ";
 							break;
-						case llvm_compute::function_info::ARG_IMAGE_ACCESS::READ_WRITE:
+						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ_WRITE:
 							info_str += "read_write ";
 							break;
 						default:
@@ -497,58 +497,58 @@ int main(int, char* argv[]) {
 							break;
 					}
 					
-					if(option_ctx.target == llvm_compute::TARGET::PTX) {
+					if(option_ctx.target == llvm_toolchain::TARGET::PTX) {
 						// image type is not stored for ptx
 						info_str += to_string(info.args[i].size);
 					}
 					else {
 						switch(info.args[i].image_type) {
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D:
 								info_str += "1D";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
 								info_str += "1D array";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
 								info_str += "1D buffer";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D:
 								info_str += "2D";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
 								info_str += "2D array";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
 								info_str += "2D depth";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
 								info_str += "2D array depth";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
 								info_str += "2D msaa";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
 								info_str += "2D array msaa";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
 								info_str += "2D msaa depth";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
 								info_str += "2D array msaa depth";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_3D:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_3D:
 								info_str += "3D";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
 								info_str += "cube";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
 								info_str += "cube array";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
 								info_str += "cube depth";
 								break;
-							case llvm_compute::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
+							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
 								info_str += "cube array depth";
 								break;
 							default:
@@ -562,9 +562,9 @@ int main(int, char* argv[]) {
 			}
 			info_str = core::trim(info_str);
 			log_msg("compiled %s function: %s (%s)",
-					info.type == llvm_compute::function_info::FUNCTION_TYPE::KERNEL ? "kernel" :
-					info.type == llvm_compute::function_info::FUNCTION_TYPE::VERTEX ? "vertex" :
-					info.type == llvm_compute::function_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
+					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL ? "kernel" :
+					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::VERTEX ? "vertex" :
+					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
 					info.name, info_str);
 		}
 		
@@ -574,19 +574,19 @@ int main(int, char* argv[]) {
 			// output file name?
 			option_ctx.output_filename = "unknown.bin";
 			switch(option_ctx.target) {
-				case llvm_compute::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
-				case llvm_compute::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
+				case llvm_toolchain::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
+				case llvm_toolchain::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				// don't do anything for air and spir-v, it's already stored in a file
-				case llvm_compute::TARGET::AIR:
-				case llvm_compute::TARGET::SPIRV_VULKAN:
-				case llvm_compute::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
+				case llvm_toolchain::TARGET::AIR:
+				case llvm_toolchain::TARGET::SPIRV_VULKAN:
+				case llvm_toolchain::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
 			}
 		}
 		
 		// write to file
-		if(option_ctx.target == llvm_compute::TARGET::AIR ||
-		   option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
-		   option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+		if(option_ctx.target == llvm_toolchain::TARGET::AIR ||
+		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
+		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
 			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
 			if(option_ctx.output_filename != "") {
@@ -598,20 +598,20 @@ int main(int, char* argv[]) {
 		
 		// print to console, as well as to file!
 		if(wants_console_output) {
-			if(option_ctx.target == llvm_compute::TARGET::AIR) {
+			if(option_ctx.target == llvm_toolchain::TARGET::AIR) {
 				string output = "";
 				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
 				cout << output << endl;
 			}
-			else if(option_ctx.target == llvm_compute::TARGET::SPIR) {
+			else if(option_ctx.target == llvm_toolchain::TARGET::SPIR) {
 				string output = "";
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
 				cout << output << endl;
 			}
-			else if(option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ||
-					option_ctx.target == llvm_compute::TARGET::SPIRV_OPENCL) {
+			else if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
+					option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
 				string output = "";
-				core::system("\"" + (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
+				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
 							 "\" " + option_ctx.output_filename, output);
 				cout << output << endl;
@@ -652,7 +652,7 @@ int main(int, char* argv[]) {
 	
 	// handle spir-v text assembly output
 	if(option_ctx.spirv_text) {
-		const auto& spirv_dis = (option_ctx.target == llvm_compute::TARGET::SPIRV_VULKAN ?
+		const auto& spirv_dis = (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 								 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis());
 		string spirv_dis_output = "";
 		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
@@ -664,8 +664,8 @@ int main(int, char* argv[]) {
 	// test the compiled binary (if this was specified)
 	if(option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
-			case llvm_compute::TARGET::SPIR:
-			case llvm_compute::TARGET::SPIRV_OPENCL: {
+			case llvm_toolchain::TARGET::SPIR:
+			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
 				auto ctx = make_shared<opencl_compute>(floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
@@ -701,7 +701,7 @@ int main(int, char* argv[]) {
 					
 					// create the program object ...
 					cl_int create_err = CL_SUCCESS;
-					if(option_ctx.target != llvm_compute::TARGET::SPIRV_OPENCL) {
+					if(option_ctx.target != llvm_toolchain::TARGET::SPIRV_OPENCL) {
 						opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
 																   &binary_length, &binary_ptr, &status, &create_err);
 						if(create_err != CL_SUCCESS) {
@@ -727,7 +727,7 @@ int main(int, char* argv[]) {
 					
 					// ... and build it
 					const string build_options {
-						(option_ctx.target == llvm_compute::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
+						(option_ctx.target == llvm_toolchain::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 					};
 					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
 										  build_err, "failed to build opencl program", {});
@@ -769,7 +769,7 @@ int main(int, char* argv[]) {
 				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
 #endif
 			} break;
-			case llvm_compute::TARGET::AIR: {
+			case llvm_toolchain::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
 				auto ctx = make_shared<metal_compute>(floor::get_metal_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
@@ -784,13 +784,13 @@ int main(int, char* argv[]) {
 					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
+					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
 						break;
 					}
 				}
 				
-				auto prog_entry = ctx->create_program_entry(dev, program, llvm_compute::TARGET::AIR);
+				auto prog_entry = ctx->create_program_entry(dev, program, llvm_toolchain::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
@@ -803,7 +803,7 @@ int main(int, char* argv[]) {
 				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
 #endif
 			} break;
-			case llvm_compute::TARGET::PTX: {
+			case llvm_toolchain::TARGET::PTX: {
 #if !defined(FLOOR_NO_CUDA)
 				auto ctx = make_shared<cuda_compute>(floor::get_cuda_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
@@ -821,7 +821,7 @@ int main(int, char* argv[]) {
 						break;
 					}
 					
-					if(!llvm_compute::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_cuda_toolchain_version())) {
+					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_cuda_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
 						break;
 					}
@@ -835,7 +835,7 @@ int main(int, char* argv[]) {
 				log_error("cuda testing not supported on this platform (or disabled during floor compilation)");
 #endif
 			} break;
-			case llvm_compute::TARGET::SPIRV_VULKAN: {
+			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
 				auto ctx = make_shared<vulkan_compute>(false, floor::get_vulkan_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);

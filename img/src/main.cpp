@@ -294,27 +294,27 @@ int main(int, char* argv[]) {
 												  (second_cache ? " -DSECOND_CACHE=1" : ""));
 #else
 	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_compute::function_info> function_infos {
+	const vector<llvm_toolchain::function_info> function_infos {
 		// non-functional right now
 		/*{
 			"image_blur_single_stage",
 			{
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},*/
 		{
 			"image_blur_dumb_horizontal",
 			{
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},
 		{
 			"image_blur_dumb_vertical",
 			{
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_compute::function_info::arg_info { .size = 0, llvm_compute::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
+				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
 			}
 		},
 	};
