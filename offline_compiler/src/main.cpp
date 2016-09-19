@@ -613,7 +613,7 @@ int main(int, char* argv[]) {
 				string output = "";
 				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
-							 "\" " + option_ctx.output_filename, output);
+							 "\" --debug-asm " + option_ctx.output_filename, output);
 				cout << output << endl;
 			}
 			else {

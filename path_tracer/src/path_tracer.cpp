@@ -212,12 +212,13 @@ protected:
 				cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission.y,
 				cornell_materials[size_t(CORNELL_OBJECT::LIGHT)].emission.z
 			};
+			const float area { edge_1.crossed(edge_2).length() };
 			
 			constexpr float3 get_point(const float2& coord) const {
 				return position + coord.x * edge_1 + coord.y * edge_2;
 			}
 			constexpr float get_area() const {
-				return edge_1.crossed(edge_2).length();
+				return area;
 			}
 		} light {};
 		{
