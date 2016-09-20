@@ -425,6 +425,7 @@ int main(int, char* argv[]) {
 					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
 					return -4;
 				}
+				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				
