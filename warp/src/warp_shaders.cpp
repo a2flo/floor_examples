@@ -16,8 +16,14 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <floor/core/essentials.hpp>
+
+#if defined(FLOOR_COMPUTE_HOST)
+#include <floor/compute/device/common.hpp>
+#endif
+
 // metal and vulkan only
-#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN)
+#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_GRAPHICS_HOST)
 
 #if !defined(WARP_SHADOW_NEAR_PLANE)
 #define WARP_SHADOW_NEAR_PLANE 1.0f
@@ -75,7 +81,9 @@ struct scene_gather_fragment_out {
 	float4 color;
 	uint32_t motion_forward;
 	uint32_t motion_backward;
-	half2 motion_depth;
+	// this actually is a half2, but we can't explicitly use this in vulkan,
+	// however, this is of course still backed by a half2 image
+	float2 motion_depth;
 };
 
 // props to:
@@ -168,8 +176,7 @@ static uint32_t encode_3d_motion(const float3& motion) {
 }
 
 static uint32_t encode_2d_motion(const float2& motion) {
-	const auto cmotion = short2((motion * 32767.0f).clamp(-32767.0f, 32767.0f)); // +/- 2^15 - 1, fit into 16 bits
-	return *(uint32_t*)&cmotion;
+	return pack_snorm_2x16(motion); // +/- 2^15 - 1, fit into 16 bits
 }
 
 static float4 scene_fs(const scene_base_in_out& in,
@@ -279,9 +286,9 @@ fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 		scene_fs(in, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
 		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
-		half2 {
-			(half)((in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w)),
-			(half)((in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w))
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
 		}
 	};
 }
@@ -401,9 +408,9 @@ fragment auto skybox_gather_fs(const skybox_gather_in_out in [[stage_input]],
 		skybox_fs(in, skybox_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
 		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
-		half2 {
-			(half)((in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w)),
-			(half)((in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w))
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
 		}
 	};
 }
@@ -434,11 +441,19 @@ vertex blit_in_out blit_vs() {
 
 fragment float4 blit_fs(const blit_in_out in [[stage_input]],
 						const_image_2d<float> img) {
+#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
 	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) });
+#else
+	return img.read(frag_coord.xy.cast<uint32_t>());
+#endif
 }
 fragment float4 blit_swizzle_fs(const blit_in_out in [[stage_input]],
 								const_image_2d<float> img) {
+#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
 	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) }).swizzle<2, 1, 0, 3>();
+#else
+	return img.read(frag_coord.xy.cast<uint32_t>()).swizzle<2, 1, 0, 3>();
+#endif
 }
 
 #endif

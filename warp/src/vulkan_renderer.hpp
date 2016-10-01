@@ -16,14 +16,18 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_METAL_RENDERER_HPP__
-#define __FLOOR_WARP_METAL_RENDERER_HPP__
+#ifndef __FLOOR_WARP_VULKAN_RENDERER_HPP__
+#define __FLOOR_WARP_VULKAN_RENDERER_HPP__
 
 #include "common_renderer.hpp"
+#if !defined(FLOOR_NO_VULKAN)
+#include <floor/compute/vulkan/vulkan_kernel.hpp>
+#endif
 
-class metal_renderer final : public common_renderer {
+class vulkan_renderer final : public common_renderer {
 public:
 	bool init() override;
+	void destroy() override;
 	void render(const floor_obj_model& model, const camera& cam) override;
 	
 protected:
@@ -32,8 +36,19 @@ protected:
 	
 	void render_full_scene(const floor_obj_model& model, const camera& cam) override;
 	
-	// current id <MTLCommandBuffer> used for rendering
-	void* render_cmd_buffer;
+#if !defined(FLOOR_NO_VULKAN)
+	bool make_pipeline(vulkan_device* vk_dev,
+					   VkRenderPass render_pass,
+					   const WARP_PIPELINE pipeline_id,
+					   const WARP_SHADER vertex_shader,
+					   const WARP_SHADER fragment_shader,
+					   const uint32_t color_attachment_count,
+					   const bool has_depth_attachment);
+	
+	vector<vulkan_kernel::multi_draw_indexed_entry> scene_draw_info;
+	
+	vulkan_kernel::vulkan_kernel_entry* get_shader_entry(const WARP_SHADER& shader) const;
+#endif
 	
 };
 

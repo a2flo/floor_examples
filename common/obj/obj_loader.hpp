@@ -46,7 +46,7 @@ struct obj_model {
 		uint32_t mat_idx { 0u };
 		// not going to put this separately just for that
 		GLuint indices_gl_vbo { 0u };
-		shared_ptr<compute_buffer> indices_metal_vbo;
+		shared_ptr<compute_buffer> indices_floor_vbo;
 	};
 	vector<unique_ptr<sub_object>> objects;
 };
@@ -68,7 +68,7 @@ struct gl_obj_model : obj_model {
 	vector<GLuint> textures;
 };
 
-struct metal_obj_model : obj_model {
+struct floor_obj_model : obj_model {
 	shared_ptr<compute_buffer> vertices_buffer;
 	shared_ptr<compute_buffer> tex_coords_buffer;
 	shared_ptr<compute_buffer> normals_buffer;

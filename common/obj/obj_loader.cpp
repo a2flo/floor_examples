@@ -100,7 +100,7 @@ if(src_surface->format->Rshift == rshift && \
 	__TEXTURE_FORMATS(__CHECK_FORMAT, surface, internal_format, format, texture_type); \
 }
 
-// -> floor (for use with metal)
+// -> floor (for use with metal/vulkan)
 #define __FLOOR_TEXTURE_FORMATS(F, src_surface, dst_image_type) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
 F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
@@ -634,12 +634,12 @@ FLOOR_POP_WARNINGS()
 
 static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  unordered_map<string, pair<uint32_t, compute_image*>>& texture_filenames,
-						  // opengl or metal?
+						  // opengl or metal/vulkan?
 						  const bool is_opengl,
 						  // gl tex ids
 						  vector<GLuint>* model_gl_textures,
-						  // metal tex objects
-						  vector<shared_ptr<compute_image>>* model_metal_textures,
+						  // metal/vulkan tex objects
+						  vector<shared_ptr<compute_image>>* model_floor_textures,
 						  // path prefix
 						  const string& prefix,
 						  shared_ptr<compute_context> ctx,
@@ -725,9 +725,9 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	else
 #endif
 	{
-		// create metal textures
-		model_metal_textures->resize(textures.size());
-		for(size_t i = 0, count = model_metal_textures->size(); i < count; ++i) {
+		// create metal/vulkan textures
+		model_floor_textures->resize(textures.size());
+		for(size_t i = 0, count = model_floor_textures->size(); i < count; ++i) {
 			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
 			
 			if(textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
@@ -762,22 +762,24 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			}
 			
 			image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
-						   COMPUTE_IMAGE_TYPE::READ |
-						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
+						   COMPUTE_IMAGE_TYPE::READ /*|
+						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED*/);
 			
-			(*model_metal_textures)[i] = ctx->create_image(dev,
+			//log_debug("tex %s: %v, %s", filenames[i], dim, compute_image::image_type_to_string(image_type));
+			
+			(*model_floor_textures)[i] = ctx->create_image(dev,
 														   dim,
 														   image_type,
 														   pixels,
 														   COMPUTE_MEMORY_FLAG::READ |
-														   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-														   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+														   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE /*|
+														   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS*/);
 			
 			// assign tex ptr to tex filename
-			texture_filenames[filenames[i]].second = (*model_metal_textures)[i].get();
+			texture_filenames[filenames[i]].second = (*model_floor_textures)[i].get();
 		}
 #if defined(FLOOR_DEBUG)
-		log_debug("metal textures created");
+		log_debug("metal/vulkan/floor textures created");
 #endif
 	}
 	
@@ -1324,16 +1326,16 @@ struct obj_grammar {
 			
 			//
 			gl_obj_model* gl_model = (is_opengl ? (gl_obj_model*)model.get() : nullptr);
-			metal_obj_model* metal_model = (!is_opengl ? (metal_obj_model*)model.get() : nullptr);
+			floor_obj_model* floor_model = (!is_opengl ? (floor_obj_model*)model.get() : nullptr);
 			if(is_opengl) {
 				gl_model->materials.resize(mats.size());
 			}
-			else metal_model->materials.resize(mats.size());
+			else floor_model->materials.resize(mats.size());
 			model->material_infos.resize(mats.size());
 			if(is_load_textures) {
 				load_textures(texture_filenames, is_opengl,
 							  is_opengl ? &gl_model->textures : nullptr,
-							  !is_opengl ? &metal_model->textures : nullptr,
+							  !is_opengl ? &floor_model->textures : nullptr,
 							  prefix, comp_ctx, dev);
 			}
 			
@@ -1360,7 +1362,7 @@ struct obj_grammar {
 					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].first;
 				}
 				else {
-					auto& mdl_mat = metal_model->materials[mat_map[mat.first]];
+					auto& mdl_mat = floor_model->materials[mat_map[mat.first]];
 					mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name].second;
 					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].second;
 					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].second;
@@ -1390,14 +1392,15 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 									   const bool cleanup_cpu_data,
 									   const bool is_load_textures,
 									   const bool create_gpu_buffers) {
-	const bool is_opengl = (ctx->get_compute_type() != COMPUTE_TYPE::METAL);
+	const bool is_opengl = (ctx->get_compute_type() != COMPUTE_TYPE::METAL &&
+							ctx->get_compute_type() != COMPUTE_TYPE::VULKAN);
 	success = false;
 	
 	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
-	shared_ptr<metal_obj_model> metal_model = (!is_opengl ? make_shared<metal_obj_model>() : nullptr);
+	shared_ptr<floor_obj_model> floor_model = (!is_opengl ? make_shared<floor_obj_model>() : nullptr);
 	shared_ptr<obj_model> model = (is_opengl ?
 								   (shared_ptr<obj_model>)gl_model :
-								   (shared_ptr<obj_model>)metal_model);
+								   (shared_ptr<obj_model>)floor_model);
 	static constexpr const uint32_t bin_obj_version { 1 };
 	
 	// -> load .obj
@@ -1455,7 +1458,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			bin_file.write_uint(bin_obj_version);
 			bin_file.write_uint((uint32_t)model->vertices.size());
 			bin_file.write_uint((uint32_t)model->objects.size());
-			bin_file.write_uint((uint32_t)(is_opengl ? gl_model->materials.size() : metal_model->materials.size()));
+			bin_file.write_uint((uint32_t)(is_opengl ?
+										   gl_model->materials.size() :
+										   floor_model->materials.size()));
 			
 			for(const auto& mtl : model->material_infos) {
 				bin_file.write_terminated_block(mtl.name, 0);
@@ -1542,7 +1547,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		if(is_opengl) {
 			gl_model->materials.reserve(mat_count);
 		}
-		else metal_model->materials.reserve(mat_count);
+		else floor_model->materials.reserve(mat_count);
 		model->material_infos.reserve(mat_count);
 		model->objects.reserve(sub_object_count);
 		
@@ -1566,7 +1571,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		if(is_load_textures) {
 			load_textures(texture_filenames, is_opengl,
 						  is_opengl ? &gl_model->textures : nullptr,
-						  !is_opengl ? &metal_model->textures : nullptr,
+						  !is_opengl ? &floor_model->textures : nullptr,
 						  prefix, ctx, dev);
 		}
 		
@@ -1581,7 +1586,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 				});
 			}
 			else {
-				metal_model->materials.emplace_back(metal_obj_model::material {
+				floor_model->materials.emplace_back(floor_obj_model::material {
 					texture_filenames[mdl_mat_info.diffuse_file_name].second,
 					texture_filenames[mdl_mat_info.specular_file_name].second,
 					texture_filenames[mdl_mat_info.normal_file_name].second,
@@ -1655,7 +1660,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 	}
 	
 	// create model buffers
-	for(auto& obj : (is_opengl ? gl_model->objects : metal_model->objects)) {
+	for(auto& obj : (is_opengl ? gl_model->objects : floor_model->objects)) {
 		obj->index_count = (GLsizei)(obj->indices.size() * 3);
 	}
 	if(create_gpu_buffers) {
@@ -1689,14 +1694,14 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		else {
 			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
 									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
-			metal_model->vertices_buffer = ctx->create_buffer(dev, metal_model->vertices, buffer_type);
-			metal_model->tex_coords_buffer = ctx->create_buffer(dev, metal_model->tex_coords, buffer_type);
-			metal_model->normals_buffer = ctx->create_buffer(dev, metal_model->normals, buffer_type);
-			metal_model->binormals_buffer = ctx->create_buffer(dev, metal_model->binormals, buffer_type);
-			metal_model->tangents_buffer = ctx->create_buffer(dev, metal_model->tangents, buffer_type);
+			floor_model->vertices_buffer = ctx->create_buffer(dev, floor_model->vertices, buffer_type);
+			floor_model->tex_coords_buffer = ctx->create_buffer(dev, floor_model->tex_coords, buffer_type);
+			floor_model->normals_buffer = ctx->create_buffer(dev, floor_model->normals, buffer_type);
+			floor_model->binormals_buffer = ctx->create_buffer(dev, floor_model->binormals, buffer_type);
+			floor_model->tangents_buffer = ctx->create_buffer(dev, floor_model->tangents, buffer_type);
 			
-			for(auto& obj : metal_model->objects) {
-				obj->indices_metal_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
+			for(auto& obj : floor_model->objects) {
+				obj->indices_floor_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
 			}
 		}
 	}

@@ -22,6 +22,7 @@
 #include <libwarp/libwarp.h>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
+#include "vulkan_renderer.hpp"
 #include "obj_loader.hpp"
 #include "auto_cam.hpp"
 #include "warp_state.hpp"
@@ -43,7 +44,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t--scatter: warp in scatter mode" << endl;
 		cout << "\t--gather: warp in gather mode" << endl;
 		cout << "\t--gather-forward: warp in gather forward-only mode" << endl;
-		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal)" << endl;
+		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal/vulkan)" << endl;
 		cout << "\t                  NOTE: obviously an upper limit" << endl;
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
 		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
@@ -280,6 +281,7 @@ int main(int, char* argv[]) {
 	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
 	const auto floor_renderer = floor::get_renderer();
+	shared_ptr<common_renderer> renderer;
 	
 	if(floor_renderer == floor::RENDERER::NONE) {
 		log_error("no renderer was initialized");
@@ -351,7 +353,7 @@ int main(int, char* argv[]) {
 		cam->set_rotation(0.0f, -90.0f, 0.0f);
 		last_cam_pos = cam->get_position();
 		
-		// get the compute context that has been automatically created (opencl/cuda/metal/host)
+		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
 		warp_state.ctx = floor::get_compute_context();
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
@@ -388,7 +390,8 @@ int main(int, char* argv[]) {
 		else if(!warp_state.no_metal) {
 			warp_state.is_zw_depth = false; // not applicable to metal
 			
-			if(!metal_renderer::init()) {
+			renderer = make_shared<metal_renderer>();
+			if(!renderer->init()) {
 				log_error("error during metal initialization!");
 				return -1;
 			}
@@ -396,9 +399,13 @@ int main(int, char* argv[]) {
 #endif
 #if !defined(FLOOR_NO_VULKAN)
 		else if(!warp_state.no_vulkan) {
-			// TODO: implement vulkan renderer
-			log_error("vulkan render is not implemented yet");
-			return -1;
+			warp_state.is_zw_depth = false; // not applicable to vulkan
+			
+			renderer = make_shared<vulkan_renderer>();
+			if(!renderer->init()) {
+				log_error("error during vulkan initialization!");
+				return -1;
+			}
 		}
 #endif
 		
@@ -447,16 +454,9 @@ int main(int, char* argv[]) {
 			if(!warp_state.no_opengl) {
 				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
 			}
-#if defined(__APPLE__)
-			else if(!warp_state.no_metal) {
-				metal_renderer::render((const metal_obj_model&)*model.get(), *cam.get());
+			else {
+				renderer->render((const floor_obj_model&)*model.get(), *cam.get());
 			}
-#endif
-#if !defined(FLOOR_NO_VULKAN)
-			else if(!warp_state.no_vulkan) {
-				warp_state.done = true;
-			}
-#endif
 			floor::end_frame();
 		}
 	}
@@ -465,6 +465,7 @@ int main(int, char* argv[]) {
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	gl_renderer::destroy();
+	renderer = nullptr;
 	cam = nullptr;
 	
 	// kthxbye

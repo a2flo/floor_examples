@@ -1168,6 +1168,7 @@
 				5C180F731D80623A00AF91E7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "nbody_ios_sideload" */ = {
 			isa = XCConfigurationList;
