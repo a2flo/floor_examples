@@ -114,6 +114,7 @@ protected:
 	
 	// rendering + warp uniforms
 	float3 light_pos;
+	matrix4f clip;
 	matrix4f pm, mvm, rmvm;
 	matrix4f prev_mvm, prev_prev_mvm;
 	matrix4f prev_rmvm, prev_prev_rmvm;

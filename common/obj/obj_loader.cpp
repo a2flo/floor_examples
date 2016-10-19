@@ -1107,6 +1107,7 @@ struct obj_grammar {
 		model->normals.reserve(vertices.size());
 		model->binormals.reserve(vertices.size());
 		model->tangents.reserve(vertices.size());
+		model->material_indices.reserve(vertices.size());
 		model->objects.reserve(sub_objects.size());
 #if defined(FLOOR_DEBUG)
 		log_debug("alloc #0");
@@ -1166,6 +1167,7 @@ struct obj_grammar {
 			model->normals.push_back(float3 {});
 			model->binormals.push_back(float3 {});
 			model->tangents.push_back(float3 {});
+			model->material_indices.push_back(0);
 			entry.add(tc_idx, n_idx, dst);
 			return dst;
 		};
@@ -1330,7 +1332,12 @@ struct obj_grammar {
 			if(is_opengl) {
 				gl_model->materials.resize(mats.size());
 			}
-			else floor_model->materials.resize(mats.size());
+			else {
+				floor_model->diffuse_textures.resize(mats.size());
+				floor_model->specular_textures.resize(mats.size());
+				floor_model->normal_textures.resize(mats.size());
+				floor_model->mask_textures.resize(mats.size());
+			}
 			model->material_infos.resize(mats.size());
 			if(is_load_textures) {
 				load_textures(texture_filenames, is_opengl,
@@ -1362,11 +1369,10 @@ struct obj_grammar {
 					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].first;
 				}
 				else {
-					auto& mdl_mat = floor_model->materials[mat_map[mat.first]];
-					mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name].second;
-					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].second;
-					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].second;
-					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].second;
+					floor_model->diffuse_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.diffuse_file_name].second;
+					floor_model->specular_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.specular_file_name].second;
+					floor_model->normal_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.normal_file_name].second;
+					floor_model->mask_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.mask_file_name].second;
 				}
 			}
 			
@@ -1460,7 +1466,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			bin_file.write_uint((uint32_t)model->objects.size());
 			bin_file.write_uint((uint32_t)(is_opengl ?
 										   gl_model->materials.size() :
-										   floor_model->materials.size()));
+										   floor_model->diffuse_textures.size()));
 			
 			for(const auto& mtl : model->material_infos) {
 				bin_file.write_terminated_block(mtl.name, 0);
@@ -1547,7 +1553,12 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		if(is_opengl) {
 			gl_model->materials.reserve(mat_count);
 		}
-		else floor_model->materials.reserve(mat_count);
+		else {
+			floor_model->diffuse_textures.reserve(mat_count);
+			floor_model->specular_textures.reserve(mat_count);
+			floor_model->normal_textures.reserve(mat_count);
+			floor_model->mask_textures.reserve(mat_count);
+		}
 		model->material_infos.reserve(mat_count);
 		model->objects.reserve(sub_object_count);
 		
@@ -1586,12 +1597,10 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 				});
 			}
 			else {
-				floor_model->materials.emplace_back(floor_obj_model::material {
-					texture_filenames[mdl_mat_info.diffuse_file_name].second,
-					texture_filenames[mdl_mat_info.specular_file_name].second,
-					texture_filenames[mdl_mat_info.normal_file_name].second,
-					texture_filenames[mdl_mat_info.mask_file_name].second
-				});
+				floor_model->diffuse_textures.emplace_back(texture_filenames[mdl_mat_info.diffuse_file_name].second);
+				floor_model->specular_textures.emplace_back(texture_filenames[mdl_mat_info.specular_file_name].second);
+				floor_model->normal_textures.emplace_back(texture_filenames[mdl_mat_info.normal_file_name].second);
+				floor_model->mask_textures.emplace_back(texture_filenames[mdl_mat_info.mask_file_name].second);
 			}
 		}
 		
@@ -1692,6 +1701,18 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			glFinish();
 		}
 		else {
+			// set material indices (only needed for floor_obj_model)
+			model->material_indices.clear();
+			model->material_indices.resize(floor_model->vertices.size());
+			for(const auto& obj : floor_model->objects) {
+				for(const auto& index : obj->indices) {
+					floor_model->material_indices[index.x] = obj->mat_idx;
+					floor_model->material_indices[index.y] = obj->mat_idx;
+					floor_model->material_indices[index.z] = obj->mat_idx;
+				}
+			}
+			
+			// create buffers
 			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
 									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
 			floor_model->vertices_buffer = ctx->create_buffer(dev, floor_model->vertices, buffer_type);
@@ -1699,10 +1720,15 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			floor_model->normals_buffer = ctx->create_buffer(dev, floor_model->normals, buffer_type);
 			floor_model->binormals_buffer = ctx->create_buffer(dev, floor_model->binormals, buffer_type);
 			floor_model->tangents_buffer = ctx->create_buffer(dev, floor_model->tangents, buffer_type);
+			floor_model->materials_buffer = ctx->create_buffer(dev, floor_model->material_indices, buffer_type);
 			
+			vector<uint3> all_indices;
 			for(auto& obj : floor_model->objects) {
 				obj->indices_floor_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
+				all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
 			}
+			floor_model->index_count = (uint32_t)(all_indices.size() * 3);
+			floor_model->indices_buffer = ctx->create_buffer(dev, all_indices, buffer_type);
 		}
 	}
 	
@@ -1713,6 +1739,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		model->normals.clear();
 		model->binormals.clear();
 		model->tangents.clear();
+		model->material_indices.clear();
 		model->material_infos.clear();
 		for(auto& obj : model->objects) {
 			obj->indices.clear();

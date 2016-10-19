@@ -29,6 +29,7 @@ struct obj_model {
 	vector<float3> normals { float3 { 0.0f, 1.0f, 0.0f } };
 	vector<float3> binormals { float3 { 1.0f, 0.0f, 0.0f } };
 	vector<float3> tangents { float3 { 0.0f, 0.0f, -1.0f } };
+	vector<uint32_t> material_indices { 0 };
 	
 	struct material_info {
 		string name;
@@ -74,14 +75,18 @@ struct floor_obj_model : obj_model {
 	shared_ptr<compute_buffer> normals_buffer;
 	shared_ptr<compute_buffer> binormals_buffer;
 	shared_ptr<compute_buffer> tangents_buffer;
+	shared_ptr<compute_buffer> materials_buffer;
 	
-	struct material {
-		compute_image* diffuse;
-		compute_image* specular;
-		compute_image* normal;
-		compute_image* mask;
-	};
-	vector<material> materials;
+	// contains *all* indices
+	shared_ptr<compute_buffer> indices_buffer;
+	uint32_t index_count { 0u };
+	
+	// all materials
+	vector<compute_image*> diffuse_textures;
+	vector<compute_image*> specular_textures;
+	vector<compute_image*> normal_textures;
+	vector<compute_image*> mask_textures;
+	
 	vector<shared_ptr<compute_image>> textures;
 };
 

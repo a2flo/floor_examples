@@ -33,6 +33,11 @@
 #define WARP_SHADOW_FAR_PLANE 260.0f
 #endif
 
+// set externally: WARP_IMAGE_ARRAY_SUPPORT
+// this is used for drawing the scene all at once by binding *all* materials/images
+// and encoding the material index in a separate per-vertex buffer, then using said
+// index in the fragment shader to access the appropriate image from the image array
+
 //////////////////////////////////////////
 // scene
 
@@ -42,6 +47,9 @@ struct scene_base_in_out {
 	float2 tex_coord;
 	float3 view_dir;
 	float3 light_dir;
+#if defined(WARP_IMAGE_ARRAY_SUPPORT)
+	uint32_t material_idx;
+#endif
 };
 
 struct scene_scatter_in_out : scene_base_in_out {
@@ -105,6 +113,7 @@ static void scene_vs(scene_base_in_out& out,
 					 buffer<const float3> in_normal,
 					 buffer<const float3> in_binormal,
 					 buffer<const float3> in_tangent,
+					 buffer<const uint32_t> in_materials,
 					 const scene_base_uniforms_t& uniforms) {
 	out.tex_coord = in_tex_coord[vertex_id];
 	
@@ -121,6 +130,10 @@ static void scene_vs(scene_base_in_out& out,
 	out.light_dir.x = vlight.dot(in_tangent[vertex_id]);
 	out.light_dir.y = vlight.dot(in_binormal[vertex_id]);
 	out.light_dir.z = vlight.dot(in_normal[vertex_id]);
+	
+#if defined(WARP_IMAGE_ARRAY_SUPPORT)
+	out.material_idx = in_materials[vertex_id];
+#endif
 }
 
 vertex auto scene_scatter_vs(buffer<const float3> in_position,
@@ -128,9 +141,10 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 							 buffer<const float3> in_normal,
 							 buffer<const float3> in_binormal,
 							 buffer<const float3> in_tangent,
+							 buffer<const uint32_t> in_materials,
 							 param<scene_scatter_uniforms_t> uniforms) {
 	scene_scatter_in_out out;
-	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, uniforms);
+	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, in_materials, uniforms);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	float4 prev_pos = pos * uniforms.prev_mvm;
@@ -146,9 +160,10 @@ vertex auto scene_gather_vs(buffer<const float3> in_position,
 							buffer<const float3> in_normal,
 							buffer<const float3> in_binormal,
 							buffer<const float3> in_tangent,
+							buffer<const uint32_t> in_materials,
 							param<scene_gather_uniforms_t> uniforms) {
 	scene_gather_in_out out;
-	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, uniforms);
+	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, in_materials, uniforms);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	out.motion_prev = pos * uniforms.prev_mvpm;
@@ -215,7 +230,9 @@ static float4 scene_fs(const scene_base_in_out& in,
 		const auto shadow_bias = math::clamp(fixed_bias * slope, 0.0f, fixed_bias * 2.0f);
 		
 		float3 shadow_coord = in.shadow_coord.xyz / in.shadow_coord.w;
+#if defined(FLOOR_COMPUTE_METAL)
 		shadow_coord.y = 1.0f - shadow_coord.y; // why metal, why?
+#endif
 #if 0
 		if(in.shadow_coord.w > 0.0f) {
 			light_vis = shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy, shadow_coord.z - shadow_bias);
@@ -264,6 +281,8 @@ static float4 scene_fs(const scene_base_in_out& in,
 	return { diff.xyz * lighting, 1.0f };
 }
 
+#if !defined(WARP_IMAGE_ARRAY_SUPPORT)
+
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   const_image_2d<float> diff_tex,
 							   const_image_2d<float> spec_tex,
@@ -304,6 +323,59 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }
+
+#else
+
+// Sponza scene consists of 25 different materials
+#define MAT_COUNT 25
+
+fragment auto scene_scatter_fs(const scene_gather_in_out in [[stage_input]],
+							   array<const_image_2d<float>, MAT_COUNT> diff_tex,
+							   array<const_image_2d<float>, MAT_COUNT> spec_tex,
+							   array<const_image_2d<float>, MAT_COUNT> norm_tex,
+							   array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+							   const_image_2d_depth<float> shadow_tex) {
+	return scene_gather_fragment_out {
+		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+		}
+	};
+}
+
+fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
+							  array<const_image_2d<float>, MAT_COUNT> diff_tex,
+							  array<const_image_2d<float>, MAT_COUNT> spec_tex,
+							  array<const_image_2d<float>, MAT_COUNT> norm_tex,
+							  array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+							  const_image_2d_depth<float> shadow_tex) {
+	return scene_gather_fragment_out {
+		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+		}
+	};
+}
+
+fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
+								  array<const_image_2d<float>, MAT_COUNT> diff_tex,
+								  array<const_image_2d<float>, MAT_COUNT> spec_tex,
+								  array<const_image_2d<float>, MAT_COUNT> norm_tex,
+								  array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+								  const_image_2d_depth<float> shadow_tex) {
+	return scene_scatter_fragment_out /* reuse */ {
+		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
+	};
+}
+
+#endif
 
 //////////////////////////////////////////
 // shadow map
@@ -357,12 +429,22 @@ struct skybox_gather_uniforms_t : skybox_base_uniforms_t {
 
 
 static void skybox_vs(skybox_base_in_out& out, const skybox_base_uniforms_t& uniforms) {
+	// correct position depending on the definition of "up" ....
+#if defined(FLOOR_COMPUTE_METAL)
 	switch(vertex_id) {
 		case 0: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
 		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 2: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
 		default: floor_unreachable();
 	}
+#else // vulkan
+	switch(vertex_id) {
+		case 2: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
+		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
+		case 0: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
+		default: floor_unreachable();
+	}
+#endif
 	out.cube_tex_coord = (out.position * uniforms.imvpm).xyz;
 }
 

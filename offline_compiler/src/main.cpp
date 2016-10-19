@@ -475,6 +475,9 @@ int main(int, char* argv[]) {
 					case llvm_toolchain::function_info::SPECIAL_TYPE::SSBO:
 						info_str += "ssbo ";
 						break;
+					case llvm_toolchain::function_info::SPECIAL_TYPE::IMAGE_ARRAY:
+						info_str += "array [" + to_string(info.args[i].size) + "] ";
+						break;
 					default: break;
 				}
 				

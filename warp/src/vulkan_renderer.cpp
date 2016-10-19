@@ -31,6 +31,9 @@ static struct {
 	VkRenderPass scatter;
 	VkRenderPass gather;
 	VkRenderPass gather_forward;
+	VkRenderPass scatter_skybox;
+	VkRenderPass gather_skybox;
+	VkRenderPass gather_forward_skybox;
 	VkRenderPass shadow;
 	VkRenderPass blit;
 	
@@ -66,7 +69,8 @@ void vulkan_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 }
 
 // NOTE: assuming the first attachment is the main color attachment
-static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> attachments, vector<VkClearValue>& clear_values) {
+static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> attachments, vector<VkClearValue>& clear_values,
+									 VkAttachmentLoadOp load_op = VK_ATTACHMENT_LOAD_OP_CLEAR) {
 	vector<VkAttachmentDescription> attachment_desc;
 	vector<VkAttachmentReference> color_attachment_refs;
 	VkAttachmentReference depth_attachment_ref;
@@ -112,7 +116,7 @@ static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> att
 			.flags = 0, // no-alias
 			.format = ((vulkan_image*)attachment)->get_vulkan_format(),
 			.samples = VK_SAMPLE_COUNT_1_BIT,
-			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.loadOp = load_op,
 			.storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -156,8 +160,10 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 									const WARP_PIPELINE pipeline_id,
 									const WARP_SHADER vertex_shader,
 									const WARP_SHADER fragment_shader,
+									const uint2& render_size,
 									const uint32_t color_attachment_count,
-									const bool has_depth_attachment) {
+									const bool has_depth_attachment,
+									const VkCompareOp depth_compare_op) {
 	auto device = vk_dev->device;
 	
 	auto vs_entry = get_shader_entry(vertex_shader);
@@ -203,18 +209,17 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 		.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 		.primitiveRestartEnable = false,
 	};
-	const auto screen_size = floor::get_physical_screen_size();
 	const VkViewport viewport {
 		.x = 0.0f,
 		.y = 0.0f,
-		.width = (float)screen_size.x,
-		.height = (float)screen_size.y,
+		.width = (float)render_size.x,
+		.height = (float)render_size.y,
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f,
 	};
 	const VkRect2D scissor_rect {
 		.offset = { 0, 0 },
-		.extent = { screen_size.x, screen_size.y },
+		.extent = { render_size.x, render_size.y },
 	};
 	const VkPipelineViewportStateCreateInfo viewport_state {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -257,7 +262,7 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 		.flags = 0,
 		.depthTestEnable = true,
 		.depthWriteEnable = true,
-		.depthCompareOp = VK_COMPARE_OP_LESS,
+		.depthCompareOp = depth_compare_op,
 		.depthBoundsTestEnable = false,
 		.stencilTestEnable = false,
 		.front = {},
@@ -326,6 +331,14 @@ bool vulkan_renderer::init() {
 	auto vk_dev = (vulkan_device*)warp_state.dev.get();
 	auto device = vk_dev->device;
 	
+	// fun times
+	clip = matrix4f {
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, -1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 1.0f,
+	};
+	
 	// creates fbo textures/images
 	create_textures();
 	
@@ -349,27 +362,48 @@ bool vulkan_renderer::init() {
 		scene_fbo.motion[0].get(),
 		scene_fbo.depth[0].get(),
 	}, passes.gather_forward_clear_values);
+	
+	passes.scatter_skybox = make_render_pass(device, {
+		scene_fbo.color[0].get(),
+		scene_fbo.motion[0].get(),
+		scene_fbo.depth[0].get(),
+	}, passes.scatter_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	passes.gather_skybox = make_render_pass(device, {
+		scene_fbo.color[0].get(),
+		scene_fbo.motion[0].get(),
+		scene_fbo.motion[1].get(),
+		scene_fbo.motion_depth[0].get(),
+		scene_fbo.depth[0].get(),
+	}, passes.gather_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	passes.gather_forward_skybox = make_render_pass(device, {
+		scene_fbo.color[0].get(),
+		scene_fbo.motion[0].get(),
+		scene_fbo.depth[0].get(),
+	}, passes.gather_forward_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	
 	passes.shadow = make_render_pass(device, {
 		shadow_map.shadow_image.get(),
 	}, passes.shadow_clear_values);
+	
 	passes.blit = make_render_pass(device, {
 		// NOTE: again, no ref to this is stored, but it uses the same format as the swapchain images
 		scene_fbo.color[0].get(),
 	}, passes.blit_clear_values);
 	
 	// create pipelines for all shaders
-	if(!make_pipeline(vk_dev, passes.scatter, SCENE_SCATTER, SCENE_SCATTER_VS, SCENE_SCATTER_FS, 2, true)) return false;
-	if(!make_pipeline(vk_dev, passes.gather, SCENE_GATHER, SCENE_GATHER_VS, SCENE_GATHER_FS, 4, true)) return false;
-	if(!make_pipeline(vk_dev, passes.gather_forward, SCENE_GATHER_FWD, SCENE_GATHER_FWD_VS, SCENE_GATHER_FWD_FS, 2, true)) return false;
-	if(!make_pipeline(vk_dev, passes.scatter, SKYBOX_SCATTER, SKYBOX_SCATTER_VS, SKYBOX_SCATTER_FS, 2, true)) return false;
-	if(!make_pipeline(vk_dev, passes.gather, SKYBOX_GATHER, SKYBOX_GATHER_VS, SKYBOX_GATHER_FS, 4, true)) return false;
-	if(!make_pipeline(vk_dev, passes.gather_forward, SKYBOX_GATHER_FWD, SKYBOX_GATHER_FWD_VS, SKYBOX_GATHER_FWD_FS, 2, true)) return false;
-	if(!make_pipeline(vk_dev, passes.shadow, SHADOW, SHADOW_VS, __MAX_WARP_SHADER, 0, true)) return false;
-	if(!make_pipeline(vk_dev, passes.blit, BLIT, BLIT_VS, BLIT_FS, 1, false)) return false;
-	if(!make_pipeline(vk_dev, passes.blit, BLIT_SWIZZLE, BLIT_SWIZZLE_VS, BLIT_SWIZZLE_FS, 1, false)) return false;
+	const auto screen_size = floor::get_physical_screen_size();
+	if(!make_pipeline(vk_dev, passes.scatter, SCENE_SCATTER, SCENE_SCATTER_VS, SCENE_SCATTER_FS, screen_size, 2, true)) return false;
+	if(!make_pipeline(vk_dev, passes.gather, SCENE_GATHER, SCENE_GATHER_VS, SCENE_GATHER_FS, screen_size, 4, true)) return false;
+	if(!make_pipeline(vk_dev, passes.gather_forward, SCENE_GATHER_FWD, SCENE_GATHER_FWD_VS, SCENE_GATHER_FWD_FS, screen_size, 2, true)) return false;
+	if(!make_pipeline(vk_dev, passes.scatter_skybox, SKYBOX_SCATTER, SKYBOX_SCATTER_VS, SKYBOX_SCATTER_FS, screen_size, 2, true, VK_COMPARE_OP_LESS_OR_EQUAL)) return false;
+	if(!make_pipeline(vk_dev, passes.gather_skybox, SKYBOX_GATHER, SKYBOX_GATHER_VS, SKYBOX_GATHER_FS, screen_size, 4, true, VK_COMPARE_OP_LESS_OR_EQUAL)) return false;
+	if(!make_pipeline(vk_dev, passes.gather_forward_skybox, SKYBOX_GATHER_FWD, SKYBOX_GATHER_FWD_VS, SKYBOX_GATHER_FWD_FS, screen_size, 2, true, VK_COMPARE_OP_LESS_OR_EQUAL)) return false;
+	if(!make_pipeline(vk_dev, passes.shadow, SHADOW, SHADOW_VS, __MAX_WARP_SHADER, shadow_map.dim, 0, true)) return false;
+	if(!make_pipeline(vk_dev, passes.blit, BLIT, BLIT_VS, BLIT_FS, screen_size, 1, false)) return false;
+	if(!make_pipeline(vk_dev, passes.blit, BLIT_SWIZZLE, BLIT_SWIZZLE_VS, BLIT_SWIZZLE_FS, screen_size, 1, false)) return false;
 	
 	// create framebuffers from the created render passes + swapchain image views
-	const auto screen_size = floor::get_physical_screen_size();
+	// NOTE: scene and skybox framebuffers (render passes) are compatible, so we only need to create them once for both
 	{
 		VkFramebufferCreateInfo framebuffer_create_info {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -449,8 +483,8 @@ bool vulkan_renderer::init() {
 			.renderPass = passes.shadow,
 			.attachmentCount = 1,
 			.pAttachments = &((vulkan_image*)shadow_map.shadow_image.get())->get_vulkan_image_view(),
-			.width = screen_size.x,
-			.height = screen_size.y,
+			.width = shadow_map.dim.x,
+			.height = shadow_map.dim.y,
 			.layers = 1,
 		};
 		VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.shadow_framebuffer),
@@ -487,16 +521,6 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 	auto vk_ctx = (vulkan_compute*)warp_state.ctx.get();
 	auto vk_queue = (vulkan_queue*)warp_state.dev_queue.get();
 	
-	// did we init the draw info yet?
-	if(scene_draw_info.empty()) {
-		for(const auto& obj : model.objects) {
-			scene_draw_info.emplace_back(vulkan_kernel::multi_draw_indexed_entry {
-				.index_buffer = obj->indices_floor_vbo.get(),
-				.index_count = uint32_t(obj->index_count)
-			});
-		}
-	}
-	
 	//
 	auto drawable_ret = vk_ctx->acquire_next_image();
 	if(!drawable_ret.first) {
@@ -506,44 +530,19 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 	auto screen_framebuffer = passes.screen_framebuffers[drawable.index];
 	
 	//
-	auto cmd_buffer = vk_queue->make_command_buffer("warp render");
+	common_renderer::render(model, cam);
+	
+	// blitting
+	auto blit_cmd_buffer = vk_queue->make_command_buffer("blit");
 	const VkCommandBufferBeginInfo begin_info {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		.pInheritanceInfo = nullptr,
 	};
-	VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
-				"failed to begin command buffer");
-	
-	render_cmd_buffer = &cmd_buffer;
-	common_renderer::render(model, cam);
-	
-	// finish drawing
-	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
-	vk_queue->submit_command_buffer(cmd_buffer, true);
-	
-	// blitting
-	auto blit_cmd_buffer = vk_queue->make_command_buffer("blit");
 	VK_CALL_RET(vkBeginCommandBuffer(blit_cmd_buffer.cmd_buffer, &begin_info),
 				"failed to begin command buffer");
 	vector<shared_ptr<compute_buffer>> retained_blit_buffers; // TODO: remove/fix
-#if 0
-	{
-		const VkImageBlit blit_region {
-			VkImageSubresourceLayers    srcSubresource;
-			VkOffset3D                  srcOffsets[2];
-			VkImageSubresourceLayers    dstSubresource;
-			VkOffset3D                  dstOffsets[2];
-		};
-		const auto& src_img = (vulkan_image*)scene_fbo.color[1 - warp_state.cur_fbo].get();
-		vkCmdBlitImage(blit_cmd_buffer.cmd_buffer,
-					   // TODO: others
-					   src_img->get_vulkan_image(), src_img->get_vulkan_image_info(),
-					   drawable.image, VK,
-					   1, &blit_region, VK_FILTER_NEAREST)
-	}
-#else
 	{
 		const auto& pipeline = pipelines[BLIT];
 		const VkRect2D render_area {
@@ -575,7 +574,6 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 		
 		vkCmdEndRenderPass(blit_cmd_buffer.cmd_buffer);
 	}
-#endif
 	
 	VK_CALL_RET(vkEndCommandBuffer(blit_cmd_buffer.cmd_buffer), "failed to end command buffer");
 	vk_queue->submit_command_buffer(blit_cmd_buffer, true);
@@ -584,12 +582,12 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 }
 
 void vulkan_renderer::render_full_scene(const floor_obj_model& model, const camera& cam) {
+	auto vk_queue = (vulkan_queue*)warp_state.dev_queue.get();
+	
 	// this updates all uniforms
 	common_renderer::render_full_scene(model, cam);
 	// updated above, still need the actual here
 	const auto cur_fbo = 1 - warp_state.cur_fbo;
-	
-	auto cmd_buffer = (vulkan_queue::command_buffer*)render_cmd_buffer;
 	
 	// TODO: remove this once constant buffers are properly tracked/killed inside vulkan_kernel
 	vector<shared_ptr<compute_buffer>> retained_buffers;
@@ -603,31 +601,62 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		.minDepth = 0.0f,
 		.maxDepth = 1.0f,
 	};
-	vkCmdSetViewport(cmd_buffer->cmd_buffer, 0, 1, &viewport);
 	const VkRect2D render_area {
 		.offset = { 0, 0 },
 		.extent = { scene_fbo.dim.x, scene_fbo.dim.y },
 	};
-	vkCmdSetScissor(cmd_buffer->cmd_buffer, 0, 1, &render_area);
+	
+	// our draw info is static, so only create it once
+	static const vector<vulkan_kernel::multi_draw_indexed_entry> scene_draw_info {{
+		.index_buffer = model.indices_buffer.get(),
+		.index_count = model.index_count
+	}};
+	static const vector<vulkan_kernel::multi_draw_entry> skybox_draw_info {{
+		.vertex_count = 3
+	}};
 	
 	//////////////////////////////////////////
 	// draw shadow map
 	
 	{
+		auto cmd_buffer = vk_queue->make_command_buffer("shadow map");
+		const VkCommandBufferBeginInfo begin_info {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr,
+		};
+		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
+					"failed to begin command buffer");
+		const VkViewport shadow_viewport {
+			.x = 0.0f,
+			.y = 0.0f,
+			.width = (float)shadow_map.dim.x,
+			.height = (float)shadow_map.dim.y,
+			.minDepth = 0.0f,
+			.maxDepth = 1.0f,
+		};
+		const VkRect2D shadow_render_area {
+			.offset = { 0, 0 },
+			.extent = { shadow_map.dim.x, shadow_map.dim.y },
+		};
+		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &shadow_viewport);
+		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &shadow_render_area);
+		
 		const auto& pipeline = pipelines[SHADOW];
 		const VkRenderPassBeginInfo pass_begin_info {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,
 			.renderPass = passes.shadow,
 			.framebuffer = passes.shadow_framebuffer,
-			.renderArea = render_area,
+			.renderArea = shadow_render_area,
 			.clearValueCount = (uint32_t)passes.shadow_clear_values.size(),
 			.pClearValues = passes.shadow_clear_values.data(),
 		};
-		vkCmdBeginRenderPass(cmd_buffer->cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SHADOW_VS])->multi_draw_indexed(warp_state.dev_queue.get(), cmd_buffer,
+		((vulkan_kernel*)shaders[SHADOW_VS])->multi_draw_indexed(warp_state.dev_queue.get(), &cmd_buffer,
 																 pipeline.pipeline,
 																 pipeline.layout,
 																 get_shader_entry(SHADOW_VS),
@@ -637,59 +666,99 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 																 model.vertices_buffer,
 																 light_mvpm_buffer /* TODO: light_mvpm */);
 		
-		vkCmdEndRenderPass(cmd_buffer->cmd_buffer);
+		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
+		
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
 	
 	//////////////////////////////////////////
 	// render actual scene
 	
-	const VkRenderPassBeginInfo pass_begin_info {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.pNext = nullptr,
-		.renderPass = passes.gather,
-		.framebuffer = passes.gather_framebuffers[cur_fbo],
-		.renderArea = render_area,
-		.clearValueCount = (uint32_t)passes.gather_clear_values.size(),
-		.pClearValues = passes.gather_clear_values.data(),
-	};
-	vkCmdBeginRenderPass(cmd_buffer->cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-	
 	{
+		auto cmd_buffer = vk_queue->make_command_buffer("scene");
+		const VkCommandBufferBeginInfo begin_info {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr,
+		};
+		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
+					"failed to begin command buffer");
+		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
+		
 		const auto& pipeline = pipelines[SCENE_GATHER]; // TODO: others
+		const VkRenderPassBeginInfo pass_begin_info {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = passes.gather,
+			.framebuffer = passes.gather_framebuffers[cur_fbo],
+			.renderArea = render_area,
+			.clearValueCount = (uint32_t)passes.gather_clear_values.size(),
+			.pClearValues = passes.gather_clear_values.data(),
+		};
+		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SCENE_GATHER_VS])->multi_draw_indexed(warp_state.dev_queue.get(), cmd_buffer,
+		((vulkan_kernel*)shaders[SCENE_GATHER_VS])->multi_draw_indexed(warp_state.dev_queue.get(), &cmd_buffer,
 																	   pipeline.pipeline,
 																	   pipeline.layout,
 																	   get_shader_entry(SCENE_GATHER_VS),
 																	   get_shader_entry(SCENE_GATHER_FS),
 																	   retained_buffers,
 																	   scene_draw_info,
+																	   // vertex shader
 																	   model.vertices_buffer,
 																	   model.tex_coords_buffer,
 																	   model.normals_buffer,
 																	   model.binormals_buffer,
 																	   model.tangents_buffer,
+																	   model.materials_buffer,
 																	   scene_uniforms_buffer,
-																	   // TODO: obj->mat_idx
-																	   model.materials[0].diffuse,
-																	   model.materials[0].specular,
-																	   model.materials[0].normal,
-																	   model.materials[0].mask,
+																	   // fragment shader
+																	   model.diffuse_textures,
+																	   model.specular_textures,
+																	   model.normal_textures,
+																	   model.mask_textures,
 																	   shadow_map.shadow_image);
+		
+		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
+		
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
 	
 	//////////////////////////////////////////
 	// render sky box
 	
-#if 0 // TODO: can't update/bind the same descriptor sets in/to the same pipeline / render pass -> need a new cmd buffer?
 	{
-		const auto& pipeline = pipelines[SKYBOX_GATHER]; // TODO: others
+		auto cmd_buffer = vk_queue->make_command_buffer("sky box");
+		const VkCommandBufferBeginInfo begin_info {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+			.pInheritanceInfo = nullptr,
+		};
+		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
+					"failed to begin command buffer");
+		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &viewport);
+		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
 		
-		const vector<vulkan_kernel::multi_draw_entry> skybox_draw_info {{ .vertex_count = 3 }};
+		const auto& pipeline = pipelines[SKYBOX_GATHER]; // TODO: others
+		const VkRenderPassBeginInfo pass_begin_info {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = passes.gather_skybox,
+			.framebuffer = passes.gather_framebuffers[cur_fbo],
+			.renderArea = render_area,
+			.clearValueCount = (uint32_t)passes.gather_clear_values.size(),
+			.pClearValues = passes.gather_clear_values.data(),
+		};
+		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SKYBOX_GATHER_VS])->multi_draw(warp_state.dev_queue.get(), cmd_buffer,
+		((vulkan_kernel*)shaders[SKYBOX_GATHER_VS])->multi_draw(warp_state.dev_queue.get(), &cmd_buffer,
 																pipeline.pipeline,
 																pipeline.layout,
 																get_shader_entry(SKYBOX_GATHER_VS),
@@ -698,16 +767,20 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 																skybox_draw_info,
 																skybox_uniforms_buffer,
 																skybox_tex);
+		
+		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
+		
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
-#endif
-	
-	vkCmdEndRenderPass(cmd_buffer->cmd_buffer);
 }
 
 bool vulkan_renderer::compile_shaders(const string add_cli_options) {
 	return common_renderer::compile_shaders(add_cli_options +
 											// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
-											" -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT");
+											" -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT"
+											// we want to use the "bind everything" method and draw the scene with 1 draw call
+											" -DWARP_IMAGE_ARRAY_SUPPORT");
 }
 
 #endif

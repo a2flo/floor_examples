@@ -339,9 +339,9 @@ void common_renderer::render_kernels(const float& delta, const float& render_del
 void common_renderer::render_full_scene(const floor_obj_model&, const camera& cam) {
 	// update shadow map uniforms
 	{
-		const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f,
-														 warp_state.shadow_near_far_plane.x,
-														 warp_state.shadow_near_far_plane.y) };
+		const matrix4f light_pm = clip * matrix4f().perspective(120.0f, 1.0f,
+																warp_state.shadow_near_far_plane.x,
+																warp_state.shadow_near_far_plane.y);
 		const matrix4f light_mvm {
 			matrix4f::translation(-light_pos) *
 			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
@@ -354,8 +354,8 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 	
 	// update scene uniforms
 	{
-		pm = matrix4f::perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-								   warp_state.near_far_plane.x, warp_state.near_far_plane.y);
+		pm = clip * matrix4f::perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
+										  warp_state.near_far_plane.x, warp_state.near_far_plane.y);
 		rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 				matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
 		mvm = matrix4f::translation(cam.get_position()) * rmvm;

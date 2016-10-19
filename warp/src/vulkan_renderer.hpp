@@ -42,10 +42,10 @@ protected:
 					   const WARP_PIPELINE pipeline_id,
 					   const WARP_SHADER vertex_shader,
 					   const WARP_SHADER fragment_shader,
+					   const uint2& render_size,
 					   const uint32_t color_attachment_count,
-					   const bool has_depth_attachment);
-	
-	vector<vulkan_kernel::multi_draw_indexed_entry> scene_draw_info;
+					   const bool has_depth_attachment,
+					   const VkCompareOp depth_compare_op = VK_COMPARE_OP_LESS);
 	
 	vulkan_kernel::vulkan_kernel_entry* get_shader_entry(const WARP_SHADER& shader) const;
 #endif

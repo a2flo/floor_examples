@@ -270,8 +270,9 @@ int main(int, char* argv[]) {
 					 (!warp_state.no_opengl && !warp_state.no_vulkan) ? floor::RENDERER::DEFAULT :
 					 // else: choose a specific one
 					 !warp_state.no_vulkan ? floor::RENDERER::VULKAN :
+					 !warp_state.no_metal ? floor::RENDERER::METAL :
 					 !warp_state.no_opengl ? floor::RENDERER::OPENGL :
-					 // both opengl and vulkan are disabled
+					 // opengl/vulkan/metal are disabled
 					 floor::RENDERER::NONE),
 	})) {
 		return -1;

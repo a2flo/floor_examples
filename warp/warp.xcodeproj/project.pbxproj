@@ -1818,6 +1818,7 @@
 				5CBA3EEA1D97EE81001BEDEC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "warp" */ = {
 			isa = XCConfigurationList;

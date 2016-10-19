@@ -582,14 +582,15 @@ void metal_renderer::render_full_scene(const floor_obj_model& model, const camer
 		[encoder setVertexBuffer:((metal_buffer*)model.normals_buffer.get())->get_metal_buffer() offset:0 atIndex:2];
 		[encoder setVertexBuffer:((metal_buffer*)model.binormals_buffer.get())->get_metal_buffer() offset:0 atIndex:3];
 		[encoder setVertexBuffer:((metal_buffer*)model.tangents_buffer.get())->get_metal_buffer() offset:0 atIndex:4];
-		[encoder setVertexBytes:&scene_uniforms length:sizeof(scene_uniforms) atIndex:5];
+		[encoder setVertexBuffer:((metal_buffer*)model.materials_buffer.get())->get_metal_buffer() offset:0 atIndex:5];
+		[encoder setVertexBytes:&scene_uniforms length:sizeof(scene_uniforms) atIndex:6];
 		
 		[encoder setFragmentTexture:((metal_image*)shadow_map.shadow_image.get())->get_metal_image() atIndex:4];
 		for(const auto& obj : model.objects) {
-			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].diffuse)->get_metal_image() atIndex:0];
-			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].specular)->get_metal_image() atIndex:1];
-			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].normal)->get_metal_image() atIndex:2];
-			[encoder setFragmentTexture:((metal_image*)model.materials[obj->mat_idx].mask)->get_metal_image() atIndex:3];
+			[encoder setFragmentTexture:((metal_image*)model.diffuse_textures[obj->mat_idx])->get_metal_image() atIndex:0];
+			[encoder setFragmentTexture:((metal_image*)model.specular_textures[obj->mat_idx])->get_metal_image() atIndex:1];
+			[encoder setFragmentTexture:((metal_image*)model.normal_textures[obj->mat_idx])->get_metal_image() atIndex:2];
+			[encoder setFragmentTexture:((metal_image*)model.mask_textures[obj->mat_idx])->get_metal_image() atIndex:3];
 			
 			[encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 								indexCount:uint32_t(obj->index_count)
