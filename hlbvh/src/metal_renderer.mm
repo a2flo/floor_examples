@@ -193,8 +193,8 @@ void metal_renderer::render(const vector<unique_ptr<animation>>& models,
 		[encoder setFragmentBytes:&uniforms length:sizeof(uniforms) atIndex:0];
 		for(uint32_t i = 0; i < (uint32_t)models.size(); ++i) {
 			const auto& mdl = models[i];
-			const auto cur_frame = (const metal_obj_model*)mdl->frames[mdl->cur_frame].get();
-			const auto next_frame = (const metal_obj_model*)mdl->frames[mdl->next_frame].get();
+			const auto cur_frame = (const floor_obj_model*)mdl->frames[mdl->cur_frame].get();
+			const auto next_frame = (const floor_obj_model*)mdl->frames[mdl->next_frame].get();
 			
 			static constexpr const float4 default_color { 0.9f, 0.9f, 0.9f, 1.0f };
 			static constexpr const float4 collision_color { 1.0f, 0.0f, 0.0f, 1.0f };
@@ -220,7 +220,7 @@ void metal_renderer::render(const vector<unique_ptr<animation>>& models,
 				[encoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
 									indexCount:uint32_t(obj->index_count)
 									 indexType:MTLIndexTypeUInt32
-								   indexBuffer:((metal_buffer*)obj->indices_metal_vbo.get())->get_metal_buffer()
+								   indexBuffer:((metal_buffer*)obj->indices_floor_vbo.get())->get_metal_buffer()
 							 indexBufferOffset:0];
 			}
 			[encoder popDebugGroup];

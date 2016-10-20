@@ -255,8 +255,9 @@ int main(int, char* argv[]) {
 					 (!hlbvh_state.no_opengl && !hlbvh_state.no_vulkan) ? floor::RENDERER::DEFAULT :
 					 // else: choose a specific one
 					 !hlbvh_state.no_vulkan ? floor::RENDERER::VULKAN :
+					 !hlbvh_state.no_metal ? floor::RENDERER::METAL :
 					 !hlbvh_state.no_opengl ? floor::RENDERER::OPENGL :
-					 // both opengl and vulkan are disabled
+					 // opengl/vulkan/metals are disabled
 					 floor::RENDERER::NONE),
 	})) {
 		return -1;
