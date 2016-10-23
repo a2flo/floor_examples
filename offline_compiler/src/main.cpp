@@ -24,6 +24,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/floor/floor_version.hpp>
 #include <floor/compute/llvm_toolchain.hpp>
+#include <floor/compute/spirv_handler.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/core/option_handler.hpp>
 
@@ -849,46 +850,27 @@ int main(int, char* argv[]) {
 				}
 				log_debug("using device: %s", dev->name);
 				
-				// get the binary (ignore 1 -> 4 alignment issues, will be checked at the end)
-FLOOR_PUSH_WARNINGS()
-FLOOR_IGNORE_WARNING(cast-align)
-				size_t binary_length = 0;
-				const uint32_t* binary_ptr = nullptr;
-				string binary_str = "";
-				if(!option_ctx.test_bin) {
-					binary_length = program.data_or_filename.size();
-					binary_ptr = (const uint32_t*)program.data_or_filename.data();
-				}
-				else {
-					if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
-						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+				//
+				if(option_ctx.test_bin) {
+					program.valid = true;
+					program.data_or_filename = option_ctx.test_bin_filename;
+					
+					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions,
+																   floor::get_vulkan_toolchain_version())) {
+						log_error("failed to create floor function info from specified ffi file %s",
+								  option_ctx.ffi_filename);
 						break;
 					}
-					binary_length = binary_str.size();
-					binary_ptr = (const uint32_t*)binary_str.data();
 				}
-				if(binary_length % 4 != 0) {
-					log_error("binary length is not a multiple of 4");
-					break;
-				}
-FLOOR_POP_WARNINGS()
 				
-				const VkShaderModuleCreateInfo module_info {
-					.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-					.pNext = nullptr,
-					.flags = 0,
-					.codeSize = binary_length,
-					.pCode = binary_ptr,
-				};
-				VkShaderModule vulkan_program { nullptr };
-				const auto build_status = vkCreateShaderModule(((vulkan_device*)dev.get())->device, &module_info, nullptr, &vulkan_program);
-				if(build_status != VK_SUCCESS) {
-					log_error("failed to create shader module for device \"%s\": %u: %s", dev->name, build_status, vulkan_error_to_string(build_status));
-					break;
-				}
-				else {
-					log_debug("successfully built shader module");
-				}
+				// this will do both the initial vkCreateShaderModule and the pipeline/program creation (if compute)
+				// NOTE: NVIDIA/Intel only do rudimentary checking in vkCreateShaderModule (if any at all?), while
+				//       AMD does proper checking there -> to fully check everything, we need to actually create
+				//       a pipeline (however, this can only be done for compute right now)
+				vulkan_program::program_map_type prog_map;
+				prog_map.insert_or_assign((vulkan_device*)dev.get(),
+										  ctx->create_vulkan_program(dev, program));
+				ctx->add_program(move(prog_map)); // will have already printed an error (if sth was wrong)
 #else
 				log_error("vulkan testing not supported on this platform (or disabled during floor compilation)");
 #endif

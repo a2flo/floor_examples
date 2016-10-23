@@ -329,20 +329,15 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 // Sponza scene consists of 25 different materials
 #define MAT_COUNT 25
 
-fragment auto scene_scatter_fs(const scene_gather_in_out in [[stage_input]],
+fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   array<const_image_2d<float>, MAT_COUNT> diff_tex,
 							   array<const_image_2d<float>, MAT_COUNT> spec_tex,
 							   array<const_image_2d<float>, MAT_COUNT> norm_tex,
 							   array<const_image_2d<float1>, MAT_COUNT> mask_tex,
 							   const_image_2d_depth<float> shadow_tex) {
-	return scene_gather_fragment_out {
+	return scene_scatter_fragment_out {
 		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
-		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
-		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
-		{
-			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
-			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
-		}
+		encode_3d_motion(in.motion)
 	};
 }
 

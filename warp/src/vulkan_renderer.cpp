@@ -628,6 +628,10 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		};
 		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
 					"failed to begin command buffer");
+		
+		// make the attachment writable (again)
+		((vulkan_image*)shadow_map.shadow_image.get())->transition_write(cmd_buffer.cmd_buffer);
+		
 		const VkViewport shadow_viewport {
 			.x = 0.0f,
 			.y = 0.0f,
@@ -685,6 +689,10 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		};
 		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
 					"failed to begin command buffer");
+		
+		// make the attachment writable (again)
+		((vulkan_image*)scene_fbo.color[cur_fbo].get())->transition_write(cmd_buffer.cmd_buffer);
+		
 		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &viewport);
 		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
 		
