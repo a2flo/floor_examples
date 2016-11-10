@@ -312,8 +312,8 @@ int main(int, char* argv[]) {
 	cam->set_wasd_input(hlbvh_state.cam_mode);
 	cam->set_keyboard_input(hlbvh_state.cam_mode);
 	cam->set_rotation_wrapping(true);
-	cam->set_position(-10.5f, -6.0f, 2.15f);
-	cam->set_rotation(28.0f, 256.0f, 0.0f);
+	cam->set_position(-10.5f, 6.0f, 2.15f);
+	cam->set_rotation(28.0f, 256.0f);
 	
 	// get the compute context that has been automatically created (opencl/cuda/metal/host, depending on the config)
 	hlbvh_state.ctx = floor::get_compute_context();
@@ -444,7 +444,7 @@ int main(int, char* argv[]) {
 		//
 		if(floor::is_new_fps_count()) {
 			floor::set_caption("hlbvh | FPS: " + to_string(floor::get_fps()) +
-							   " | Pos: " + (-cam->get_position()).to_string() +
+							   " | Pos: " + cam->get_position().to_string() +
 							   " | Rot: " + cam->get_rotation().to_string());
 		}
 		

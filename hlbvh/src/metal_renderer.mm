@@ -166,7 +166,7 @@ void metal_renderer::render(const vector<unique_ptr<animation>>& models,
 		else {
 			const auto rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 							   matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
-			mview = matrix4f::translation(cam.get_position()) * rmvm;
+			mview = matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm;
 		}
 		struct __attribute__((packed)) {
 			matrix4f mvpm;

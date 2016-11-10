@@ -39,10 +39,10 @@ public:
 	const float3& get_position() const;
 	const float3& get_prev_position() const;
 	
-	void set_rotation(const float& x, const float& y, const float& z);
-	void set_rotation(const float3& rot);
-	float3& get_rotation();
-	const float3& get_rotation() const;
+	void set_rotation(const float& x, const float& y);
+	void set_rotation(const float2& rot);
+	float2& get_rotation();
+	const float2& get_rotation() const;
 	void set_rotation_wrapping(const bool& state);
 	const bool& get_rotation_wrapping() const;
 	
@@ -61,15 +61,15 @@ public:
 	bool get_mouse_input() const;
 	void set_wasd_input(const bool& state);
 	bool get_wasd_input() const;
-
-	const float3& get_direction() const;
+	
+	float3 get_direction() const;
+	static float3 get_direction(const float2 rotation);
 
 protected:
 	event* evt;
 
 	float3 position, prev_position;
-	float3 rotation;
-	mutable float3 direction;
+	float2 rotation;
 	
 	bool is_single_frame = false;
 	quaternionf single_frame_quat;

@@ -350,8 +350,8 @@ int main(int, char* argv[]) {
 			cam->set_wasd_input(false);
 		}
 		
-		cam->set_position(-115.0f, -15.0f, 0.0f);
-		cam->set_rotation(0.0f, -90.0f, 0.0f);
+		cam->set_position(-115.0f, 15.0f, 0.0f);
+		cam->set_rotation(0.0f, -90.0f);
 		last_cam_pos = cam->get_position();
 		
 		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
@@ -441,7 +441,7 @@ int main(int, char* argv[]) {
 		
 		if(floor::is_new_fps_count()) {
 			floor::set_caption("warp | FPS: " + to_string(floor::get_fps()) +
-							   " | Pos: " + (-cam->get_position()).to_string() +
+							   " | Pos: " + cam->get_position().to_string() +
 							   " | Rot: " + cam->get_rotation().to_string());
 		}
 		

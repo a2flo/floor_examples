@@ -113,7 +113,7 @@ static float3 compute_gradient(const float& interpolator) {
 	};
 	
 	// scale from [0, 1] to [0, range]
-	const auto scaled_interp = interpolator * float(size(gradients));
+	const auto scaled_interp = interpolator * float(size(gradients) - 1);
 	// determine lower gradient idx
 	const auto gradient_idx = min(uint32_t(scaled_interp), uint32_t(size(gradients) - 2));
 	// interp range is [0, 1] between gradients, just need to wrap/mod it

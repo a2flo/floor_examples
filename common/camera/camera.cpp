@@ -44,24 +44,22 @@ void camera::run() {
 	
 	if(!is_single_frame) {
 		if(keyboard_input) {
-			// ... recalculate the cameras position
+			// ... update the camera position
+			const auto dir = get_direction() * move_speed;
+			const auto side_dir = get_direction(float2 { 0.0f, rotation.y - 90.0f }) * move_speed;
 			if(key_state[0]) {
-				position.x += (float)sin((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z -= (float)cos((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.x -= side_dir.x;
+				position.z -= side_dir.z;
 			}
 			if(key_state[1]) {
-				position.x -= (float)sin((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z += (float)cos((double(rotation.y) - 90.0) * const_math::PI_DIV_180<double>) * move_speed;
+				position.x += side_dir.x;
+				position.z += side_dir.z;
 			}
 			if(key_state[2]) {
-				position.x -= (float)sin(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
-				position.y += (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z += (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
+				position += dir;
 			}
 			if(key_state[3]) {
-				position.x += (float)sin(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
-				position.y -= (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>) * move_speed;
-				position.z -= (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>) * move_speed;
+				position -= dir;
 			}
 		}
 		
@@ -108,8 +106,8 @@ void camera::run() {
 		}
 		
 		if(rotation_wrapping) {
-			// wrap around 360°
-			rotation.x = const_math::wrap(rotation.x, 360.0f);
+			// wrap y axis rotation, clamp x axis rotation + avoid gimbal lock
+			rotation.x = const_math::clamp(rotation.x, -89.995f, 89.995f);
 			rotation.y = const_math::wrap(rotation.y, 360.0f);
 		}
 	}
@@ -179,12 +177,11 @@ void camera::set_position(const float3& pos) {
 /*! sets the rotation of the camera
  *  @param x x rotation
  *  @param y y rotation
- *  @param z z rotation
  */
-void camera::set_rotation(const float& x, const float& y, const float& z) {
-	rotation.set(x, y, z);
+void camera::set_rotation(const float& x, const float& y) {
+	rotation.set(x, y);
 }
-void camera::set_rotation(const float3& rot) {
+void camera::set_rotation(const float2& rot) {
 	rotation.set(rot);
 }
 
@@ -203,10 +200,10 @@ const float3& camera::get_prev_position() const {
 
 /*! returns the rotation of the camera
  */
-float3& camera::get_rotation() {
+float2& camera::get_rotation() {
 	return rotation;
 }
-const float3& camera::get_rotation() const {
+const float2& camera::get_rotation() const {
 	return rotation;
 }
 
@@ -297,13 +294,17 @@ float camera::get_cam_speed() const {
 	return cam_speed;
 }
 
-/*! returns the cameras direction
- */
-const float3& camera::get_direction() const {
-	direction.x = (float)-sin(double(rotation.y) * const_math::PI_DIV_180<double>);
-	direction.y = (float)sin(double(rotation.x) * const_math::PI_DIV_180<double>);
-	direction.z = (float)cos(double(rotation.y) * const_math::PI_DIV_180<double>);
-	return direction;
+float3 camera::get_direction() const {
+	return get_direction(rotation);
+}
+
+float3 camera::get_direction(const float2 rotation_) {
+	const float2 unit_vec_x { sinf(const_math::deg_to_rad(rotation_.x)), cosf(const_math::deg_to_rad(rotation_.x)) };
+	const float2 unit_vec_y { sinf(const_math::deg_to_rad(rotation_.y)), cosf(const_math::deg_to_rad(rotation_.y)) };
+	// scale x/z vector based on pitch (pitch takes priority)
+	const float2 xz_dir { float2(-unit_vec_y.x, unit_vec_y.y) * unit_vec_x.y };
+	// NOTE: this is normalized
+	return { xz_dir.x, -unit_vec_x.x, xz_dir.y };
 }
 
 bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {

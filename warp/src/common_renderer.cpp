@@ -358,7 +358,7 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 										  warp_state.near_far_plane.x, warp_state.near_far_plane.y);
 		rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 				matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
-		mvm = matrix4f::translation(cam.get_position()) * rmvm;
+		mvm = matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm;
 		const matrix4f mvpm {
 			warp_state.is_scatter ?
 			mvm * pm :
@@ -370,7 +370,7 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 		scene_uniforms = {
 			.mvpm = mvpm,
 			.light_bias_mvpm = light_bias_mvpm,
-			.cam_pos = -cam.get_position(),
+			.cam_pos = cam.get_position() * float3 { -1.0f, 1.0f, -1.0f },
 			.light_pos = light_pos,
 			.m0 = (warp_state.is_scatter ? mvm : next_mvpm),
 			.m1 = (warp_state.is_scatter ? prev_mvm : prev_mvpm),

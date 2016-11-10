@@ -47,7 +47,7 @@
 		"msg_filename": ""
 	},
 
-	// general compute and compute toolchain settings, and specific backend settings further down
+	// general compute/graphics and toolchain settings, and specific backend settings further down
 	"compute": {
 		// opencl, cuda, metal, host or vulkan (NOTE: default backend depends on the OS)
 		"backend": "",
