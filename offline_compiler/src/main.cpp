@@ -96,7 +96,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
-				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only CUDA)\n"
+				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"

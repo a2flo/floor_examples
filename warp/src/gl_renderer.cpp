@@ -648,7 +648,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
 	};
-	const matrix4f mvm { matrix4f::translation(cam.get_position()) * rmvm };
+	const matrix4f mvm { matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm };
 
 	matrix4f mvpm;
 	if(warp_state.is_scatter) {
@@ -686,10 +686,11 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	const float3 cam_pos {
 #if !defined(FORWARD_PROJECTION)
 		(warp_state.is_scatter && !warp_state.is_bidir_scatter) ?
-		-cam.get_position() : -cam.get_prev_position()
+		cam.get_position() : cam.get_prev_position()
 #else
-		-cam.get_prev_position()
+		cam.get_prev_position()
 #endif
+		* float3 { -1.0f, 1.0f, -1.0f }
 	};
 	glUniform3fv(shd.program.uniforms["cam_pos"].location, 1, cam_pos.data());
 	

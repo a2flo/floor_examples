@@ -90,6 +90,14 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.is_zw_depth = true;
 		cout << "using separate z/w depth buffer" << endl;
 	}},
+	{ "--no-metal", [](warp_option_context&, char**&) {
+		warp_state.no_metal = true;
+		cout << "metal disabled" << endl;
+	}},
+	{ "--no-vulkan", [](warp_option_context&, char**&) {
+		warp_state.no_vulkan = true;
+		cout << "vulkan disabled" << endl;
+	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
 };
