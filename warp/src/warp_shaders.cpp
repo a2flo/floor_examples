@@ -113,7 +113,11 @@ static void scene_vs(scene_base_in_out& out,
 					 buffer<const float3> in_normal,
 					 buffer<const float3> in_binormal,
 					 buffer<const float3> in_tangent,
-					 buffer<const uint32_t> in_materials,
+					 buffer<const uint32_t> in_materials
+#if !defined(WARP_IMAGE_ARRAY_SUPPORT)
+					 floor_unused
+#endif
+					 ,
 					 const scene_base_uniforms_t& uniforms) {
 	out.tex_coord = in_tex_coord[vertex_id];
 	

@@ -46,6 +46,9 @@ static struct {
 	vector<VkClearValue> scatter_clear_values;
 	vector<VkClearValue> gather_clear_values;
 	vector<VkClearValue> gather_forward_clear_values;
+	vector<VkClearValue> skybox_scatter_clear_values;
+	vector<VkClearValue> skybox_gather_clear_values;
+	vector<VkClearValue> skybox_gather_forward_clear_values;
 	vector<VkClearValue> shadow_clear_values;
 	vector<VkClearValue> blit_clear_values;
 } passes;
@@ -164,6 +167,7 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 									const uint32_t color_attachment_count,
 									const bool has_depth_attachment,
 									const VkCompareOp depth_compare_op) {
+	//log_debug("creating pipeline #%u", pipeline_id);
 	auto device = vk_dev->device;
 	
 	auto vs_entry = get_shader_entry(vertex_shader);
@@ -363,23 +367,24 @@ bool vulkan_renderer::init() {
 		scene_fbo.depth[0].get(),
 	}, passes.gather_forward_clear_values);
 	
+	// NOTE: skybox clear values are not actually used, since we're loading the color with LOAD_OP_LOAD
 	passes.scatter_skybox = make_render_pass(device, {
 		scene_fbo.color[0].get(),
 		scene_fbo.motion[0].get(),
 		scene_fbo.depth[0].get(),
-	}, passes.scatter_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	}, passes.skybox_scatter_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
 	passes.gather_skybox = make_render_pass(device, {
 		scene_fbo.color[0].get(),
 		scene_fbo.motion[0].get(),
 		scene_fbo.motion[1].get(),
 		scene_fbo.motion_depth[0].get(),
 		scene_fbo.depth[0].get(),
-	}, passes.gather_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	}, passes.skybox_gather_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
 	passes.gather_forward_skybox = make_render_pass(device, {
 		scene_fbo.color[0].get(),
 		scene_fbo.motion[0].get(),
 		scene_fbo.depth[0].get(),
-	}, passes.gather_forward_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
+	}, passes.skybox_gather_forward_clear_values, VK_ATTACHMENT_LOAD_OP_LOAD);
 	
 	passes.shadow = make_render_pass(device, {
 		shadow_map.shadow_image.get(),
@@ -570,7 +575,10 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 													   get_shader_entry(BLIT_FS),
 													   retained_blit_buffers,
 													   blit_draw_info,
-													   scene_fbo.color[1 - warp_state.cur_fbo]);
+													   // if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
+													   blit_frame ?
+													   scene_fbo.color[warp_state.cur_fbo] :
+													   scene_fbo.compute_color);
 		
 		vkCmdEndRenderPass(blit_cmd_buffer.cmd_buffer);
 	}
@@ -760,8 +768,9 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 			.renderPass = passes.gather_skybox,
 			.framebuffer = passes.gather_framebuffers[cur_fbo],
 			.renderArea = render_area,
-			.clearValueCount = (uint32_t)passes.gather_clear_values.size(),
-			.pClearValues = passes.gather_clear_values.data(),
+			// NOTE: we aren't clearing anything in here, but load the current color instead
+			.clearValueCount = 0,
+			.pClearValues = nullptr,
 		};
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		

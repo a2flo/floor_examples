@@ -430,6 +430,9 @@ int main(int, char* argv[]) {
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				
+				// mip-mapping support is already enabled, just need to set the max supported mip level count
+				device->max_mip_levels = 15;
+				
 				// not supported right now
 				//if(option_ctx.sub_groups) device->sub_group_support = true;
 				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);

@@ -254,10 +254,10 @@ void common_renderer::render(const floor_obj_model& model, const camera& cam) {
 }
 
 void common_renderer::render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num) {
-	//#define WARP_TIMING
+//#define WARP_TIMING
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
-	const auto timing_start = floor_timer2::start();
+	const auto timing_start = floor_timer::start();
 #endif
 	
 	//
@@ -278,7 +278,7 @@ void common_renderer::render_kernels(const float& delta, const float& render_del
 	
 	// slow fixed delta for debugging/demo purposes
 	static float dbg_delta = 0.0f;
-	static constexpr const float delta_eps = 0.0025f;
+	static constexpr const float delta_eps = 0.00025f;
 	if(warp_state.is_debug_delta) {
 		if(dbg_delta >= (1.0f - delta_eps)) {
 			dbg_delta = delta_eps;
@@ -332,7 +332,7 @@ void common_renderer::render_kernels(const float& delta, const float& render_del
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
-	log_debug("warp timing: %f", double(floor_timer2::stop<chrono::microseconds>(timing_start)) / 1000.0);
+	log_debug("warp timing: %f", double(floor_timer::stop<chrono::microseconds>(timing_start)) / 1000.0);
 #endif
 }
 
