@@ -48,7 +48,7 @@
 	},
 
 	// general compute/graphics and toolchain settings, and specific backend settings further down
-	"compute": {
+	"toolchain": {
 		// opencl, cuda, metal, host or vulkan (NOTE: default backend depends on the OS)
 		"backend": "",
 		// if true, creates an opengl sharing context (only affects opencl right now, opengl sharing is always enabled with cuda and host)
@@ -70,22 +70,22 @@
 		
 		// general toolchain settings
 		// NOTE: these values can be overwritten on a per-backend basis by simply putting the key/value entry in the specific backend
-		"toolchain": {
+		"generic": {
 			// toolchain base paths that will be searched for the toolchain binaries + libc++, clang and floor includes
 			// NOTE: folder structure must be "<path>/{bin,clang,floor,libcxx}"
 			"paths": [
-				"/opt/floor/compute",
-				"/c/msys/opt/floor/compute",
-				"%ProgramW6432%/floor/compute",
-				"%ProgramFiles%/floor/compute"
+				"/opt/floor/toolchain",
+				"/c/msys/opt/floor/toolchain",
+				"%ProgramW6432%/floor/toolchain",
+				"%ProgramFiles%/floor/toolchain"
 			],
-			// the compute clang binary name
+			// the toolchain clang binary name
 			"compiler": "clang",
-			// the compute llc binary name
+			// the toolchain llc binary name
 			"llc": "llc",
-			// the compute llvm-as binary name
+			// the toolchain llvm-as binary name
 			"as": "llvm-as",
-			// the compute llvm-dis binary name
+			// the toolchain llvm-dis binary name
 			"dis": "llvm-dis"
 		},
 		
@@ -113,13 +113,13 @@
 			// NOTE: as mentioned above, toolchain settings can be overwritten here, e.g.:
 			// "compiler": "some_other_clang_binary"
 			
-			// the compute spir-v encoder binary name
+			// the toolchain spir-v encoder binary name
 			"spirv-encoder": "llvm-spirv",
-			// the compute spir-v assembler binary name
+			// the toolchain spir-v assembler binary name
 			"spirv-as": "spirv-as",
-			// the compute spir-v disassembler binary name
+			// the toolchain spir-v disassembler binary name
 			"spirv-dis": "spirv-dis",
-			// the compute spir-v validator binary name
+			// the toolchain spir-v validator binary name
 			"spirv-validator": "spirv-val"
 		},
 		
@@ -165,13 +165,13 @@
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": [],
 			
-			// the compute spir-v encoder binary name
+			// the toolchain spir-v encoder binary name
 			"spirv-encoder": "llvm-spirv",
-			// the compute spir-v assembler binary name
+			// the toolchain spir-v assembler binary name
 			"spirv-as": "spirv-as",
-			// the compute spir-v disassembler binary name
+			// the toolchain spir-v disassembler binary name
 			"spirv-dis": "spirv-dis",
-			// the compute spir-v validator binary name
+			// the toolchain spir-v validator binary name
 			"spirv-validator": "spirv-val"
 		}
 	}
