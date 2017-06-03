@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,9 +31,6 @@ protected:
 	bool compile_shaders(const string add_cli_options) override;
 	
 	void render_full_scene(const floor_obj_model& model, const camera& cam) override;
-	
-	// current id <MTLCommandBuffer> used for rendering
-	void* render_cmd_buffer;
 	
 };
 

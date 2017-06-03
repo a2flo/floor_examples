@@ -23,10 +23,14 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1D1E32C677003A5688 /* GameController.framework */; };
+		5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1F1E32C691003A5688 /* AVFoundation.framework */; };
+		5C131E841E33D343003A5688 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
 		5C180F771D8063A500AF91E7 /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */; };
 		5C30CAA51AA625F5008986B1 /* nbody.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* nbody.metallib */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
+		5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
 		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5C8646291C19B2A4000518C7 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
@@ -99,6 +103,9 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E1D1E32C677003A5688 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E1F1E32C691003A5688 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E821E33D32E003A5688 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/ios/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vulkan_renderer.cpp; sourceTree = "<group>"; };
 		5C180F761D8063A500AF91E7 /* vulkan_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vulkan_renderer.hpp; sourceTree = "<group>"; };
 		5C30CAA31AA625DC008986B1 /* nbody.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = nbody.metallib; path = ../data/nbody.metallib; sourceTree = "<group>"; };
@@ -143,6 +150,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */,
+				5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */,
 				5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */,
 				5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */,
 				5C86462D1C19B2A4000518C7 /* CoreGraphics.framework in Frameworks */,
@@ -185,6 +194,7 @@
 				5C0071C31A91FF7C00F4711D /* OpenGLES.framework */,
 				5C0071BA1A91F1E800F4711D /* Base.lproj */,
 				5C0071BB1A91F1E800F4711D /* Images.xcassets */,
+				5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */,
 				5C0071BC1A91F1E800F4711D /* Info.plist */,
 			);
 			name = ios;
@@ -198,6 +208,15 @@
 				5C54877F1B608CF50088272A /* config.json.local */,
 			);
 			name = data;
+			sourceTree = "<group>";
+		};
+		5C131E1C1E32C676003A5688 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5C131E1F1E32C691003A5688 /* AVFoundation.framework */,
+				5C131E1D1E32C677003A5688 /* GameController.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		5C8FD0B91AD3392500215230 /* osx */ = {
@@ -220,6 +239,7 @@
 				5C0071911A91EF7E00F4711D /* nbodyd.app */,
 				5C8FD0941AD3366800215230 /* nbodyd.app */,
 				5C8646421C19B2A4000518C7 /* nbodyd.app */,
+				5C131E1C1E32C676003A5688 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -322,7 +342,7 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0800;
+				LastUpgradeCheck = 0820;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -366,6 +386,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */,
 				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
 				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
 			);
@@ -375,6 +396,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C131E841E33D343003A5688 /* LaunchScreen.storyboard in Resources */,
 				5C8646381C19B2A4000518C7 /* Base.lproj in Resources */,
 				5C8646391C19B2A4000518C7 /* Images.xcassets in Resources */,
 			);
@@ -468,6 +490,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5C131E821E33D32E003A5688 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		5C0071B11A91EF7E00F4711D /* Debug */ = {
@@ -985,7 +1018,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -994,8 +1027,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
@@ -1034,6 +1069,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1048,9 +1084,14 @@
 					"-Wthread-safety-verbose",
 					"-Wno-c++98-compat",
 					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
 					"-Wno-c99-extensions",
 					"-Wno-header-hygiene",
-					"-Wno-gnu",
 					"-Wno-documentation",
 					"-Wno-system-headers",
 					"-Wno-global-constructors",
@@ -1073,7 +1114,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1082,8 +1123,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
@@ -1116,6 +1159,7 @@
 				MTL_OPTIMIZATION_LEVEL = s;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1130,9 +1174,14 @@
 					"-Wthread-safety-verbose",
 					"-Wno-c++98-compat",
 					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
 					"-Wno-c99-extensions",
 					"-Wno-header-hygiene",
-					"-Wno-gnu",
 					"-Wno-documentation",
 					"-Wno-system-headers",
 					"-Wno-global-constructors",

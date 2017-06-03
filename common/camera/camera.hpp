@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -85,6 +85,10 @@ protected:
 	bool wasd_input = false;
 	bool rotation_wrapping = true;
 	unsigned int ignore_next_rotation = 0;
+	
+	// hack for mice on os x 10.12+ that don't have proper warp support
+	bool delta_hack { false };
+	int2 last_delta;
 	
 	// [right, left, up, down]
 	atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };

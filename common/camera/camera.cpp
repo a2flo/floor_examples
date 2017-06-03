@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -65,41 +65,53 @@ void camera::run() {
 		
 		if(mouse_input) {
 			// calculate the rotation via the current mouse cursor position
-			int cursor_pos_x = 0;
-			int cursor_pos_y = 0;
+			int2 cursor_pos;
+			const auto center_point = (floor::get_screen_size().cast<float>() * 0.5f).cast<int32_t>();
 			
 ////////////////////////////////
 // linux/windows version
 #if !defined(__APPLE__)
-			SDL_GetMouseState(&cursor_pos_x, &cursor_pos_y);
+			SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
 			
-			double xpos = (1.0 / (double)floor::get_width()) * (double)cursor_pos_x;
-			double ypos = (1.0 / (double)floor::get_height()) * (double)cursor_pos_y;
+			double xpos = (1.0 / (double)floor::get_width()) * (double)cursor_pos.x;
+			double ypos = (1.0 / (double)floor::get_height()) * (double)cursor_pos.y;
 			
 			if(xpos != 0.5 || ypos != 0.5) {
 				rotation.x -= (0.5 - ypos) * (double)rotation_speed;
 				rotation.y -= (0.5 - xpos) * (double)rotation_speed;
 				
-				const float2 center_point(float2(floor::get_width(), floor::get_height()) * 0.5f);
-				SDL_WarpMouseInWindow(floor::get_window(), (int)roundf(center_point.x), (int)roundf(center_point.y));
+				SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
 			}
 ////////////////////////////////
 // os x version
 #else
-			SDL_GetRelativeMouseState(&cursor_pos_x, &cursor_pos_y);
+			SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
 			
-			double xpos = (1.0 / (double)floor::get_width()) * (double)-cursor_pos_x;
-			double ypos = (1.0 / (double)floor::get_height()) * (double)-cursor_pos_y;
-			
-			if(xpos != 0.0 || ypos != 0.0) {
-				if(!ignore_next_rotation) {
-					rotation.x -= ypos * (double)rotation_speed;
-					rotation.y -= xpos * (double)rotation_speed;
+			if(cursor_pos.x != last_delta.x || cursor_pos.y != last_delta.y) {
+				if(delta_hack) {
+					if(cursor_pos.x != center_point.x || cursor_pos.y != center_point.y) {
+						const auto actual_diff = cursor_pos - last_delta;
+						last_delta = cursor_pos;
+						cursor_pos = actual_diff;
+					}
+					else {
+						// ignore center reset
+						cursor_pos = 0;
+					}
 				}
-				else ignore_next_rotation--;
 				
-				const float2 center_point(float2(floor::get_width(), floor::get_height()) * 0.5f);
-				SDL_WarpMouseInWindow(floor::get_window(), (int)roundf(center_point.x), (int)roundf(center_point.y));
+				double xpos = (1.0 / (double)floor::get_width()) * (double)-cursor_pos.x;
+				double ypos = (1.0 / (double)floor::get_height()) * (double)-cursor_pos.y;
+				
+				if(xpos != 0.0 || ypos != 0.0) {
+					if(!ignore_next_rotation) {
+						rotation.x -= ypos * (double)rotation_speed;
+						rotation.y -= xpos * (double)rotation_speed;
+					}
+					else ignore_next_rotation--;
+					
+					SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
+				}
 			}
 #endif
 ////////////////////////////////
@@ -113,13 +125,12 @@ void camera::run() {
 	}
 	// -> single frame camera handling
 	else {
-		int cursor_pos_x = 0;
-		int cursor_pos_y = 0;
-		SDL_GetRelativeMouseState(&cursor_pos_x, &cursor_pos_y);
+		int2 cursor_pos;
+		SDL_GetRelativeMouseState(&cursor_pos.x, &cursor_pos.y);
 		
 		const double2 cursor_delta {
-			(1.0 / (double)floor::get_width()) * (double)-cursor_pos_x,
-			(1.0 / (double)floor::get_height()) * (double)-cursor_pos_y
+			(1.0 / (double)floor::get_width()) * (double)-cursor_pos.x,
+			(1.0 / (double)floor::get_height()) * (double)-cursor_pos.y
 		};
 		
 		if(cursor_delta.x != 0.0 || cursor_delta.y != 0.0) {
@@ -231,12 +242,14 @@ void camera::set_mouse_input(const bool& state) {
 #if defined(__APPLE__)
 	// this effictively calls CGAssociateMouseAndMouseCursorPosition (which will lock the cursor to the window)
 	// and subsequently handles all mouse moves in relative/delta mode
-	SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
+	if(!delta_hack) {
+		SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
+	}
 	
 	// this fixes some weird mouse positioning when switching from grab to non-grab mode
 	if(mouse_input && !state) {
-		const float2 center_point(float2(floor::get_width(), floor::get_height()) * 0.5f);
-		SDL_WarpMouseInWindow(floor::get_window(), (int)roundf(center_point.x), (int)roundf(center_point.y));
+		const auto center_point = (floor::get_screen_size().cast<float>() * 0.5f).cast<int32_t>();
+		SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
 	}
 #endif
 	

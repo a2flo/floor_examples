@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -173,7 +173,7 @@ void obj_lexer::lex(translation_unit& tu) {
 	tu.tokens.reserve(tu.source.size() / 4);
 	
 	// lex
-	for(auto src_begin = tu.source.data(), src_end = tu.source.data() + tu.source.size(), char_iter = src_begin;
+	for(const char* src_begin = tu.source.data(), *src_end = tu.source.data() + tu.source.size(), *char_iter = src_begin;
 		char_iter != src_end;
 		/* NOTE: char_iter is incremented in the individual lex_* functions or whitespace case: */) {
 		switch(*char_iter) {
@@ -473,7 +473,7 @@ struct mtl_grammar {
 			cur_mtl->mask = matches.back().token->second.to_string();
 			return {};
 		});
-		map_options.on_match([this](auto& matches floor_unused) -> parser_context::match_list {
+		map_options.on_match([](auto& matches floor_unused) -> parser_context::match_list {
 			return {};
 		});
 	}
@@ -649,7 +649,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	alignas(128) vector<obj_loader::texture> textures(filenames.size());
 	atomic<uint32_t> cur_tex { 0u }, active_workers { core::get_hw_thread_count() };
 	for(uint32_t worker_id = 0; worker_id < core::get_hw_thread_count(); ++worker_id) {
-		task::spawn([worker_id, &active_workers, &filenames, &cur_tex, &textures, &prefix] {
+		task::spawn([&active_workers, &filenames, &cur_tex, &textures, &prefix] {
 			for(;;) {
 				const auto id = cur_tex++;
 				if(id >= filenames.size()) break;

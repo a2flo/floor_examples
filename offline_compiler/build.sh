@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ##########################################
 # helper functions
@@ -35,33 +35,43 @@ verbose() {
 
 # if no CXX/CC are specified, try using clang++/clang
 if [ -z "${CXX}" ]; then
-	CXX=clang++
+	# try using clang++ directly (avoid any nasty wrappers)
+	if [ -n $(command -v /usr/bin/clang++) ]; then
+		CXX=/usr/bin/clang++
+	elif [ -n $(command -v /usr/local/bin/clang++) ]; then
+		CXX=/usr/local/bin/clang++
+	else
+		CXX=clang++
+	fi
 fi
 command -v ${CXX} >/dev/null 2>&1 || error "clang++ binary not found, please set CXX to a valid clang++ binary"
 
 if [ -z "${CC}" ]; then
-	CC=clang
+	# try using clang directly (avoid any nasty wrappers)
+	if [ -n $(command -v /usr/bin/clang) ]; then
+		CC=/usr/bin/clang++
+	elif [ -n $(command -v /usr/local/bin/clang) ]; then
+		CC=/usr/local/bin/clang
+	else
+		CC=clang
+	fi
 fi
 command -v ${CC} >/dev/null 2>&1 || error "clang binary not found, please set CC to a valid clang binary"
 
 # check if clang is the compiler, fail if not
 CXX_VERSION=$(${CXX} -v 2>&1)
-CXX17_CAPABLE=0
 if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
 	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 6.1.0 is required (ships with Xcode 6.3)
-		if [ $CLANG_MAJOR -lt 6 ] || [ $CLANG_MAJOR -eq 6 -a $CLANG_MINOR -lt 1 ]; then
-			error "at least Xcode 6.3 / clang/LLVM 6.1.0 is required to compile this project!"
+		# apple xcode/llvm/clang versioning scheme -> at least 8.1.0 is required (ships with Xcode 8.3)
+		if [ $CLANG_MAJOR -lt 8 ] || [ $CLANG_MAJOR -eq 8 -a $CLANG_MINOR -lt 1 ]; then
+			error "at least Xcode 8.3 / clang/LLVM 8.1.0 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 3.5.0 is required
-		if [ $CLANG_MAJOR -lt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -lt 5 ]; then
-			error "at least clang 3.5.0 is required to compile this project!"
-		fi
-		if [ $CLANG_MAJOR -gt 3 ] || [ $CLANG_MAJOR -eq 3 -a $CLANG_MINOR -ge 9 ]; then
-			CXX17_CAPABLE=1
+		# standard clang versioning scheme -> at least 4.0 is required
+		if [ $CLANG_MAJOR -lt 4 ] || [ $CLANG_MAJOR -eq 4 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 4.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -86,7 +96,6 @@ BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
 BUILD_CONF_POCL=0
 BUILD_CONF_LIBSTDCXX=0
-BUILD_CONF_CXX17=$((${FLOOR_CXX17}))
 BUILD_CONF_NATIVE=0
 
 BUILD_CONF_SANITIZERS=0
@@ -94,10 +103,6 @@ BUILD_CONF_ASAN=0
 BUILD_CONF_MSAN=0
 BUILD_CONF_TSAN=0
 BUILD_CONF_UBSAN=0
-
-if [ ${BUILD_CONF_CXX17} -gt ${CXX17_CAPABLE} ]; then
-	error "libfloor was compiled with C++17 support, but the current compiler is not C++17 capable"
-fi
 
 BUILD_ARCH_SIZE="x64"
 BUILD_ARCH=$(${CC} -dumpmachine | sed "s/-.*//")
@@ -261,9 +266,6 @@ if [ $BUILD_MODE == "debug" ]; then
 	TARGET_BIN_NAME=${TARGET_BIN_NAME}d
 fi
 
-# use *.a for all platforms
-TARGET_STATIC_BIN_NAME=${TARGET_BIN_NAME}.a
-
 # file ending, depending on the platform we're building on
 # windows/mingw/cygwin -> .exe
 if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
@@ -285,7 +287,6 @@ BIN_DIR=bin
 
 # location of the target binary
 TARGET_BIN=${BIN_DIR}/${TARGET_BIN_NAME}
-TARGET_STATIC_BIN=${BIN_DIR}/${TARGET_STATIC_BIN_NAME}
 
 # root folder of the source code
 SRC_DIR="src"
@@ -294,7 +295,12 @@ SRC_DIR="src"
 SRC_SUB_DIRS="."
 
 # build directory where all temporary files are stored (*.o, etc.)
-BUILD_DIR=build
+BUILD_DIR=
+if [ $BUILD_MODE == "debug" ]; then
+	BUILD_DIR=build/debug
+else
+	BUILD_DIR=build/release
+fi
 
 ##########################################
 # library/dependency handling
@@ -498,12 +504,18 @@ else
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
 	fi
+	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
+		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openal-soft/include"
+	fi
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
 	# additional lib paths
 	LDFLAGS="${LDFLAGS} -L/opt/X11/lib"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openssl/lib"
+	fi
+	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
+		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openal-soft/lib"
 	fi
 
 	# rpath voodoo
@@ -522,13 +534,15 @@ else
 	LDFLAGS="${LDFLAGS} -framework SDL2"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
+		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openssl/lib"
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -framework OpenALSoft"
+		LDFLAGS="${LDFLAGS} -lopenal"
+		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openal-soft/lib"
 	fi
 	
 	# system frameworks
-	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework OpenGL"
+	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework OpenGL -framework QuartzCore"
 	if [ ${BUILD_CONF_METAL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -framework Metal"
 	fi
@@ -542,11 +556,7 @@ LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
 # flags
 
 # set up initial c++ and c flags
-if [ ${BUILD_CONF_CXX17} -eq 0 ]; then
-	CXXFLAGS="${CXXFLAGS} -std=gnu++14"
-else
-	CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
-fi
+CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -668,8 +678,11 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (c++14 with gnu and clang extensions is required)
-WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++11-compat -Wno-c99-extensions -Wno-c11-extensions"
+# remove std compat warnings (c++17 with gnu and clang extensions is required)
+WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
 # don't be too pedantic
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"

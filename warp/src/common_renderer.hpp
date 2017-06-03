@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -146,7 +146,7 @@ protected:
 	
 	virtual bool compile_shaders(const string add_cli_options = "");
 	
-	// current vulkan command buffer used for rendering
+	// current metal (id <MTLCommandBuffer>) or vulkan command buffer used for rendering
 	void* render_cmd_buffer;
 	
 };

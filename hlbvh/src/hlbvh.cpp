@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -486,11 +486,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	uint32_t node = 0;
 	uint32_t iters = 0;
 	do {
-		if
-#if defined(FLOOR_CXX17)
-			constexpr
-#endif
-			(!triangle_vis) {
+		if constexpr(!triangle_vis) {
 			// check abort condition (no need to do further checking when a collision has been found already)
 			// NOTE: need to check both, because either could have been set previously
 			// NOTE: if both have been set to true previously, this will also immediately return (as it should)
@@ -524,11 +520,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 					if(check_triangle_intersection(v[0], v[1], v[2], ov[0], ov[1], ov[2])) {
 						atomic_inc(&collision_flags[mesh_idx_a]);
 						atomic_inc(&collision_flags[mesh_idx_b]);
-						if
-#if defined(FLOOR_CXX17)
-							constexpr
-#endif
-							(triangle_vis) {
+						if constexpr(triangle_vis) {
 							atomic_inc(&colliding_triangles_a[triangle_idx]);
 							atomic_inc(&colliding_triangles_b[overlap_triangle_idx]);
 						}

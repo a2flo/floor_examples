@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ struct option_context {
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	bool warnings { false };
 	bool workarounds { false };
-	bool double_support { true };
+	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
 	bool sub_groups { false };
@@ -84,7 +84,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air})\n"
 				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62], defaults to sm_20\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios9|ios10|osx11|osx12][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
@@ -92,6 +92,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
+				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
 				 "\t--no-double: explicitly disables double support (only SPIR/SPIR-V)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
@@ -193,8 +194,11 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--workarounds", [](option_context& ctx, char**&) {
 		ctx.workarounds = true;
 	}},
+	{ "--with-double", [](option_context& ctx, char**&) {
+		ctx.double_support = 1;
+	}},
 	{ "--no-double", [](option_context& ctx, char**&) {
-		ctx.double_support = false;
+		ctx.double_support = 2;
 	}},
 	{ "--64-bit-atomics", [](option_context& ctx, char**&) {
 		ctx.basic_64_atomics = true;
@@ -351,6 +355,7 @@ int main(int, char* argv[]) {
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				if(option_ctx.sub_groups) device->sub_group_support = true;
+				device->double_support = (option_ctx.double_support != 2); // enabled by default
 				// enable common image support
 				device->image_support = true;
 				device->image_depth_support = true;
@@ -387,6 +392,7 @@ int main(int, char* argv[]) {
 					}
 				}
 				else option_ctx.sub_target = "sm_20";
+				device->double_support = true; // enabled by default
 				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
@@ -418,6 +424,7 @@ int main(int, char* argv[]) {
 					log_error("invalid AIR sub-target: %s", option_ctx.sub_target);
 					return -3;
 				}
+				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
 			} break;
 			case llvm_toolchain::TARGET::SPIRV_VULKAN:
@@ -429,6 +436,7 @@ int main(int, char* argv[]) {
 				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
+				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				
 				// mip-mapping support is already enabled, just need to set the max supported mip level count
 				device->max_mip_levels = 15;
@@ -441,7 +449,6 @@ int main(int, char* argv[]) {
 				break;
 		}
 		device->bitness = option_ctx.bitness;
-		device->double_support = option_ctx.double_support;
 		
 		// compile
 		llvm_toolchain::compile_options options {
@@ -609,12 +616,12 @@ int main(int, char* argv[]) {
 			if(option_ctx.target == llvm_toolchain::TARGET::AIR) {
 				string output = "";
 				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
-				cout << output << endl;
+				log_undecorated("%s", output);
 			}
 			else if(option_ctx.target == llvm_toolchain::TARGET::SPIR) {
 				string output = "";
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
-				cout << output << endl;
+				log_undecorated("%s", output);
 			}
 			else if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
 					option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
@@ -622,10 +629,10 @@ int main(int, char* argv[]) {
 				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
 							 "\" --debug-asm " + option_ctx.output_filename, output);
-				cout << output << endl;
+				log_undecorated("%s", output);
 			}
 			else {
-				cout << program.data_or_filename << endl;
+				log_undecorated("%s", program.data_or_filename);
 			}
 		}
 	}
@@ -645,17 +652,17 @@ int main(int, char* argv[]) {
 			" -o " + cubin_filename + ".cubin " +
 			option_ctx.output_filename
 		};
-		if(floor::get_compute_log_commands()) log_debug("ptxas cmd: %s", ptxas_cmd);
+		if(floor::get_toolchain_log_commands()) log_debug("ptxas cmd: %s", ptxas_cmd);
 		const string cuobjdump_cmd {
 			"cuobjdump --dump-sass " + cubin_filename + ".cubin" +
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
-		if(floor::get_compute_log_commands()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
+		if(floor::get_toolchain_log_commands()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
 		string ptxas_output = "", cuobjdump_output = "";
 		core::system(ptxas_cmd, ptxas_output);
-		cout << ptxas_output << endl;
+		log_undecorated("%s", ptxas_output);
 		core::system(cuobjdump_cmd, cuobjdump_output);
-		cout << cuobjdump_output << endl;
+		log_undecorated("%s", cuobjdump_output);
 	}
 	
 	// handle spir-v text assembly output

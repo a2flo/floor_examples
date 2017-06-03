@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2016 Florian Ziesche
+ *  Copyright (C) 2004 - 2017 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -109,6 +109,8 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		
 		// performance stats
 		cout << "expected performace (with --benchmark):" << endl;
+		cout << "\tP6000:        ~8400 gflops (--count 262144 --tile-size 512)" << endl;
+		cout << "\tGP100:        ~7600 gflops (--count 262144 --tile-size 512)" << endl;
 		cout << "\tGTX 970:      ~2770 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\tGTX 780:      ~2350 gflops (--count 131072 --tile-size 512)" << endl;
 		cout << "\tR9 285:       ~850 gflops (--count 131072 --tile-size 64)" << endl;
@@ -118,6 +120,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
 		cout << "\ti7-6700:      ~195 gflops (--count 32768 --tile-size 1024)" << endl;
 		cout << "\tHD 4000:      ~148 gflops (--count 32768 --tile-size 128)" << endl;
+		cout << "\tiPhone A10:   ~131 gflops (--count 32768 --tile-size 512)" << endl;
 		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-4770:      ~80 gflops (--count 32768 --tile-size 8)" << endl;
 		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8)" << endl;
@@ -773,7 +776,7 @@ int main(int, char* argv[]) {
 		};
 		
 		// there is no proper dependency tracking yet, so always need to manually finish right now
-		if(is_vulkan) dev_queue->finish();
+		if(is_vulkan || is_metal) dev_queue->finish();
 		
 		// flip/flop buffer indices
 		const size_t cur_buffer = buffer_flip_flop;
@@ -818,7 +821,7 @@ int main(int, char* argv[]) {
 		}
 		
 		// there is no proper dependency tracking yet, so always need to manually finish right now
-		if(is_vulkan) dev_queue->finish();
+		if(is_vulkan || is_metal) dev_queue->finish();
 		
 		// s/w rendering
 		if(nbody_state.no_opengl && nbody_state.no_metal && nbody_state.no_vulkan && !nbody_state.benchmark) {
@@ -847,6 +850,8 @@ int main(int, char* argv[]) {
 							   /* img: */				img_buffers[img_buffer_flip_flop],
 							   /* img_old: */			img_buffers[1 - img_buffer_flip_flop],
 							   /* raster_params: */		raster_params);
+			
+			if(is_vulkan || is_metal) dev_queue->finish();
 			
 			// grab the current image buffer data (read-only + blocking) ...
 			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
