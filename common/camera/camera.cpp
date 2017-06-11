@@ -85,9 +85,14 @@ void camera::run() {
 ////////////////////////////////
 // os x version
 #else
-			SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
+			if(delta_hack) {
+				SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
+			}
+			else {
+				SDL_GetRelativeMouseState(&cursor_pos.x, &cursor_pos.y);
+			}
 			
-			if(cursor_pos.x != last_delta.x || cursor_pos.y != last_delta.y) {
+			if(!delta_hack || (cursor_pos.x != last_delta.x || cursor_pos.y != last_delta.y)) {
 				if(delta_hack) {
 					if(cursor_pos.x != center_point.x || cursor_pos.y != center_point.y) {
 						const auto actual_diff = cursor_pos - last_delta;

@@ -416,10 +416,10 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 bool common_renderer::compile_shaders(const string add_cli_options) {
 	shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
 												   "-I" + floor::data_path("../warp/src") +
-												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) +
-												   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) +
-												   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) +
-												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) +
+												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +
+												   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
+												   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) + "f" +
+												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
 												   add_cli_options);
 	
 	if(shader_prog == nullptr) {
