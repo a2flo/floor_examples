@@ -51,6 +51,7 @@ struct option_context {
 	string sub_target;
 	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
+	uint32_t ptx_version { 43 };
 	bool warnings { false };
 	bool workarounds { false };
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
@@ -84,12 +85,13 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air})\n"
 				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70], defaults to sm_20\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios9|ios10|osx11|osx12][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
+				 "\t--ptx-version <43|50|60>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -185,6 +187,18 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(cl_version_str == "2.2") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_2; }
 		else {
 			cerr << "invalid --cl-std argument" << endl;
+			return;
+		}
+	}},
+	{ "--ptx-version", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.ptx_version = stou(*arg_ptr);
+		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 && ctx.ptx_version != 60) {
+			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
 	}},
@@ -455,6 +469,7 @@ int main(int, char* argv[]) {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings,
+			.cuda.ptx_version = option_ctx.ptx_version,
 		};
 		program = llvm_toolchain::compile_program_file(device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
