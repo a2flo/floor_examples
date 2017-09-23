@@ -51,6 +51,7 @@ struct option_context {
 	string sub_target;
 	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
+	METAL_VERSION metal_std { METAL_VERSION::METAL_1_1 };
 	uint32_t ptx_version { 43 };
 	bool warnings { false };
 	bool workarounds { false };
@@ -64,6 +65,7 @@ struct option_context {
 	bool test_bin { false };
 	bool cuda_sass { false };
 	bool spirv_text { false };
+	string cuda_sdk_path { "" };
 	string cuda_sass_filename { "" };
 	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
@@ -87,10 +89,11 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios9|ios10|osx11|osx12][_family], family is optional and defaults to lowest available\n"
+				 "\t    Metal/AIR:     [ios|osx|macos][_family], family is optional and defaults to lowest available\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
+				 "\t--metal-std <1.1|1.2|2.0>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -101,6 +104,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
+				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
@@ -190,6 +194,21 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 	}},
+	{ "--metal-std", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string mtl_version_str = *arg_ptr;
+		if(mtl_version_str == "1.1") { ctx.metal_std = METAL_VERSION::METAL_1_1; }
+		else if(mtl_version_str == "1.2") { ctx.metal_std = METAL_VERSION::METAL_1_2; }
+		else if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
+		else {
+			cerr << "invalid --metal-std argument" << endl;
+			return;
+		}
+	}},
 	{ "--ptx-version", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
@@ -270,6 +289,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.ffi_filename = *arg_ptr;
 		
 		ctx.test_bin = true;
+	}},
+	{ "--cuda-sdk", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.cuda_sdk_path = *arg_ptr;
 	}},
 	{ "--cuda-sass", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -408,6 +435,7 @@ int main(int, char* argv[]) {
 				else option_ctx.sub_target = "sm_20";
 				device->double_support = true; // enabled by default
 				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
+				device->sub_group_shuffle_support = (((cuda_device*)device.get())->sm.x >= 3);
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
 				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
@@ -415,6 +443,7 @@ int main(int, char* argv[]) {
 			case llvm_toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
+				dev->metal_version = option_ctx.metal_std;
 				const auto family_pos = option_ctx.sub_target.rfind('_');
 				uint32_t family = 0;
 				if(family_pos != string::npos) {
@@ -422,12 +451,11 @@ int main(int, char* argv[]) {
 					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
 				}
 				
-				if(option_ctx.sub_target == "" ||
-				   option_ctx.sub_target.find("ios") != string::npos) {
+				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios") {
 					dev->family = (family == 0 ? 1 : family);
 					dev->family_version = (family < 3 ? 2 : 1);
 				}
-				else if(option_ctx.sub_target.find("osx") != string::npos) {
+				else if(option_ctx.sub_target == "osx" || option_ctx.sub_target == "macos") {
 					dev->family = (family == 0 ? 10000 : family);
 					dev->family_version = 1;
 					if(option_ctx.workarounds) {
@@ -659,8 +687,9 @@ int main(int, char* argv[]) {
 		if(dot_pos != string::npos) cubin_filename = option_ctx.output_filename.substr(0, dot_pos);
 		else cubin_filename = option_ctx.output_filename;
 		
+		const string cuda_bin_path = (option_ctx.cuda_sdk_path.empty() ? "" : option_ctx.cuda_sdk_path + "/bin/");
 		const string ptxas_cmd {
-			"ptxas -O3"s +
+			cuda_bin_path + "ptxas -O3"s +
 			(option_ctx.verbosity >= (size_t)logger::LOG_TYPE::DEBUG_MSG ? " -v" : "") +
 			" -m" + (option_ctx.bitness == 32 ? "32" : "64") +
 			" -arch " + option_ctx.sub_target +
@@ -669,7 +698,7 @@ int main(int, char* argv[]) {
 		};
 		if(floor::get_toolchain_log_commands()) log_debug("ptxas cmd: %s", ptxas_cmd);
 		const string cuobjdump_cmd {
-			"cuobjdump --dump-sass " + cubin_filename + ".cubin" +
+			cuda_bin_path + "cuobjdump --dump-sass " + cubin_filename + ".cubin" +
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
 		if(floor::get_toolchain_log_commands()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
