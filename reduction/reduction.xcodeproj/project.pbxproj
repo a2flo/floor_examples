@@ -1,0 +1,1244 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
+		5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
+		5C0071C11A91F2BD00F4711D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5C0071C21A91F2BD00F4711D /* reduction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* reduction.cpp */; };
+		5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
+		5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
+		5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
+		5C0071CA1A91FFA600F4711D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
+		5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
+		5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
+		5C0071D01A91FFC300F4711D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
+		5C0071D21A91FFCB00F4711D /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
+		5C0071D41A91FFD100F4711D /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
+		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
+		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
+		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1D1E32C677003A5688 /* GameController.framework */; };
+		5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1F1E32C691003A5688 /* AVFoundation.framework */; };
+		5C131E841E33D343003A5688 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
+		5C30CAA51AA625F5008986B1 /* reduction.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* reduction.metallib */; };
+		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
+		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
+		5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
+		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5C8646291C19B2A4000518C7 /* reduction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* reduction.cpp */; };
+		5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
+		5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
+		5C86462D1C19B2A4000518C7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
+		5C86462E1C19B2A4000518C7 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C86462F1C19B2A4000518C7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
+		5C8646301C19B2A4000518C7 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
+		5C8646311C19B2A4000518C7 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
+		5C8646321C19B2A4000518C7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
+		5C8646331C19B2A4000518C7 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
+		5C8646341C19B2A4000518C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
+		5C8646351C19B2A4000518C7 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
+		5C8646361C19B2A4000518C7 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
+		5C8646381C19B2A4000518C7 /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
+		5C8646391C19B2A4000518C7 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
+		5C86463C1C19B2A4000518C7 /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
+		5C86463D1C19B2A4000518C7 /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
+		5C86463E1C19B2A4000518C7 /* reduction.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* reduction.metallib */; };
+		5C8FD0B41AD3389B00215230 /* reduction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* reduction.cpp */; settings = {COMPILER_FLAGS = "-fslp-vectorize-aggressive -Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
+		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5C0071DB1A9200B200F4711D /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = data;
+			dstSubfolderSpec = 7;
+			files = (
+				5C5487801B608DE40088272A /* config.json in CopyFiles */,
+				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
+				5C30CAA51AA625F5008986B1 /* reduction.metallib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C86463B1C19B2A4000518C7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = data;
+			dstSubfolderSpec = 7;
+			files = (
+				5C86463C1C19B2A4000518C7 /* config.json in CopyFiles */,
+				5C86463D1C19B2A4000518C7 /* config.json.local in CopyFiles */,
+				5C86463E1C19B2A4000518C7 /* reduction.metallib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5C0071911A91EF7E00F4711D /* reductiond.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = reductiond.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
+		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
+		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
+		5C0071C31A91FF7C00F4711D /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/OpenGLES.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071C51A91FF8000F4711D /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/Metal.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071C71A91FF9000F4711D /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreAudio.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071C91A91FFA600F4711D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/AudioToolbox.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071CD1A91FFB000F4711D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071CF1A91FFC300F4711D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071D11A91FFCB00F4711D /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/MobileCoreServices.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
+		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
+		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E1D1E32C677003A5688 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E1F1E32C691003A5688 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		5C131E821E33D32E003A5688 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/ios/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		5C30CAA31AA625DC008986B1 /* reduction.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = reduction.metallib; path = ../data/reduction.metallib; sourceTree = "<group>"; };
+		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
+		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
+		5C7467131A5828D000999E78 /* reduction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = reduction.cpp; sourceTree = "<group>"; };
+		5C7467141A5828D000999E78 /* reduction.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = reduction.hpp; sourceTree = "<group>"; };
+		5C8646421C19B2A4000518C7 /* reductiond.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = reductiond.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C8FD0941AD3366800215230 /* reductiond.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = reductiond.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
+		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
+		5CB92D9E1ACA0DFB00109EB3 /* reduction_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = reduction_state.hpp; sourceTree = "<group>"; };
+		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
+		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5C00718E1A91EF7E00F4711D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */,
+				5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */,
+				5C0071CA1A91FFA600F4711D /* CoreGraphics.framework in Frameworks */,
+				5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */,
+				5C0071D01A91FFC300F4711D /* Foundation.framework in Frameworks */,
+				5C0071D21A91FFCB00F4711D /* ImageIO.framework in Frameworks */,
+				5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */,
+				5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */,
+				5C0071D41A91FFD100F4711D /* MobileCoreServices.framework in Frameworks */,
+				5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */,
+				5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */,
+				5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C86462A1C19B2A4000518C7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */,
+				5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */,
+				5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */,
+				5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */,
+				5C86462D1C19B2A4000518C7 /* CoreGraphics.framework in Frameworks */,
+				5C86462E1C19B2A4000518C7 /* CoreMotion.framework in Frameworks */,
+				5C86462F1C19B2A4000518C7 /* Foundation.framework in Frameworks */,
+				5C8646301C19B2A4000518C7 /* ImageIO.framework in Frameworks */,
+				5C8646311C19B2A4000518C7 /* libxml2.2.dylib in Frameworks */,
+				5C8646321C19B2A4000518C7 /* Metal.framework in Frameworks */,
+				5C8646331C19B2A4000518C7 /* MobileCoreServices.framework in Frameworks */,
+				5C8646341C19B2A4000518C7 /* OpenGLES.framework in Frameworks */,
+				5C8646351C19B2A4000518C7 /* QuartzCore.framework in Frameworks */,
+				5C8646361C19B2A4000518C7 /* UIKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8FD0911AD3366800215230 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5C0071B91A91F1DD00F4711D /* ios */ = {
+			isa = PBXGroup;
+			children = (
+				5C0071D91A91FFF400F4711D /* CoreMotion.framework */,
+				5C0071D71A91FFE600F4711D /* libxml2.2.dylib */,
+				5C0071D51A91FFD600F4711D /* UIKit.framework */,
+				5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */,
+				5C0071D11A91FFCB00F4711D /* ImageIO.framework */,
+				5C0071CF1A91FFC300F4711D /* Foundation.framework */,
+				5C0071CD1A91FFB000F4711D /* QuartzCore.framework */,
+				5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */,
+				5C0071C91A91FFA600F4711D /* CoreGraphics.framework */,
+				5C0071C71A91FF9000F4711D /* CoreAudio.framework */,
+				5C0071C51A91FF8000F4711D /* Metal.framework */,
+				5C0071C31A91FF7C00F4711D /* OpenGLES.framework */,
+				5C0071BA1A91F1E800F4711D /* Base.lproj */,
+				5C0071BB1A91F1E800F4711D /* Images.xcassets */,
+				5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */,
+				5C0071BC1A91F1E800F4711D /* Info.plist */,
+			);
+			name = ios;
+			sourceTree = "<group>";
+		};
+		5C0071E01A9200D400F4711D /* data */ = {
+			isa = PBXGroup;
+			children = (
+				5C30CAA31AA625DC008986B1 /* reduction.metallib */,
+				5C54877E1B608CF50088272A /* config.json */,
+				5C54877F1B608CF50088272A /* config.json.local */,
+			);
+			name = data;
+			sourceTree = "<group>";
+		};
+		5C131E1C1E32C676003A5688 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5C131E1F1E32C691003A5688 /* AVFoundation.framework */,
+				5C131E1D1E32C677003A5688 /* GameController.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		5C8FD0B91AD3392500215230 /* osx */ = {
+			isa = PBXGroup;
+			children = (
+				5C8FD0BA1AD3393700215230 /* Images.xcassets */,
+				5C8FD0BC1AD3393700215230 /* Info.plist */,
+			);
+			name = osx;
+			sourceTree = "<group>";
+		};
+		5CD2174419E924A20049D6AE = {
+			isa = PBXGroup;
+			children = (
+				5CD2174F19E924E80049D6AE /* build.sh */,
+				5CD2175019E924E80049D6AE /* src */,
+				5C0071E01A9200D400F4711D /* data */,
+				5C0071B91A91F1DD00F4711D /* ios */,
+				5C8FD0B91AD3392500215230 /* osx */,
+				5C0071911A91EF7E00F4711D /* reductiond.app */,
+				5C8FD0941AD3366800215230 /* reductiond.app */,
+				5C8646421C19B2A4000518C7 /* reductiond.app */,
+				5C131E1C1E32C676003A5688 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		5CD2175019E924E80049D6AE /* src */ = {
+			isa = PBXGroup;
+			children = (
+				5CD2175119E924E80049D6AE /* main.cpp */,
+				5CB92D9E1ACA0DFB00109EB3 /* reduction_state.hpp */,
+				5C7467131A5828D000999E78 /* reduction.cpp */,
+				5C7467141A5828D000999E78 /* reduction.hpp */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		5C180F711D80623A00AF91E7 /* reduction_remote */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "floor_remote \"cd ~/floor_examples_remote/reduction && export FLOOR_DEV=1 && export NO_COLOR=1 && if [ '${CONFIGURATION}' == 'Debug' ]; then ./build.sh $(ACTION) debug; else ./build.sh $(ACTION); fi\"";
+			buildConfigurationList = 5C180F741D80623A00AF91E7 /* Build configuration list for PBXLegacyTarget "reduction_remote" */;
+			buildPhases = (
+			);
+			buildToolPath = ssh;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = reduction_remote;
+			passBuildSettingsInEnvironment = 1;
+			productName = reduction_remote;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXNativeTarget section */
+		5C0071901A91EF7E00F4711D /* reduction_ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "reduction_ios" */;
+			buildPhases = (
+				5C30CAA61AA7058D008986B1 /* Run Script */,
+				5C00718D1A91EF7E00F4711D /* Sources */,
+				5C00718E1A91EF7E00F4711D /* Frameworks */,
+				5C00718F1A91EF7E00F4711D /* Resources */,
+				5C0071C01A91F1EF00F4711D /* ShellScript */,
+				5C0071DB1A9200B200F4711D /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = reduction_ios;
+			productName = reduction_ios;
+			productReference = 5C0071911A91EF7E00F4711D /* reductiond.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5C8646231C19B2A4000518C7 /* reduction_ios_sideload */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "reduction_ios_sideload" */;
+			buildPhases = (
+				5C8646241C19B2A4000518C7 /* Run Script */,
+				5C8646251C19B2A4000518C7 /* Sources */,
+				5C86462A1C19B2A4000518C7 /* Frameworks */,
+				5C8646371C19B2A4000518C7 /* Resources */,
+				5C86463B1C19B2A4000518C7 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = reduction_ios_sideload;
+			productName = reduction_ios;
+			productReference = 5C8646421C19B2A4000518C7 /* reductiond.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5C8FD0931AD3366800215230 /* reduction_osx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "reduction_osx" */;
+			buildPhases = (
+				5C8FD0901AD3366800215230 /* Sources */,
+				5C8FD0911AD3366800215230 /* Frameworks */,
+				5C8FD0921AD3366800215230 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = reduction_osx;
+			productName = reduction_osx;
+			productReference = 5C8FD0941AD3366800215230 /* reductiond.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5CD2174519E924A20049D6AE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0930;
+				ORGANIZATIONNAME = libfloor;
+				TargetAttributes = {
+					5C0071901A91EF7E00F4711D = {
+						CreatedOnToolsVersion = 6.3;
+					};
+					5C180F711D80623A00AF91E7 = {
+						CreatedOnToolsVersion = 8.0;
+						ProvisioningStyle = Automatic;
+					};
+					5C8646231C19B2A4000518C7 = {
+						DevelopmentTeam = S63YFDZ98S;
+					};
+					5C8FD0931AD3366800215230 = {
+						CreatedOnToolsVersion = 6.3;
+					};
+				};
+			};
+			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "reduction" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5CD2174419E924A20049D6AE;
+			productRefGroup = 5CD2174419E924A20049D6AE;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5C8FD0931AD3366800215230 /* reduction_osx */,
+				5C0071901A91EF7E00F4711D /* reduction_ios */,
+				5C8646231C19B2A4000518C7 /* reduction_ios_sideload */,
+				5C180F711D80623A00AF91E7 /* reduction_remote */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5C00718F1A91EF7E00F4711D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */,
+				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
+				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8646371C19B2A4000518C7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C131E841E33D343003A5688 /* LaunchScreen.storyboard in Resources */,
+				5C8646381C19B2A4000518C7 /* Base.lproj in Resources */,
+				5C8646391C19B2A4000518C7 /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8FD0921AD3366800215230 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5C0071C01A91F1EF00F4711D /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# create entitlements file on the fly\nENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"\nENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"\n\n# need to create the necessary xml file with the correct application-identifier\n# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)\nprintf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}\nprintf \"${PRODUCT_BUNDLE_IDENTIFIER}\" >> ${ENTITLEMENTS_TMP}\nprintf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}\n# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)\nSIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")\n\n# write the 4-byte header + 4-byte size of this complete file\nprintf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}\n# dump the previously created xml file in the new one and remove the appended 8 bytes\ncat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}\n# cleanup\nrm ${ENTITLEMENTS_TMP}\n\n# code sign with entitlements\ncodesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"\n";
+		};
+		5C30CAA61AA7058D008986B1 /* Run Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Run Script";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd src\nocc --src reduction.cpp --target air --sub-target ios9 --out reduction_unopt.air --no-double -vv --config ../../../data/ -- -Dreduction_TILE_SIZE=512 -Dreduction_SOFTENING=0.01f -Dreduction_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-opt reduction_unopt.air -o reduction.air\n${PLATFORM_DIR}/usr/bin/metal-ar r reduction.a reduction.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/reduction.metallib reduction.a\n";
+		};
+		5C8646241C19B2A4000518C7 /* Run Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Run Script";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd src\nocc --src reduction.cpp --target air --sub-target ios9 --out reduction_unopt.air --no-double -vv --config ../../../data/ -- -Dreduction_TILE_SIZE=512 -Dreduction_SOFTENING=0.01f -Dreduction_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-opt reduction_unopt.air -o reduction.air\n${PLATFORM_DIR}/usr/bin/metal-ar r reduction.a reduction.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/reduction.metallib reduction.a\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5C00718D1A91EF7E00F4711D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
+				5C0071C21A91F2BD00F4711D /* reduction.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8646251C19B2A4000518C7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C8646271C19B2A4000518C7 /* main.cpp in Sources */,
+				5C8646291C19B2A4000518C7 /* reduction.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C8FD0901AD3366800215230 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
+				5C8FD0B41AD3389B00215230 /* reduction.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5C131E821E33D32E003A5688 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		5C0071B11A91EF7E00F4711D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_IOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					FLOOR_NO_OPENAL,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				INFOPLIST_FILE = src/ios/Info.plist;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+					/opt/floor/include/floor/ios/deps/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/include",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
+					"-isystem",
+					/usr/include/libxml2,
+					"-isystem",
+					"$(SDKROOT)/usr/include",
+					"-isystem",
+					"$(SDKROOT)/usr/include/freetype2",
+					"-I$(SDKROOT)/usr/include",
+					"-isystem",
+					/opt/floor/include/floor/ios/deps/include,
+					"-isystem",
+					/usr/include,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lSDL2",
+					"-lcrypto",
+					"-lssl",
+					"-lfreetype",
+					"-lz",
+					"-lbz2",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloord_static",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = "arm64 armv7s";
+			};
+			name = Debug;
+		};
+		5C0071B21A91EF7E00F4711D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				COPY_PHASE_STRIP = NO;
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_IOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					FLOOR_NO_OPENAL,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				INFOPLIST_FILE = src/ios/Info.plist;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+					/opt/floor/include/floor/ios/deps/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/include",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
+					"-isystem",
+					/usr/include/libxml2,
+					"-isystem",
+					"$(SDKROOT)/usr/include",
+					"-isystem",
+					"$(SDKROOT)/usr/include/freetype2",
+					"-I$(SDKROOT)/usr/include",
+					"-isystem",
+					/opt/floor/include/floor/ios/deps/include,
+					"-isystem",
+					/usr/include,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lSDL2",
+					"-lcrypto",
+					"-lssl",
+					"-lfreetype",
+					"-lz",
+					"-lbz2",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloor_static",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "arm64 armv7s";
+			};
+			name = Release;
+		};
+		5C180F721D80623A00AF91E7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		5C180F731D80623A00AF91E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		5C8646401C19B2A4000518C7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_IOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					FLOOR_NO_OPENAL,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				INFOPLIST_FILE = src/ios/Info.plist;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+					/opt/floor/include/floor/ios/deps/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/include",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
+					"-isystem",
+					/usr/include/libxml2,
+					"-isystem",
+					"$(SDKROOT)/usr/include",
+					"-isystem",
+					"$(SDKROOT)/usr/include/freetype2",
+					"-I$(SDKROOT)/usr/include",
+					"-isystem",
+					/opt/floor/include/floor/ios/deps/include,
+					"-isystem",
+					/usr/include,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lSDL2",
+					"-lcrypto",
+					"-lssl",
+					"-lfreetype",
+					"-lz",
+					"-lbz2",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloord_static",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = "arm64 armv7s";
+			};
+			name = Debug;
+		};
+		5C8646411C19B2A4000518C7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
+				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
+				ENABLE_BITCODE = NO;
+				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_IOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					FLOOR_NO_OPENAL,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
+					"$(inherited)",
+					PLATFORM_X64,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
+					"$(inherited)",
+					PLATFORM_X32,
+				);
+				INFOPLIST_FILE = src/ios/Info.plist;
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+					/opt/floor/include/floor/ios/deps/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/include",
+					"-isystem",
+					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
+					"-isystem",
+					/usr/include/libxml2,
+					"-isystem",
+					"$(SDKROOT)/usr/include",
+					"-isystem",
+					"$(SDKROOT)/usr/include/freetype2",
+					"-I$(SDKROOT)/usr/include",
+					"-isystem",
+					/opt/floor/include/floor/ios/deps/include,
+					"-isystem",
+					/usr/include,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lSDL2",
+					"-lcrypto",
+					"-lssl",
+					"-lfreetype",
+					"-lz",
+					"-lbz2",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloor_static",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "arm64 armv7s";
+			};
+			name = Release;
+		};
+		5C8FD0AE1AD3366900215230 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/Library/Frameworks,
+					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"FLOOR_DEBUG=1",
+					PLATFORM_X64,
+				);
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_SHADOW = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				INFOPLIST_FILE = src/osx/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					/usr/X11/lib,
+					/usr/local/opt/openssl/lib,
+					/usr/local/lib,
+					/opt/floor/lib,
+				);
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-fparse-all-comments",
+					"-isystem",
+					/opt/X11/include,
+					"-isystem",
+					/usr/local/include,
+					"-isystem",
+					/usr/local/opt/openssl/include,
+					"-iframework",
+					/Library/Frameworks,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lcrypto",
+					"-lssl",
+					"-lfloord",
+					"-framework",
+					OpenCL,
+					"-framework",
+					OpenGL,
+					"-framework",
+					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL2,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				VALID_ARCHS = x86_64;
+			};
+			name = Debug;
+		};
+		5C8FD0AF1AD3366900215230 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_ASSIGN_ENUM = YES;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
+				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					/Library/Frameworks,
+					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+				);
+				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
+				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_FOUR_CHARACTER_CONSTANTS = YES;
+				GCC_WARN_HIDDEN_VIRTUAL_FUNCTIONS = YES;
+				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
+				GCC_WARN_NON_VIRTUAL_DESTRUCTOR = YES;
+				GCC_WARN_SHADOW = YES;
+				GCC_WARN_SIGN_COMPARE = YES;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_PARAMETER = YES;
+				INFOPLIST_FILE = src/osx/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					/usr/X11/lib,
+					/usr/local/opt/openssl/lib,
+					/usr/local/lib,
+					/opt/floor/lib,
+				);
+				LLVM_LTO = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-fparse-all-comments",
+					"-isystem",
+					/opt/X11/include,
+					"-isystem",
+					/usr/local/include,
+					"-isystem",
+					/usr/local/opt/openssl/include,
+					"-iframework",
+					/Library/Frameworks,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lcrypto",
+					"-lssl",
+					"-lfloor",
+					"-framework",
+					OpenCL,
+					"-framework",
+					OpenGL,
+					"-framework",
+					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL2,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.reduction;
+				VALID_ARCHS = x86_64;
+			};
+			name = Release;
+		};
+		5CD2174A19E924A20049D6AE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
+				GCC_FAST_MATH = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/include,
+					/usr/local/include,
+					/opt/floor/include,
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				MTL_FAST_MATH = YES;
+				MTL_OPTIMIZATION_LEVEL = s;
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
+					"-fno-elide-type",
+					"-fdiagnostics-show-template-tree",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = reductiond;
+				SDKROOT = macosx;
+				WARNING_CFLAGS = (
+					"-Weverything",
+					"-Wthread-safety",
+					"-Wthread-safety-negative",
+					"-Wthread-safety-beta",
+					"-Wthread-safety-verbose",
+					"-Wno-c++98-compat",
+					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
+					"-Wno-c99-extensions",
+					"-Wno-header-hygiene",
+					"-Wno-documentation",
+					"-Wno-system-headers",
+					"-Wno-global-constructors",
+					"-Wno-padded",
+					"-Wno-packed",
+					"-Wno-switch-enum",
+					"-Wno-exit-time-destructors",
+					"-Wno-unknown-warning-option",
+					"-Wno-nested-anon-types",
+					"-Wno-old-style-cast",
+					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
+				);
+			};
+			name = Debug;
+		};
+		5CD2174B19E924A20049D6AE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
+				GCC_FAST_MATH = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_UNROLL_LOOPS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/usr/include,
+					/usr/local/include,
+					/opt/floor/include,
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				LD_RUNPATH_SEARCH_PATHS = /opt/floor/lib;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				MTL_OPTIMIZATION_LEVEL = s;
+				OTHER_CPLUSPLUSFLAGS = (
+					"$(OTHER_CFLAGS)",
+					"-std=gnu++1z",
+					"-fno-elide-type",
+					"-fdiagnostics-show-template-tree",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_NAME = reduction;
+				SDKROOT = macosx;
+				WARNING_CFLAGS = (
+					"-Weverything",
+					"-Wthread-safety",
+					"-Wthread-safety-negative",
+					"-Wthread-safety-beta",
+					"-Wthread-safety-verbose",
+					"-Wno-c++98-compat",
+					"-Wno-c++98-compat-pedantic",
+					"-Wno-c++11-compat",
+					"-Wno-c++11-compat-pedantic",
+					"-Wno-c++14-compat",
+					"-Wno-c++14-compat-pedantic",
+					"-Wno-gcc-compat",
+					"-Wno-gnu",
+					"-Wno-c99-extensions",
+					"-Wno-header-hygiene",
+					"-Wno-documentation",
+					"-Wno-system-headers",
+					"-Wno-global-constructors",
+					"-Wno-padded",
+					"-Wno-packed",
+					"-Wno-switch-enum",
+					"-Wno-exit-time-destructors",
+					"-Wno-unknown-warning-option",
+					"-Wno-nested-anon-types",
+					"-Wno-old-style-cast",
+					"-Wno-date-time",
+					"-Wno-reserved-id-macro",
+					"-Wno-documentation-unknown-command",
+					"-Wno-partial-availability",
+				);
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "reduction_ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C0071B11A91EF7E00F4711D /* Debug */,
+				5C0071B21A91EF7E00F4711D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C180F741D80623A00AF91E7 /* Build configuration list for PBXLegacyTarget "reduction_remote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C180F721D80623A00AF91E7 /* Debug */,
+				5C180F731D80623A00AF91E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "reduction_ios_sideload" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C8646401C19B2A4000518C7 /* Debug */,
+				5C8646411C19B2A4000518C7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "reduction_osx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C8FD0AE1AD3366900215230 /* Debug */,
+				5C8FD0AF1AD3366900215230 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "reduction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5CD2174A19E924A20049D6AE /* Debug */,
+				5CD2174B19E924A20049D6AE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5CD2174519E924A20049D6AE /* Project object */;
+}
