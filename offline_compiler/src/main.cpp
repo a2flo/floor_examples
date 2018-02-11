@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2018 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0>: sets the supported Metal version (defaults to 1.1)\n"
-				 "\t--ptx-version <43|50|60>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
+				 "\t--ptx-version <43|50|60|61>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -216,7 +216,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.ptx_version = stou(*arg_ptr);
-		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 && ctx.ptx_version != 60) {
+		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 && ctx.ptx_version != 60 && ctx.ptx_version != 61) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
@@ -451,11 +451,11 @@ int main(int, char* argv[]) {
 					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
 				}
 				
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "ios") {
+				if(option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
 					dev->family = (family == 0 ? 1 : family);
 					dev->family_version = (family < 3 ? 2 : 1);
 				}
-				else if(option_ctx.sub_target == "osx" || option_ctx.sub_target == "macos") {
+				else if(option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
 					dev->family = (family == 0 ? 10000 : family);
 					dev->family_version = 1;
 					if(option_ctx.workarounds) {
