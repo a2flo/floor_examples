@@ -114,8 +114,9 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tGTX 970:      ~2770 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\tGTX 780:      ~2350 gflops (--count 131072 --tile-size 512)" << endl;
 		cout << "\tGTX 1050 Ti:  ~1675 gflops (--count 262144 --tile-size 256)" << endl;
-		cout << "\tR9 285:       ~850 gflops (--count 131072 --tile-size 64)" << endl;
+		cout << "\tR9 285:       ~1500 gflops (--count 131072 --tile-size 1024)" << endl;
 		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
+		cout << "\ti9-7980XE:    ~825 gflops (--count 73728 --tile-size 64)" << endl;
 		cout << "\tGT 650M:      ~385 gflops (--count 65536 --tile-size 512)" << endl;
 		cout << "\tHD 530:       ~242 gflops (--count 65536 --tile-size 128)" << endl;
 		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
