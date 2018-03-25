@@ -24,11 +24,11 @@
 #if defined(FLOOR_COMPUTE)
 
 template <uint32_t tile_size, typename data_type>
-void reduce_add(buffer<const data_type> data, buffer<data_type> sum, const uint32_t count) {
+floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_type> sum, const uint32_t count) {
 	static_assert(sizeof(data_type) == 4 || sizeof(data_type) == 8, "invalid data type size (must be 4 or 8 bytes)");
 	
 	if constexpr(device_info::has_cooperative_kernel_support() && device_info::has_sub_group_shuffle()) {
-#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0
+#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0 && FLOOR_COMPUTE_INFO_CUDA_SM >= 60 /* TODO: proper define */
 		// can use shuffle/swizzle + coop kernel
 		static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };
 		static constexpr const uint32_t tile_count { max(1u, tile_size / sub_group_width) };
@@ -73,102 +73,115 @@ void reduce_add(buffer<const data_type> data, buffer<data_type> sum, const uint3
 		}
 #endif
 	}
-	else if constexpr(device_info::has_sub_group_shuffle()) {
-#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0
-		// can use shuffle/swizzle
-		static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };
-		static constexpr const uint32_t tile_count { max(1u, tile_size / sub_group_width) };
-		static_assert(tile_count * sub_group_width == tile_size, "tile size must be a multiple of sub-group width");
-		local_buffer<data_type, tile_count> lmem;
+	else {
+		// sum items in large blocks
+		auto item_sum = data_type(0);
+		const auto per_item_count = (count + (global_size.x - 1u)) / global_size.x;
+		const auto offset = per_item_count * tile_size * group_id.x;
 		
-		// reduce in sub-group first (via shuffle)
-		const auto sg_red_val = compute_algorithm::sub_group_reduce_add(global_id.x < count ? data[global_id.x] : data_type(0));
-		if constexpr(tile_count == 1) {
-			// special case where we only have one sub-group
-			if(local_id.x == 0) {
-				atomic_add(&sum[0], sg_red_val);
+#if defined(FLOOR_COMPUTE_INFO_TYPE_CPU)
+		// CPU: sequential iteration over items per work-item, b/c it's executed this way
+		uint32_t idx = offset + local_id.x * per_item_count;
+		static constexpr const uint32_t idx_inc { 1u };
+#else
+		// GPU: work-group-size iteration over items per work-item
+		uint32_t idx = offset + local_id.x;
+		static constexpr const uint32_t idx_inc { tile_size };
+#endif
+		
+		for (uint32_t i = 0; i < per_item_count; ++i, idx += idx_inc) {
+			if (idx < count) {
+				item_sum += data[idx];
 			}
 		}
-		else {
-			// write reduced sub-group value to local memory for the next step
-			if(sub_group_local_id == 0) {
-				lmem[sub_group_id_1d] = sg_red_val;
-			}
-			local_barrier();
+		
+		if constexpr(device_info::has_sub_group_shuffle()) {
+#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0
+			// can use shuffle/swizzle
+			static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };
+			static constexpr const uint32_t tile_count { max(1u, tile_size / sub_group_width) };
+			static_assert(tile_count * sub_group_width == tile_size, "tile size must be a multiple of sub-group width");
 			
-			// final reduction of sub-group values
-			if constexpr(tile_count <= sub_group_width) {
-				// can do this directly in one sub-group
-				if(sub_group_id_1d == 0) {
-					const auto final_red_val = compute_algorithm::sub_group_reduce_add(tile_count == sub_group_width ?
-																					   lmem[sub_group_local_id] :
-																					   (sub_group_local_id < tile_count ?
-																						lmem[sub_group_local_id] : data_type(0)));
-					if(sub_group_local_id == 0) {
-						atomic_add(&sum[0], final_red_val);
-					}
-				}
-			}
-			else if constexpr(tile_count <= sub_group_width * 2) {
-				// tile count is at most 2x sub-group width
-				if(sub_group_id_1d == 0) {
-					const auto final_red_val = compute_algorithm::sub_group_reduce_add(sub_group_local_id * 2u < tile_count ?
-																					   lmem[sub_group_local_id * 2u] +
-																					   lmem[sub_group_local_id * 2u + 1u] :
-																					   data_type(0));
-					if(sub_group_local_id == 0) {
-						atomic_add(&sum[0], final_red_val);
-					}
+			// reduce in sub-group first (via shuffle)
+			const auto sg_red_val = compute_algorithm::sub_group_reduce_add(item_sum);
+			
+			if constexpr(tile_count == 1) {
+				// special case where we only have one sub-group
+				if(local_id.x == 0) {
+					atomic_add(&sum[0], sg_red_val);
 				}
 			}
 			else {
-				// do another round
-				static constexpr const uint32_t tile_count_2nd { max(1u, tile_count / sub_group_width) };
-				static_assert(tile_count_2nd <= sub_group_width, "invalid or too small sub-group width");
-				if(sub_group_id_1d < tile_count_2nd) {
-					const auto sg_red_val_2nd = compute_algorithm::sub_group_reduce_add(lmem[sub_group_id_1d * sub_group_width +
-																							 sub_group_local_id]);
-					local_barrier();
-					if(sub_group_local_id == 0) {
-						lmem[sub_group_id_1d] = sg_red_val_2nd;
-					}
-					local_barrier();
-					
-					// final reduction
+				local_buffer<data_type, tile_count> lmem;
+				
+				// write reduced sub-group value to local memory for the next step
+				if(sub_group_local_id == 0) {
+					lmem[sub_group_id_1d] = sg_red_val;
+				}
+				local_barrier();
+				
+				// final reduction of sub-group values
+				if constexpr(tile_count <= sub_group_width) {
+					// can do this directly in one sub-group
 					if(sub_group_id_1d == 0) {
-						const auto final_red_val = compute_algorithm::sub_group_reduce_add(sub_group_local_id < tile_count_2nd ?
-																						   lmem[sub_group_local_id] : data_type(0));
+						const auto final_red_val = compute_algorithm::sub_group_reduce_add(tile_count == sub_group_width ?
+																						   lmem[sub_group_local_id] :
+																						   (sub_group_local_id < tile_count ?
+																							lmem[sub_group_local_id] : data_type(0)));
 						if(sub_group_local_id == 0) {
 							atomic_add(&sum[0], final_red_val);
 						}
 					}
 				}
-			}
-		}
-#endif
-	}
-	else {
-		// fallback to local memory reduction
-		local_buffer<data_type, tile_size> lmem;
-		auto value = (global_id.x < count ? data[global_id.x] : data_type(0));
-		lmem[local_id.x] = value;
-		
-		// butterfly reduce to [0]
-#pragma unroll
-		for(uint32_t i = tile_size / 2u; i > 0u; i >>= 1u) {
-			// sync local mem + work-item barrier
-			local_barrier();
-			if(local_id.x < i) {
-				value += lmem[local_id.x + i];
-				if(i > 1u) {
-					lmem[local_id.x] = value;
+				else if constexpr(tile_count <= sub_group_width * 2) {
+					// tile count is at most 2x sub-group width
+					if(sub_group_id_1d == 0) {
+						const auto final_red_val = compute_algorithm::sub_group_reduce_add(sub_group_local_id * 2u < tile_count ?
+																						   lmem[sub_group_local_id * 2u] +
+																						   lmem[sub_group_local_id * 2u + 1u] :
+																						   data_type(0));
+						if(sub_group_local_id == 0) {
+							atomic_add(&sum[0], final_red_val);
+						}
+					}
+				}
+				else {
+					// do another round
+					static constexpr const uint32_t tile_count_2nd { max(1u, tile_count / sub_group_width) };
+					static_assert(tile_count_2nd <= sub_group_width, "invalid or too small sub-group width");
+					if(sub_group_id_1d < tile_count_2nd) {
+						const auto sg_red_val_2nd = compute_algorithm::sub_group_reduce_add(lmem[sub_group_id_1d * sub_group_width +
+																								 sub_group_local_id]);
+						local_barrier();
+						if(sub_group_local_id == 0) {
+							lmem[sub_group_id_1d] = sg_red_val_2nd;
+						}
+						local_barrier();
+						
+						// final reduction
+						if(sub_group_id_1d == 0) {
+							const auto final_red_val = compute_algorithm::sub_group_reduce_add(sub_group_local_id < tile_count_2nd ?
+																							   lmem[sub_group_local_id] : data_type(0));
+							if(sub_group_local_id == 0) {
+								atomic_add(&sum[0], final_red_val);
+							}
+						}
+					}
 				}
 			}
+#endif
 		}
-		
-		// only work-item #0 knows the reduced sum and will thus write to the total sum
-		if(local_id.x == 0) {
-			atomic_add(&sum[0], value);
+		else {
+			// fallback to local memory reduction
+			
+			// local reduction to work-item #0
+			local_buffer<data_type, compute_algorithm::reduce_local_memory_elements<tile_size>()> lmem;
+			const auto red_sum = compute_algorithm::reduce<tile_size>(item_sum, lmem, plus<> {});
+			
+			// only work-item #0 knows the reduced sum and will thus write to the total sum
+			if(local_id.x == 0) {
+				atomic_add(&sum[0], red_sum);
+			}
 		}
 	}
 }

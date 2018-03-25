@@ -129,9 +129,15 @@ static bool compile_kernels() {
 			return false;
 		}
 		new_reduction_max_local_sizes[i] = new_reduction_kernels[i]->get_kernel_entry(fastest_device)->max_total_local_size;
-		// usable if max local size >= required tile size, and if #args != 0 (i.e. kernel isn't disable for other reasons)
-		new_reduction_kernel_usable[i] = ((reduction_kernel_sizes[i] <= new_reduction_max_local_sizes[i].x) &&
-										  !new_reduction_kernels[i]->get_kernel_entry(fastest_device)->info->args.empty());
+		if(fastest_device->context->get_compute_type() != COMPUTE_TYPE::HOST) {
+			// usable if max local size >= required tile size, and if #args != 0 (i.e. kernel isn't disabled for other reasons)
+			new_reduction_kernel_usable[i] = ((reduction_kernel_sizes[i] <= new_reduction_max_local_sizes[i].x) &&
+											  !new_reduction_kernels[i]->get_kernel_entry(fastest_device)->info->args.empty());
+		}
+		else {
+			// always usable with host-compute
+			new_reduction_kernel_usable[i] = true;
+		}
 		log_debug("%s: local size: %u, usable: %u", reduction_kernel_names[i], new_reduction_max_local_sizes[i],
 				  new_reduction_kernel_usable[i]);
 	}
@@ -213,9 +219,19 @@ int main(int, char* argv[]) {
 	if(!compile_kernels()) return -1;
 	
 	// reduction buffers
-	static constexpr const uint32_t reduction_elem_count { 1024 * 1024 * 32 }; // == 128 MiB (32-bit), 256 MiB (64-bit)
-	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
-	auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
+	static constexpr const uint32_t reduction_elem_count { 1024 * 1024 * 256 }; // == 1024 MiB (32-bit), 2048 MiB (64-bit)
+	//auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
+	//auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
+	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) /* 32-bit */);
+	auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint32_t) /* 32-bit */);
+	
+	// compute the ideal global size (#units * local size), if the unit count is unknown, assume 16, so that we still get good throughput
+	static constexpr const uint32_t unit_count_fallback { 16u };
+	if (fastest_device->units == 0) {
+		log_error("device #units is 0 - assuming %u", unit_count_fallback);
+	}
+	const uint32_t dev_unit_count = (fastest_device->units != 0 ? fastest_device->units : unit_count_fallback);
+	const uint32_t reduction_global_size = dev_unit_count * 1024u * (fastest_device->is_gpu() ? 2u : 1u);
 	
 	// init done, release context
 	floor::release_context();
@@ -223,12 +239,12 @@ int main(int, char* argv[]) {
 	//
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> f32_dist { 0.0f, 0.5f };
-	uniform_real_distribution<double> f64_dist { 0.0, 0.5 };
-	uniform_int_distribution<uint32_t> u32_dist { 0, 64 };
-	uniform_int_distribution<uint64_t> u64_dist { 0, 64 };
+	uniform_real_distribution<float> f32_dist { 0.0f, 0.025f };
+	uniform_real_distribution<double> f64_dist { 0.0, 0.05 };
+	uniform_int_distribution<uint32_t> u32_dist { 0, 16 };
+	uniform_int_distribution<uint64_t> u64_dist { 0, 16 };
 	// main loop
-    uint32_t iteration = 0;
+	uint32_t iteration = 0;
 	while(!reduction_state.done) {
 		floor::get_event()->handle_events();
 		
@@ -237,14 +253,17 @@ int main(int, char* argv[]) {
 		auto mrdata = (float*)red_data->map(dev_queue);
 		auto rdata = mrdata;
 		double expected_sum = 0.0, kahan_c = 0.0;
-		long double expected_sum2 = 0.0L;
+		long double expected_sum_ld = 0.0L;
+		float expected_sum_f = 0.0f;
+#pragma clang loop vectorize(enable)
 		for(uint32_t i = 0; i < reduction_elem_count; ++i) {
 			const auto rnd_val = f32_dist(gen);
 			const auto kahan_y = double(rnd_val) - kahan_c;
 			const auto kahan_t = expected_sum + kahan_y;
 			kahan_c = (kahan_t - expected_sum) - kahan_y;
 			expected_sum = kahan_t;
-			expected_sum2 += (long double)rnd_val;
+			expected_sum_ld += (long double)rnd_val;
+			expected_sum_f += rnd_val;
 			*rdata++ = rnd_val;
 		}
 		red_data->unmap(dev_queue, mrdata);
@@ -259,9 +278,10 @@ int main(int, char* argv[]) {
 										   uint1 { 2048 /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
 										   uint1 { 1024 },
 										   red_data, red_data_sum, reduction_elem_count);
-		} else {
+		}
+		else {
 			dev_queue->execute(reduction_kernels[REDUCTION_ADD_F32_1024],
-							   uint1 { reduction_elem_count },
+							   uint1 { reduction_global_size },
 							   uint1 { 1024 },
 							   red_data, red_data_sum, reduction_elem_count);
 		}
@@ -274,12 +294,13 @@ int main(int, char* argv[]) {
 			const auto size_per_second = (double(red_size) / 1000000000.0) / (double(microseconds) / 1000000.0);
 			return size_per_second;
 		};
-		log_debug("reduction computed in %fus -> %u GB/s", prof_time, compute_bandwidth(prof_time));
+		log_debug("reduction computed in %fms -> %u GB/s", double(prof_time) / 1000.0, compute_bandwidth(prof_time));
 		
 		float sum = 0.0f;
 		red_data_sum->read_to(sum, dev_queue);
 		const auto abs_diff = abs(double(sum) - expected_sum);
-		log_debug("sum: %f, expected: kahan: %f, linear: %f -> diff: %f", sum, expected_sum, expected_sum2, abs_diff);
+		log_debug("sum: %f, expected: kahan: %f, linear: %f, %f -> diff: %f (sp: %f)",
+				  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));
 		
 		// next
 		++iteration;

@@ -27,7 +27,7 @@
 * build with "./build.sh" inside the folder
 !https://raw.githubusercontent.com/a2flo/floor_examples/b3eb816a5c80f079aad4d63aeec2786afe5523d9/poc_spir_ptx/example_rendering.png(noise and streaks courtesy of the horrible random function that I'm using)!
 
-*reduce:*
+*reduction:*
 * simple (WIP) reduction example that showcases 3 different reduce implementations: local/shared memory reduce, shuffle reduce and CUDA coop kernel + shuffle reduce
 
 *img:*
