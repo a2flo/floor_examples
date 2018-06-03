@@ -41,6 +41,8 @@
 #include <floor/compute/vulkan/vulkan_compute.hpp>
 #include <floor/compute/vulkan/vulkan_device.hpp>
 
+#include "fubar.hpp"
+
 #define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
 #define FLOOR_OCC_FULL_VERSION_STR "offline compute compiler v" FLOOR_OCC_VERSION_STR
 
@@ -67,6 +69,7 @@ struct option_context {
 	bool spirv_text { false };
 	string cuda_sdk_path { "" };
 	string cuda_sass_filename { "" };
+	uint32_t cuda_max_registers { 0 };
 	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
 	string ffi_filename { "" };
@@ -75,6 +78,10 @@ struct option_context {
 	string config_path { "../../data/" };
 	bool done { false };
 	bool native_cl { false };
+	
+	bool is_fubar_build { false };
+	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
+	string fubar_target_set_file_name { "" };
 };
 typedef option_handler<option_context> occ_opt_handler;
 
@@ -84,7 +91,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
 		cout << ("command line options:\n"
 				 "\t--src <input-file>: the source file that should be compiled\n"
-				 "\t--out <output-file>: the output file name (defaults to {spir.bc,cuda.ptx,metal.air})\n"
+				 "\t--out <output-file>: the output file name (defaults to {$file.fubar,spir.bc,cuda.ptx,metal.air})\n"
+				 "\t--fubar <targets-json|all|minimal>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal target set)\n"
 				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75], defaults to sm_20\n"
@@ -106,6 +114,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
+				 "\t--cuda-max-registers <#registers>: restricts/specifies how many registers can be used when jitting the PTX code (default: 0/unlimited)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
@@ -131,6 +140,23 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.output_filename = *arg_ptr;
+	}},
+	{ "--fubar", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		
+		ctx.is_fubar_build = true;
+		ctx.fubar_target_set_file_name = *arg_ptr;
+		if (ctx.fubar_target_set_file_name == "all") {
+			ctx.fubar_target_set = fubar::TARGET_SET::ALL;
+		} else if (ctx.fubar_target_set_file_name == "minimal") {
+			ctx.fubar_target_set = fubar::TARGET_SET::MINIMAL;
+		} else {
+			ctx.fubar_target_set = fubar::TARGET_SET::USER_JSON;
+		}
 	}},
 	{ "--target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -308,6 +334,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.cuda_sass_filename = *arg_ptr;
 		ctx.cuda_sass = true;
 	}},
+	{ "--cuda-max-registers", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.cuda_max_registers = stou(*arg_ptr);
+	}},
 	{ "--spirv-text", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr) {
@@ -337,34 +371,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 };
 
-int main(int, char* argv[]) {
-	// handle options
-	option_context option_ctx;
-	occ_opt_handler::parse_options(argv + 1, option_ctx);
-	if(option_ctx.done) return 0;
-			
-	// preempt floor logger init
-	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
-	
-	if(!floor::init(floor::init_state {
-		.call_path = argv[0],
-#if !defined(FLOOR_IOS)
-		.data_path = option_ctx.config_path.c_str(),
-#else
-		.data_path = "data/",
-#endif
-		.console_only = true,
-	})) {
-		return -1;
-	}
-	
+static int run_normal_build(option_context& option_ctx) {
 	// handle spir-v target change
 	if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN &&
 	   (option_ctx.sub_target == "opencl" ||
 		option_ctx.sub_target == "opencl-gpu" ||
 		option_ctx.sub_target == "opencl-cpu")) {
-		option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
-	}
+		   option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
+	   }
 	
 	llvm_toolchain::program_data program {};
 	if(!option_ctx.test_bin && !option_ctx.native_cl) {
@@ -434,7 +448,6 @@ int main(int, char* argv[]) {
 					}
 				}
 				else option_ctx.sub_target = "sm_20";
-				device->double_support = true; // enabled by default
 				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
 				device->sub_group_shuffle_support = (((cuda_device*)device.get())->sm.x >= 3);
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
@@ -499,6 +512,7 @@ int main(int, char* argv[]) {
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings,
 			.cuda.ptx_version = option_ctx.ptx_version,
+			.cuda.max_registers = option_ctx.cuda_max_registers,
 		};
 		program = llvm_toolchain::compile_program_file(device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
@@ -720,7 +734,7 @@ int main(int, char* argv[]) {
 			log_msg("spirv-dis: %s", spirv_dis_output);
 		}
 	}
-
+	
 	// test the compiled binary (if this was specified)
 	if(option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
@@ -933,7 +947,59 @@ int main(int, char* argv[]) {
 		}
 	}
 	
+	return 0;
+}
+
+int main(int, char* argv[]) {
+	// handle options
+	option_context option_ctx;
+	occ_opt_handler::parse_options(argv + 1, option_ctx);
+	if(option_ctx.done) return 0;
+			
+	// preempt floor logger init
+	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
+	
+	if(!floor::init(floor::init_state {
+		.call_path = argv[0],
+#if !defined(FLOOR_IOS)
+		.data_path = option_ctx.config_path.c_str(),
+#else
+		.data_path = "data/",
+#endif
+		.console_only = true,
+	})) {
+		return -1;
+	}
+	
+	int ret_code = 0;
+	if (option_ctx.is_fubar_build) {
+		string dst_archive_file_name = option_ctx.output_filename;
+		if (dst_archive_file_name.empty()) {
+			dst_archive_file_name = option_ctx.filename;
+			
+			const auto dot_pos = dst_archive_file_name.rfind('.');
+			if (dot_pos != string::npos) {
+				dst_archive_file_name = dst_archive_file_name.substr(0, dot_pos);
+			}
+			
+			dst_archive_file_name += ".fubar";
+		}
+		
+		const fubar::options_t options {
+			.additional_cli_options = option_ctx.additional_options,
+			.enable_warnings = option_ctx.warnings,
+			.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED)),
+			.cuda_max_registers = option_ctx.cuda_max_registers,
+		};
+		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,
+						  option_ctx.filename, dst_archive_file_name, options)) {
+			ret_code = -42;
+		}
+	} else {
+		ret_code = run_normal_build(option_ctx);
+	}
+	
 	// kthxbye
 	floor::destroy();
-	return 0;
+	return ret_code;
 }
