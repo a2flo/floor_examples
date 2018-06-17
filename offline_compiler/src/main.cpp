@@ -97,7 +97,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios|osx|macos][_family], family is optional and defaults to lowest available\n"
+				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
@@ -458,20 +458,14 @@ static int run_normal_build(option_context& option_ctx) {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
 				dev->metal_version = option_ctx.metal_std;
-				const auto family_pos = option_ctx.sub_target.rfind('_');
-				uint32_t family = 0;
-				if(family_pos != string::npos) {
-					family = stou(option_ctx.sub_target.substr(family_pos + 1));
-					option_ctx.sub_target = option_ctx.sub_target.substr(0, family_pos);
-				}
 				
+				dev->family = 1;
+				dev->family_version = 1;
 				if(option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
-					dev->family = (family == 0 ? 1 : family);
-					dev->family_version = (family < 3 ? 2 : 1);
+					dev->feature_set = 0;
 				}
 				else if(option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
-					dev->family = (family == 0 ? 10000 : family);
-					dev->family_version = 1;
+					dev->feature_set = 10000;
 					if(option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
 					}
@@ -481,7 +475,7 @@ static int run_normal_build(option_context& option_ctx) {
 					return -3;
 				}
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
-				log_debug("compiling to AIR (family: %u, version: %u) ...", dev->family, dev->family_version);
+				log_debug("compiling to AIR (feature set: %u) ...", dev->feature_set);
 			} break;
 			case llvm_toolchain::TARGET::SPIRV_VULKAN:
 				device = make_shared<vulkan_device>();
