@@ -126,6 +126,19 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.version = universal_binary::target_format_version,
+				.type = COMPUTE_TYPE::CUDA,
+				.cuda = {
+					.sm_major = 7,
+					.sm_minor = 5,
+					.ptx_isa_major = 6,
+					.ptx_isa_minor = 3,
+					.is_ptx = 1,
+					.image_depth_compare_support = 1,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// Metal
@@ -147,6 +160,30 @@ namespace fubar {
 				.metal = {
 					.major = 1,
 					.minor = 1,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.version = universal_binary::target_format_version,
+				.type = COMPUTE_TYPE::METAL,
+				.metal = {
+					.major = 2,
+					.minor = 0,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.version = universal_binary::target_format_version,
+				.type = COMPUTE_TYPE::METAL,
+				.metal = {
+					.major = 2,
+					.minor = 0,
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
 					.simd_width = 0,
