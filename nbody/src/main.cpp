@@ -610,65 +610,7 @@ int main(int, char* argv[]) {
 	};
 	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
 #else
-	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_toolchain::function_info> function_infos {
-		{
-			"nbody_compute",
-			llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL,
-			{
-				llvm_toolchain::function_info::arg_info { .size = 16 },
-				llvm_toolchain::function_info::arg_info { .size = 16 },
-				llvm_toolchain::function_info::arg_info { .size = 12 },
-				llvm_toolchain::function_info::arg_info { .size = 4, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"nbody_raster",
-			llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL,
-			{
-				llvm_toolchain::function_info::arg_info { .size = 16 },
-				llvm_toolchain::function_info::arg_info { .size = 4 },
-				llvm_toolchain::function_info::arg_info { .size = 4 },
-				llvm_toolchain::function_info::arg_info { .size = 84, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"lighting_vertex",
-			llvm_toolchain::function_info::FUNCTION_TYPE::VERTEX,
-			{
-				llvm_toolchain::function_info::arg_info { .size = 16 },
-				llvm_toolchain::function_info::arg_info { .size = 136, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		},
-		{
-			"lighting_fragment",
-			llvm_toolchain::function_info::FUNCTION_TYPE::FRAGMENT,
-			{
-				llvm_toolchain::function_info::arg_info {
-					.size = 16,
-					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
-				},
-				llvm_toolchain::function_info::arg_info {
-					.size = 4,
-					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
-				},
-				llvm_toolchain::function_info::arg_info {
-					.size = 16,
-					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::UNKNOWN,
-					.special_type = llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT
-				},
-				llvm_toolchain::function_info::arg_info {
-					.size = 0,
-					.address_space = llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE,
-					.image_type = llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D,
-					.image_access = llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ,
-				},
-			}
-		},
-	};
-	auto nbody_prog = compute_ctx->add_precompiled_program_file(floor::data_path("nbody.metallib"), function_infos);
+	auto nbody_prog = compute_ctx->add_universal_binary(floor::data_path("nbody.fubar"));
 #endif
 	if(nbody_prog == nullptr) {
 		log_error("program compilation failed");
@@ -711,16 +653,16 @@ int main(int, char* argv[]) {
 		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, (
 			// will be reading and writing from the kernel
 			COMPUTE_MEMORY_FLAG::READ_WRITE
-			// host will read and write data
-			| COMPUTE_MEMORY_FLAG::HOST_READ_WRITE
-			
+			// host will only write data
+			| COMPUTE_MEMORY_FLAG::HOST_WRITE
 			// will be using the buffer with opengl
 			| (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
 			// automatic defaults when using OPENGL_SHARING:
 			// OPENGL_READ_WRITE: again, will be reading and writing in the kernel
 		), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
 	}
-	velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count);
+	velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count,
+												 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 	
 	// image buffers (for s/w rendering only)
 	array<shared_ptr<compute_buffer>, 2> img_buffers;

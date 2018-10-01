@@ -75,7 +75,6 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 	}
 	else {
 		// sum items in large blocks
-		auto item_sum = data_type(0);
 		const auto per_item_count = (count + (global_size.x - 1u)) / global_size.x;
 		const auto offset = per_item_count * tile_size * group_id.x;
 		
@@ -89,6 +88,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 		static constexpr const uint32_t idx_inc { tile_size };
 #endif
 		
+		auto item_sum = data_type(0);
 		for (uint32_t i = 0; i < per_item_count; ++i, idx += idx_inc) {
 			if (idx < count) {
 				item_sum += data[idx];

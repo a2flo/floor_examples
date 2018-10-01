@@ -51,19 +51,7 @@ int main(int, char* argv[]) {
 														  " -DSCREEN_WIDTH=" + to_string(img_size.x) +
 														  " -DSCREEN_HEIGHT=" + to_string(img_size.y));
 #else
-	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_toolchain::function_info> function_infos {
-		{
-			"path_trace",
-			llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL,
-			{
-				llvm_toolchain::function_info::arg_info { .size = 16 },
-				llvm_toolchain::function_info::arg_info { .size = 4, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-				llvm_toolchain::function_info::arg_info { .size = 4, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT },
-			}
-		}
-	};
-	auto path_tracer_prog = compute_ctx->add_precompiled_program_file(floor::data_path("path_tracer.metallib"), function_infos);
+	auto path_tracer_prog = compute_ctx->add_universal_binary(floor::data_path("path_tracer.fubar"));
 #endif
 	if(path_tracer_prog == nullptr) {
 		log_error("program compilation failed");

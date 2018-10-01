@@ -106,19 +106,12 @@ public:
 	
 	// if you can't do normal recursion, do some template recursion instead! (at the cost of code bloat)
 	// also: can do this inside a single function now with c++17
-	template <uint32_t depth = 0
-#if !defined(FLOOR_CXX17)
-			  , enable_if_t<depth < max_recursion_depth>* = nullptr
-#endif
-			  >
+	template <uint32_t depth = 0>
 	float3 compute_radiance(const ray& r, const bool sample_emission) {
-#if defined(FLOOR_CXX17)
 		if constexpr(depth >= max_recursion_depth) {
 			return {};
 		}
-		else
-#endif
-		{
+		else {
 			// intersect
 			const auto p = simple_intersector::intersect(r);
 			if(p.object >= CORNELL_OBJECT::__OBJECT_INVALID) return {};
@@ -139,14 +132,6 @@ public:
 			return radiance;
 		}
 	}
-	
-#if !defined(FLOOR_CXX17)
-	// terminator
-	template <uint32_t depth, enable_if_t<depth >= max_recursion_depth>* = nullptr>
-	float3 compute_radiance(const ray&, const bool) {
-		return {};
-	}
-#endif
 	
 protected:
 	uint32_t seed;

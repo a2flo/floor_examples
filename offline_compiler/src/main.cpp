@@ -101,7 +101,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <1.1|1.2|2.0>: sets the supported Metal version (defaults to 1.1)\n"
+				 "\t--metal-std <1.1|1.2|2.0|2.1>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60|61|62|63>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -230,6 +230,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if(mtl_version_str == "1.1") { ctx.metal_std = METAL_VERSION::METAL_1_1; }
 		else if(mtl_version_str == "1.2") { ctx.metal_std = METAL_VERSION::METAL_1_2; }
 		else if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
+		else if(mtl_version_str == "2.1") { ctx.metal_std = METAL_VERSION::METAL_2_1; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;

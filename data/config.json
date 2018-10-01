@@ -146,6 +146,11 @@
 		
 		// metal backend settings
 		"metal": {
+			// we need a different LLVM disassembler, because metallib is a container format
+			//"dis": "metallib-dis", // TODO: WIP right now
+			// forces the compiler to generate code for the specified Metal version, instead of the one supported by the OS
+			// 0 = ignore this option, 11 = Metal 1.1, 12 = Metal 1.2, 20 = Metal 2.0, ...
+			"force_version": 0,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": []

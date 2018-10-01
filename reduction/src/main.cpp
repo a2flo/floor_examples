@@ -219,14 +219,18 @@ int main(int, char* argv[]) {
 	if(!compile_kernels()) return -1;
 	
 	// reduction buffers
-	static constexpr const uint32_t reduction_elem_count { 1024 * 1024 * 256 }; // == 1024 MiB (32-bit), 2048 MiB (64-bit)
+	static constexpr const uint32_t reduction_elem_count { 1024 * 1024 * 64 }; // == 256 MiB (32-bit), 512 MiB (64-bit)
 	//auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
 	//auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
-	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) /* 32-bit */);
-	auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint32_t) /* 32-bit */);
+	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) /* 32-bit */,
+												   COMPUTE_MEMORY_FLAG::READ_WRITE |
+												   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+	auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint32_t) /* 32-bit */,
+											   COMPUTE_MEMORY_FLAG::READ_WRITE |
+											   COMPUTE_MEMORY_FLAG::HOST_WRITE);
 	
 	// compute the ideal global size (#units * local size), if the unit count is unknown, assume 16, so that we still get good throughput
-	static constexpr const uint32_t unit_count_fallback { 16u };
+	static constexpr const uint32_t unit_count_fallback { 12u };
 	if (fastest_device->units == 0) {
 		log_error("device #units is 0 - assuming %u", unit_count_fallback);
 	}
@@ -250,7 +254,9 @@ int main(int, char* argv[]) {
 		
 		// init data
 		// for expected sum on the CPU use: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-		auto mrdata = (float*)red_data->map(dev_queue);
+		auto mrdata = (float*)red_data->map(dev_queue,
+											COMPUTE_MEMORY_MAP_FLAG::WRITE |
+											COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 		auto rdata = mrdata;
 		double expected_sum = 0.0, kahan_c = 0.0;
 		long double expected_sum_ld = 0.0L;
