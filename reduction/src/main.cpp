@@ -219,7 +219,13 @@ int main(int, char* argv[]) {
 	if(!compile_kernels()) return -1;
 	
 	// reduction buffers
-	static constexpr const uint32_t reduction_elem_count { 1024 * 1024 * 64 }; // == 256 MiB (32-bit), 512 MiB (64-bit)
+	static constexpr const uint32_t reduction_elem_count {
+#if !defined(FLOOR_IOS)
+		1024 * 1024 * 256 // == 1024 MiB (32-bit), 2048 MiB (64-bit)
+#else
+		1024 * 1024 * 64 // == 256 MiB (32-bit), 512 MiB (64-bit)
+#endif
+	};
 	//auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
 	//auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
 	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) /* 32-bit */,
@@ -279,9 +285,8 @@ int main(int, char* argv[]) {
 		dev_queue->finish();
 		dev_queue->start_profiling();
 		if(fastest_device->cooperative_kernel_support) {
-			// TODO: query max concurrent threads
 			dev_queue->execute_cooperative(reduction_kernels[REDUCTION_ADD_F32_1024],
-										   uint1 { 2048 /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
+										   uint1 { fastest_device->max_coop_total_local_size /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
 										   uint1 { 1024 },
 										   red_data, red_data_sum, reduction_elem_count);
 		}
