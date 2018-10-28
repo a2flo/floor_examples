@@ -110,26 +110,26 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		// performance stats
 		cout << "expected performace (with --benchmark):" << endl;
 		cout << "\tRTX 2080 Ti:  ~10970 gflops (--count 278528 --tile-size 256)" << endl;
-		cout << "\tP6000:        ~8400 gflops (--count 262144 --tile-size 512)" << endl;
-		cout << "\tGP100:        ~7600 gflops (--count 262144 --tile-size 512)" << endl;
-		cout << "\tGTX 970:      ~2770 gflops (--count 131072 --tile-size 256)" << endl;
-		cout << "\tGTX 780:      ~2350 gflops (--count 131072 --tile-size 512)" << endl;
-		cout << "\tGTX 1050 Ti:  ~1675 gflops (--count 262144 --tile-size 256)" << endl;
-		cout << "\tR9 285:       ~1500 gflops (--count 131072 --tile-size 1024)" << endl;
-		cout << "\tGTX 750:      ~840 gflops (--count 65536 --tile-size 256)" << endl;
-		cout << "\ti9-7980XE:    ~825 gflops (--count 73728 --tile-size 64)" << endl;
-		cout << "\tGT 650M:      ~385 gflops (--count 65536 --tile-size 512)" << endl;
-		cout << "\tHD 530:       ~242 gflops (--count 65536 --tile-size 128)" << endl;
-		cout << "\tHD 4600:      ~235 gflops (--count 65536 --tile-size 80)" << endl;
-		cout << "\ti7-6700:      ~195 gflops (--count 32768 --tile-size 1024)" << endl;
-		cout << "\tHD 4000:      ~165 gflops (--count 32768 --tile-size 128)" << endl;
-		cout << "\tiPhone A10:   ~131 gflops (--count 32768 --tile-size 512)" << endl;
-		cout << "\ti7-5820K:     ~105 gflops (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-4770:      ~80 gflops (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-3615QM:    ~38 gflops (--count 32768 --tile-size 8)" << endl;
-		cout << "\ti7-950:       ~29 gflops (--count 32768 --tile-size 4)" << endl;
-		cout << "\tiPhone A8:    ~28 gflops (--count 16384 --tile-size 512)" << endl;
-		cout << "\tiPad A7:      ~20 gflops (--count 16384 --tile-size 512)" << endl;
+		cout << "\tP6000:        ~ 8400 gflops (--count 262144 --tile-size 512)" << endl;
+		cout << "\tGP100:        ~ 7600 gflops (--count 262144 --tile-size 512)" << endl;
+		cout << "\tGTX 970:      ~ 2770 gflops (--count 131072 --tile-size 256)" << endl;
+		cout << "\tGTX 780:      ~ 2350 gflops (--count 131072 --tile-size 512)" << endl;
+		cout << "\tGTX 1050 Ti:  ~ 1675 gflops (--count 262144 --tile-size 256)" << endl;
+		cout << "\tR9 285:       ~ 1500 gflops (--count 131072 --tile-size 1024)" << endl;
+		cout << "\ti9-7980XE:    ~ 1000 gflops (--count 73728 --tile-size 64)" << endl;
+		cout << "\tGTX 750:      ~  840 gflops (--count 65536 --tile-size 256)" << endl;
+		cout << "\tGT 650M:      ~  385 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tHD 530:       ~  242 gflops (--count 65536 --tile-size 128)" << endl;
+		cout << "\tHD 4600:      ~  235 gflops (--count 65536 --tile-size 80)" << endl;
+		cout << "\ti7-6700:      ~  195 gflops (--count 32768 --tile-size 1024)" << endl;
+		cout << "\tHD 4000:      ~  165 gflops (--count 32768 --tile-size 128)" << endl;
+		cout << "\tiPhone A10:   ~  131 gflops (--count 32768 --tile-size 512)" << endl;
+		cout << "\ti7-5820K:     ~  105 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-4770:      ~   80 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-3615QM:    ~   38 gflops (--count 32768 --tile-size 8)" << endl;
+		cout << "\ti7-950:       ~   29 gflops (--count 32768 --tile-size 4)" << endl;
+		cout << "\tiPhone A8:    ~   28 gflops (--count 16384 --tile-size 512)" << endl;
+		cout << "\tiPad A7:      ~   20 gflops (--count 16384 --tile-size 512)" << endl;
 		cout << endl;
 	}},
 	{ "--count", [](nbody_option_context&, char**& arg_ptr) {
