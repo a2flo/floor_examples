@@ -112,6 +112,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tRTX 2080 Ti:  ~10970 gflops (--count 278528 --tile-size 256)" << endl;
 		cout << "\tP6000:        ~ 8400 gflops (--count 262144 --tile-size 512)" << endl;
 		cout << "\tGP100:        ~ 7600 gflops (--count 262144 --tile-size 512)" << endl;
+		cout << "\tRX 580:       ~ 3225 gflops (--count 221184 --tile-size 64)" << endl;
 		cout << "\tGTX 970:      ~ 2770 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\tGTX 780:      ~ 2350 gflops (--count 131072 --tile-size 512)" << endl;
 		cout << "\tGTX 1050 Ti:  ~ 1675 gflops (--count 262144 --tile-size 256)" << endl;

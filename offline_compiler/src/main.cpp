@@ -70,6 +70,7 @@ struct option_context {
 	string cuda_sdk_path { "" };
 	string cuda_sass_filename { "" };
 	uint32_t cuda_max_registers { 0 };
+	bool cuda_no_short_ptr { false };
 	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
 	string ffi_filename { "" };
@@ -115,6 +116,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--cuda-max-registers <#registers>: restricts/specifies how many registers can be used when jitting the PTX code (default: 0/unlimited)\n"
+				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
@@ -343,6 +345,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		ctx.cuda_max_registers = stou(*arg_ptr);
 	}},
+	{ "--cuda-no-short-ptr", [](option_context& ctx, char**&) {
+		ctx.cuda_no_short_ptr = true;
+	}},
 	{ "--spirv-text", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr) {
@@ -508,6 +513,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.enable_warnings = option_ctx.warnings,
 			.cuda.ptx_version = option_ctx.ptx_version,
 			.cuda.max_registers = option_ctx.cuda_max_registers,
+			.cuda.short_ptr = (option_ctx.cuda_no_short_ptr ? false : true),
 		};
 		program = llvm_toolchain::compile_program_file(device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
