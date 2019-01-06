@@ -57,10 +57,11 @@ static void compute_body_interaction(const float4& shared_body,
 #endif
 }
 
-kernel void nbody_compute(buffer<const float4> in_positions,
-						  buffer<float4> out_positions,
-						  buffer<float3> velocities,
-						  param<float> delta) {
+kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
+void nbody_compute(buffer<const float4> in_positions,
+				   buffer<float4> out_positions,
+				   buffer<float3> velocities,
+				   param<float> delta) {
 	const auto idx = global_id.x;
 	const auto body_count = global_size.x;
 	
