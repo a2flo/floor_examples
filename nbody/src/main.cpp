@@ -552,136 +552,152 @@ int main(int, char* argv[]) {
 			   !nbody_state.no_vulkan ? "vulkan renderer" : "s/w rasterizer"));
 	
 	// floor context handling
-	floor::acquire_context();
-	
-	// add event handlers
-	event::handler evt_handler_fnctr(&evt_handler);
-	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-												   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-												   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
-	
-	// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
-	auto compute_ctx = floor::get_compute_context();
-	
-	// create a compute queue (aka command queue or stream) for the fastest device in the context
-	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	dev_queue = compute_ctx->create_queue(fastest_device);
-	
-	// parameter sanity check
-	if(nbody_state.tile_size > fastest_device->max_total_local_size) {
-		nbody_state.tile_size = (uint32_t)fastest_device->max_total_local_size;
-		log_error("tile size too large, > max possible work-group size! - setting tile size to %u now", nbody_state.tile_size);
-	}
-	if((nbody_state.body_count % nbody_state.tile_size) != 0u) {
-		nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
-		log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
-	}
-	if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
-	   nbody_state.tile_size != NBODY_TILE_SIZE) {
-		log_error("compiled NBODY_TILE_SIZE (%u) must match run-time tile-size when using host compute! - using it now",
-				  NBODY_TILE_SIZE);
-		nbody_state.tile_size = NBODY_TILE_SIZE;
-	}
-	
-	// init gl renderer
-#if !defined(FLOOR_IOS)
-	if(!nbody_state.no_opengl) {
-		// setup renderer
-		if(!gl_renderer::init()) {
-			log_error("error during opengl initialization!");
-			return -1;
+	struct floor_ctx_guard {
+		floor_ctx_guard() {
+			floor::acquire_context();
 		}
-	}
-#endif
-	
-	// compile the program and get the kernel functions
-#if !defined(FLOOR_IOS)
-	llvm_toolchain::compile_options options {
-		.cli = ("-I" + floor::data_path("../nbody/src") +
-				" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
-				" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
-				" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
-		// override max registers that can be used, this is beneficial here as it yields about +10% of performance
-		.cuda.max_registers = 36,
+		~floor_ctx_guard() {
+			floor::release_context();
+		}
 	};
-	auto nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
-#else
-	auto nbody_prog = compute_ctx->add_universal_binary(floor::data_path("nbody.fubar"));
-#endif
-	if(nbody_prog == nullptr) {
-		log_error("program compilation failed");
-		return -1;
-	}
-	auto nbody_compute = nbody_prog->get_kernel("nbody_compute");
-	auto nbody_raster = nbody_prog->get_kernel("nbody_raster");
-	if(nbody_compute == nullptr || nbody_raster == nullptr) {
-		log_error("failed to retrieve kernel(s) from program");
-		return -1;
-	}
+	event::handler evt_handler_fnctr(&evt_handler);
 	
-	// init metal/vulkan renderers (need compiled prog first)
-#if defined(__APPLE__)
-	if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
-		// setup renderer
-		if(!metal_renderer::init(fastest_device,
-								 nbody_prog->get_kernel("lighting_vertex"),
-								 nbody_prog->get_kernel("lighting_fragment"))) {
-			log_error("error during metal initialization!");
+	shared_ptr<compute_device> fastest_device;
+	shared_ptr<compute_program> nbody_prog;
+	shared_ptr<compute_kernel> nbody_compute;
+	shared_ptr<compute_kernel> nbody_raster;
+	
+	const uint2 img_size { floor::get_physical_screen_size() };
+	size_t img_buffer_flip_flop { 0 };
+	array<shared_ptr<compute_buffer>, 2> img_buffers;
+	
+	{
+		floor_ctx_guard grd;
+		
+		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
+		auto compute_ctx = floor::get_compute_context();
+		
+		// create a compute queue (aka command queue or stream) for the fastest device in the context
+		fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
+		dev_queue = compute_ctx->create_queue(fastest_device);
+		
+		// parameter sanity check
+		if(nbody_state.tile_size > fastest_device->max_total_local_size) {
+			nbody_state.tile_size = (uint32_t)fastest_device->max_total_local_size;
+			log_error("tile size too large, > max possible work-group size! - setting tile size to %u now", nbody_state.tile_size);
+		}
+		if((nbody_state.body_count % nbody_state.tile_size) != 0u) {
+			nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
+			log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
+		}
+		if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
+		   nbody_state.tile_size != NBODY_TILE_SIZE) {
+			log_error("compiled NBODY_TILE_SIZE (%u) must match run-time tile-size when using host compute! - using it now",
+					  NBODY_TILE_SIZE);
+			nbody_state.tile_size = NBODY_TILE_SIZE;
+		}
+		
+		// init gl renderer
+#if !defined(FLOOR_IOS)
+		if(!nbody_state.no_opengl) {
+			// setup renderer
+			if(!gl_renderer::init()) {
+				log_error("error during opengl initialization!");
+				return -1;
+			}
+		}
+#endif
+		
+		// compile the program and get the kernel functions
+#if !defined(FLOOR_IOS)
+		llvm_toolchain::compile_options options {
+			.cli = ("-I" + floor::data_path("../nbody/src") +
+					" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
+					" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
+					" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
+			// override max registers that can be used, this is beneficial here as it yields about +10% of performance
+			.cuda.max_registers = 36,
+		};
+		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
+#else
+		nbody_prog = compute_ctx->add_universal_binary(floor::data_path("nbody.fubar"));
+#endif
+		if(nbody_prog == nullptr) {
+			log_error("program compilation failed");
 			return -1;
 		}
-	}
+		nbody_compute = nbody_prog->get_kernel("nbody_compute");
+		nbody_raster = nbody_prog->get_kernel("nbody_raster");
+		if(nbody_compute == nullptr || nbody_raster == nullptr) {
+			log_error("failed to retrieve kernel(s) from program");
+			return -1;
+		}
+		
+		// init metal/vulkan renderers (need compiled prog first)
+#if defined(__APPLE__)
+		if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
+			// setup renderer
+			if(!metal_renderer::init(fastest_device,
+									 nbody_prog->get_kernel("lighting_vertex"),
+									 nbody_prog->get_kernel("lighting_fragment"))) {
+				log_error("error during metal initialization!");
+				return -1;
+			}
+		}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
-	if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
-		// setup renderer
-		if(!vulkan_renderer::init(compute_ctx,
-								  fastest_device,
-								  nbody_prog->get_kernel("lighting_vertex"),
-								  nbody_prog->get_kernel("lighting_fragment"))) {
-			log_error("error during vulkan initialization!");
-			return -1;
+		if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
+			// setup renderer
+			if(!vulkan_renderer::init(compute_ctx,
+									  fastest_device,
+									  nbody_prog->get_kernel("lighting_vertex"),
+									  nbody_prog->get_kernel("lighting_fragment"))) {
+				log_error("error during vulkan initialization!");
+				return -1;
+			}
 		}
-	}
 #endif
-	
-	// create nbody position and velocity buffers
-	for(size_t i = 0; i < pos_buffer_count; ++i) {
-		position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, (
-			// will be reading and writing from the kernel
-			COMPUTE_MEMORY_FLAG::READ_WRITE
-			// host will only write data
-			| COMPUTE_MEMORY_FLAG::HOST_WRITE
-			// will be using the buffer with opengl
-			| (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
-			// automatic defaults when using OPENGL_SHARING:
-			// OPENGL_READ_WRITE: again, will be reading and writing in the kernel
-		), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
+		
+		// create nbody position and velocity buffers
+		for(size_t i = 0; i < pos_buffer_count; ++i) {
+			position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, (
+																													   // will be reading and writing from the kernel
+																													   COMPUTE_MEMORY_FLAG::READ_WRITE
+																													   // host will only write data
+																													   | COMPUTE_MEMORY_FLAG::HOST_WRITE
+																													   // will be using the buffer with opengl
+																													   | (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
+																													   // automatic defaults when using OPENGL_SHARING:
+																													   // OPENGL_READ_WRITE: again, will be reading and writing in the kernel
+																													   ), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
+		}
+		velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count,
+													 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
+		
+		// image buffers (for s/w rendering only)
+		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
+			img_buffers = {{
+				compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
+										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+				compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
+										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+			}};
+			img_buffers[0]->zero(dev_queue);
+			img_buffers[1]->zero(dev_queue);
+		}
+		
+		// init nbody system
+		init_system();
+		
+		// add event handlers
+		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
+													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
+													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
+													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
+		
+		// init done, release context
 	}
-	velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count,
-												 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-	
-	// image buffers (for s/w rendering only)
-	array<shared_ptr<compute_buffer>, 2> img_buffers;
-	size_t img_buffer_flip_flop { 0 };
-	const uint2 img_size { floor::get_physical_screen_size() };
-	if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
-		img_buffers = {{
-			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
-									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-			compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
-									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-		}};
-		img_buffers[0]->zero(dev_queue);
-		img_buffers[1]->zero(dev_queue);
-	}
-	
-	// init nbody system
-	init_system();
-	
-	// init done, release context
-	floor::release_context();
 	
 	// keeps track of the time between two simulation steps -> time delta in kernel
 	auto time_keeper = chrono::high_resolution_clock::now();

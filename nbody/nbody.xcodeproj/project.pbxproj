@@ -859,7 +859,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
@@ -929,7 +928,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
