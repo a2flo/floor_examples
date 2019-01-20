@@ -7,7 +7,7 @@
 * cd data/nets/vgg16 && ./get_vgg16.sh to download the necessary VGG16 layers/net
 * desktop/cli: run with "--image <path/to/image.png>"  (image must be 224*224px 32-bit RGBA for now)
 * iOS: press cheese and take a photo
-!https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_cli_example.png(Lake in the Alps (iOS) and Tiger (cli) licensed under CC BY 2.0 by Tony Hisgett)!
+!https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_cli_example.png(iOS: Lake in the Alps; cli: Tiger, licensed under CC BY 2.0 by Tony Hisgett)!
 
 *warp:*
 * image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
