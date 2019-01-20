@@ -1,0 +1,3 @@
+ * Tiger image (tiger_rgba.png) licensed under CC BY 2.0 (https://creativecommons.org/licenses/by/2.0/deed.en) by Tony Hisgett from Birmingham, UK (https://www.flickr.com/people/37804979@N00)
+   also: https://commons.wikimedia.org/wiki/File:Sumatran_Tiger_2_(6964693266).jpg
+   image has been resized and cropped to 224*224px to fit VGG requirements

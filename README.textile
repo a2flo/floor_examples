@@ -1,6 +1,15 @@
 
 *floor examples*
 
+*dnn:*
+* demonstrates inference on a VGG16 deep neural network (implements convolution, max-pooling, fully-connected and softmax layers)
+* build with "./build.sh" inside the folder
+* cd data/nets/vgg16 && ./get_vgg16.sh to download the necessary VGG16 layers/net
+* desktop/cli: run with "--image <path/to/image.png>"  (image must be 224*224px 32-bit RGBA for now)
+* iOS: press cheese and take a photo
+!https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_example.png(Lake in the Alps)!
+!https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/cli_example.png(Tiger, licensed under CC BY 2.0 by Tony Hisgett)!
+
 *warp:*
 * image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
 * build with "./build.sh" inside the folder
