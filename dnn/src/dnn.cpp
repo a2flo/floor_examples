@@ -207,11 +207,11 @@ kernel void max_pooling(buffer<const float> in_data,
 // sum reduction using either sub-groups or local memory reduction
 template <uint32_t tile_size, typename data_type>
 floor_inline_always static data_type sum_reduction(const data_type& initial_val) {
-	static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };
-	if constexpr (device_info::has_sub_group_shuffle() && sub_group_width == 32u) { // TODO: support sub_group_width != 32
+	if constexpr (device_info::has_sub_group_shuffle() && device_info::has_fixed_known_simd_width()) {
 #if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0
+		static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width()) };
 		static constexpr const uint32_t tile_count { max(1u, tile_size / sub_group_width) };
-		static_assert(tile_count * sub_group_width == tile_size, "tile size must be a multiple of sub-group width");
+		static_assert(tile_count <= sub_group_width, "must be able to perform single-pass sub-group reduction (sub-group width too small)");
 		
 		// reduce in sub-group first (via shuffle)
 		const auto partial_sum = compute_algorithm::sub_group_reduce_add(initial_val);
