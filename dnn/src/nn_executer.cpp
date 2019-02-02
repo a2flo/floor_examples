@@ -118,7 +118,13 @@ bool nn_executer::rebuild_kernels() {
 	decltype(dnn_max_local_sizes_3d) new_dnn_max_local_sizes_3d;
 	for(uint32_t i = 0; i < DNN_KERNEL::__MAX_DNN_KERNEL; ++i) {
 		new_dnn_kernels[i] = new_dnn_prog->get_kernel(dnn_kernel_names[i]);
-		if(new_dnn_kernels[i] == nullptr) {
+		if (new_dnn_kernels[i] == nullptr && string(dnn_kernel_names[i]).find("1024") != string::npos) {
+			new_dnn_max_local_sizes[i] = 0;
+			new_dnn_max_local_sizes_3d[i] = { 0, 0, 0 };
+			log_debug("%s: unavailable on this device", dnn_kernel_names[i]);
+			continue;
+		}
+		if (new_dnn_kernels[i] == nullptr) {
 			log_error("failed to retrieve kernel %s from program", dnn_kernel_names[i]);
 			return false;
 		}

@@ -372,30 +372,33 @@ kernel kernel_local_size(tile_size, 1, 1) void fc_matrix_mul_partial_unchecked_ 
 	fc_matrix_mul_partial<in_data_type, out_data_type, tile_size, true>(A, B, C_partials, A_width, B_width, partial_count); \
 }
 
-FC_MATRIX_MUL_KERNEL(1024, float, f32, float, f32)
 FC_MATRIX_MUL_KERNEL(512, float, f32, float, f32)
 FC_MATRIX_MUL_KERNEL(256, float, f32, float, f32)
 FC_MATRIX_MUL_KERNEL(128, float, f32, float, f32)
 FC_MATRIX_MUL_KERNEL(64, float, f32, float, f32)
 FC_MATRIX_MUL_KERNEL(32, float, f32, float, f32)
-FC_MATRIX_MUL_KERNEL(1024, float, f32, half, f16)
 FC_MATRIX_MUL_KERNEL(512, float, f32, half, f16)
 FC_MATRIX_MUL_KERNEL(256, float, f32, half, f16)
 FC_MATRIX_MUL_KERNEL(128, float, f32, half, f16)
 FC_MATRIX_MUL_KERNEL(64, float, f32, half, f16)
 FC_MATRIX_MUL_KERNEL(32, float, f32, half, f16)
-FC_MATRIX_MUL_KERNEL(1024, half, f16, float, f32)
 FC_MATRIX_MUL_KERNEL(512, half, f16, float, f32)
 FC_MATRIX_MUL_KERNEL(256, half, f16, float, f32)
 FC_MATRIX_MUL_KERNEL(128, half, f16, float, f32)
 FC_MATRIX_MUL_KERNEL(64, half, f16, float, f32)
 FC_MATRIX_MUL_KERNEL(32, half, f16, float, f32)
-FC_MATRIX_MUL_KERNEL(1024, half, f16, half, f16)
 FC_MATRIX_MUL_KERNEL(512, half, f16, half, f16)
 FC_MATRIX_MUL_KERNEL(256, half, f16, half, f16)
 FC_MATRIX_MUL_KERNEL(128, half, f16, half, f16)
 FC_MATRIX_MUL_KERNEL(64, half, f16, half, f16)
 FC_MATRIX_MUL_KERNEL(32, half, f16, half, f16)
+
+#if FLOOR_COMPUTE_INFO_LOCAL_ID_RANGE_MAX >= 1024
+FC_MATRIX_MUL_KERNEL(1024, float, f32, float, f32)
+FC_MATRIX_MUL_KERNEL(1024, float, f32, half, f16)
+FC_MATRIX_MUL_KERNEL(1024, half, f16, float, f32)
+FC_MATRIX_MUL_KERNEL(1024, half, f16, half, f16)
+#endif
 
 // single-pass softmax with sub-group reduce:
 // usable if #elems <= max local size, and if max local size >= tile_size
@@ -433,14 +436,18 @@ kernel kernel_local_size(tile_size, 1, 1) void softmax_inplace_ ## tile_size ## 
 	softmax_inplace<in_data_type, out_data_type, tile_size>(in_data, out_data, count); \
 }
 
-SOFTMAX_INPLACE_KERNEL(1024, float, f32, float, f32)
-SOFTMAX_INPLACE_KERNEL(512, float, f32, float, f32)
 SOFTMAX_INPLACE_KERNEL(256, float, f32, float, f32)
+SOFTMAX_INPLACE_KERNEL(512, float, f32, float, f32)
+#if FLOOR_COMPUTE_INFO_LOCAL_ID_RANGE_MAX >= 1024
+SOFTMAX_INPLACE_KERNEL(1024, float, f32, float, f32)
+#endif
 
 // for now: always 32-bit float output
-SOFTMAX_INPLACE_KERNEL(1024, half, f16, float, f32)
-SOFTMAX_INPLACE_KERNEL(512, half, f16, float, f32)
 SOFTMAX_INPLACE_KERNEL(256, half, f16, float, f32)
+SOFTMAX_INPLACE_KERNEL(512, half, f16, float, f32)
+#if FLOOR_COMPUTE_INFO_LOCAL_ID_RANGE_MAX >= 1024
+SOFTMAX_INPLACE_KERNEL(1024, half, f16, float, f32)
+#endif
 
 // multi-pass softmax:
 // 1st: compute exp(item_i)
