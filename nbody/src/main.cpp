@@ -562,6 +562,7 @@ int main(int, char* argv[]) {
 	};
 	event::handler evt_handler_fnctr(&evt_handler);
 	
+	shared_ptr<compute_context> compute_ctx;
 	shared_ptr<compute_device> fastest_device;
 	shared_ptr<compute_program> nbody_prog;
 	shared_ptr<compute_kernel> nbody_compute;
@@ -575,7 +576,7 @@ int main(int, char* argv[]) {
 		floor_ctx_guard grd;
 		
 		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
-		auto compute_ctx = floor::get_compute_context();
+		compute_ctx = floor::get_compute_context();
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
 		fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
