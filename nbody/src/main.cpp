@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/compute/compute_kernel.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "vulkan_renderer.hpp"
@@ -116,7 +117,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tRX 580:       ~ 3225 gflops (--count 221184 --tile-size 64)" << endl;
 		cout << "\tGTX 970:      ~ 2770 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\tGTX 780:      ~ 2350 gflops (--count 131072 --tile-size 512)" << endl;
-		cout << "\tGTX 1050 Ti:  ~ 1675 gflops (--count 262144 --tile-size 256)" << endl;
+		cout << "\tGTX 1050 Ti:  ~ 1690 gflops (--count 262144 --tile-size 256)" << endl;
 		cout << "\tR9 285:       ~ 1500 gflops (--count 131072 --tile-size 1024)" << endl;
 		cout << "\ti9-7980XE:    ~ 1000 gflops (--count 73728 --tile-size 64)" << endl;
 		cout << "\tGTX 750:      ~  840 gflops (--count 65536 --tile-size 256)" << endl;

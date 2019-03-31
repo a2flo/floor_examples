@@ -17,6 +17,7 @@
  */
 
 #include "nn_executer.hpp"
+#include <floor/compute/compute_kernel.hpp>
 
 //// program/kernels are only loaded/initialized once
 static shared_ptr<compute_program> dnn_prog;

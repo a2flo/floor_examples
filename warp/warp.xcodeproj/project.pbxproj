@@ -965,6 +965,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -1120,22 +1121,6 @@
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENAL,
 				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
@@ -1197,18 +1182,6 @@
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENAL,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1274,22 +1247,6 @@
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENAL,
 				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
@@ -1353,18 +1310,6 @@
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
 					FLOOR_NO_OPENAL,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1434,7 +1379,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FLOOR_DEBUG=1",
-					PLATFORM_X64,
 				);
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -1451,7 +1395,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
@@ -1459,8 +1402,6 @@
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
-					"-isystem",
-					/opt/X11/include,
 					"-isystem",
 					/usr/local/include,
 					"-isystem",
@@ -1505,7 +1446,6 @@
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
 				GCC_FAST_MATH = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
@@ -1521,7 +1461,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
@@ -1529,8 +1468,6 @@
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
-					"-isystem",
-					/opt/X11/include,
 					"-isystem",
 					/usr/local/include,
 					"-isystem",

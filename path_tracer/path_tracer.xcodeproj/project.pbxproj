@@ -463,7 +463,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx512;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -498,13 +498,12 @@
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
 					"-isystem",
 					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
+					"-march=native",
 				);
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -525,7 +524,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = avx512;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
@@ -556,13 +555,12 @@
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
 					"-isystem",
 					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
+					"-march=native",
 				);
 				OTHER_LDFLAGS = (
 					"-framework",

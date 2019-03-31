@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +21,6 @@
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
 #include <libwarp/libwarp.h>
-
-#if !defined(FLOOR_CXX17)
-constexpr const double4 common_renderer::clear_color;
-#endif
 
 common_renderer::common_renderer() :
 resize_handler_fnctr(bind(&common_renderer::resize_handler, this, placeholders::_1, placeholders::_2)) {

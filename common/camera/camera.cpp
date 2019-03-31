@@ -110,8 +110,8 @@ void camera::run() {
 				
 				if(xpos != 0.0 || ypos != 0.0) {
 					if(!ignore_next_rotation) {
-						rotation.x -= ypos * (double)rotation_speed;
-						rotation.y -= xpos * (double)rotation_speed;
+						rotation.x -= float(ypos * (double)rotation_speed);
+						rotation.y -= float(xpos * (double)rotation_speed);
 					}
 					else ignore_next_rotation--;
 					
@@ -141,7 +141,7 @@ void camera::run() {
 		if(cursor_delta.x != 0.0 || cursor_delta.y != 0.0) {
 			if(!ignore_next_rotation) {
 				// multiply by desired rotation speed
-				delta *= (double)rotation_speed;
+				delta *= rotation_speed;
 				
 				single_frame_direction += delta * 0.1f;
 				

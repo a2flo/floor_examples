@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <floor/compute/metal/metal_buffer.hpp>
 #include <floor/compute/metal/metal_image.hpp>
 #include <floor/compute/metal/metal_queue.hpp>
+#include <floor/compute/metal/metal_kernel.hpp>
 #include <floor/darwin/darwin_helper.hpp>
 
 // renderer

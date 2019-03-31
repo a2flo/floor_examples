@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2018 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/compute/compute_kernel.hpp>
 #include "reduction_state.hpp"
 reduction_state_struct reduction_state;
 

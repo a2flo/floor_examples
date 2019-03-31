@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2018 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@ struct option_context {
 	string output_filename { "" };
 	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
 	string sub_target;
-	uint32_t bitness { 64 };
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	METAL_VERSION metal_std { METAL_VERSION::METAL_1_1 };
 	uint32_t ptx_version { 43 };
@@ -96,11 +95,10 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar <targets-json|all|minimal>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal target set)\n"
 				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75], defaults to sm_20\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_82], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
-				 "\t--bitness <32|64>: sets the bitness of the target (defaults to 64)\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0|2.1>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60|61|62|63>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
@@ -197,14 +195,6 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.sub_target = *arg_ptr;
-	}},
-	{ "--bitness", [](option_context& ctx, char**& arg_ptr) {
-		++arg_ptr;
-		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			cerr << "invalid argument!" << endl;
-			return;
-		}
-		ctx.bitness = stou(*arg_ptr);
 	}},
 	{ "--cl-std", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -504,7 +494,6 @@ static int run_normal_build(option_context& option_ctx) {
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;
 		}
-		device->bitness = option_ctx.bitness;
 		
 		// compile
 		llvm_toolchain::compile_options options {
@@ -707,7 +696,7 @@ static int run_normal_build(option_context& option_ctx) {
 		const string ptxas_cmd {
 			cuda_bin_path + "ptxas -O3"s +
 			(option_ctx.verbosity >= (size_t)logger::LOG_TYPE::DEBUG_MSG ? " -v" : "") +
-			" -m" + (option_ctx.bitness == 32 ? "32" : "64") +
+			" -m64" +
 			" -arch " + option_ctx.sub_target +
 			" -o " + cubin_filename + ".cubin " +
 			option_ctx.output_filename

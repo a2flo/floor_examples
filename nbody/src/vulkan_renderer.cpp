@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include <floor/compute/vulkan/vulkan_buffer.hpp>
 #include <floor/compute/vulkan/vulkan_image.hpp>
 #include <floor/compute/vulkan/vulkan_queue.hpp>
+#include <floor/compute/vulkan/vulkan_kernel.hpp>
 
 static VkRenderPass render_pass { nullptr };
 static VkPipeline pipeline { nullptr };

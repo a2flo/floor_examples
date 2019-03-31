@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2017 Florian Ziesche
+ *  Copyright (C) 2004 - 2019 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/compute/compute_kernel.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "hlbvh_state.hpp"

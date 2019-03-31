@@ -1206,6 +1206,7 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
 				);
 			};
 			name = Debug;
@@ -1305,6 +1306,7 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
 				);
 			};
 			name = Release;
