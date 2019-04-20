@@ -19,15 +19,15 @@
 #include "fubar.hpp"
 
 namespace fubar {
-	static vector<universal_binary::target_v1> get_json_targets(const string& targets_json_file_name floor_unused) {
+	static vector<universal_binary::target_v2> get_json_targets(const string& targets_json_file_name floor_unused) {
 		// TODO: implement this
 		return {};
 	}
 	
-	static vector<universal_binary::target_v1> get_targets(const TARGET_SET target_set,
+	static vector<universal_binary::target_v2> get_targets(const TARGET_SET target_set,
 														   const string& targets_json_file_name,
 														   const llvm_toolchain::compile_options& options) {
-		vector<universal_binary::target_v1> ret_targets;
+		vector<universal_binary::target_v2> ret_targets;
 		if (target_set == TARGET_SET::USER_JSON) {
 			ret_targets = get_json_targets(targets_json_file_name);
 		}
@@ -149,7 +149,7 @@ namespace fubar {
 					.major = 1,
 					.minor = 1,
 					.is_ios = 0,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -161,7 +161,7 @@ namespace fubar {
 					.major = 1,
 					.minor = 1,
 					.is_ios = 1,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -173,7 +173,7 @@ namespace fubar {
 					.major = 2,
 					.minor = 0,
 					.is_ios = 0,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -185,7 +185,7 @@ namespace fubar {
 					.major = 2,
 					.minor = 0,
 					.is_ios = 1,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -197,7 +197,7 @@ namespace fubar {
 					.major = 2,
 					.minor = 1,
 					.is_ios = 0,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -209,7 +209,7 @@ namespace fubar {
 					.major = 2,
 					.minor = 1,
 					.is_ios = 1,
-					.device_target = decltype(universal_binary::target_v1::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					._unused = 0,
 				}
@@ -224,7 +224,7 @@ namespace fubar {
 					.major = 1,
 					.minor = 2,
 					.is_spir = 1,
-					.device_target = decltype(universal_binary::target_v1::opencl)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::opencl)::GENERIC,
 					.image_depth_support = 0,
 					.image_msaa_support = 0,
 					.image_mipmap_support = 0,
@@ -249,7 +249,7 @@ namespace fubar {
 					.vulkan_minor = 0,
 					.spirv_major = 1,
 					.spirv_minor = 0,
-					.device_target = decltype(universal_binary::target_v1::vulkan)::GENERIC,
+					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,

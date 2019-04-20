@@ -115,7 +115,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		glUniform1f(delta_location, mdl->step);
 		
 		if(hlbvh_state.triangle_vis) {
-			mdl->colliding_vertices->release_opengl_object(hlbvh_state.dev_queue);
+			mdl->colliding_vertices->release_opengl_object(hlbvh_state.dev_queue.get());
 			glBindBuffer(GL_ARRAY_BUFFER, mdl->colliding_vertices->get_opengl_object());
 			glEnableVertexAttribArray(is_collision_location);
 			glVertexAttribPointer(is_collision_location, 1, GL_UNSIGNED_INT, GL_FALSE, 0, nullptr);
@@ -143,7 +143,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		}
 		
 		if(hlbvh_state.triangle_vis) {
-			mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.dev_queue);
+			mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.dev_queue.get());
 		}
 	}
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

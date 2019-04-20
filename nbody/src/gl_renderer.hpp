@@ -24,7 +24,7 @@
 
 struct gl_renderer {
 	static bool init();
-	static void render(shared_ptr<compute_queue> dev_queue,
+	static void render(const compute_queue& dev_queue,
 					   shared_ptr<compute_buffer> position_buffer);
 	static bool compile_shaders();
 };

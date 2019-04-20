@@ -36,7 +36,7 @@ static const vulkan_kernel::vulkan_kernel_entry* fs_entry;
 static vector<VkFramebuffer> screen_framebuffers;
 
 static array<shared_ptr<vulkan_image>, 2> body_textures {};
-static void create_textures(shared_ptr<compute_device> dev) {
+static void create_textures(const compute_queue& dev_queue) {
 	auto ctx = floor::get_compute_context();
 	
 	// create/generate an opengl texture and bind it
@@ -64,7 +64,7 @@ static void create_textures(shared_ptr<compute_device> dev) {
 			}
 		}
 		
-		body_textures[i] = static_pointer_cast<vulkan_image>(ctx->create_image(dev, texture_size,
+		body_textures[i] = static_pointer_cast<vulkan_image>(ctx->create_image(dev_queue, texture_size,
 																			   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																			   COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
 																			   //COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
@@ -77,13 +77,14 @@ static void create_textures(shared_ptr<compute_device> dev) {
 }
 
 bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
-						   shared_ptr<compute_device> dev,
+						   const compute_device& dev,
+						   const compute_queue& dev_queue,
 						   shared_ptr<compute_kernel> vs,
 						   shared_ptr<compute_kernel> fs) {
 	auto vk_ctx = (vulkan_compute*)ctx.get();
-	auto vk_dev = (vulkan_device*)dev.get();
-	auto device = vk_dev->device;
-	create_textures(dev);
+	const auto& vk_dev = (const vulkan_device&)dev;
+	auto device = vk_dev.device;
+	create_textures(dev_queue);
 	
 	// check vs/fs and get state
 	if(!vs) {
@@ -153,7 +154,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 	
 	// create the pipeline layout
 	vector<VkDescriptorSetLayout> desc_set_layouts;
-	desc_set_layouts.emplace_back(vk_dev->fixed_sampler_desc_set_layout);
+	desc_set_layouts.emplace_back(vk_dev.fixed_sampler_desc_set_layout);
 	if(vs_entry->desc_set_layout != nullptr) {
 		desc_set_layouts.emplace_back(vs_entry->desc_set_layout);
 	}
@@ -332,8 +333,8 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 	return true;
 }
 
-void vulkan_renderer::destroy(shared_ptr<compute_context> ctx,
-							  shared_ptr<compute_device> dev) {
+void vulkan_renderer::destroy(shared_ptr<compute_context> ctx floor_unused,
+							  const compute_device& dev floor_unused) {
 	for(auto& tex : body_textures) {
 		tex = nullptr;
 	}
@@ -342,12 +343,12 @@ void vulkan_renderer::destroy(shared_ptr<compute_context> ctx,
 }
 
 void vulkan_renderer::render(shared_ptr<compute_context> ctx,
-							 shared_ptr<compute_device> dev,
-							 shared_ptr<compute_queue> dev_queue,
+							 const compute_device& dev,
+							 const compute_queue& dev_queue,
 							 shared_ptr<compute_buffer> position_buffer) {
 	auto vk_ctx = (vulkan_compute*)ctx.get();
-	auto vk_queue = (vulkan_queue*)dev_queue.get();
-	auto vk_dev = (vulkan_device*)dev.get();
+	const auto& vk_queue = (const vulkan_queue&)dev_queue;
+	const auto& vk_dev = (const vulkan_device&)dev;
 	
 	//
 	auto drawable_ret = vk_ctx->acquire_next_image();
@@ -358,7 +359,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	auto screen_framebuffer = screen_framebuffers[drawable.index];
 	
 	//
-	auto cmd_buffer = vk_queue->make_command_buffer("nbody render");
+	auto cmd_buffer = vk_queue.make_command_buffer("nbody render");
 	const VkCommandBufferBeginInfo begin_info {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
@@ -415,12 +416,12 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		auto& write_desc = write_descs[write_idx++];
 		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		write_desc.pNext = nullptr;
-		write_desc.dstSet = vk_dev->fixed_sampler_desc_set;
+		write_desc.dstSet = vk_dev.fixed_sampler_desc_set;
 		write_desc.dstBinding = 0;
 		write_desc.dstArrayElement = 0;
-		write_desc.descriptorCount = (uint32_t)vk_dev->fixed_sampler_set.size();
+		write_desc.descriptorCount = (uint32_t)vk_dev.fixed_sampler_set.size();
 		write_desc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		write_desc.pImageInfo = vk_dev->fixed_sampler_image_info.data();
+		write_desc.pImageInfo = vk_dev.fixed_sampler_image_info.data();
 		write_desc.pBufferInfo = nullptr;
 		write_desc.pTexelBufferView = nullptr;
 	}
@@ -458,7 +459,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	};
 	
 	// vs arg #1
-	shared_ptr<compute_buffer> constant_buffer = make_shared<vulkan_buffer>(vk_dev, sizeof(uniforms), (void*)&uniforms,
+	shared_ptr<compute_buffer> constant_buffer = make_shared<vulkan_buffer>(vk_queue, sizeof(uniforms), (void*)&uniforms,
 																			COMPUTE_MEMORY_FLAG::READ |
 																			COMPUTE_MEMORY_FLAG::HOST_WRITE);
 	{
@@ -493,11 +494,11 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		write_desc.pTexelBufferView = nullptr;
 	}
 	
-	vkUpdateDescriptorSets(vk_dev->device,
+	vkUpdateDescriptorSets(vk_dev.device,
 						   write_desc_count, write_descs.data(),
 						   0, nullptr);
 	const VkDescriptorSet desc_sets[3] {
-		vk_dev->fixed_sampler_desc_set,
+		vk_dev.fixed_sampler_desc_set,
 		vs_entry->desc_set,
 		fs_entry->desc_set,
 	};
@@ -515,7 +516,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	
 	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
-	vk_queue->submit_command_buffer(cmd_buffer, true);
+	vk_queue.submit_command_buffer(cmd_buffer, true);
 	
 	vk_ctx->present_image(drawable);
 }

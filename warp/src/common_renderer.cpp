@@ -38,14 +38,14 @@ void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 	scene_fbo.dim_multiple = scene_fbo.dim.rounded_next_multiple(warp_state.tile_size);
 	
 	for(size_t i = 0, count = size(scene_fbo.color); i < count; ++i) {
-		scene_fbo.color[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+		scene_fbo.color[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 														  color_format |
 														  COMPUTE_IMAGE_TYPE::IMAGE_2D |
 														  COMPUTE_IMAGE_TYPE::READ_WRITE |
 														  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 														  COMPUTE_MEMORY_FLAG::READ_WRITE);
 		
-		scene_fbo.depth[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+		scene_fbo.depth[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 														  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 														  COMPUTE_IMAGE_TYPE::D32F |
 														  COMPUTE_IMAGE_TYPE::READ |
@@ -53,7 +53,7 @@ void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 														  COMPUTE_MEMORY_FLAG::READ);
 		
 		for(size_t j = 0; j < 2; ++j) {
-			scene_fbo.motion[i * 2 + j] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+			scene_fbo.motion[i * 2 + j] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 																	   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																	   COMPUTE_IMAGE_TYPE::R32UI |
 																	   COMPUTE_IMAGE_TYPE::READ_WRITE |
@@ -61,7 +61,7 @@ void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 																	   COMPUTE_MEMORY_FLAG::READ_WRITE);
 		}
 		
-		scene_fbo.motion_depth[i] = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+		scene_fbo.motion_depth[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 																 COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																 COMPUTE_IMAGE_TYPE::RG16F |
 																 COMPUTE_IMAGE_TYPE::READ_WRITE |
@@ -69,14 +69,14 @@ void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 																 COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	
-	scene_fbo.compute_color = warp_state.ctx->create_image(warp_state.dev, scene_fbo.dim,
+	scene_fbo.compute_color = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 														   COMPUTE_IMAGE_TYPE::IMAGE_2D |
 														   COMPUTE_IMAGE_TYPE::BGRA8UI_NORM |
 														   COMPUTE_IMAGE_TYPE::READ_WRITE,
 														   COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
 	// create appropriately sized s/w depth buffer
-	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(warp_state.dev, sizeof(float) *
+	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(float) *
 																	size_t(scene_fbo.dim.x) * size_t(scene_fbo.dim.y));
 }
 
@@ -135,7 +135,7 @@ void common_renderer::create_skybox() {
 		memcpy(skybox_pixels.get() + i * slice_size, skybox_surfaces[i]->pixels, slice_size);
 	}
 	
-	skybox_tex = warp_state.ctx->create_image(warp_state.dev,
+	skybox_tex = warp_state.ctx->create_image(*warp_state.dev_queue,
 											  skybox_dim,
 											  image_type,
 											  skybox_pixels.get(),
@@ -169,7 +169,7 @@ bool common_renderer::init() {
 	create_skybox();
 	
 	// shadow map
-	shadow_map.shadow_image = warp_state.ctx->create_image(warp_state.dev, shadow_map.dim,
+	shadow_map.shadow_image = warp_state.ctx->create_image(*warp_state.dev_queue, shadow_map.dim,
 														   COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 														   COMPUTE_IMAGE_TYPE::D32F |
 														   COMPUTE_IMAGE_TYPE::READ |
@@ -177,9 +177,9 @@ bool common_renderer::init() {
 														   COMPUTE_MEMORY_FLAG::READ);
 	
 	// uniforms
-	light_mvpm_buffer = warp_state.ctx->create_buffer(warp_state.dev, sizeof(matrix4f));
-	scene_uniforms_buffer = warp_state.ctx->create_buffer(warp_state.dev, sizeof(scene_uniforms));
-	skybox_uniforms_buffer = warp_state.ctx->create_buffer(warp_state.dev, sizeof(skybox_uniforms));
+	light_mvpm_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(matrix4f));
+	scene_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(scene_uniforms));
+	skybox_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(skybox_uniforms));
 	
 	return true;
 }
@@ -392,9 +392,9 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 	}
 	
 	// update constant buffers
-	light_mvpm_buffer->write(warp_state.dev_queue, &light_mvpm);
-	scene_uniforms_buffer->write(warp_state.dev_queue, &scene_uniforms);
-	skybox_uniforms_buffer->write(warp_state.dev_queue, &skybox_uniforms);
+	light_mvpm_buffer->write(*warp_state.dev_queue, &light_mvpm);
+	scene_uniforms_buffer->write(*warp_state.dev_queue, &scene_uniforms);
+	skybox_uniforms_buffer->write(*warp_state.dev_queue, &skybox_uniforms);
 	
 	// end
 	if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
@@ -451,7 +451,7 @@ bool common_renderer::compile_shaders(const string add_cli_options) {
 			//return false;
 			continue;
 		}
-		shader_entries[i] = (const compute_kernel::kernel_entry*)shaders[i]->get_kernel_entry(warp_state.dev);
+		shader_entries[i] = (const compute_kernel::kernel_entry*)shaders[i]->get_kernel_entry(*warp_state.dev);
 		if(shader_entries[i] == nullptr) {
 			log_error("failed to retrieve shader entry \"%s\" for the current device", shader_names[i]);
 			//return false;

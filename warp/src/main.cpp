@@ -367,7 +367,7 @@ int main(int, char* argv[]) {
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
 		warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
-		warp_state.dev_queue = warp_state.ctx->create_queue(warp_state.dev);
+		warp_state.dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
 		
 		// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
 		// compute the appropriate value according to the render/input frame rate and display refresh rate
@@ -421,7 +421,7 @@ int main(int, char* argv[]) {
 		//
 		bool model_success { false };
 		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success,
-								 warp_state.ctx, warp_state.dev);
+								 warp_state.ctx, *warp_state.dev_queue);
 		if(!model_success) {
 			return -1;
 		}

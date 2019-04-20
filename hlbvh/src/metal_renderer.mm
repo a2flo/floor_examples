@@ -49,7 +49,7 @@ void metal_renderer::destroy() {
 static void create_textures() {
 	scene_fbo.dim = floor::get_physical_screen_size();
 	
-	scene_fbo.depth = hlbvh_state.ctx->create_image(hlbvh_state.dev, scene_fbo.dim,
+	scene_fbo.depth = hlbvh_state.ctx->create_image(*hlbvh_state.dev_queue, scene_fbo.dim,
 													COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 													COMPUTE_IMAGE_TYPE::D32F |
 													COMPUTE_IMAGE_TYPE::READ_WRITE |
@@ -63,7 +63,7 @@ static void create_textures() {
 
 bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 						  shared_ptr<compute_kernel> fs) {
-	auto device = ((metal_device*)hlbvh_state.dev.get())->device;
+	auto device = ((const metal_device&)*hlbvh_state.dev).device;
 	
 	// check vs/fs and get state
 	if(!vs) {
@@ -75,12 +75,12 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 		return false;
 	}
 	
-	const auto vs_entry = (const metal_kernel::metal_kernel_entry*)vs->get_kernel_entry(hlbvh_state.dev);
+	const auto vs_entry = (const metal_kernel::metal_kernel_entry*)vs->get_kernel_entry(*hlbvh_state.dev);
 	if(!vs_entry) {
 		log_error("no vertex shader for this device exists!");
 		return false;
 	}
-	const auto fs_entry = (const metal_kernel::metal_kernel_entry*)fs->get_kernel_entry(hlbvh_state.dev);
+	const auto fs_entry = (const metal_kernel::metal_kernel_entry*)fs->get_kernel_entry(*hlbvh_state.dev);
 	if(!fs_entry) {
 		log_error("no fragment shader for this device exists!");
 		return false;

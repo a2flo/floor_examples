@@ -89,7 +89,7 @@ bool metal_renderer::init() {
 		return false;
 	}
 	
-	auto device = ((metal_device*)warp_state.dev.get())->device;
+	auto device = ((const metal_device&)*warp_state.dev).device;
 	
 	const auto get_shader_entry = [this](const WARP_SHADER& shader) {
 		return (__bridge id<MTLFunction>)((const metal_kernel::metal_kernel_entry*)shader_entries[shader])->kernel;

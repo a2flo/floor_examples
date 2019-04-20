@@ -31,7 +31,7 @@ struct dnn_state_struct {
 	//
 	shared_ptr<compute_context> ctx;
 	shared_ptr<compute_queue> dev_queue;
-	shared_ptr<compute_device> dev;
+	const compute_device* dev { nullptr };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)

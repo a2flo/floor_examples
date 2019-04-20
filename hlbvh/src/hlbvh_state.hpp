@@ -60,7 +60,7 @@ struct hlbvh_state_struct {
 	// main compute context
 	shared_ptr<compute_context> ctx;
 	// active compute device
-	shared_ptr<compute_device> dev;
+	const compute_device* dev { nullptr };
 	// device compute/command queue
 	shared_ptr<compute_queue> dev_queue;
 	// collision/hlbvh kernels

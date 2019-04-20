@@ -276,7 +276,7 @@ int main(int, char* argv[]) {
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	auto dev_queue = compute_ctx->create_queue(fastest_device);
+	auto dev_queue = compute_ctx->create_queue(*fastest_device);
 	
 	// compile the program and get the kernel functions
 	static_assert(tap_count % 2u == 1u, "tap count must be an odd number!");
@@ -359,7 +359,7 @@ int main(int, char* argv[]) {
 				};
 			}
 		}
-		imgs[img_idx] = compute_ctx->create_image(fastest_device,
+		imgs[img_idx] = compute_ctx->create_image(*dev_queue,
 												  // using a uint2 here, although parameter is actually a uint4 to support 3D/cube-maps/arrays/etc.,
 												  // conversion happens automatically
 												  image_size,
@@ -377,7 +377,7 @@ int main(int, char* argv[]) {
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
 												  // when using opengl sharing: appropriate texture target must be set
 												  GL_TEXTURE_2D);
-		if(img_idx > 0) imgs[img_idx]->zero(dev_queue);
+		if(img_idx > 0) imgs[img_idx]->zero(*dev_queue);
 	}
 	
 	// flush/finish everything (init, data copy) before running the benchmark
@@ -432,7 +432,7 @@ int main(int, char* argv[]) {
 	// acquire for opengl use
 	if(!no_opengl) {
 		for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-			imgs[img_idx]->release_opengl_object(dev_queue);
+			imgs[img_idx]->release_opengl_object(dev_queue.get());
 		}
 	}
 	
@@ -471,7 +471,7 @@ int main(int, char* argv[]) {
 		// s/w rendering
 		if(no_opengl) {
 			// grab the current image buffer data (read-only + blocking) ...
-			auto render_img = (uchar4*)imgs[cur_image]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto render_img = (uchar4*)imgs[cur_image]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
@@ -484,7 +484,7 @@ int main(int, char* argv[]) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
 				}
 			}
-			imgs[cur_image]->unmap(dev_queue, render_img);
+			imgs[cur_image]->unmap(*dev_queue, render_img);
 			
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());

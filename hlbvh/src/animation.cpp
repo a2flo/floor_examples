@@ -57,7 +57,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			file_name += file_suffix;
 			//log_debug("file name: %s", file_name);
 			bool success = false;
-			auto model = obj_loader::load(floor::data_path(file_name), success, hlbvh_state.ctx, hlbvh_state.dev,
+			auto model = obj_loader::load(floor::data_path(file_name), success, hlbvh_state.ctx, *hlbvh_state.dev_queue,
 										  // don't scale anything
 										  1.0f,
 										  // keep cpu data, b/c we still need it
@@ -112,10 +112,10 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				frames_centroids[frame_id] = mdl_centroids;
 				
 				// upload key-frame data for this animation
-				frames_triangles_buffer[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_triangles);
-				frames_centroids_buffer[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_centroids);
+				frames_triangles_buffer[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_triangles);
+				frames_centroids_buffer[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_centroids);
 				if(hlbvh_state.triangle_vis) {
-					frames_indices[frame_id] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, *mdl_indices);
+					frames_indices[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_indices);
 				}
 				
 				//
@@ -161,27 +161,27 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 		morton_codes_size = ((morton_codes_size / rs_alignment) + 1) * rs_alignment;
 	}
 	
-	morton_codes = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, morton_codes_size);
-	morton_codes_ping = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, morton_codes_size);
-	triangles = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(float3) * 3u);
+	morton_codes = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, morton_codes_size);
+	morton_codes_ping = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, morton_codes_size);
+	triangles = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(float3) * 3u);
 	
 	// N leaves + (N-1) internal nodes, allocating enough for max triangle count
-	bvh_leaves = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
-	bvh_internal = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, (tri_count - 1u) * sizeof(uint3));
-	bvh_aabbs = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, (tri_count - 1u) * sizeof(float3) * 2u);
-	bvh_aabbs_leaves = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(float3) * 2u);
-	bvh_aabbs_counters = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, (tri_count - 1u) * sizeof(uint32_t));
+	bvh_leaves = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
+	bvh_internal = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(uint3));
+	bvh_aabbs = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(float3) * 2u);
+	bvh_aabbs_leaves = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(float3) * 2u);
+	bvh_aabbs_counters = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(uint32_t));
 	
 	// for visualization purposes
 	if(hlbvh_state.triangle_vis) {
 		log_debug("max vertex count: %u", max_vertex_count.load());
-		colliding_vertices = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, max_vertex_count * sizeof(uint32_t),
+		colliding_vertices = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, max_vertex_count * sizeof(uint32_t),
 															COMPUTE_MEMORY_FLAG::READ_WRITE |
 															COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
 															COMPUTE_MEMORY_FLAG::OPENGL_SHARING,
 															GL_ARRAY_BUFFER);
-		colliding_triangles[0] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
-		colliding_triangles[1] = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, tri_count * sizeof(uint32_t));
+		colliding_triangles[0] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
+		colliding_triangles[1] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
 		log_debug("check tri col buffer: %u, %u", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
 	}
 }

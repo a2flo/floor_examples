@@ -504,7 +504,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.cuda.max_registers = option_ctx.cuda_max_registers,
 			.cuda.short_ptr = (option_ctx.cuda_no_short_ptr ? false : true),
 		};
-		program = llvm_toolchain::compile_program_file(device, option_ctx.filename, options);
+		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
 			string info_str = "";
 			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
@@ -854,7 +854,7 @@ static int run_normal_build(option_context& option_ctx) {
 					}
 				}
 				
-				auto prog_entry = ctx->create_program_entry(dev, program, llvm_toolchain::TARGET::AIR);
+				auto prog_entry = ctx->create_program_entry(*dev, program, llvm_toolchain::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
@@ -891,7 +891,7 @@ static int run_normal_build(option_context& option_ctx) {
 					}
 				}
 				
-				auto prog_entry = ctx->create_cuda_program((cuda_device*)dev.get(), program);
+				auto prog_entry = ctx->create_cuda_program((const cuda_device&)*dev, program);
 				if(!prog_entry.valid) {
 					log_error("program compilation failed!");
 				}

@@ -36,7 +36,7 @@ static metal_view* view { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
 static array<shared_ptr<metal_image>, 2> body_textures {};
-static void create_textures(shared_ptr<compute_device> dev) {
+static void create_textures(const compute_queue& dev_queue) {
 	auto ctx = floor::get_compute_context();
 	
 	// create/generate an opengl texture and bind it
@@ -64,7 +64,7 @@ static void create_textures(shared_ptr<compute_device> dev) {
 			}
 		}
 		
-		body_textures[i] = static_pointer_cast<metal_image>(ctx->create_image(dev, texture_size,
+		body_textures[i] = static_pointer_cast<metal_image>(ctx->create_image(dev_queue, texture_size,
 																			  COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																			  COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
 																			  COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
@@ -76,11 +76,12 @@ static void create_textures(shared_ptr<compute_device> dev) {
 	}
 }
 
-bool metal_renderer::init(shared_ptr<compute_device> dev,
+bool metal_renderer::init(const compute_device& dev,
+						  const compute_queue& dev_queue,
 						  shared_ptr<compute_kernel> vs,
 						  shared_ptr<compute_kernel> fs) {
-	auto device = ((metal_device*)dev.get())->device;
-	create_textures(dev);
+	auto device = ((const metal_device&)dev).device;
+	create_textures(dev_queue);
 	
 	// check vs/fs and get state
 	if(!vs) {
@@ -152,11 +153,11 @@ bool metal_renderer::init(shared_ptr<compute_device> dev,
 	return true;
 }
 
-void metal_renderer::render(shared_ptr<compute_queue> dev_queue,
+void metal_renderer::render(const compute_queue& dev_queue,
 							shared_ptr<compute_buffer> position_buffer) {
 	@autoreleasepool {
 		//
-		auto mtl_queue = ((metal_queue*)dev_queue.get())->get_queue();
+		auto mtl_queue = ((const metal_queue&)dev_queue).get_queue();
 		
 		id <MTLCommandBuffer> cmd_buffer = [mtl_queue commandBuffer];
 		cmd_buffer.label = @"nbody render";

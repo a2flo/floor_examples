@@ -25,7 +25,7 @@
 
 class nn_executer {
 public:
-	nn_executer(const nn_model& mdl, shared_ptr<compute_device> dev, shared_ptr<compute_queue> dev_queue);
+	nn_executer(const nn_model& mdl, const compute_device& dev, shared_ptr<compute_queue> dev_queue);
 	
 	//! clear all previous execution state
 	void clear();
@@ -69,7 +69,7 @@ public:
 	
 protected:
 	const nn_model& mdl;
-	shared_ptr<compute_device> dev;
+	const compute_device& dev;
 	shared_ptr<compute_queue> dev_queue;
 	
 	const compute_image* input_img { nullptr };

@@ -169,9 +169,9 @@ struct conv_layer_t {
 	}
 	
 	compute_conv_layer_t create_compute_layer() const {
-		auto filters_buf = dnn_state.ctx->create_buffer(dnn_state.dev, sizeof(decltype(filters)), (void*)&filters,
+		auto filters_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(filters)), (void*)&filters,
 														COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		auto biases_buf = dnn_state.ctx->create_buffer(dnn_state.dev, sizeof(decltype(biases)), (void*)&biases,
+		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(biases)), (void*)&biases,
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		
 		return {
@@ -273,9 +273,9 @@ struct fully_connected_layer_t {
 	}
 	
 	compute_fully_connected_layer_t create_compute_layer() const {
-		auto matrix_buf = dnn_state.ctx->create_buffer(dnn_state.dev, sizeof(decltype(matrix)), (void*)&matrix,
+		auto matrix_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(matrix)), (void*)&matrix,
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		auto biases_buf = dnn_state.ctx->create_buffer(dnn_state.dev, sizeof(decltype(biases)), (void*)&biases,
+		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(biases)), (void*)&biases,
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		
 		return {

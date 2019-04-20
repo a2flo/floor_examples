@@ -384,8 +384,8 @@ void init_system() {
 	// finish up old execution before we start with anything new
 	dev_queue->finish();
 	
-	auto positions = (float4*)position_buffers[0]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
-	auto velocities = (float3*)velocity_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+	auto positions = (float4*)position_buffers[0]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+	auto velocities = (float3*)velocity_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 	if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {
 		nbody_state.mass_minmax = nbody_state.mass_minmax_default;
 	}
@@ -472,8 +472,8 @@ void init_system() {
 			positions[i].w = core::rand(nbody_state.mass_minmax.x, nbody_state.mass_minmax.y);
 		}
 	}
-	position_buffers[0]->unmap(dev_queue, positions);
-	velocity_buffer->unmap(dev_queue, velocities);
+	position_buffers[0]->unmap(*dev_queue, positions);
+	velocity_buffer->unmap(*dev_queue, velocities);
 	
 	// reset everything
 	buffer_flip_flop = 0;
@@ -564,7 +564,7 @@ int main(int, char* argv[]) {
 	event::handler evt_handler_fnctr(&evt_handler);
 	
 	shared_ptr<compute_context> compute_ctx;
-	shared_ptr<compute_device> fastest_device;
+	const compute_device* fastest_device { nullptr };
 	shared_ptr<compute_program> nbody_prog;
 	shared_ptr<compute_kernel> nbody_compute;
 	shared_ptr<compute_kernel> nbody_raster;
@@ -581,7 +581,7 @@ int main(int, char* argv[]) {
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
 		fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-		dev_queue = compute_ctx->create_queue(fastest_device);
+		dev_queue = compute_ctx->create_queue(*fastest_device);
 		
 		// parameter sanity check
 		if(nbody_state.tile_size > fastest_device->max_total_local_size) {
@@ -639,7 +639,8 @@ int main(int, char* argv[]) {
 #if defined(__APPLE__)
 		if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
 			// setup renderer
-			if(!metal_renderer::init(fastest_device,
+			if(!metal_renderer::init(*fastest_device,
+									 *dev_queue,
 									 nbody_prog->get_kernel("lighting_vertex"),
 									 nbody_prog->get_kernel("lighting_fragment"))) {
 				log_error("error during metal initialization!");
@@ -651,7 +652,8 @@ int main(int, char* argv[]) {
 		if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
 			// setup renderer
 			if(!vulkan_renderer::init(compute_ctx,
-									  fastest_device,
+									  *fastest_device,
+									  *dev_queue,
 									  nbody_prog->get_kernel("lighting_vertex"),
 									  nbody_prog->get_kernel("lighting_fragment"))) {
 				log_error("error during vulkan initialization!");
@@ -662,30 +664,30 @@ int main(int, char* argv[]) {
 		
 		// create nbody position and velocity buffers
 		for(size_t i = 0; i < pos_buffer_count; ++i) {
-			position_buffers[i] = compute_ctx->create_buffer(fastest_device, sizeof(float4) * nbody_state.body_count, (
-																													   // will be reading and writing from the kernel
-																													   COMPUTE_MEMORY_FLAG::READ_WRITE
-																													   // host will only write data
-																													   | COMPUTE_MEMORY_FLAG::HOST_WRITE
-																													   // will be using the buffer with opengl
-																													   | (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
-																													   // automatic defaults when using OPENGL_SHARING:
-																													   // OPENGL_READ_WRITE: again, will be reading and writing in the kernel
-																													   ), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
+			position_buffers[i] = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * nbody_state.body_count, (
+																												   // will be reading and writing from the kernel
+																												   COMPUTE_MEMORY_FLAG::READ_WRITE
+																												   // host will only write data
+																												   | COMPUTE_MEMORY_FLAG::HOST_WRITE
+																												   // will be using the buffer with opengl
+																												   | (!nbody_state.no_opengl ? COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE)
+																												   // automatic defaults when using OPENGL_SHARING:
+																												   // OPENGL_READ_WRITE: again, will be reading and writing in the kernel
+																												   ), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
 		}
-		velocity_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float3) * nbody_state.body_count,
+		velocity_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float3) * nbody_state.body_count,
 													 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		
 		// image buffers (for s/w rendering only)
 		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
 			img_buffers = {{
-				compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
+				compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
 										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-				compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) * img_size.x * img_size.y,
+				compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
 										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
 			}};
-			img_buffers[0]->zero(dev_queue);
-			img_buffers[1]->zero(dev_queue);
+			img_buffers[0]->zero(*dev_queue);
+			img_buffers[1]->zero(*dev_queue);
 		}
 		
 		// init nbody system
@@ -803,7 +805,7 @@ int main(int, char* argv[]) {
 							   // work per work-group:
 							   uint1 {
 								   nbody_state.render_size == 0 ?
-								   nbody_raster->get_kernel_entry(fastest_device)->max_total_local_size : nbody_state.render_size
+								   nbody_raster->get_kernel_entry(*fastest_device)->max_total_local_size : nbody_state.render_size
 							   },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
@@ -814,7 +816,7 @@ int main(int, char* argv[]) {
 			if(is_vulkan || is_metal) dev_queue->finish();
 			
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
@@ -829,7 +831,7 @@ int main(int, char* argv[]) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, img_data[img_idx].x, img_data[img_idx].y, img_data[img_idx].z);
 				}
 			}
-			img_buffers[img_buffer_flip_flop]->unmap(dev_queue, img_data);
+			img_buffers[img_buffer_flip_flop]->unmap(*dev_queue, img_data);
 			
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());
@@ -839,17 +841,17 @@ int main(int, char* argv[]) {
 			floor::start_frame();
 			if(!nbody_state.no_opengl) {
 #if !defined(FLOOR_IOS)
-				gl_renderer::render(dev_queue, position_buffers[cur_buffer]);
+				gl_renderer::render(*dev_queue, position_buffers[cur_buffer]);
 #endif
 			}
 #if defined(__APPLE__)
 			else if(!nbody_state.no_metal) {
-				metal_renderer::render(dev_queue, position_buffers[cur_buffer]);
+				metal_renderer::render(*dev_queue, position_buffers[cur_buffer]);
 			}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
 			else if(!nbody_state.no_vulkan) {
-				vulkan_renderer::render(compute_ctx, fastest_device, dev_queue, position_buffers[cur_buffer]);
+				vulkan_renderer::render(compute_ctx, *fastest_device, *dev_queue, position_buffers[cur_buffer]);
 			}
 #endif
 			floor::end_frame();
@@ -871,7 +873,7 @@ int main(int, char* argv[]) {
 	}
 #if !defined(FLOOR_NO_VULKAN)
 	if(!nbody_state.no_vulkan) {
-		vulkan_renderer::destroy(compute_ctx, fastest_device);
+		vulkan_renderer::destroy(compute_ctx, *fastest_device);
 	}
 #endif
 	floor::release_context();

@@ -642,7 +642,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  // path prefix
 						  const string& prefix,
 						  shared_ptr<compute_context> ctx,
-						  shared_ptr<compute_device> dev) {
+						  const compute_queue& cqueue) {
 	// load textures
 	const auto filenames = core::keys(texture_filenames);
 	alignas(128) vector<obj_loader::texture> textures(filenames.size());
@@ -766,7 +766,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			
 			//log_debug("tex %s: %v, %s", filenames[i], dim, compute_image::image_type_to_string(image_type));
 			
-			(*model_floor_textures)[i] = ctx->create_image(dev,
+			(*model_floor_textures)[i] = ctx->create_image(cqueue,
 														   dim,
 														   image_type,
 														   pixels,
@@ -1066,7 +1066,7 @@ struct obj_grammar {
 	}
 	
 	void parse(parser_context& ctx, bool& success, const bool is_opengl, const bool is_load_textures, shared_ptr<obj_model> model,
-			   shared_ptr<compute_context> comp_ctx, shared_ptr<compute_device> dev) {
+			   shared_ptr<compute_context> comp_ctx, const compute_queue& cqueue) {
 		// clear all
 		vertices.clear();
 		tex_coords.clear();
@@ -1342,7 +1342,7 @@ struct obj_grammar {
 				load_textures(texture_filenames, is_opengl,
 							  is_opengl ? &gl_model->textures : nullptr,
 							  !is_opengl ? &floor_model->textures : nullptr,
-							  prefix, comp_ctx, dev);
+							  prefix, comp_ctx, cqueue);
 			}
 			
 			// assign textures/materials
@@ -1392,7 +1392,7 @@ struct obj_grammar {
 
 shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 									   shared_ptr<compute_context> ctx,
-									   shared_ptr<compute_device> dev,
+									   const compute_queue& cqueue,
 									   const float scale,
 									   const bool cleanup_cpu_data,
 									   const bool is_load_textures,
@@ -1431,7 +1431,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		
 		parser_context parser_ctx { *tu };
 		obj_grammar obj_grammar_parser;
-		obj_grammar_parser.parse(parser_ctx, success, is_opengl, is_load_textures, model, ctx, dev);
+		obj_grammar_parser.parse(parser_ctx, success, is_opengl, is_load_textures, model, ctx, cqueue);
 		if(!success) {
 			log_error("obj parsing failed");
 			return {};
@@ -1582,7 +1582,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			load_textures(texture_filenames, is_opengl,
 						  is_opengl ? &gl_model->textures : nullptr,
 						  !is_opengl ? &floor_model->textures : nullptr,
-						  prefix, ctx, dev);
+						  prefix, ctx, cqueue);
 		}
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
@@ -1714,20 +1714,20 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			// create buffers
 			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
 									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
-			floor_model->vertices_buffer = ctx->create_buffer(dev, floor_model->vertices, buffer_type);
-			floor_model->tex_coords_buffer = ctx->create_buffer(dev, floor_model->tex_coords, buffer_type);
-			floor_model->normals_buffer = ctx->create_buffer(dev, floor_model->normals, buffer_type);
-			floor_model->binormals_buffer = ctx->create_buffer(dev, floor_model->binormals, buffer_type);
-			floor_model->tangents_buffer = ctx->create_buffer(dev, floor_model->tangents, buffer_type);
-			floor_model->materials_buffer = ctx->create_buffer(dev, floor_model->material_indices, buffer_type);
+			floor_model->vertices_buffer = ctx->create_buffer(cqueue, floor_model->vertices, buffer_type);
+			floor_model->tex_coords_buffer = ctx->create_buffer(cqueue, floor_model->tex_coords, buffer_type);
+			floor_model->normals_buffer = ctx->create_buffer(cqueue, floor_model->normals, buffer_type);
+			floor_model->binormals_buffer = ctx->create_buffer(cqueue, floor_model->binormals, buffer_type);
+			floor_model->tangents_buffer = ctx->create_buffer(cqueue, floor_model->tangents, buffer_type);
+			floor_model->materials_buffer = ctx->create_buffer(cqueue, floor_model->material_indices, buffer_type);
 			
 			vector<uint3> all_indices;
 			for(auto& obj : floor_model->objects) {
-				obj->indices_floor_vbo = ctx->create_buffer(dev, obj->indices, buffer_type);
+				obj->indices_floor_vbo = ctx->create_buffer(cqueue, obj->indices, buffer_type);
 				all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
 			}
 			floor_model->index_count = (uint32_t)(all_indices.size() * 3);
-			floor_model->indices_buffer = ctx->create_buffer(dev, all_indices, buffer_type);
+			floor_model->indices_buffer = ctx->create_buffer(cqueue, all_indices, buffer_type);
 		}
 	}
 	

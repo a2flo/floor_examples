@@ -33,7 +33,7 @@ static shared_ptr<compute_context> compute_ctx;
 // device compute/command queue
 static shared_ptr<compute_queue> dev_queue;
 //
-static shared_ptr<compute_device> fastest_device;
+static const compute_device* fastest_device { nullptr };
 //
 static shared_ptr<compute_program> reduction_prog;
 // POT sizes from 32 - 1024
@@ -129,11 +129,11 @@ static bool compile_kernels() {
 			log_error("failed to retrieve kernel %s from program", reduction_kernel_names[i]);
 			return false;
 		}
-		new_reduction_max_local_sizes[i] = new_reduction_kernels[i]->get_kernel_entry(fastest_device)->max_total_local_size;
+		new_reduction_max_local_sizes[i] = new_reduction_kernels[i]->get_kernel_entry(*fastest_device)->max_total_local_size;
 		if(fastest_device->context->get_compute_type() != COMPUTE_TYPE::HOST) {
 			// usable if max local size >= required tile size, and if #args != 0 (i.e. kernel isn't disabled for other reasons)
 			new_reduction_kernel_usable[i] = ((reduction_kernel_sizes[i] <= new_reduction_max_local_sizes[i].x) &&
-											  !new_reduction_kernels[i]->get_kernel_entry(fastest_device)->info->args.empty());
+											  !new_reduction_kernels[i]->get_kernel_entry(*fastest_device)->info->args.empty());
 		}
 		else {
 			// always usable with host-compute
@@ -212,7 +212,7 @@ int main(int, char* argv[]) {
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	dev_queue = compute_ctx->create_queue(fastest_device);
+	dev_queue = compute_ctx->create_queue(*fastest_device);
 	
 	// parameter sanity check (TODO)
 	
@@ -229,10 +229,10 @@ int main(int, char* argv[]) {
 	};
 	//auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
 	//auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
-	auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint32_t) /* 32-bit */,
+	auto red_data_sum = compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) /* 32-bit */,
 												   COMPUTE_MEMORY_FLAG::READ_WRITE |
 												   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
-	auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint32_t) /* 32-bit */,
+	auto red_data = compute_ctx->create_buffer(*dev_queue, reduction_elem_count * sizeof(uint32_t) /* 32-bit */,
 											   COMPUTE_MEMORY_FLAG::READ_WRITE |
 											   COMPUTE_MEMORY_FLAG::HOST_WRITE);
 	
@@ -261,7 +261,7 @@ int main(int, char* argv[]) {
 		
 		// init data
 		// for expected sum on the CPU use: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-		auto mrdata = (float*)red_data->map(dev_queue,
+		auto mrdata = (float*)red_data->map(*dev_queue,
 											COMPUTE_MEMORY_MAP_FLAG::WRITE |
 											COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 		auto rdata = mrdata;
@@ -279,10 +279,10 @@ int main(int, char* argv[]) {
 			expected_sum_f += rnd_val;
 			*rdata++ = rnd_val;
 		}
-		red_data->unmap(dev_queue, mrdata);
+		red_data->unmap(*dev_queue, mrdata);
 		
 		//
-		red_data_sum->zero(dev_queue);
+		red_data_sum->zero(*dev_queue);
 		dev_queue->finish();
 		dev_queue->start_profiling();
 		if(fastest_device->cooperative_kernel_support) {
@@ -309,7 +309,7 @@ int main(int, char* argv[]) {
 		log_debug("reduction computed in %fms -> %u GB/s", double(prof_time) / 1000.0, compute_bandwidth(prof_time));
 		
 		float sum = 0.0f;
-		red_data_sum->read_to(sum, dev_queue);
+		red_data_sum->read_to(sum, *dev_queue);
 		const auto abs_diff = abs(double(sum) - expected_sum);
 		log_debug("sum: %f, expected: kahan: %f, linear: %f, %f -> diff: %f (sp: %f)",
 				  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));

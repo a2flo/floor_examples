@@ -129,8 +129,8 @@ bool nn_executer::rebuild_kernels() {
 			log_error("failed to retrieve kernel %s from program", dnn_kernel_names[i]);
 			return false;
 		}
-		new_dnn_max_local_sizes[i] = new_dnn_kernels[i]->get_kernel_entry(dnn_state.dev)->max_total_local_size;
-		new_dnn_max_local_sizes_3d[i] = new_dnn_kernels[i]->get_kernel_entry(dnn_state.dev)->max_local_size;
+		new_dnn_max_local_sizes[i] = new_dnn_kernels[i]->get_kernel_entry(*dnn_state.dev)->max_total_local_size;
+		new_dnn_max_local_sizes_3d[i] = new_dnn_kernels[i]->get_kernel_entry(*dnn_state.dev)->max_local_size;
 		log_debug("%s: local size: %u", dnn_kernel_names[i], new_dnn_max_local_sizes[i]);
 	}
 	
@@ -142,7 +142,7 @@ bool nn_executer::rebuild_kernels() {
 	return true;
 }
 
-nn_executer::nn_executer(const nn_model& mdl_, shared_ptr<compute_device> dev_, shared_ptr<compute_queue> dev_queue_) :
+nn_executer::nn_executer(const nn_model& mdl_, const compute_device& dev_, shared_ptr<compute_queue> dev_queue_) :
 mdl(mdl_), dev(dev_), dev_queue(dev_queue_) {
 }
 
@@ -157,7 +157,7 @@ void nn_executer::dump(const string name, const uint64_t max_elems) {
 	if (elem_count == 0 || max_elems == 0) return;
 	const uint64_t display_elem_count = (max_elems != ~0ull ? min(elem_count, max_elems) : elem_count);
 	
-	auto data = (float*)data_buf->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ);
+	auto data = (float*)data_buf->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ);
 	auto data_ptr = data;
 	
 	stringstream data_sstr;
@@ -168,11 +168,11 @@ void nn_executer::dump(const string name, const uint64_t max_elems) {
 	}
 	log_undecorated("%s data:\n%s", name, data_sstr.str());
 	
-	data_buf->unmap(dev_queue, data);
+	data_buf->unmap(*dev_queue, data);
 }
 
 shared_ptr<compute_image> nn_executer::resample(shared_ptr<compute_image> img) {
-	auto ret = dnn_state.ctx->create_image(dnn_state.dev, uint4 { 224, 224, 1, 0 }, img->get_image_type());
+	auto ret = dnn_state.ctx->create_image(*dnn_state.dev_queue, uint4 { 224, 224, 1, 0 }, img->get_image_type());
 	const uint2 in_dim = img->get_image_dim().xy;
 	dev_queue->execute(dnn_kernels[DNN_resample_image_224],
 					   uint2 { 224, 224 },
@@ -226,7 +226,7 @@ void nn_executer::convolution(const string& layer_name, const bool dump_output) 
 	const auto& conv = **layer;
 	const auto conv_out_channel_count = conv.get_output_channels();
 	const auto conv_out_elem_count = cur_dim.xy.extent() * conv_out_channel_count;
-	stage_output = dnn_state.ctx->create_buffer(dev, sizeof(float) * conv_out_elem_count,
+	stage_output = dnn_state.ctx->create_buffer(*dev_queue, sizeof(float) * conv_out_elem_count,
 												COMPUTE_MEMORY_FLAG::READ_WRITE | (dump_output ?
 																				   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE :
 																				   COMPUTE_MEMORY_FLAG::NONE));
@@ -294,7 +294,7 @@ void nn_executer::max_pooling(const bool dump_output) {
 	
 	const uint2 max_pool_dim { cur_dim.x / 2, cur_dim.y / 2 };
 	const auto max_pool_out_elem_count = max_pool_dim.extent() * cur_dim.z;
-	stage_output = dnn_state.ctx->create_buffer(dev, sizeof(float) * max_pool_out_elem_count,
+	stage_output = dnn_state.ctx->create_buffer(*dev_queue, sizeof(float) * max_pool_out_elem_count,
 												COMPUTE_MEMORY_FLAG::READ_WRITE | (dump_output ?
 																				   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE :
 																				   COMPUTE_MEMORY_FLAG::NONE));
@@ -339,7 +339,7 @@ void nn_executer::fully_connected(const string& layer_name, const bool with_relu
 	const auto out_type = fc.type;
 	const auto out_type_size = data_type_size(out_type);
 	
-	stage_output = dnn_state.ctx->create_buffer(dev, out_type_size * fc_out_elem_count,
+	stage_output = dnn_state.ctx->create_buffer(*dev_queue, out_type_size * fc_out_elem_count,
 												COMPUTE_MEMORY_FLAG::READ_WRITE | (dump_output ?
 																				   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE :
 																				   COMPUTE_MEMORY_FLAG::NONE));
@@ -379,7 +379,7 @@ void nn_executer::fully_connected(const string& layer_name, const bool with_relu
 	}
 	
 	const auto partials_count = (fc_height / local_size) + ((fc_height % local_size) != 0 ? 1 : 0);
-	auto partials_buf = dnn_state.ctx->create_buffer(dev, out_type_size * partials_count * fc_width, COMPUTE_MEMORY_FLAG::READ_WRITE);
+	auto partials_buf = dnn_state.ctx->create_buffer(*dev_queue, out_type_size * partials_count * fc_width, COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
 	log_msg("partials kernel: %u, %u (w: %u, h: %u), partials: %u",
 			kernel_idx, local_size, fc_width, fc_height, partials_count);
@@ -428,7 +428,7 @@ void nn_executer::softmax(const bool dump_output) {
 	const compute_buffer* out_buffer = *input;
 	stage_output = nullptr;
 	if (in_type != out_type) {
-		stage_output = dnn_state.ctx->create_buffer(dev, out_type_size * cur_dim.x,
+		stage_output = dnn_state.ctx->create_buffer(*dev_queue, out_type_size * cur_dim.x,
 													COMPUTE_MEMORY_FLAG::READ_WRITE | /*(dump_output ?*/
 																					   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE /*:
 																					   COMPUTE_MEMORY_FLAG::HOST_WRITE)*/);

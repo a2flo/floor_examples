@@ -47,26 +47,26 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 	if(model_count != allocated_model_count) {
 		allocated_model_count = model_count;
 		
-		collision_flags = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, model_count * sizeof(uint32_t),
+		collision_flags = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, model_count * sizeof(uint32_t),
 														 COMPUTE_MEMORY_FLAG::WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 		collision_flags_host.resize(model_count);
 	
-		aabb_collision_flags = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, total_aabb_checks * sizeof(uint32_t),
+		aabb_collision_flags = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, total_aabb_checks * sizeof(uint32_t),
 															  COMPUTE_MEMORY_FLAG::WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 		
-		aabbs = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, model_count * sizeof(float3) * 2,
+		aabbs = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, model_count * sizeof(float3) * 2,
 											   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 	}
 	
 	// init all data (every time this is called)
-	collision_flags->zero(hlbvh_state.dev_queue);
-	aabb_collision_flags->zero(hlbvh_state.dev_queue);
+	collision_flags->zero(*hlbvh_state.dev_queue);
+	aabb_collision_flags->zero(*hlbvh_state.dev_queue);
 	
 	if(hlbvh_state.triangle_vis) {
 		for(const auto& mdl : models) {
 			// swap + clear
 			mdl->colliding_triangles_idx = 1 - mdl->colliding_triangles_idx;
-			mdl->colliding_triangles[mdl->colliding_triangles_idx]->zero(hlbvh_state.dev_queue);
+			mdl->colliding_triangles[mdl->colliding_triangles_idx]->zero(*hlbvh_state.dev_queue);
 		}
 	}
 	
@@ -75,7 +75,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		init_aabbs[i * 2] = float3(__FLT_MAX__);
 		init_aabbs[i * 2 + 1] = float3(-__FLT_MAX__);
 	}
-	aabbs->write(hlbvh_state.dev_queue, init_aabbs);
+	aabbs->write(*hlbvh_state.dev_queue, init_aabbs);
 	
 	// compute root aabbs
 	uint32_t mdl_idx = 0;
@@ -112,7 +112,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 									   aabb_collision_flags);
 		
 		// read back aabb collision flags
-		aabb_collision_flags->read(hlbvh_state.dev_queue, aabb_collision_flags_host.get());
+		aabb_collision_flags->read(*hlbvh_state.dev_queue, aabb_collision_flags_host.get());
 		
 		// we're only interessted in further constructing+colliding bvhs for meshes whose root aabbs collide with something
 		// and also only the resp. collision pairs
@@ -175,7 +175,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 									   mdl->bvh_aabbs_leaves);
 		
 		log_if_debug("build_bvh_aabbs: %u", i);
-		mdl->bvh_aabbs_counters->zero(hlbvh_state.dev_queue);
+		mdl->bvh_aabbs_counters->zero(*hlbvh_state.dev_queue);
 		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["build_bvh_aabbs"],
 									   uint1 { leaf_count },
 									   uint1 { hlbvh_state.kernel_max_local_size["build_bvh_aabbs"] },
@@ -259,7 +259,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 	
 	// copy to host + return
 	// TODO: share buffer with gl/metal instead? (unless doing cpu side checking)
-	collision_flags->read(hlbvh_state.dev_queue, &collision_flags_host[0]);
+	collision_flags->read(*hlbvh_state.dev_queue, &collision_flags_host[0]);
 #if 0 // log collided models
 	string collision_str = "collisions: ";
 	for(const auto& col_flag : collision_flags_host) {
@@ -273,7 +273,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 			const auto& mdl = models[i];
 			const auto cur_frame = mdl->cur_frame;
 			const auto triangle_count = mdl->tri_count;
-			mdl->colliding_vertices->zero(hlbvh_state.dev_queue);
+			mdl->colliding_vertices->zero(*hlbvh_state.dev_queue);
 			if(collision_flags_host[i] > 0) {
 				hlbvh_state.dev_queue->execute(hlbvh_state.kernels["map_collided_triangles"],
 											   uint1 { triangle_count },
@@ -294,7 +294,7 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 						  const size_t size,
 						  const uint32_t max_bit) {
 	if(!valid_counts_buffer) {
-		valid_counts_buffer = hlbvh_state.ctx->create_buffer(hlbvh_state.dev, COMPACTION_GROUP_COUNT * sizeof(uint32_t),
+		valid_counts_buffer = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, COMPACTION_GROUP_COUNT * sizeof(uint32_t),
 															 COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
 	

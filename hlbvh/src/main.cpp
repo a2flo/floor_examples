@@ -321,7 +321,7 @@ int main(int, char* argv[]) {
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	hlbvh_state.dev = hlbvh_state.ctx->get_device(compute_device::TYPE::FASTEST);
-	hlbvh_state.dev_queue = hlbvh_state.ctx->create_queue(hlbvh_state.dev);
+	hlbvh_state.dev_queue = hlbvh_state.ctx->create_queue(*hlbvh_state.dev);
 	
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
@@ -358,7 +358,7 @@ int main(int, char* argv[]) {
 			log_error("failed to retrieve kernel \"%s\" from program", kernel.first);
 			return -1;
 		}
-		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(hlbvh_state.dev)->max_total_local_size;
+		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(*hlbvh_state.dev)->max_total_local_size;
 		log_debug("max local size for \"%s\": %u", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
 	}
 	

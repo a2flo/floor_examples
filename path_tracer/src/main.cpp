@@ -37,7 +37,7 @@ int main(int, char* argv[]) {
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	auto dev_queue = compute_ctx->create_queue(fastest_device);
+	auto dev_queue = compute_ctx->create_queue(*fastest_device);
 	
 	//
 	static const uint2 img_size { 512, 512 }; // fixed for now, b/c random function makes this look horrible at higher res
@@ -64,7 +64,7 @@ int main(int, char* argv[]) {
 	}
 	
 	// create the image buffer on the device
-	auto img_buffer = compute_ctx->create_buffer(fastest_device, sizeof(float4) * pixel_count);
+	auto img_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * pixel_count);
 	
 	bool done = false;
 	static constexpr const uint32_t iteration_count { 16384 };
@@ -80,7 +80,7 @@ int main(int, char* argv[]) {
 		// draw every 10th frame (except for the first 10 frames)
 		if(iteration < 10 || iteration % 10 == 0) {
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float4*)img_buffer->map(dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto img_data = (float4*)img_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 
 			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
 			const auto gamma_correct = [](const float3& color) {
@@ -103,7 +103,7 @@ int main(int, char* argv[]) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, rgb.x, rgb.y, rgb.z);
 				}
 			}
-			img_buffer->unmap(dev_queue, img_data);
+			img_buffer->unmap(*dev_queue, img_data);
 			
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());

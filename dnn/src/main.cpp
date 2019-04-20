@@ -123,7 +123,7 @@ static shared_ptr<compute_image> load_test_image(const string& file_name) {
 	auto pixels = make_unique<uint8_t[]>(img_size);
 	memcpy(pixels.get(), surface->pixels, img_size);
 	
-	return dnn_state.ctx->create_image(dnn_state.dev,
+	return dnn_state.ctx->create_image(*dnn_state.dev_queue,
 									   dim,
 									   image_type,
 									   pixels.get(),
@@ -198,14 +198,14 @@ static optional<string> run_vgg(nn_executer& nn_exec, shared_ptr<compute_image> 
 	log_msg("VGG16 executed in %ums", double(vgg_exec_time) / 1000.0);
 
 	// eval/read results
-	auto readback_buffer = nn_exec.get_cur_buffer()->clone(dnn_state.dev_queue, true,
+	auto readback_buffer = nn_exec.get_cur_buffer()->clone(*dnn_state.dev_queue, true,
 														   COMPUTE_MEMORY_FLAG::READ_WRITE |
 														   COMPUTE_MEMORY_FLAG::HOST_READ);
 	
 	const uint32_t prob_count = nn_exec.get_cur_dim().x;
 	vector<float> probabilities(prob_count);
 	vector<pair<uint32_t, float>> kv_probabilities;
-	readback_buffer->read(dnn_state.dev_queue, &probabilities[0]);
+	readback_buffer->read(*dnn_state.dev_queue, &probabilities[0]);
 	for (uint32_t i = 0; i < prob_count; ++i) {
 		kv_probabilities.emplace_back(i, probabilities[i]);
 	}
@@ -279,7 +279,7 @@ int main(int, char* argv[]) {
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
 		dnn_state.dev = dnn_state.ctx->get_device(compute_device::TYPE::FASTEST);
-		dnn_state.dev_queue = dnn_state.ctx->create_queue(dnn_state.dev);
+		dnn_state.dev_queue = dnn_state.ctx->create_queue(*dnn_state.dev);
 		
 		// compile the program and get the kernel functions
 		if(!nn_executer::init_kernels()) return -1;
@@ -298,7 +298,7 @@ int main(int, char* argv[]) {
 		);
 		if (!vgg_mdl) break;
 		
-		auto nn_exec = make_unique<nn_executer>(*vgg_mdl, dnn_state.dev, dnn_state.dev_queue);
+		auto nn_exec = make_unique<nn_executer>(*vgg_mdl, *dnn_state.dev, dnn_state.dev_queue);
 		
 #if !defined(FLOOR_IOS)
 		// load test image
