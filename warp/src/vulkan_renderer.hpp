@@ -37,7 +37,7 @@ protected:
 	void render_full_scene(const floor_obj_model& model, const camera& cam) override;
 	
 #if !defined(FLOOR_NO_VULKAN)
-	bool make_pipeline(vulkan_device* vk_dev,
+	bool make_pipeline(const vulkan_device& vk_dev,
 					   VkRenderPass render_pass,
 					   const WARP_PIPELINE pipeline_id,
 					   const WARP_SHADER vertex_shader,
@@ -47,7 +47,7 @@ protected:
 					   const bool has_depth_attachment,
 					   const VkCompareOp depth_compare_op = VK_COMPARE_OP_LESS);
 	
-	vulkan_kernel::vulkan_kernel_entry* get_shader_entry(const WARP_SHADER& shader) const;
+	const vulkan_kernel::vulkan_kernel_entry* get_shader_entry(const WARP_SHADER& shader) const;
 #endif
 	
 };

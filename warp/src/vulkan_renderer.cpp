@@ -60,9 +60,9 @@ struct pipeline_object {
 };
 static array<pipeline_object, vulkan_renderer::warp_pipeline_count()> pipelines;
 
-vulkan_kernel::vulkan_kernel_entry* vulkan_renderer::get_shader_entry(const WARP_SHADER& shader) const {
+const vulkan_kernel::vulkan_kernel_entry* vulkan_renderer::get_shader_entry(const WARP_SHADER& shader) const {
 	return (shader < __MAX_WARP_SHADER ?
-			(vulkan_kernel::vulkan_kernel_entry*)shader_entries[shader] :
+			(const vulkan_kernel::vulkan_kernel_entry*)shader_entries[shader] :
 			nullptr);
 };
 
@@ -159,7 +159,7 @@ static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> att
 	return render_pass;
 }
 
-bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
+bool vulkan_renderer::make_pipeline(const vulkan_device& vk_dev,
 									VkRenderPass render_pass,
 									const WARP_PIPELINE pipeline_id,
 									const WARP_SHADER vertex_shader,
@@ -169,7 +169,7 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 									const bool has_depth_attachment,
 									const VkCompareOp depth_compare_op) {
 	//log_debug("creating pipeline #%u", pipeline_id);
-	auto device = vk_dev->device;
+	auto device = vk_dev.device;
 	
 	auto vs_entry = get_shader_entry(vertex_shader);
 	auto fs_entry = get_shader_entry(fragment_shader);
@@ -178,7 +178,7 @@ bool vulkan_renderer::make_pipeline(vulkan_device* vk_dev,
 	
 	// create the pipeline layout
 	vector<VkDescriptorSetLayout> desc_set_layouts {
-		vk_dev->fixed_sampler_desc_set_layout,
+		vk_dev.fixed_sampler_desc_set_layout,
 		vs_entry->desc_set_layout
 	};
 	if(fs_entry != nullptr) {
@@ -333,8 +333,8 @@ bool vulkan_renderer::init() {
 	}
 	
 	auto vk_ctx = (vulkan_compute*)warp_state.ctx.get();
-	auto vk_dev = (vulkan_device*)warp_state.dev.get();
-	auto device = vk_dev->device;
+	const auto& vk_dev = (const vulkan_device&)*warp_state.dev;
+	auto device = vk_dev.device;
 	
 	// fun times
 	clip = matrix4f {
@@ -569,7 +569,7 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 		const vector<vulkan_kernel::multi_draw_entry> blit_draw_info {
 			{ .vertex_count = 3 }
 		};
-		((vulkan_kernel*)shaders[BLIT_VS])->multi_draw(warp_state.dev_queue.get(), &blit_cmd_buffer,
+		((vulkan_kernel*)shaders[BLIT_VS])->multi_draw(*warp_state.dev_queue, &blit_cmd_buffer,
 													   pipeline.pipeline,
 													   pipeline.layout,
 													   get_shader_entry(BLIT_VS),
@@ -639,7 +639,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 					"failed to begin command buffer");
 		
 		// make the attachment writable (again)
-		((vulkan_image*)shadow_map.shadow_image.get())->transition_write(cmd_buffer.cmd_buffer);
+		((vulkan_image*)shadow_map.shadow_image.get())->transition_write(*warp_state.dev_queue, cmd_buffer.cmd_buffer);
 		
 		const VkViewport shadow_viewport {
 			.x = 0.0f,
@@ -669,7 +669,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SHADOW_VS])->multi_draw_indexed(warp_state.dev_queue.get(), &cmd_buffer,
+		((vulkan_kernel*)shaders[SHADOW_VS])->multi_draw_indexed(*warp_state.dev_queue, &cmd_buffer,
 																 pipeline.pipeline,
 																 pipeline.layout,
 																 get_shader_entry(SHADOW_VS),
@@ -700,7 +700,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 					"failed to begin command buffer");
 		
 		// make the attachment writable (again)
-		((vulkan_image*)scene_fbo.color[cur_fbo].get())->transition_write(cmd_buffer.cmd_buffer);
+		((vulkan_image*)scene_fbo.color[cur_fbo].get())->transition_write(*warp_state.dev_queue, cmd_buffer.cmd_buffer);
 		
 		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &viewport);
 		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
@@ -718,7 +718,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SCENE_GATHER_VS])->multi_draw_indexed(warp_state.dev_queue.get(), &cmd_buffer,
+		((vulkan_kernel*)shaders[SCENE_GATHER_VS])->multi_draw_indexed(*warp_state.dev_queue, &cmd_buffer,
 																	   pipeline.pipeline,
 																	   pipeline.layout,
 																	   get_shader_entry(SCENE_GATHER_VS),
@@ -776,7 +776,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SKYBOX_GATHER_VS])->multi_draw(warp_state.dev_queue.get(), &cmd_buffer,
+		((vulkan_kernel*)shaders[SKYBOX_GATHER_VS])->multi_draw(*warp_state.dev_queue, &cmd_buffer,
 																pipeline.pipeline,
 																pipeline.layout,
 																get_shader_entry(SKYBOX_GATHER_VS),
