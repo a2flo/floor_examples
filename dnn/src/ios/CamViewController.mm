@@ -84,11 +84,11 @@ static image_evaluator img_eval;
 		auto cg_image = [self.image_view.image CGImage];
 		string img_label;
 		if (cg_image != nullptr) {
-			MTKTextureLoader* tex_loader = [[MTKTextureLoader alloc] initWithDevice:((metal_device*)dnn_state.dev.get())->device];
+			MTKTextureLoader* tex_loader = [[MTKTextureLoader alloc] initWithDevice:((const metal_device&)*dnn_state.dev).device];
 			id <MTLTexture> tex = [tex_loader newTextureWithCGImage:cg_image
 															options:nullptr
 															  error:nullptr];
-			auto img = make_shared<metal_image>(dnn_state.dev, tex);
+			auto img = make_shared<metal_image>(*dnn_state.dev_queue, tex);
 			log_debug("got camera image of type: %s",
 					  compute_image::image_type_to_string(img->get_image_type()));
 			img_label = img_eval(img);
