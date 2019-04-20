@@ -740,7 +740,7 @@ static int run_normal_build(option_context& option_ctx) {
 					break;
 				}
 				log_debug("using device: %s", dev->name);
-				auto cl_dev = ((opencl_device*)dev.get())->device_id;
+				auto cl_dev = ((const opencl_device&)dev).device_id;
 				
 				cl_program opencl_program { nullptr };
 				if(!option_ctx.native_cl) {
@@ -794,7 +794,7 @@ static int run_normal_build(option_context& option_ctx) {
 						(option_ctx.target == llvm_toolchain::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 					};
 					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
-										  build_err, "failed to build opencl program", {});
+										  build_err, "failed to build opencl program", {})
 					log_debug("check"); logger::flush();
 				}
 				else {
@@ -812,7 +812,7 @@ static int run_normal_build(option_context& option_ctx) {
 					
 					const string build_options = option_ctx.additional_options;
 					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
-										  build_err, "failed to build opencl program", {});
+										  build_err, "failed to build opencl program", {})
 					log_debug("check"); logger::flush();
 				}
 				
@@ -927,8 +927,8 @@ static int run_normal_build(option_context& option_ctx) {
 				//       AMD does proper checking there -> to fully check everything, we need to actually create
 				//       a pipeline (however, this can only be done for compute right now)
 				vulkan_program::program_map_type prog_map;
-				prog_map.insert_or_assign((vulkan_device*)dev.get(),
-										  ctx->create_vulkan_program(dev, program));
+				prog_map.insert_or_assign((const vulkan_device&)*dev,
+										  ctx->create_vulkan_program(*dev, program));
 				ctx->add_program(move(prog_map)); // will have already printed an error (if sth was wrong)
 #else
 				log_error("vulkan testing not supported on this platform (or disabled during floor compilation)");
