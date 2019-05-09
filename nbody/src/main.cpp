@@ -18,6 +18,7 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/core/core.hpp>
 #include <floor/compute/compute_kernel.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"

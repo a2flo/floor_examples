@@ -19,6 +19,7 @@
 #include "gl_renderer.hpp"
 #include "nbody_state.hpp"
 #include <floor/core/gl_shader.hpp>
+#include <floor/core/gl_support.hpp>
 
 static unordered_map<string, floor_shader_object> shader_objects;
 
@@ -135,7 +136,7 @@ void gl_renderer::render(const compute_queue& dev_queue,
 }
 
 bool gl_renderer::compile_shaders() {
-	static const string nbody_color_gradient_compute { u8R"RAWSTR(
+	static const string nbody_color_gradient_compute { R"RAWSTR(
 		vec4 compute_gradient(const in float interpolator) {
 			const vec4 gradients[4] = vec4[4](vec4(1.0, 0.2, 0.0, 1.0),
 											  vec4(1.0, 1.0, 0.0, 1.0),
@@ -159,7 +160,7 @@ bool gl_renderer::compile_shaders() {
 			return color;
 		}
 	)RAWSTR"};
-	static const string nbody_vs_text { nbody_color_gradient_compute + u8R"RAWSTR(
+	static const string nbody_vs_text { nbody_color_gradient_compute + R"RAWSTR(
 		uniform mat4 mvpm;
 		uniform vec2 mass_minmax;
 		in vec4 in_vertex;
@@ -171,7 +172,7 @@ bool gl_renderer::compile_shaders() {
 			gl_Position = mvpm * vec4(in_vertex.xyz, 1.0);
 		}
 	)RAWSTR"};
-	static const string nbody_vs_sprite_text { nbody_color_gradient_compute + u8R"RAWSTR(
+	static const string nbody_vs_sprite_text { nbody_color_gradient_compute + R"RAWSTR(
 		uniform mat4 mvpm;
 		uniform mat4 mvm;
 		uniform vec2 mass_minmax;
@@ -193,7 +194,7 @@ bool gl_renderer::compile_shaders() {
 			color = compute_gradient((in_vertex.w - mass_minmax.x) / (mass_minmax.y - mass_minmax.x));
 		}
 	)RAWSTR"};
-	static const string nbody_fs_text { u8R"RAWSTR(
+	static const string nbody_fs_text { R"RAWSTR(
 		in vec4 color;
 		uniform mat4 mvpm;
 		uniform sampler2D tex;
@@ -203,7 +204,7 @@ bool gl_renderer::compile_shaders() {
 			frag_color = texture(tex, gl_PointCoord.xy) * color;
 		}
 	)RAWSTR"};
-	static const string nbody_fs_discard_text { u8R"RAWSTR(
+	static const string nbody_fs_discard_text { R"RAWSTR(
 		in vec4 color;
 		uniform mat4 mvpm;
 		uniform sampler2D tex;

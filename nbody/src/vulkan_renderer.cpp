@@ -150,7 +150,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.pDependencies = nullptr,
 	};
 	VK_CALL_RET(vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass),
-				"failed to create render pass", false);
+				"failed to create render pass", false)
 	
 	// create the pipeline layout
 	vector<VkDescriptorSetLayout> desc_set_layouts;
@@ -171,7 +171,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.pPushConstantRanges = nullptr,
 	};
 	VK_CALL_RET(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout),
-				"failed to create pipeline layout", false);
+				"failed to create pipeline layout", false)
 	
 	// create the pipeline
 	const VkPipelineShaderStageCreateInfo stages[2] {
@@ -307,7 +307,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.basePipelineIndex = 0,
 	};
 	VK_CALL_RET(vkCreateGraphicsPipelines(device, nullptr, 1, &gfx_pipeline_info, nullptr, &pipeline),
-				"failed to create pipeline", false);
+				"failed to create pipeline", false)
 	
 	// create framebuffers from the created render pass + swapchain image views
 	VkFramebufferCreateInfo framebuffer_create_info {
@@ -325,7 +325,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 	for(uint32_t i = 0, count = vk_ctx->get_swapchain_image_count(); i < count; ++i) {
 		framebuffer_create_info.pAttachments = &vk_ctx->get_swapchain_image_view(i);
 		VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &screen_framebuffers[i]),
-					"failed to create framebuffer", false);
+					"failed to create framebuffer", false)
 	}
 	
 	log_debug("pipeline initialized");
@@ -367,7 +367,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		.pInheritanceInfo = nullptr,
 	};
 	VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
-				"failed to begin command buffer");
+				"failed to begin command buffer")
 	
 	//
 	const VkViewport viewport {
@@ -515,7 +515,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	
-	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
 	vk_queue.submit_command_buffer(cmd_buffer, true);
 	
 	vk_ctx->present_image(drawable);
