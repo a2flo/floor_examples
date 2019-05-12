@@ -54,6 +54,7 @@ struct option_context {
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	METAL_VERSION metal_std { METAL_VERSION::METAL_1_1 };
 	uint32_t ptx_version { 43 };
+	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_0 };
 	bool warnings { false };
 	bool workarounds { false };
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
@@ -102,6 +103,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0|2.1>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60|61|62|63>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
+				 "\t--vulkan-std <1.0|1.1>: sets the supported Vulkan version (defaults to 1.0)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -238,6 +240,20 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 &&
 		   ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63) {
 			cerr << "invalid --ptx-version argument" << endl;
+			return;
+		}
+	}},
+	{ "--vulkan-std", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string vlk_version_str = *arg_ptr;
+		if(vlk_version_str == "1.0") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_0; }
+		else if(vlk_version_str == "1.1") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_1; }
+		else {
+			cerr << "invalid --vulkan-std argument" << endl;
 			return;
 		}
 	}},
@@ -473,8 +489,9 @@ static int run_normal_build(option_context& option_ctx) {
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				log_debug("compiling to AIR (feature set: %u) ...", dev->feature_set);
 			} break;
-			case llvm_toolchain::TARGET::SPIRV_VULKAN:
+			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 				device = make_shared<vulkan_device>();
+				vulkan_device* dev = (vulkan_device*)device.get();
 				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
 					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
 					return -4;
@@ -487,12 +504,24 @@ static int run_normal_build(option_context& option_ctx) {
 				// mip-mapping support is already enabled, just need to set the max supported mip level count
 				device->max_mip_levels = 15;
 				
+				// handle version
+				dev->vulkan_version = option_ctx.vulkan_std;
+				switch (dev->vulkan_version) {
+					default:
+					case VULKAN_VERSION::VULKAN_1_0:
+						dev->spirv_version = SPIRV_VERSION::SPIRV_1_0;
+						break;
+					case VULKAN_VERSION::VULKAN_1_1:
+						dev->spirv_version = SPIRV_VERSION::SPIRV_1_3;
+						break;
+				}
+				
 				// not supported right now
 				//if(option_ctx.sub_groups) device->sub_group_support = true;
 				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
 				
 				log_debug("compiling to SPIR-V Vulkan ...");
-				break;
+			} break;
 		}
 		
 		// compile

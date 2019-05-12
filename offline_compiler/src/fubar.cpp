@@ -256,6 +256,21 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.version = universal_binary::target_format_version,
+				.type = COMPUTE_TYPE::VULKAN,
+				.vulkan = {
+					.vulkan_major = 1,
+					.vulkan_minor = 1,
+					.spirv_major = 1,
+					.spirv_minor = 3,
+					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
+					.double_support = 0,
+					.basic_64_bit_atomics_support = 0,
+					.extended_64_bit_atomics_support = 0,
+					._unused = 0,
+				}
+			},
 #endif
 		};
 		
