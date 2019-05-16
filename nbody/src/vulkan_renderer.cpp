@@ -38,6 +38,17 @@ static vector<VkFramebuffer> screen_framebuffers;
 static array<shared_ptr<vulkan_image>, 2> body_textures {};
 static void create_textures(const compute_queue& dev_queue) {
 	auto ctx = floor::get_compute_context();
+	const auto& vk_queue = (const vulkan_queue&)dev_queue;
+
+	// images must be transitioned after creation
+	auto cmd = vk_queue.make_command_buffer("image transition");
+	const VkCommandBufferBeginInfo begin_info{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr,
+	};
+	VK_CALL_RET(vkBeginCommandBuffer(cmd.cmd_buffer, &begin_info), "failed to begin command buffer")
 	
 	// create/generate an opengl texture and bind it
 	for(size_t i = 0; i < body_textures.size(); ++i) {
@@ -73,7 +84,11 @@ static void create_textures(const compute_queue& dev_queue) {
 																			   COMPUTE_MEMORY_FLAG::READ |
 																			   COMPUTE_MEMORY_FLAG::HOST_WRITE /*|
 																			   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS*/));
+		body_textures[i]->transition_read(dev_queue, cmd.cmd_buffer);
 	}
+
+	VK_CALL_RET(vkEndCommandBuffer(cmd.cmd_buffer), "failed to end command buffer")
+	vk_queue.submit_command_buffer(cmd);
 }
 
 bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
