@@ -36,9 +36,9 @@ verbose() {
 # if no CXX/CC are specified, try using clang++/clang
 if [ -z "${CXX}" ]; then
 	# try using clang++ directly (avoid any nasty wrappers)
-	if [ -n $(command -v /usr/bin/clang++) ]; then
+	if [[ -n $(command -v /usr/bin/clang++) ]]; then
 		CXX=/usr/bin/clang++
-	elif [ -n $(command -v /usr/local/bin/clang++) ]; then
+	elif [[ -n $(command -v /usr/local/bin/clang++) ]]; then
 		CXX=/usr/local/bin/clang++
 	else
 		CXX=clang++
@@ -48,9 +48,9 @@ command -v ${CXX} >/dev/null 2>&1 || error "clang++ binary not found, please set
 
 if [ -z "${CC}" ]; then
 	# try using clang directly (avoid any nasty wrappers)
-	if [ -n $(command -v /usr/bin/clang) ]; then
-		CC=/usr/bin/clang++
-	elif [ -n $(command -v /usr/local/bin/clang) ]; then
+	if [[ -n $(command -v /usr/bin/clang) ]]; then
+		CC=/usr/bin/clang
+	elif [[ -n $(command -v /usr/local/bin/clang) ]]; then
 		CC=/usr/local/bin/clang
 	else
 		CC=clang
@@ -242,12 +242,12 @@ case ${BUILD_PLATFORM} in
 	"cygwin"*)
 		# untested
 		BUILD_OS="cygwin"
-		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([:digit:]*)/\1/g')
+		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([[:digit:]]*)/\1/g')
 		warning "cygwin support is untested and unsupported!"
 		;;
 	"mingw"*)
 		BUILD_OS="mingw"
-		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([:digit:]*)/\1/g')
+		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([[:digit:]]*)/\1/g')
 		;;
 	*)
 		warning "unknown build platform - trying to continue! ${BUILD_PLATFORM}"
@@ -352,17 +352,9 @@ fi
 
 # link against floor (note: floor debug lib is suffixed by "d")
 if [ $BUILD_MODE == "debug" ]; then
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lfloord_static"
-	else
-		LDFLAGS="${LDFLAGS} -lfloord"
-	fi
+	LDFLAGS="${LDFLAGS} -lfloord"
 else
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lfloor_static"
-	else
-		LDFLAGS="${LDFLAGS} -lfloor"
-	fi
+	LDFLAGS="${LDFLAGS} -lfloor"
 fi
 
 # use pkg-config (and some manual libs/includes) on all platforms except osx/ios
@@ -417,8 +409,6 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
 		if [ $BUILD_OS != "mingw" ]; then
 			UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan"
-		else
-			UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan-1"
 		fi
 	fi
 
@@ -466,7 +456,13 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 		fi
 		
 		if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
-			if [ ! -z "${VK_SDK_PATH}" ]; then
+			if [ "$(pkg-config --exists vulkan && echo $?)" == "0" ]; then
+				# use MSYS2/MinGW package
+				LIBS="${LIBS} $(pkg-config --libs vulkan)"
+				COMMON_FLAGS="${COMMON_FLAGS} $(pkg-config --cflags vulkan)"
+			elif [ ! -z "${VK_SDK_PATH}" ]; then
+				# use official SDK
+				UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan-1"
 				VK_SDK_PATH_FIXED=$(echo ${VK_SDK_PATH} | sed -E "s/\\\\/\//g")
 				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
 					LDFLAGS="${LDFLAGS} -L\"${VK_SDK_PATH_FIXED}/Bin32\""
@@ -475,7 +471,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 				fi
 				INCLUDES="${INCLUDES} -isystem \"${VK_SDK_PATH_FIXED}/Include\""
 			else
-				error "Vulkan SDK not installed (VK_SDK_PATH not set)"
+				error "Vulkan SDK not installed (install official SDK or mingw-w64-x86_64-vulkan)"
 			fi
 		fi
 	fi
