@@ -423,7 +423,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	// bind/update descs
 	const auto write_desc_count = 4;
 	vector<VkWriteDescriptorSet> write_descs(write_desc_count);
-	vector<uint32_t> dyn_offsets;
 	uint32_t write_idx = 0;
 	
 	// fixed sampler set
@@ -454,9 +453,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		write_desc.pImageInfo = nullptr;
 		write_desc.pBufferInfo = ((vulkan_buffer*)position_buffer.get())->get_vulkan_buffer_info();
 		write_desc.pTexelBufferView = nullptr;
-		
-		// always offset 0 for now
-		dyn_offsets.emplace_back(0);
 	}
 	
 	//
@@ -489,9 +485,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		write_desc.pImageInfo = nullptr;
 		write_desc.pBufferInfo = ((vulkan_buffer*)constant_buffer.get())->get_vulkan_buffer_info();
 		write_desc.pTexelBufferView = nullptr;
-		
-		// always offset 0 for now
-		dyn_offsets.emplace_back(0);
 	}
 	
 	// fs arg #0
@@ -523,8 +516,8 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 							0,
 							(uint32_t)size(desc_sets),
 							desc_sets,
-							(uint32_t)dyn_offsets.size(),
-							dyn_offsets.data());
+							0,
+							nullptr);
 	
 	vkCmdDraw(cmd_buffer.cmd_buffer, nbody_state.body_count, 1, 0, 0);
 	

@@ -36,9 +36,9 @@ namespace fubar {
 #if 1
 			// CUDA
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 3,
 					.sm_minor = 0,
 					.ptx_isa_major = 4,
@@ -49,9 +49,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 3,
 					.sm_minor = 5,
 					.ptx_isa_major = 4,
@@ -62,9 +62,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 0,
 					.ptx_isa_major = 4,
@@ -75,9 +75,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 2,
 					.ptx_isa_major = 4,
@@ -88,9 +88,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 0,
 					.ptx_isa_major = 5,
@@ -101,9 +101,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 1,
 					.ptx_isa_major = 5,
@@ -114,9 +114,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 0,
 					.ptx_isa_major = 6,
@@ -127,9 +127,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
 				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 5,
 					.ptx_isa_major = 6,
@@ -143,9 +143,9 @@ namespace fubar {
 #if 1
 			// Metal
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 1,
 					.minor = 1,
 					.is_ios = 0,
@@ -155,9 +155,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 1,
 					.minor = 1,
 					.is_ios = 1,
@@ -167,9 +167,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 0,
 					.is_ios = 0,
@@ -179,9 +179,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 0,
 					.is_ios = 1,
@@ -191,9 +191,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 1,
 					.is_ios = 0,
@@ -203,9 +203,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
 				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 1,
 					.is_ios = 1,
@@ -218,9 +218,9 @@ namespace fubar {
 #if 1
 			// OpenCL
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::OPENCL,
 				.opencl = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::OPENCL,
 					.major = 1,
 					.minor = 2,
 					.is_spir = 1,
@@ -242,9 +242,9 @@ namespace fubar {
 #if 1
 			// Vulkan
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::VULKAN,
 				.vulkan = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::VULKAN,
 					.vulkan_major = 1,
 					.vulkan_minor = 0,
 					.spirv_major = 1,
@@ -257,9 +257,9 @@ namespace fubar {
 				}
 			},
 			{
-				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::VULKAN,
 				.vulkan = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::VULKAN,
 					.vulkan_major = 1,
 					.vulkan_minor = 1,
 					.spirv_major = 1,
@@ -283,7 +283,7 @@ namespace fubar {
 		
 		// overwrite options if specified/necessary
 		for (auto& target : ret_targets) {
-			if (target.type == COMPUTE_TYPE::CUDA && target.cuda.max_registers == 0) {
+			if (target.common.type == COMPUTE_TYPE::CUDA && target.cuda.max_registers == 0) {
 				target.cuda.max_registers = options.cuda.max_registers;
 			}
 		}
