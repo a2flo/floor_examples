@@ -30,6 +30,8 @@
 static VkRenderPass render_pass { nullptr };
 static VkPipeline pipeline { nullptr };
 static VkPipelineLayout pipeline_layout { nullptr };
+static compute_kernel* nbody_vs { nullptr };
+static compute_kernel* nbody_fs { nullptr };
 static const vulkan_kernel::vulkan_kernel_entry* vs_entry;
 static const vulkan_kernel::vulkan_kernel_entry* fs_entry;
 
@@ -110,6 +112,8 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		log_error("fragment shader not found");
 		return false;
 	}
+	nbody_vs = vs.get();
+	nbody_fs = fs.get();
 	
 	vs_entry = (const vulkan_kernel::vulkan_kernel_entry*)vs->get_kernel_entry(dev);
 	if(!vs_entry) {
@@ -358,12 +362,10 @@ void vulkan_renderer::destroy(shared_ptr<compute_context> ctx floor_unused,
 }
 
 void vulkan_renderer::render(shared_ptr<compute_context> ctx,
-							 const compute_device& dev,
 							 const compute_queue& dev_queue,
 							 shared_ptr<compute_buffer> position_buffer) {
 	auto vk_ctx = (vulkan_compute*)ctx.get();
 	const auto& vk_queue = (const vulkan_queue&)dev_queue;
-	const auto& vk_dev = (const vulkan_device&)dev;
 	
 	//
 	auto drawable_ret = vk_ctx->acquire_next_image();
@@ -418,44 +420,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	};
 	vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 	
-	vkCmdBindPipeline(cmd_buffer.cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-	
-	// bind/update descs
-	const auto write_desc_count = 4;
-	vector<VkWriteDescriptorSet> write_descs(write_desc_count);
-	uint32_t write_idx = 0;
-	
-	// fixed sampler set
-	{
-		auto& write_desc = write_descs[write_idx++];
-		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_desc.pNext = nullptr;
-		write_desc.dstSet = vk_dev.fixed_sampler_desc_set;
-		write_desc.dstBinding = 0;
-		write_desc.dstArrayElement = 0;
-		write_desc.descriptorCount = (uint32_t)vk_dev.fixed_sampler_set.size();
-		write_desc.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-		write_desc.pImageInfo = vk_dev.fixed_sampler_image_info.data();
-		write_desc.pBufferInfo = nullptr;
-		write_desc.pTexelBufferView = nullptr;
-	}
-	
-	// vs arg #0
-	{
-		auto& write_desc = write_descs[write_idx++];
-		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_desc.pNext = nullptr;
-		write_desc.dstSet = vs_entry->desc_set;
-		write_desc.dstBinding = 0;
-		write_desc.dstArrayElement = 0;
-		write_desc.descriptorCount = 1;
-		write_desc.descriptorType = vs_entry->desc_types[0];
-		write_desc.pImageInfo = nullptr;
-		write_desc.pBufferInfo = ((vulkan_buffer*)position_buffer.get())->get_vulkan_buffer_info();
-		write_desc.pTexelBufferView = nullptr;
-	}
-	
-	//
 	const matrix4f mproj { matrix4f().perspective(90.0f, float(floor::get_width()) / float(floor::get_height()),
 												  0.25f, nbody_state.max_distance) };
 	const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
@@ -469,62 +433,31 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		.mass_minmax = nbody_state.mass_minmax
 	};
 	
-	// vs arg #1
-	shared_ptr<compute_buffer> constant_buffer = make_shared<vulkan_buffer>(vk_queue, sizeof(uniforms), (void*)&uniforms,
-																			COMPUTE_MEMORY_FLAG::READ |
-																			COMPUTE_MEMORY_FLAG::HOST_WRITE);
-	{
-		auto& write_desc = write_descs[write_idx++];
-		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_desc.pNext = nullptr;
-		write_desc.dstSet = vs_entry->desc_set;
-		write_desc.dstBinding = 1;
-		write_desc.dstArrayElement = 0;
-		write_desc.descriptorCount = 1;
-		write_desc.descriptorType = vs_entry->desc_types[1];
-		write_desc.pImageInfo = nullptr;
-		write_desc.pBufferInfo = ((vulkan_buffer*)constant_buffer.get())->get_vulkan_buffer_info();
-		write_desc.pTexelBufferView = nullptr;
-	}
+	// TODO: remove this once constant buffers are properly tracked/killed inside vulkan_kernel
+	vector<shared_ptr<compute_buffer>> retained_buffers;
 	
-	// fs arg #0
-	{
-		auto& write_desc = write_descs[write_idx++];
-		write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		write_desc.pNext = nullptr;
-		write_desc.dstSet = fs_entry->desc_set;
-		write_desc.dstBinding = 0;
-		write_desc.dstArrayElement = 0;
-		write_desc.descriptorCount = 1;
-		write_desc.descriptorType = fs_entry->desc_types[0];
-		write_desc.pImageInfo = ((vulkan_image*)body_textures[0].get())->get_vulkan_image_info();
-		write_desc.pBufferInfo = nullptr;
-		write_desc.pTexelBufferView = nullptr;
-	}
+	static const vector<vulkan_kernel::multi_draw_entry> nbody_draw_info {{
+		.vertex_count = nbody_state.body_count
+	}};
 	
-	vkUpdateDescriptorSets(vk_dev.device,
-						   write_desc_count, write_descs.data(),
-						   0, nullptr);
-	const VkDescriptorSet desc_sets[3] {
-		vk_dev.fixed_sampler_desc_set,
-		vs_entry->desc_set,
-		fs_entry->desc_set,
-	};
-	vkCmdBindDescriptorSets(cmd_buffer.cmd_buffer,
-							VK_PIPELINE_BIND_POINT_GRAPHICS,
-							pipeline_layout,
-							0,
-							(uint32_t)size(desc_sets),
-							desc_sets,
-							0,
-							nullptr);
-	
-	vkCmdDraw(cmd_buffer.cmd_buffer, nbody_state.body_count, 1, 0, 0);
+	// hijack the vertex shader (kernel) for now
+	((vulkan_kernel*)nbody_vs)->multi_draw(dev_queue, &cmd_buffer,
+										   pipeline,
+										   pipeline_layout,
+										   vs_entry,
+										   fs_entry,
+										   retained_buffers,
+										   nbody_draw_info,
+										   // vs args
+										   position_buffer,
+										   uniforms,
+										   // fs args
+										   body_textures[0].get());
 	
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	
 	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
-	vk_queue.submit_command_buffer(cmd_buffer, true);
+	vk_queue.submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	
 	vk_ctx->present_image(drawable);
 }
