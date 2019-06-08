@@ -123,6 +123,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\ti9-7980XE:    ~ 1000 gflops (--count 73728 --tile-size 64)" << endl;
 		cout << "\tGTX 750:      ~  840 gflops (--count 65536 --tile-size 256)" << endl;
 		cout << "\tGT 650M:      ~  385 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tiPad A12:     ~  320 gflops (--count 32768 --tile-size 512)" << endl;
 		cout << "\tHD 530:       ~  242 gflops (--count 65536 --tile-size 128)" << endl;
 		cout << "\tHD 4600:      ~  235 gflops (--count 65536 --tile-size 80)" << endl;
 		cout << "\ti7-6700:      ~  195 gflops (--count 32768 --tile-size 1024)" << endl;

@@ -101,7 +101,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <1.1|1.2|2.0|2.1>: sets the supported Metal version (defaults to 1.1)\n"
+				 "\t--metal-std <1.1|1.2|2.0|2.1|2.2>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60|61|62|63>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--vulkan-std <1.0|1.1>: sets the supported Vulkan version (defaults to 1.0)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -225,6 +225,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(mtl_version_str == "1.2") { ctx.metal_std = METAL_VERSION::METAL_1_2; }
 		else if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
 		else if(mtl_version_str == "2.1") { ctx.metal_std = METAL_VERSION::METAL_2_1; }
+		else if(mtl_version_str == "2.2") { ctx.metal_std = METAL_VERSION::METAL_2_2; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
@@ -469,25 +470,24 @@ static int run_normal_build(option_context& option_ctx) {
 			case llvm_toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
-				dev->metal_version = option_ctx.metal_std;
+				dev->metal_language_version = option_ctx.metal_std;
+				dev->metal_software_version = option_ctx.metal_std;
 				
-				dev->family = 1;
-				dev->family_version = 1;
+				dev->family_tier = 1;
 				if(option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
-					dev->feature_set = 0;
-				}
-				else if(option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
-					dev->feature_set = 10000;
+					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
+				} else if(option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
+					dev->family_type = metal_device::FAMILY_TYPE::MAC;
 					if(option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
 					}
-				}
-				else {
+				} else {
 					log_error("invalid AIR sub-target: %s", option_ctx.sub_target);
 					return -3;
 				}
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
-				log_debug("compiling to AIR (feature set: %u) ...", dev->feature_set);
+				log_debug("compiling to AIR (type: %u, tier: %u) ...",
+						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 			} break;
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 				device = make_shared<vulkan_device>();

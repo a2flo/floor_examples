@@ -20,7 +20,7 @@
 
 #if defined(FLOOR_COMPUTE)
 
-// ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
+// ref: https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch31.html
 
 static void compute_body_interaction(const float4& shared_body,
 									 const float4& this_body,

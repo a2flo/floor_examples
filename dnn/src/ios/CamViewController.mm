@@ -20,6 +20,7 @@
 #import <UIKit/UIKit.h>
 #import <MetalKit/MTKTextureLoader.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_syswm.h>
 #include <floor/floor/floor.hpp>
 #include <floor/compute/metal/metal_device.hpp>
 #include <floor/compute/metal/metal_image.hpp>

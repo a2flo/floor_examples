@@ -808,7 +808,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 }
 
 bool gl_renderer::compile_shaders() {
-	static const char scene_vs_text[] { u8R"RAWSTR(
+	static const char scene_vs_text[] { R"RAWSTR(
 		uniform mat4 mvpm; // @t
 #if defined(WARP_GATHER)
 		uniform mat4 next_mvpm; // @t+1
@@ -879,7 +879,7 @@ bool gl_renderer::compile_shaders() {
 			light_dir.z = dot(vlight, in_normal);
 		}
 	)RAWSTR"};
-	static const char scene_fs_text[] { u8R"RAWSTR(
+	static const char scene_fs_text[] { R"RAWSTR(
 		uniform sampler2D diff_tex;
 		uniform sampler2D spec_tex;
 		uniform sampler2D norm_tex;
@@ -1037,20 +1037,20 @@ bool gl_renderer::compile_shaders() {
 #endif
 		}
 	)RAWSTR"};
-	static const char shadow_map_vs_text[] { u8R"RAWSTR(
+	static const char shadow_map_vs_text[] { R"RAWSTR(
 		uniform mat4 mvpm;
 		in vec3 in_vertex;
 		void main() {
 			gl_Position = mvpm * vec4(in_vertex.xyz, 1.0);
 		}
 	)RAWSTR"};
-	static const char shadow_map_fs_text[] { u8R"RAWSTR(
+	static const char shadow_map_fs_text[] { R"RAWSTR(
 		out float frag_depth;
 		void main() {
 			frag_depth = gl_FragCoord.z;
 		}
 	)RAWSTR"};
-	static const char skybox_vs_text[] { u8R"RAWSTR(
+	static const char skybox_vs_text[] { R"RAWSTR(
 		uniform mat4 imvpm;
 #if defined(WARP_GATHER)
 		uniform mat4 next_mvpm; // @t+1
@@ -1087,7 +1087,7 @@ bool gl_renderer::compile_shaders() {
 #endif
 		}
 	)RAWSTR"};
-	static const char skybox_fs_text[] { u8R"RAWSTR(
+	static const char skybox_fs_text[] { R"RAWSTR(
 		uniform samplerCube skybox_tex;
 		
 		in vec3 cube_tex_coord;

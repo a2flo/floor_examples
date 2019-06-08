@@ -641,7 +641,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  vector<shared_ptr<compute_image>>* model_floor_textures,
 						  // path prefix
 						  const string& prefix,
-						  shared_ptr<compute_context> ctx,
+						  const compute_context& ctx,
 						  const compute_queue& cqueue) {
 	// load textures
 	const auto filenames = core::keys(texture_filenames);
@@ -766,13 +766,13 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			
 			//log_debug("tex %s: %v, %s", filenames[i], dim, compute_image::image_type_to_string(image_type));
 			
-			(*model_floor_textures)[i] = ctx->create_image(cqueue,
-														   dim,
-														   image_type,
-														   pixels,
-														   COMPUTE_MEMORY_FLAG::READ |
-														   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-														   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+			(*model_floor_textures)[i] = ctx.create_image(cqueue,
+														  dim,
+														  image_type,
+														  pixels,
+														  COMPUTE_MEMORY_FLAG::READ |
+														  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+														  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
 			
 			// assign tex ptr to tex filename
 			texture_filenames[filenames[i]].second = (*model_floor_textures)[i].get();
@@ -1066,7 +1066,7 @@ struct obj_grammar {
 	}
 	
 	void parse(parser_context& ctx, bool& success, const bool is_opengl, const bool is_load_textures, shared_ptr<obj_model> model,
-			   shared_ptr<compute_context> comp_ctx, const compute_queue& cqueue) {
+			   const compute_context& comp_ctx, const compute_queue& cqueue) {
 		// clear all
 		vertices.clear();
 		tex_coords.clear();
@@ -1391,14 +1391,14 @@ struct obj_grammar {
 };
 
 shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
-									   shared_ptr<compute_context> ctx,
+									   const compute_context& ctx,
 									   const compute_queue& cqueue,
 									   const float scale,
 									   const bool cleanup_cpu_data,
 									   const bool is_load_textures,
 									   const bool create_gpu_buffers) {
-	const bool is_opengl = (ctx->get_compute_type() != COMPUTE_TYPE::METAL &&
-							ctx->get_compute_type() != COMPUTE_TYPE::VULKAN);
+	const bool is_opengl = (ctx.get_compute_type() != COMPUTE_TYPE::METAL &&
+							ctx.get_compute_type() != COMPUTE_TYPE::VULKAN);
 	success = false;
 	
 	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
@@ -1714,20 +1714,20 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			// create buffers
 			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
 									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
-			floor_model->vertices_buffer = ctx->create_buffer(cqueue, floor_model->vertices, buffer_type);
-			floor_model->tex_coords_buffer = ctx->create_buffer(cqueue, floor_model->tex_coords, buffer_type);
-			floor_model->normals_buffer = ctx->create_buffer(cqueue, floor_model->normals, buffer_type);
-			floor_model->binormals_buffer = ctx->create_buffer(cqueue, floor_model->binormals, buffer_type);
-			floor_model->tangents_buffer = ctx->create_buffer(cqueue, floor_model->tangents, buffer_type);
-			floor_model->materials_buffer = ctx->create_buffer(cqueue, floor_model->material_indices, buffer_type);
+			floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
+			floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
+			floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
+			floor_model->binormals_buffer = ctx.create_buffer(cqueue, floor_model->binormals, buffer_type);
+			floor_model->tangents_buffer = ctx.create_buffer(cqueue, floor_model->tangents, buffer_type);
+			floor_model->materials_buffer = ctx.create_buffer(cqueue, floor_model->material_indices, buffer_type);
 			
 			vector<uint3> all_indices;
 			for(auto& obj : floor_model->objects) {
-				obj->indices_floor_vbo = ctx->create_buffer(cqueue, obj->indices, buffer_type);
+				obj->indices_floor_vbo = ctx.create_buffer(cqueue, obj->indices, buffer_type);
 				all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
 			}
 			floor_model->index_count = (uint32_t)(all_indices.size() * 3);
-			floor_model->indices_buffer = ctx->create_buffer(cqueue, all_indices, buffer_type);
+			floor_model->indices_buffer = ctx.create_buffer(cqueue, all_indices, buffer_type);
 		}
 	}
 	

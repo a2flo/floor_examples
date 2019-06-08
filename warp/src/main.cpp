@@ -421,7 +421,7 @@ int main(int, char* argv[]) {
 		//
 		bool model_success { false };
 		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success,
-								 warp_state.ctx, *warp_state.dev_queue);
+								 *warp_state.ctx, *warp_state.dev_queue);
 		if(!model_success) {
 			return -1;
 		}

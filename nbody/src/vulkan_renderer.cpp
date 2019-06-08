@@ -433,9 +433,6 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		.mass_minmax = nbody_state.mass_minmax
 	};
 	
-	// TODO: remove this once constant buffers are properly tracked/killed inside vulkan_kernel
-	vector<shared_ptr<compute_buffer>> retained_buffers;
-	
 	static const vector<vulkan_kernel::multi_draw_entry> nbody_draw_info {{
 		.vertex_count = nbody_state.body_count
 	}};
@@ -446,13 +443,12 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 										   pipeline_layout,
 										   vs_entry,
 										   fs_entry,
-										   retained_buffers,
 										   nbody_draw_info,
 										   // vs args
 										   position_buffer,
 										   uniforms,
 										   // fs args
-										   body_textures[0].get());
+										   body_textures[0]);
 	
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	

@@ -548,7 +548,6 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 	};
 	VK_CALL_RET(vkBeginCommandBuffer(blit_cmd_buffer.cmd_buffer, &begin_info),
 				"failed to begin command buffer");
-	vector<shared_ptr<compute_buffer>> retained_blit_buffers; // TODO: remove/fix
 	{
 		const auto& pipeline = pipelines[BLIT];
 		const VkRect2D render_area {
@@ -574,7 +573,6 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 													   pipeline.layout,
 													   get_shader_entry(BLIT_VS),
 													   get_shader_entry(BLIT_FS),
-													   retained_blit_buffers,
 													   blit_draw_info,
 													   // if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
 													   blit_frame ?
@@ -597,9 +595,6 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 	common_renderer::render_full_scene(model, cam);
 	// updated above, still need the actual here
 	const auto cur_fbo = 1 - warp_state.cur_fbo;
-	
-	// TODO: remove this once constant buffers are properly tracked/killed inside vulkan_kernel
-	vector<shared_ptr<compute_buffer>> retained_buffers;
 	
 	//
 	const VkViewport viewport {
@@ -674,7 +669,6 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 																 pipeline.layout,
 																 get_shader_entry(SHADOW_VS),
 																 nullptr,
-																 retained_buffers,
 																 scene_draw_info,
 																 model.vertices_buffer,
 																 light_mvpm_buffer /* TODO: light_mvpm */);
@@ -723,7 +717,6 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 																	   pipeline.layout,
 																	   get_shader_entry(SCENE_GATHER_VS),
 																	   get_shader_entry(SCENE_GATHER_FS),
-																	   retained_buffers,
 																	   scene_draw_info,
 																	   // vertex shader
 																	   model.vertices_buffer,
@@ -781,7 +774,6 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 																pipeline.layout,
 																get_shader_entry(SKYBOX_GATHER_VS),
 																get_shader_entry(SKYBOX_GATHER_FS),
-																retained_buffers,
 																skybox_draw_info,
 																skybox_uniforms_buffer,
 																skybox_tex);

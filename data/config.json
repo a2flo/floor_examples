@@ -169,6 +169,9 @@
 		"vulkan": {
 			// run the spirv-validator after compiling a spir-v binary
 			"validate_spirv": false,
+			// if true, enables software printf in functions
+			// NOTE: this does come at a big performance cost and should only be enabled for debugging/development purposes
+			"soft_printf": false,
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": [],
