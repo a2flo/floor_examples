@@ -153,7 +153,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 }
 
 bool gl_renderer::compile_shaders() {
-	static const string hlbvh_vs_text { u8R"RAWSTR(
+	static const string hlbvh_vs_text { R"RAWSTR(
 		uniform mat4 mvpm;
 		uniform vec4 repl_color;
 		uniform vec4 default_color;
@@ -191,7 +191,7 @@ bool gl_renderer::compile_shaders() {
 			}
 		}
 	)RAWSTR"};
-	static const string hlbvh_fs_text { u8R"RAWSTR(
+	static const string hlbvh_fs_text { R"RAWSTR(
 		uniform vec3 light_dir;
 		
 #if COLLIDING_TRIANGLES_VIS

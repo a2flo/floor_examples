@@ -57,7 +57,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			file_name += file_suffix;
 			//log_debug("file name: %s", file_name);
 			bool success = false;
-			auto model = obj_loader::load(floor::data_path(file_name), success, hlbvh_state.ctx, *hlbvh_state.dev_queue,
+			auto model = obj_loader::load(floor::data_path(file_name), success, *hlbvh_state.ctx, *hlbvh_state.dev_queue,
 										  // don't scale anything
 										  1.0f,
 										  // keep cpu data, b/c we still need it
