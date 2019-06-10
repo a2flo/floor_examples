@@ -44,7 +44,7 @@ static void create_textures(const compute_queue& dev_queue) {
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
 		static constexpr float2 texture_sizef { texture_size };
-		array<uint32_t, texture_size.x * texture_size.y> pixel_data;
+		array<ushort4, texture_size.x * texture_size.y> pixel_data;
 		for(uint32_t y = 0; y < texture_size.y; ++y) {
 			for(uint32_t x = 0; x < texture_size.x; ++x) {
 				float2 dir = (float2(x, y) / texture_sizef) * 2.0f - 1.0f;
@@ -53,20 +53,17 @@ static void create_textures(const compute_queue& dev_queue) {
 #else
 				float fval = dir.length();
 #endif
-				uint32_t val = 255u - uint8_t(const_math::clamp(fval, 0.0f, 1.0f) * 255.0f);
-				if(i == 0) {
-					pixel_data[y * texture_size.x + x] = val + (val << 8u) + (val << 16u) + (val << 24u);
-				}
-				else {
-					uint32_t alpha_val = (val > 16u ? 0xFFu : val);
-					pixel_data[y * texture_size.x + x] = val + (val << 8u) + (val << 16u) + (alpha_val << 24u);
-				}
+				const auto val = 1.0f - const_math::clamp(fval, 0.0f, 1.0f);
+				const auto alpha_val = (val > 0.25f ? 1.0f : val);
+				const auto half_val = soft_f16::float_to_half(val);
+				const auto half_alpha_val = soft_f16::float_to_half(alpha_val);
+				pixel_data[y * texture_size.x + x] = { half_val, half_val, half_val, half_alpha_val };
 			}
 		}
 		
 		body_textures[i] = static_pointer_cast<metal_image>(ctx->create_image(dev_queue, texture_size,
 																			  COMPUTE_IMAGE_TYPE::IMAGE_2D |
-																			  COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
+																			  COMPUTE_IMAGE_TYPE::RGBA16F |
 																			  COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
 																			  COMPUTE_IMAGE_TYPE::READ,
 																			  &pixel_data[0],
@@ -82,7 +79,14 @@ bool metal_renderer::init(const compute_device& dev,
 						  shared_ptr<compute_kernel> fs) {
 	auto device = ((const metal_device&)dev).device;
 	create_textures(dev_queue);
-	
+
+	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
+	view = darwin_helper::create_metal_view(floor::get_window(), device);
+	if(view == nullptr) {
+		log_error("failed to create metal view!");
+		return false;
+	}
+
 	// check vs/fs and get state
 	if(!vs) {
 		log_error("vertex shader not found");
@@ -112,7 +116,7 @@ bool metal_renderer::init(const compute_device& dev,
 	pipelineStateDescriptor.fragmentFunction = (__bridge id<MTLFunction>)fs_entry->kernel;
 	pipelineStateDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 	pipelineStateDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-	pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	pipelineStateDescriptor.colorAttachments[0].pixelFormat = darwin_helper::get_metal_pixel_format(view);
 	pipelineStateDescriptor.colorAttachments[0].blendingEnabled = true;
 	pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorOne;
 	pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
@@ -134,13 +138,6 @@ bool metal_renderer::init(const compute_device& dev,
 	depthStateDesc.depthCompareFunction = MTLCompareFunctionAlways;
 	depthStateDesc.depthWriteEnabled = NO;
 	depth_state = [device newDepthStencilStateWithDescriptor:depthStateDesc];
-	
-	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
-	if(view == nullptr) {
-		log_error("failed to create metal view!");
-		return false;
-	}
 	
 	//
 	render_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];

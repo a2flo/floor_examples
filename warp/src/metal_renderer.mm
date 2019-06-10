@@ -91,6 +91,15 @@ bool metal_renderer::init() {
 	
 	auto device = ((const metal_device&)*warp_state.dev).device;
 	
+	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
+	view = darwin_helper::create_metal_view(floor::get_window(), device);
+	if(view == nullptr) {
+		log_error("failed to create metal view!");
+		return false;
+	}
+	const auto render_pixel_format = darwin_helper::get_metal_pixel_format(view);
+	
+	//
 	const auto get_shader_entry = [this](const WARP_SHADER& shader) {
 		return (__bridge id<MTLFunction>)((const metal_kernel::metal_kernel_entry*)shader_entries[shader])->kernel;
 	};
@@ -106,7 +115,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SCENE_SCATTER_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -128,7 +137,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SCENE_GATHER_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -154,7 +163,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SCENE_GATHER_FWD_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -247,7 +256,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SKYBOX_SCATTER_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -269,7 +278,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SKYBOX_GATHER_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -295,7 +304,7 @@ bool metal_renderer::init() {
 			pipeline_desc.fragmentFunction = get_shader_entry(SKYBOX_GATHER_FWD_FS);
 			pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-			pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 			pipeline_desc.colorAttachments[0].blendingEnabled = false;
 			pipeline_desc.colorAttachments[1].pixelFormat = MTLPixelFormatR32Uint;
 			pipeline_desc.colorAttachments[1].blendingEnabled = false;
@@ -417,7 +426,7 @@ bool metal_renderer::init() {
 		pipeline_desc.fragmentFunction = get_shader_entry(BLIT_FS);
 		pipeline_desc.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 		pipeline_desc.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-		pipeline_desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		pipeline_desc.colorAttachments[0].pixelFormat = render_pixel_format;
 		pipeline_desc.colorAttachments[0].blendingEnabled = false;
 		
 		NSError* error = nullptr;
@@ -450,13 +459,6 @@ bool metal_renderer::init() {
 	depth_state_desc.depthCompareFunction = MTLCompareFunctionLessEqual;
 	depth_state_desc.depthWriteEnabled = YES;
 	skybox_depth_state = [device newDepthStencilStateWithDescriptor:depth_state_desc];
-	
-	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
-	if(view == nullptr) {
-		log_error("failed to create metal view!");
-		return false;
-	}
 	
 	return true;
 }

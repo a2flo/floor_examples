@@ -496,7 +496,7 @@
 		5C3B0BEB1BCED83F000732F9 /* posz.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = posz.png; path = ../data/skybox/posz.png; sourceTree = "<group>"; };
 		5C3B0BEC1BCED83F000732F9 /* readme.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = readme.txt; path = ../data/skybox/readme.txt; sourceTree = "<group>"; };
 		5C5487821B608E110088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
-		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
+		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.json; };
 		5C56D4DD1BB2F64D0024467C /* sponza.mtl */ = {isa = PBXFileReference; lastKnownFileType = text; name = sponza.mtl; path = ../data/sponza/sponza.mtl; sourceTree = "<group>"; };
 		5C56D4DE1BB2F64D0024467C /* sponza.obj */ = {isa = PBXFileReference; lastKnownFileType = text; name = sponza.obj; path = ../data/sponza/sponza.obj; sourceTree = "<group>"; };
 		5C56D4DF1BB2F64D0024467C /* sponza.obj.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = sponza.obj.bin; path = ../data/sponza/sponza.obj.bin; sourceTree = "<group>"; };

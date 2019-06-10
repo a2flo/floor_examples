@@ -11,6 +11,8 @@
 		"vsync": true,
 		// if enabled, will create a opengl/metal window/surface using the native device/display resolution
 		"hidpi": true,
+		// if enabled, use a wide-gamut render target/surface/view for Metal and Vulkan
+		"wide_gamut": false,
 		// 0 = auto-detect, other values can be used to override the detected value
 		"dpi": 0,
 		// serves no purpose right now

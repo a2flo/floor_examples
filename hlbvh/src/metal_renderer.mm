@@ -75,6 +75,14 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 		return false;
 	}
 	
+	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
+	view = darwin_helper::create_metal_view(floor::get_window(), device);
+	if(view == nullptr) {
+		log_error("failed to create metal view!");
+		return false;
+	}
+	
+	//
 	const auto vs_entry = (const metal_kernel::metal_kernel_entry*)vs->get_kernel_entry(*hlbvh_state.dev);
 	if(!vs_entry) {
 		log_error("no vertex shader for this device exists!");
@@ -94,7 +102,7 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 	pipelineStateDescriptor.fragmentFunction = (__bridge id<MTLFunction>)fs_entry->kernel;
 	pipelineStateDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 	pipelineStateDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-	pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+	pipelineStateDescriptor.colorAttachments[0].pixelFormat = darwin_helper::get_metal_pixel_format(view);
 	pipelineStateDescriptor.colorAttachments[0].blendingEnabled = false;
 	
 	NSError* error = nullptr;
@@ -110,13 +118,6 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 	depthStateDesc.depthCompareFunction = MTLCompareFunctionLess;
 	depthStateDesc.depthWriteEnabled = YES;
 	depth_state = [device newDepthStencilStateWithDescriptor:depthStateDesc];
-	
-	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
-	if(view == nullptr) {
-		log_error("failed to create metal view!");
-		return false;
-	}
 	
 	//
 	render_pass_desc = [MTLRenderPassDescriptor renderPassDescriptor];
