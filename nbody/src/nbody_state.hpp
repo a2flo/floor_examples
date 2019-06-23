@@ -68,6 +68,7 @@ struct nbody_state_struct {
 	bool no_metal { false };
 	bool no_vulkan { false };
 	bool benchmark { false };
+	bool unified_renderer { false };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)

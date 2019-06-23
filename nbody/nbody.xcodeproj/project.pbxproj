@@ -23,6 +23,9 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C0134D322B6EC1400BA993D /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
+		5C0134D422B6EC1400BA993D /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
+		5C0134D522B6EC1400BA993D /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
 		5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1D1E32C677003A5688 /* GameController.framework */; };
 		5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1F1E32C691003A5688 /* AVFoundation.framework */; };
 		5C180F771D8063A500AF91E7 /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */; };
@@ -100,6 +103,8 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C0134D122B6EC1400BA993D /* unified_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = unified_renderer.hpp; sourceTree = "<group>"; };
+		5C0134D222B6EC1400BA993D /* unified_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unified_renderer.cpp; sourceTree = "<group>"; };
 		5C131E1D1E32C677003A5688 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		5C131E1F1E32C691003A5688 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		5C131E821E33D32E003A5688 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/ios/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -121,6 +126,7 @@
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = metal_renderer.hpp; sourceTree = "<group>"; };
 		5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = metal_renderer.mm; sourceTree = "<group>"; };
+		5CEC08AC22BFBE8A00033467 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -229,6 +235,7 @@
 			isa = PBXGroup;
 			children = (
 				5CD2174F19E924E80049D6AE /* build.sh */,
+				5CEC08AC22BFBE8A00033467 /* CMakeLists.txt */,
 				5CD2175019E924E80049D6AE /* src */,
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
@@ -253,6 +260,8 @@
 				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
 				5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */,
 				5C180F761D8063A500AF91E7 /* vulkan_renderer.hpp */,
+				5C0134D222B6EC1400BA993D /* unified_renderer.cpp */,
+				5C0134D122B6EC1400BA993D /* unified_renderer.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -462,6 +471,7 @@
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C0071C21A91F2BD00F4711D /* nbody.cpp in Sources */,
+				5C0134D422B6EC1400BA993D /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -472,6 +482,7 @@
 				5C8646271C19B2A4000518C7 /* main.cpp in Sources */,
 				5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */,
 				5C8646291C19B2A4000518C7 /* nbody.cpp in Sources */,
+				5C0134D522B6EC1400BA993D /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -484,6 +495,7 @@
 				5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */,
 				5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
+				5C0134D322B6EC1400BA993D /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

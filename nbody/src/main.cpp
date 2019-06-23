@@ -23,6 +23,7 @@
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "vulkan_renderer.hpp"
+#include "unified_renderer.hpp"
 #include "nbody_state.hpp"
 nbody_state_struct nbody_state;
 
@@ -84,6 +85,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\t--no-metal: disables metal rendering (uses s/w rendering instead if --no-opengl as well)" << endl;
 #endif
 		cout << "\t--no-vulkan: disables vulkan rendering (uses s/w rendering instead)" << endl;
+		cout << "\t--unified: use the unified renderer (requires Metal or Vulkan)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
@@ -216,6 +218,10 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 	{ "--no-vulkan", [](nbody_option_context&, char**&) {
 		nbody_state.no_vulkan = true;
 		cout << "vulkan disabled" << endl;
+	}},
+	{ "--unified", [](nbody_option_context&, char**&) {
+		nbody_state.unified_renderer = true;
+		cout << "unified renderer enabled" << endl;
 	}},
 	{ "--benchmark", [](nbody_option_context&, char**&) {
 		nbody_state.no_opengl = true; // also disable opengl
@@ -527,16 +533,15 @@ int main(int, char* argv[]) {
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
 	const auto floor_renderer = floor::get_renderer();
 	
-	if(is_metal) {
+	if (is_metal) {
 		nbody_state.no_opengl = true;
 		nbody_state.no_vulkan = true;
-	}
-	else {
+	} else {
 		nbody_state.no_metal = true;
 	}
 	
-	if(is_vulkan) {
-		if(floor_renderer == floor::RENDERER::VULKAN) {
+	if (is_vulkan) {
+		if (floor_renderer == floor::RENDERER::VULKAN) {
 			nbody_state.no_opengl = true;
 			nbody_state.no_metal = true;
 		}
@@ -544,13 +549,18 @@ int main(int, char* argv[]) {
 		else {
 			nbody_state.no_opengl = true;
 		}
-	}
-	else {
+	} else {
 		nbody_state.no_vulkan = true;
 	}
 	
+	if (!is_metal && !is_vulkan) {
+		// neither Metal nor Vulkan is available (or disabled)
+		nbody_state.unified_renderer = false;
+	}
+	
 	log_debug("using %s",
-			  (!nbody_state.no_opengl ? "opengl renderer" :
+			  (nbody_state.unified_renderer ? "unified renderer" :
+			   !nbody_state.no_opengl ? "opengl renderer" :
 			   !nbody_state.no_metal ? "metal renderer" :
 			   !nbody_state.no_vulkan ? "vulkan renderer" : "s/w rasterizer"));
 	
@@ -637,32 +647,43 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 		
-		// init metal/vulkan renderers (need compiled prog first)
-#if defined(__APPLE__)
-		if(!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
+		// init unified/metal/vulkan renderers (need compiled prog first)
+		if (nbody_state.unified_renderer) {
 			// setup renderer
-			if(!metal_renderer::init(*fastest_device,
-									 *dev_queue,
-									 nbody_prog->get_kernel("lighting_vertex"),
-									 nbody_prog->get_kernel("lighting_fragment"))) {
-				log_error("error during metal initialization!");
+			if (!unified_renderer::init(*compute_ctx,
+										*dev_queue,
+										*nbody_prog->get_kernel("lighting_vertex"),
+										*nbody_prog->get_kernel("lighting_fragment"))) {
+				log_error("error during unified renderer initialization!");
 				return -1;
 			}
-		}
+		} else {
+#if defined(__APPLE__)
+			if (!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
+				// setup renderer
+				if (!metal_renderer::init(*compute_ctx,
+										  *dev_queue,
+										  nbody_prog->get_kernel("lighting_vertex"),
+										  nbody_prog->get_kernel("lighting_fragment"))) {
+					log_error("error during metal initialization!");
+					return -1;
+				}
+			}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
-		if(!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
-			// setup renderer
-			if(!vulkan_renderer::init(compute_ctx,
-									  *fastest_device,
-									  *dev_queue,
-									  nbody_prog->get_kernel("lighting_vertex"),
-									  nbody_prog->get_kernel("lighting_fragment"))) {
-				log_error("error during vulkan initialization!");
-				return -1;
+			if (!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
+				// setup renderer
+				if (!vulkan_renderer::init(compute_ctx,
+										   *fastest_device,
+										   *dev_queue,
+										   nbody_prog->get_kernel("lighting_vertex"),
+										   nbody_prog->get_kernel("lighting_fragment"))) {
+					log_error("error during vulkan initialization!");
+					return -1;
+				}
 			}
-		}
 #endif
+		}
 		
 		// create nbody position and velocity buffers
 		for(size_t i = 0; i < pos_buffer_count; ++i) {
@@ -841,18 +862,20 @@ int main(int, char* argv[]) {
 		// opengl/metal/vulkan rendering
 		else if(!nbody_state.no_opengl || !nbody_state.no_metal || !nbody_state.no_vulkan) {
 			floor::start_frame();
-			if(!nbody_state.no_opengl) {
+			if (!nbody_state.no_opengl) {
 #if !defined(FLOOR_IOS)
 				gl_renderer::render(*dev_queue, position_buffers[cur_buffer]);
 #endif
+			} else if (nbody_state.unified_renderer) {
+				unified_renderer::render(*compute_ctx, *dev_queue, *position_buffers[cur_buffer]);
 			}
 #if defined(__APPLE__)
-			else if(!nbody_state.no_metal) {
-				metal_renderer::render(*dev_queue, position_buffers[cur_buffer]);
+			else if (!nbody_state.no_metal) {
+				metal_renderer::render(*compute_ctx, *dev_queue, position_buffers[cur_buffer]);
 			}
 #endif
 #if !defined(FLOOR_NO_VULKAN)
-			else if(!nbody_state.no_vulkan) {
+			else if (!nbody_state.no_vulkan) {
 				vulkan_renderer::render(compute_ctx, *dev_queue, position_buffers[cur_buffer]);
 			}
 #endif
@@ -872,6 +895,9 @@ int main(int, char* argv[]) {
 	velocity_buffer = nullptr;
 	for(auto img_buffer : img_buffers) {
 		img_buffer = nullptr;
+	}
+	if (nbody_state.unified_renderer) {
+		unified_renderer::destroy(*compute_ctx);
 	}
 #if !defined(FLOOR_NO_VULKAN)
 	if(!nbody_state.no_vulkan) {

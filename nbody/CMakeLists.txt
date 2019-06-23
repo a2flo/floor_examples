@@ -1,4 +1,4 @@
-﻿# VS/vcpkg/clang/CMake project for nbody
+# VS/vcpkg/clang/CMake project for nbody
 cmake_minimum_required(VERSION 3.8)
 project(nbody)
 set(CMAKE_CXX_STANDARD 17)
@@ -59,6 +59,8 @@ src/gl_renderer.cpp
 src/gl_renderer.hpp
 src/vulkan_renderer.cpp
 src/vulkan_renderer.hpp
+src/unified_renderer.cpp
+src/unified_renderer.hpp
 )
 
 ## output postfix

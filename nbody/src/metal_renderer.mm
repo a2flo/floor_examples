@@ -32,7 +32,6 @@
 static id <MTLRenderPipelineState> pipeline_state;
 static id <MTLDepthStencilState> depth_state;
 
-static metal_view* view { nullptr };
 static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
 static array<shared_ptr<metal_image>, 2> body_textures {};
@@ -73,19 +72,12 @@ static void create_textures(const compute_queue& dev_queue) {
 	}
 }
 
-bool metal_renderer::init(const compute_device& dev,
-						  const compute_queue& dev_queue,
-						  shared_ptr<compute_kernel> vs,
-						  shared_ptr<compute_kernel> fs) {
+bool metal_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_kernel> vs, shared_ptr<compute_kernel> fs) {
+	const auto& dev = dev_queue.get_device();
 	auto device = ((const metal_device&)dev).device;
 	create_textures(dev_queue);
-
-	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
-	if(view == nullptr) {
-		log_error("failed to create metal view!");
-		return false;
-	}
+	
+	const auto render_pixel_format = ((const metal_compute&)ctx).get_metal_renderer_pixel_format();
 
 	// check vs/fs and get state
 	if(!vs) {
@@ -116,7 +108,7 @@ bool metal_renderer::init(const compute_device& dev,
 	pipelineStateDescriptor.fragmentFunction = (__bridge id<MTLFunction>)fs_entry->kernel;
 	pipelineStateDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 	pipelineStateDescriptor.stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-	pipelineStateDescriptor.colorAttachments[0].pixelFormat = darwin_helper::get_metal_pixel_format(view);
+	pipelineStateDescriptor.colorAttachments[0].pixelFormat = render_pixel_format;
 	pipelineStateDescriptor.colorAttachments[0].blendingEnabled = true;
 	pipelineStateDescriptor.colorAttachments[0].sourceRGBBlendFactor = MTLBlendFactorOne;
 	pipelineStateDescriptor.colorAttachments[0].sourceAlphaBlendFactor = MTLBlendFactorOne;
@@ -150,8 +142,7 @@ bool metal_renderer::init(const compute_device& dev,
 	return true;
 }
 
-void metal_renderer::render(const compute_queue& dev_queue,
-							shared_ptr<compute_buffer> position_buffer) {
+void metal_renderer::render(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_buffer> position_buffer) {
 	@autoreleasepool {
 		//
 		auto mtl_queue = ((const metal_queue&)dev_queue).get_queue();
@@ -159,7 +150,7 @@ void metal_renderer::render(const compute_queue& dev_queue,
 		id <MTLCommandBuffer> cmd_buffer = [mtl_queue commandBuffer];
 		cmd_buffer.label = @"nbody render";
 		
-		auto drawable = darwin_helper::get_metal_next_drawable(view, cmd_buffer);
+		auto drawable = ((const metal_compute&)ctx).get_metal_next_drawable(cmd_buffer);
 		if(drawable == nil) {
 			log_error("drawable is nil!");
 			return;
