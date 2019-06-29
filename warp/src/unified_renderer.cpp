@@ -16,22 +16,25 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "common_renderer.hpp"
+#include "unified_renderer.hpp"
 
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
+#include <floor/graphics/graphics_renderer.hpp>
+#include <floor/graphics/graphics_pipeline.hpp>
+#include <floor/graphics/graphics_pass.hpp>
 #include <libwarp/libwarp.h>
 
-common_renderer::common_renderer() :
-resize_handler_fnctr(bind(&common_renderer::resize_handler, this, placeholders::_1, placeholders::_2)) {
+unified_renderer::unified_renderer() :
+resize_handler_fnctr(bind(&unified_renderer::resize_handler, this, placeholders::_1, placeholders::_2)) {
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 }
 
-common_renderer::~common_renderer() {
+unified_renderer::~unified_renderer() {
 	floor::get_event()->remove_event_handler(resize_handler_fnctr);
 }
 
-void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
+void unified_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 	scene_fbo.dim = floor::get_physical_screen_size();
 	
 	// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
@@ -78,9 +81,11 @@ void common_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 	// create appropriately sized s/w depth buffer
 	warp_state.scatter_depth_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(float) *
 																	size_t(scene_fbo.dim.x) * size_t(scene_fbo.dim.y));
+	
+	// TODO: update passes
 }
 
-void common_renderer::destroy_textures(bool is_resize) {
+void unified_renderer::destroy_textures(bool is_resize) {
 	scene_fbo.compute_color = nullptr;
 	for(auto& img : scene_fbo.color) {
 		img = nullptr;
@@ -99,7 +104,7 @@ void common_renderer::destroy_textures(bool is_resize) {
 	if(!is_resize) shadow_map.shadow_image = nullptr;
 }
 
-void common_renderer::create_skybox() {
+void unified_renderer::create_skybox() {
 	static const char* skybox_filenames[] {
 		"skybox/posx.png",
 		"skybox/negx.png",
@@ -144,11 +149,11 @@ void common_renderer::create_skybox() {
 											  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS*/);
 }
 
-void common_renderer::destroy_skybox() {
+void unified_renderer::destroy_skybox() {
 	skybox_tex = nullptr;
 }
 
-bool common_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
+bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
 	if(type == EVENT_TYPE::WINDOW_RESIZE) {
 		destroy_textures(true);
 		create_textures(warp_state.ctx->get_renderer_image_type());
@@ -158,10 +163,15 @@ bool common_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) 
 	return false;
 }
 
-bool common_renderer::init() {
-	if(!compile_shaders()) {
+bool unified_renderer::init() {
+	// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
+	// + we want to use the "bind everything" method and draw the scene with 1 draw call
+	const string additional_compile_options = " -DFLOOR_METAL_ADDRESS_MODE=metal_image::sampler::ADDRESS_MODE::REPEAT -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT -DWARP_IMAGE_ARRAY_SUPPORT";
+	if (!compile_shaders(additional_compile_options)) {
 		return false;
 	}
+	
+	create_textures(warp_state.ctx->get_renderer_image_type());
 	
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 	
@@ -181,15 +191,288 @@ bool common_renderer::init() {
 	scene_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(scene_uniforms));
 	skybox_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(skybox_uniforms));
 	
+	//
+	create_passes();
+	create_pipelines();
+	
 	return true;
 }
 
-void common_renderer::destroy() {
+void unified_renderer::destroy() {
 	destroy_textures(false);
 	destroy_skybox();
 }
 
-void common_renderer::render(const floor_obj_model& model, const camera& cam) {
+void unified_renderer::create_passes() {
+	const auto color_format = scene_fbo.color[0]->get_image_type();
+	const auto motion_format = scene_fbo.motion[0]->get_image_type();
+	const auto depth_format = scene_fbo.depth[0]->get_image_type();
+	const auto motion_depth_format = scene_fbo.motion_depth[0]->get_image_type();
+	
+	const auto change_load_ops_to_load = [](auto& desc) {
+		for (auto& att : desc.attachments) {
+			att.load_op = LOAD_OP::LOAD;
+		}
+	};
+	
+	{
+		render_pass_description pass_desc {
+			.attachments = {
+				// color
+				{
+					.format = color_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = clear_color,
+				},
+				// motion
+				{
+					.format = motion_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+				// depth
+				{
+					.format = depth_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.depth = 1.0f,
+				},
+			}
+		};
+		scatter_passes[0] = warp_state.ctx->create_graphics_pass(pass_desc);
+		change_load_ops_to_load(pass_desc);
+		scatter_passes[1] = warp_state.ctx->create_graphics_pass(pass_desc);
+	}
+	
+	{
+		render_pass_description pass_desc {
+			.attachments = {
+				// color
+				{
+					.format = color_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = clear_color,
+				},
+				// motion fwd
+				{
+					.format = motion_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+				// motion bwd
+				{
+					.format = motion_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+				// motion depth
+				{
+					.format = motion_depth_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+				// depth
+				{
+					.format = depth_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.depth = 1.0f,
+				},
+			}
+		};
+		gather_passes[0] = warp_state.ctx->create_graphics_pass(pass_desc);
+		change_load_ops_to_load(pass_desc);
+		gather_passes[1] = warp_state.ctx->create_graphics_pass(pass_desc);
+	}
+	
+	{
+		render_pass_description pass_desc {
+			.attachments = {
+				// color
+				{
+					.format = color_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = clear_color,
+				},
+				// motion
+				{
+					.format = motion_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+				// depth
+				{
+					.format = depth_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.depth = 1.0f,
+				},
+			}
+		};
+		gather_fwd_passes[0] = warp_state.ctx->create_graphics_pass(pass_desc);
+		change_load_ops_to_load(pass_desc);
+		gather_fwd_passes[1] = warp_state.ctx->create_graphics_pass(pass_desc);
+	}
+	
+	{
+		const render_pass_description pass_desc {
+			.attachments = {
+				// depth
+				{
+					.format = depth_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.depth = 1.0f,
+				},
+			}
+		};
+		shadow_pass = warp_state.ctx->create_graphics_pass(pass_desc);
+	}
+	
+	{
+		const render_pass_description pass_desc {
+			.attachments = {
+				// color
+				{
+					.format = color_format,
+					.load_op = LOAD_OP::DONT_CARE, // don't care b/c drawing the whole screen
+					.store_op = STORE_OP::STORE,
+					.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+				},
+			}
+		};
+		blit_pass = warp_state.ctx->create_graphics_pass(pass_desc);
+	}
+}
+
+void unified_renderer::create_pipelines() {
+	const auto color_format = scene_fbo.color[0]->get_image_type();
+	const auto motion_format = scene_fbo.motion[0]->get_image_type();
+	const auto depth_format = scene_fbo.depth[0]->get_image_type();
+	const auto motion_depth_format = scene_fbo.motion_depth[0]->get_image_type();
+	
+	{
+		const render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[SCENE_SCATTER_VS],
+			.fragment_shader = shaders[SCENE_SCATTER_FS],
+			.primitive = PRIMITIVE::TRIANGLE,
+			.cull_mode = CULL_MODE::BACK,
+			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.depth = {
+				.write = true,
+				.compare = DEPTH_COMPARE::LESS,
+			},
+			.color_attachments = {
+				{ .format = color_format, },
+				{ .format = motion_format, },
+			},
+			.depth_attachment = { .format = depth_format },
+		};
+		scatter_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
+		
+		auto skybox_desc = pipeline_desc;
+		skybox_desc.vertex_shader = shaders[SKYBOX_SCATTER_VS];
+		skybox_desc.fragment_shader = shaders[SKYBOX_SCATTER_FS];
+		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_scatter_pipeline = warp_state.ctx->create_graphics_pipeline(skybox_desc);
+	}
+	{
+		const render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[SCENE_GATHER_VS],
+			.fragment_shader = shaders[SCENE_GATHER_FS],
+			.primitive = PRIMITIVE::TRIANGLE,
+			.cull_mode = CULL_MODE::BACK,
+			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.depth = {
+				.write = true,
+				.compare = DEPTH_COMPARE::LESS,
+			},
+			.color_attachments = {
+				{ .format = color_format, },
+				{ .format = motion_format, },
+				{ .format = motion_format, },
+				{ .format = motion_depth_format, },
+			},
+			.depth_attachment = { .format = depth_format },
+		};
+		gather_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
+		
+		auto skybox_desc = pipeline_desc;
+		skybox_desc.vertex_shader = shaders[SKYBOX_GATHER_VS];
+		skybox_desc.fragment_shader = shaders[SKYBOX_GATHER_FS];
+		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_gather_pipeline = warp_state.ctx->create_graphics_pipeline(skybox_desc);
+	}
+	{
+		const render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[SCENE_GATHER_FWD_VS],
+			.fragment_shader = shaders[SCENE_GATHER_FWD_FS],
+			.primitive = PRIMITIVE::TRIANGLE,
+			.cull_mode = CULL_MODE::BACK,
+			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.depth = {
+				.write = true,
+				.compare = DEPTH_COMPARE::LESS,
+			},
+			.color_attachments = {
+				{ .format = color_format, },
+				{ .format = motion_format, },
+			},
+			.depth_attachment = { .format = depth_format },
+		};
+		gather_fwd_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
+		
+		auto skybox_desc = pipeline_desc;
+		skybox_desc.vertex_shader = shaders[SKYBOX_GATHER_FWD_VS];
+		skybox_desc.fragment_shader = shaders[SKYBOX_GATHER_FWD_FS];
+		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_gather_fwd_pipeline = warp_state.ctx->create_graphics_pipeline(skybox_desc);
+	}
+	
+	{
+		const render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[SHADOW_VS],
+			.fragment_shader = nullptr, // only rendering z/depth
+			.primitive = PRIMITIVE::TRIANGLE,
+			.cull_mode = CULL_MODE::BACK,
+			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.depth = {
+				.write = true,
+				.compare = DEPTH_COMPARE::LESS,
+			},
+			.depth_attachment = { .format = depth_format },
+		};
+		shadow_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
+	}
+	
+	{
+		const render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[BLIT_VS],
+			.fragment_shader = shaders[BLIT_FS],
+			.primitive = PRIMITIVE::TRIANGLE,
+			.cull_mode = CULL_MODE::BACK,
+			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.depth = {
+				.write = false,
+				.compare = DEPTH_COMPARE::ALWAYS,
+			},
+			.color_attachments = {
+				{ .format = color_format, },
+			},
+		};
+		blit_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
+	}
+}
+
+void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 	// time keeping
 	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
 	static auto time_keeper = chrono::high_resolution_clock::now();
@@ -217,27 +500,26 @@ void common_renderer::render(const floor_obj_model& model, const camera& cam) {
 		light_pos = light_min.interpolated(light_max, light_interp);
 	}
 	
+	// decide if we are going to perform warping or render the full scene
 	static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 	static size_t warp_frame_num = 0;
 	blit_frame = false;
 	const bool run_warp_kernel = ((deltaf < frame_limit && !first_frame) || warp_state.is_frame_repeat);
-	if(run_warp_kernel) {
-		if(deltaf >= frame_limit) { // need to reset when over the limit
+	if (run_warp_kernel) {
+		if (deltaf >= frame_limit) { // need to reset when over the limit
 			render_delta = deltaf;
 			time_keeper = now;
 			warp_frame_num = 0;
 		}
 		
-		if(warp_state.is_warping) {
+		if (warp_state.is_warping) {
 			render_kernels(deltaf, render_delta, warp_frame_num);
 			blit_frame = false;
 			++warp_frame_num;
+		} else {
+			blit_frame = true;
 		}
-		else blit_frame = true;
-	}
-	
-	//
-	if(!run_warp_kernel) {
+	} else {
 		first_frame = false;
 		render_delta = deltaf;
 		time_keeper = now;
@@ -247,9 +529,37 @@ void common_renderer::render(const floor_obj_model& model, const camera& cam) {
 		
 		blit_frame = warp_state.is_render_full;
 	}
+	
+	// blit to window
+	{
+		// create the blit renderer
+		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue, *blit_pass, *blit_pipeline);
+		if (!renderer->is_valid()) {
+			return;
+		}
+		
+		// setup drawable and attachments
+		auto drawable = renderer->get_next_drawable();
+		if (drawable == nullptr || !drawable->is_valid()) {
+			log_error("failed to get next drawable");
+			return;
+		}
+		renderer->set_attachments(drawable);
+		renderer->begin();
+		
+		static const vector<graphics_renderer::multi_draw_entry> blit_draw_info {{
+			.vertex_count = 3 // fullscreen triangle
+		}};
+		renderer->multi_draw(blit_draw_info,
+							 blit_frame ? scene_fbo.color[warp_state.cur_fbo] : scene_fbo.compute_color);
+		
+		renderer->end();
+		renderer->present();
+		renderer->commit();
+	}
 }
 
-void common_renderer::render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num) {
+void unified_renderer::render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num) {
 //#define WARP_TIMING
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
@@ -332,7 +642,10 @@ void common_renderer::render_kernels(const float& delta, const float& render_del
 #endif
 }
 
-void common_renderer::render_full_scene(const floor_obj_model&, const camera& cam) {
+void unified_renderer::render_full_scene(const floor_obj_model& model, const camera& cam) {
+	//////////////////////////////////////////
+	// update uniforms
+	
 	// update shadow map uniforms
 	{
 		const matrix4f light_pm = clip * matrix4f().perspective(120.0f, 1.0f,
@@ -396,6 +709,107 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 	scene_uniforms_buffer->write(*warp_state.dev_queue, &scene_uniforms);
 	skybox_uniforms_buffer->write(*warp_state.dev_queue, &skybox_uniforms);
 	
+	// our draw info is static, so only create it once
+	static const vector<graphics_renderer::multi_draw_indexed_entry> scene_draw_info {{
+		.index_buffer = model.indices_buffer.get(),
+		.index_count = model.index_count
+	}};
+	static const vector<graphics_renderer::multi_draw_entry> skybox_draw_info {{
+		.vertex_count = 3
+	}};
+	
+	//////////////////////////////////////////
+	// draw shadow map
+	{
+		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue, *shadow_pass, *shadow_pipeline);
+		if (!renderer->is_valid()) {
+			return;
+		}
+		
+		renderer->set_attachments(shadow_map.shadow_image);
+		renderer->begin();
+		
+		renderer->multi_draw_indexed(scene_draw_info,
+									 model.vertices_buffer,
+									 light_mvpm_buffer /* TODO: light_mvpm */);
+		
+		renderer->end();
+		renderer->commit();
+	}
+	
+	//////////////////////////////////////////
+	// render actual scene
+	{
+		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue,
+																 (warp_state.is_scatter ? *scatter_passes[0] : (warp_state.is_gather_forward ? *gather_fwd_passes[0] : *gather_passes[0])),
+																 (warp_state.is_scatter ? *scatter_pipeline : (warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline)));
+		if (!renderer->is_valid()) {
+			return;
+		}
+		
+		if (warp_state.is_scatter || warp_state.is_gather_forward) {
+			renderer->set_attachments(scene_fbo.color[0], scene_fbo.motion[0], scene_fbo.depth[0]);
+		} else { // gather
+			// for bidirectional gather rendering, this switches every frame
+			renderer->set_attachments(scene_fbo.color[warp_state.cur_fbo],
+									  scene_fbo.motion[warp_state.cur_fbo * 2],
+									  scene_fbo.motion[warp_state.cur_fbo * 2 + 1],
+									  scene_fbo.motion_depth[warp_state.cur_fbo],
+									  scene_fbo.depth[warp_state.cur_fbo]);
+		}
+		
+		// scene
+		renderer->begin();
+		renderer->multi_draw_indexed(scene_draw_info,
+									 // vertex shader
+									 model.vertices_buffer,
+									 model.tex_coords_buffer,
+									 model.normals_buffer,
+									 model.binormals_buffer,
+									 model.tangents_buffer,
+									 model.materials_buffer,
+									 scene_uniforms_buffer,
+									 // fragment shader
+									 model.diffuse_textures,
+									 model.specular_textures,
+									 model.normal_textures,
+									 model.mask_textures,
+									 shadow_map.shadow_image);
+		renderer->end();
+		renderer->commit();
+	}
+	
+	//////////////////////////////////////////
+	// render sky box
+	{
+		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue,
+																 (warp_state.is_scatter ? *scatter_passes[1] : (warp_state.is_gather_forward ? *gather_fwd_passes[1] : *gather_passes[1])),
+																 (warp_state.is_scatter ? *skybox_scatter_pipeline : (warp_state.is_gather_forward ? *skybox_gather_fwd_pipeline : *skybox_gather_pipeline)));
+		if (!renderer->is_valid()) {
+			return;
+		}
+		
+		if (warp_state.is_scatter || warp_state.is_gather_forward) {
+			renderer->set_attachments(scene_fbo.color[0], scene_fbo.motion[0], scene_fbo.depth[0]);
+		} else { // gather
+			// for bidirectional gather rendering, this switches every frame
+			renderer->set_attachments(scene_fbo.color[warp_state.cur_fbo],
+									  scene_fbo.motion[warp_state.cur_fbo * 2],
+									  scene_fbo.motion[warp_state.cur_fbo * 2 + 1],
+									  scene_fbo.motion_depth[warp_state.cur_fbo],
+									  scene_fbo.depth[warp_state.cur_fbo]);
+		}
+		
+		// skybox
+		renderer->begin();
+		renderer->multi_draw(skybox_draw_info,
+							 skybox_uniforms_buffer,
+							 skybox_tex);
+		renderer->end();
+		renderer->commit();
+	}
+	
+	//////////////////////////////////////////
 	// end
 	if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 		// flip state
@@ -409,7 +823,7 @@ void common_renderer::render_full_scene(const floor_obj_model&, const camera& ca
 	prev_rmvm = rmvm;
 }
 
-bool common_renderer::compile_shaders(const string add_cli_options) {
+bool unified_renderer::compile_shaders(const string add_cli_options) {
 	shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
 												   "-I" + floor::data_path("../warp/src") +
 												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +

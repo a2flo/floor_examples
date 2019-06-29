@@ -51,9 +51,6 @@ static MTLRenderPassDescriptor* shadow_pass_desc { nullptr };
 static id <MTLRenderPipelineState> blit_pipeline_state;
 static MTLRenderPassDescriptor* blit_pass_desc { nullptr };
 
-static id <MTLRenderPipelineState> warp_gather_pipeline_state;
-static MTLRenderPassDescriptor* warp_gather_pass_desc { nullptr };
-
 static id <MTLDepthStencilState> depth_state;
 static id <MTLDepthStencilState> passthrough_depth_state;
 static id <MTLDepthStencilState> skybox_depth_state;
@@ -90,14 +87,7 @@ bool metal_renderer::init() {
 	}
 	
 	auto device = ((const metal_device&)*warp_state.dev).device;
-	
-	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
-	if(view == nullptr) {
-		log_error("failed to create metal view!");
-		return false;
-	}
-	const auto render_pixel_format = darwin_helper::get_metal_pixel_format(view);
+	const auto render_pixel_format = ((const metal_compute&)*warp_state.ctx).get_metal_renderer_pixel_format();
 	
 	//
 	const auto get_shader_entry = [this](const WARP_SHADER& shader) {
@@ -387,7 +377,7 @@ bool metal_renderer::init() {
 	}
 	
 	// creates fbo textures/images and sets attachment textures of render_pass_desc_scatter + skybox_pass_desc_scatter (gather changes at runtime)
-	create_textures();
+	create_textures(warp_state.ctx->get_renderer_image_type());
 	
 	// shadow renderer setup
 	{
@@ -472,8 +462,8 @@ void metal_renderer::render(const floor_obj_model& model,
 		render_cmd_buffer = (__bridge void*)cmd_buffer;
 		
 		// blit to window
-		auto drawable = darwin_helper::get_metal_next_drawable(view, cmd_buffer);
-		if(drawable == nil) {
+		auto drawable = ((const metal_compute&)*warp_state.ctx).get_metal_next_drawable(cmd_buffer);
+		if (drawable == nil) {
 			log_error("drawable is nil!");
 			return;
 		}
@@ -488,7 +478,7 @@ void metal_renderer::render(const floor_obj_model& model,
 			encoder.label = @"warp blit encoder";
 			[encoder setDepthStencilState:passthrough_depth_state];
 			[encoder setCullMode:MTLCullModeBack];
-			[encoder setFrontFacingWinding:MTLWindingClockwise];
+			[encoder setFrontFacingWinding:MTLWindingCounterClockwise];
 			
 			//
 			[encoder pushDebugGroup:@"blit"];

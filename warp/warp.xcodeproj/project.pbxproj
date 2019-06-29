@@ -191,6 +191,9 @@
 		5CBA3EF51D97F61F001BEDEC /* common_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */; };
 		5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
 		5CE8AEC51D1F356400369136 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
+		5CEC08AF22C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
+		5CEC08B022C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
+		5CEC08B122C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
 		5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
 		5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
 		5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
@@ -570,6 +573,8 @@
 		5CD737F51B00123700D9815E /* warp_state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp_state.hpp; sourceTree = "<group>"; };
 		5CE8AEC31D1F356400369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj/obj_loader.cpp; sourceTree = "<group>"; };
 		5CE8AEC41D1F356400369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj/obj_loader.hpp; sourceTree = "<group>"; };
+		5CEC08AD22C00D7D00033467 /* unified_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = unified_renderer.hpp; sourceTree = "<group>"; };
+		5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unified_renderer.cpp; sourceTree = "<group>"; };
 		5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp_shaders.cpp; sourceTree = "<group>"; };
 		5CF948921D2AB15800FEA7AE /* camera.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = camera.cpp; path = ../../common/camera/camera.cpp; sourceTree = "<group>"; };
 		5CF948931D2AB15800FEA7AE /* camera.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = camera.hpp; path = ../../common/camera/camera.hpp; sourceTree = "<group>"; };
@@ -844,6 +849,8 @@
 				5CBA3EED1D97F148001BEDEC /* vulkan_renderer.hpp */,
 				5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */,
 				5CBA3EF11D97F53D001BEDEC /* common_renderer.hpp */,
+				5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */,
+				5CEC08AD22C00D7D00033467 /* unified_renderer.hpp */,
 				5CE8AEC31D1F356400369136 /* obj_loader.cpp */,
 				5CE8AEC41D1F356400369136 /* obj_loader.hpp */,
 				5CF948921D2AB15800FEA7AE /* camera.cpp */,
@@ -1063,6 +1070,7 @@
 				5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */,
 				5CBA3EEF1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
+				5CEC08B022C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5C2F836F1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
@@ -1079,6 +1087,7 @@
 				5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */,
 				5CBA3EF01D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5C8646491C19BFB6000518C7 /* main.cpp in Sources */,
+				5CEC08B122C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */,
 				5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5C86464D1C19BFB6000518C7 /* metal_renderer.mm in Sources */,
@@ -1095,6 +1104,7 @@
 				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
 				5CBA3EEE1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */,
+				5CEC08AF22C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
 				5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,

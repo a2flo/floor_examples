@@ -16,8 +16,8 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_COMMON_RENDERER_HPP__
-#define __FLOOR_WARP_COMMON_RENDERER_HPP__
+#ifndef __FLOOR_WARP_UNIFIED_RENDERER_HPP__
+#define __FLOOR_WARP_UNIFIED_RENDERER_HPP__
 
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_context.hpp>
@@ -26,15 +26,15 @@
 #include "camera.hpp"
 #include "warp_state.hpp"
 
-// common renderer code used by metal and vulkan
-class common_renderer {
+// unified Metal/Vulkan renderer
+class unified_renderer {
 public:
-	common_renderer();
-	virtual ~common_renderer();
+	unified_renderer();
+	~unified_renderer();
 	
-	virtual bool init();
-	virtual void destroy();
-	virtual void render(const floor_obj_model& model, const camera& cam);
+	bool init();
+	void destroy();
+	void render(const floor_obj_model& model, const camera& cam);
 	
 	// pipelines
 	enum WARP_PIPELINE : uint32_t {
@@ -79,8 +79,8 @@ public:
 	}
 	
 protected:
-	virtual void create_textures(const COMPUTE_IMAGE_TYPE color_format);
-	virtual void destroy_textures(bool is_resize);
+	void create_textures(const COMPUTE_IMAGE_TYPE color_format);
+	 void destroy_textures(bool is_resize);
 	
 	void create_skybox();
 	void destroy_skybox();
@@ -88,10 +88,27 @@ protected:
 	event::handler resize_handler_fnctr;
 	bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>);
 	
-	virtual void render_full_scene(const floor_obj_model& model, const camera& cam);
-	virtual void render_kernels(const float& delta,
-								const float& render_delta,
-								const size_t& warp_frame_num);
+	void render_full_scene(const floor_obj_model& model, const camera& cam);
+	void render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num);
+	
+	//
+	unique_ptr<graphics_pass> scatter_passes[2];
+	unique_ptr<graphics_pass> gather_passes[2];
+	unique_ptr<graphics_pass> gather_fwd_passes[2];
+	unique_ptr<graphics_pass> shadow_pass;
+	unique_ptr<graphics_pass> blit_pass;
+	void create_passes();
+	
+	//
+	unique_ptr<graphics_pipeline> scatter_pipeline;
+	unique_ptr<graphics_pipeline> skybox_scatter_pipeline;
+	unique_ptr<graphics_pipeline> gather_pipeline;
+	unique_ptr<graphics_pipeline> skybox_gather_pipeline;
+	unique_ptr<graphics_pipeline> gather_fwd_pipeline;
+	unique_ptr<graphics_pipeline> skybox_gather_fwd_pipeline;
+	unique_ptr<graphics_pipeline> shadow_pipeline;
+	unique_ptr<graphics_pipeline> blit_pipeline;
+	void create_pipelines();
 	
 	//
 	struct {
@@ -145,10 +162,10 @@ protected:
 	array<compute_kernel*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> shaders;
 	array<const compute_kernel::kernel_entry*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> shader_entries;
 	
-	virtual bool compile_shaders(const string add_cli_options = "");
+	bool compile_shaders(const string add_cli_options = "");
 	
 	// current metal (id <MTLCommandBuffer>) or vulkan command buffer used for rendering
-	void* render_cmd_buffer;
+	//void* render_cmd_buffer;
 	
 };
 

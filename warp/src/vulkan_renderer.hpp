@@ -31,7 +31,7 @@ public:
 	void render(const floor_obj_model& model, const camera& cam) override;
 	
 protected:
-	void create_textures(const COMPUTE_IMAGE_TYPE color_format = COMPUTE_IMAGE_TYPE::BGRA8UI_NORM) override;
+	void create_textures(const COMPUTE_IMAGE_TYPE color_format) override;
 	bool compile_shaders(const string add_cli_options) override;
 	
 	void render_full_scene(const floor_obj_model& model, const camera& cam) override;

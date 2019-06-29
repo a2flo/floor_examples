@@ -513,9 +513,9 @@ struct blit_in_out {
 
 vertex blit_in_out blit_vs() {
 	switch(vertex_id) {
-		case 0: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
+		case 0: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
 		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
-		case 2: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
+		case 2: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
 		default: floor_unreachable();
 	}
 }
