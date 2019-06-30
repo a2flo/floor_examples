@@ -77,8 +77,8 @@ void camera::run() {
 			double ypos = (1.0 / (double)floor::get_height()) * (double)cursor_pos.y;
 			
 			if(xpos != 0.5 || ypos != 0.5) {
-				rotation.x -= (0.5 - ypos) * (double)rotation_speed;
-				rotation.y -= (0.5 - xpos) * (double)rotation_speed;
+				rotation.x -= float((0.5 - ypos) * (double)rotation_speed);
+				rotation.y -= float((0.5 - xpos) * (double)rotation_speed);
 				
 				SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
 			}

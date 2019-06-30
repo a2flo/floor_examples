@@ -155,7 +155,7 @@ static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> att
 	};
 	VkRenderPass render_pass { nullptr };
 	VK_CALL_RET(vkCreateRenderPass(device, &render_pass_info, nullptr, &render_pass),
-				"failed to create render pass", nullptr);
+				"failed to create render pass", nullptr)
 	return render_pass;
 }
 
@@ -194,7 +194,7 @@ bool vulkan_renderer::make_pipeline(const vulkan_device& vk_dev,
 		.pPushConstantRanges = nullptr,
 	};
 	VK_CALL_RET(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline.layout),
-				"failed to create pipeline layout #" + to_string(pipeline_id), false);
+				"failed to create pipeline layout #" + to_string(pipeline_id), false)
 	
 	// create the pipeline
 	const VkPipelineVertexInputStateCreateInfo vertex_input_state {
@@ -323,7 +323,7 @@ bool vulkan_renderer::make_pipeline(const vulkan_device& vk_dev,
 		.basePipelineIndex = 0,
 	};
 	VK_CALL_RET(vkCreateGraphicsPipelines(device, nullptr, 1, &gfx_pipeline_info, nullptr, &pipeline.pipeline),
-				"failed to create pipeline #" + to_string(pipeline_id), false);
+				"failed to create pipeline #" + to_string(pipeline_id), false)
 	return true;
 }
 
@@ -345,7 +345,7 @@ bool vulkan_renderer::init() {
 	};
 	
 	// creates fbo textures/images
-	create_textures();
+	create_textures(warp_state.ctx->get_renderer_image_type());
 	
 	// create the render passes and sub-passes
 	// NOTE: this isn't actually storing any references to the images, these are only
@@ -430,7 +430,7 @@ bool vulkan_renderer::init() {
 			};
 			framebuffer_create_info.pAttachments = attachments;
 			VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.scatter_framebuffers[i]),
-						"failed to create scatter framebuffer", false);
+						"failed to create scatter framebuffer", false)
 		}
 	}
 	{
@@ -455,7 +455,7 @@ bool vulkan_renderer::init() {
 			};
 			framebuffer_create_info.pAttachments = attachments;
 			VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.gather_framebuffers[i]),
-						"failed to create gather framebuffer", false);
+						"failed to create gather framebuffer", false)
 		}
 	}
 	{
@@ -478,7 +478,7 @@ bool vulkan_renderer::init() {
 			};
 			framebuffer_create_info.pAttachments = attachments;
 			VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.gather_forward_framebuffers[i]),
-						"failed to create gather forward framebuffer", false);
+						"failed to create gather forward framebuffer", false)
 		}
 	}
 	{
@@ -494,7 +494,7 @@ bool vulkan_renderer::init() {
 			.layers = 1,
 		};
 		VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.shadow_framebuffer),
-					"failed to create shadow framebuffer", false);
+					"failed to create shadow framebuffer", false)
 	}
 	{
 		VkFramebufferCreateInfo framebuffer_create_info {
@@ -512,7 +512,7 @@ bool vulkan_renderer::init() {
 		for(uint32_t i = 0, count = vk_ctx->get_swapchain_image_count(); i < count; ++i) {
 			framebuffer_create_info.pAttachments = &vk_ctx->get_swapchain_image_view(i);
 			VK_CALL_RET(vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &passes.screen_framebuffers[i]),
-						"failed to create screen framebuffer", false);
+						"failed to create screen framebuffer", false)
 		}
 	}
 	
@@ -547,7 +547,7 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 		.pInheritanceInfo = nullptr,
 	};
 	VK_CALL_RET(vkBeginCommandBuffer(blit_cmd_buffer.cmd_buffer, &begin_info),
-				"failed to begin command buffer");
+				"failed to begin command buffer")
 	{
 		const auto& pipeline = pipelines[BLIT];
 		const VkRect2D render_area {
@@ -582,7 +582,7 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 		vkCmdEndRenderPass(blit_cmd_buffer.cmd_buffer);
 	}
 	
-	VK_CALL_RET(vkEndCommandBuffer(blit_cmd_buffer.cmd_buffer), "failed to end command buffer");
+	VK_CALL_RET(vkEndCommandBuffer(blit_cmd_buffer.cmd_buffer), "failed to end command buffer")
 	vk_queue->submit_command_buffer(blit_cmd_buffer, true);
 	
 	vk_ctx->present_image(drawable);
@@ -631,7 +631,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 			.pInheritanceInfo = nullptr,
 		};
 		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
-					"failed to begin command buffer");
+					"failed to begin command buffer")
 		
 		// make the attachment writable (again)
 		((vulkan_image*)shadow_map.shadow_image.get())->transition_write(*warp_state.dev_queue, cmd_buffer.cmd_buffer);
@@ -675,7 +675,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
-		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
 		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
 	
@@ -691,7 +691,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 			.pInheritanceInfo = nullptr,
 		};
 		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
-					"failed to begin command buffer");
+					"failed to begin command buffer")
 		
 		// make the attachment writable (again)
 		((vulkan_image*)scene_fbo.color[cur_fbo].get())->transition_write(*warp_state.dev_queue, cmd_buffer.cmd_buffer);
@@ -735,7 +735,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
-		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
 		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
 	
@@ -751,7 +751,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 			.pInheritanceInfo = nullptr,
 		};
 		VK_CALL_RET(vkBeginCommandBuffer(cmd_buffer.cmd_buffer, &begin_info),
-					"failed to begin command buffer");
+					"failed to begin command buffer")
 		vkCmdSetViewport(cmd_buffer.cmd_buffer, 0, 1, &viewport);
 		vkCmdSetScissor(cmd_buffer.cmd_buffer, 0, 1, &render_area);
 		
@@ -780,7 +780,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
-		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer");
+		VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
 		vk_queue->submit_command_buffer(cmd_buffer, true); // TODO: don't block
 	}
 }

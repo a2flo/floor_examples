@@ -172,14 +172,14 @@ static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_p
 }
 
 static bool compile_shaders() {
-	static const char img_vs_text[] { u8R"RAWSTR(
+	static const char img_vs_text[] { R"RAWSTR(
 		in vec2 in_vertex;
 		out vec2 tex_coord;
 		void main() {
 			tex_coord = in_vertex.xy * 0.5 + 0.5;
 			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
 		})RAWSTR" };
-	static const char img_fs_text[] { u8R"RAWSTR(
+	static const char img_fs_text[] { R"RAWSTR(
 		uniform sampler2D tex;
 		in vec2 tex_coord;
 		out vec4 frag_color;

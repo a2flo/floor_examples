@@ -43,14 +43,14 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 	}
 	log_debug("offsets: %s", offsets.str());
 	
-	static const char blur_vs_text[] { u8R"RAWSTR(
+	static const char blur_vs_text[] { R"RAWSTR(
 		in vec2 in_vertex;
 		out vec2 tex_coord;
 		void main() {
 			tex_coord = in_vertex.xy * 0.5 + 0.5;
 			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
 		})RAWSTR" };
-	static const string blur_fs_text { u8R"RAWSTR(
+	static const string blur_fs_text { R"RAWSTR(
 		uniform sampler2D tex;
 		in vec2 tex_coord;
 		out vec4 frag_color;
@@ -58,7 +58,7 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 			// NOTE: fixed for 15-tap or 17-tap
 			const float offsets[TAP_COUNT] = float[TAP_COUNT]()RAWSTR"
 			+ offsets.str() +
-			u8R"RAWSTR();
+			R"RAWSTR();
 #if TAP_COUNT == 17
 			const float coeffs[17] = float[17](0.00437766, 0.00984974, 0.0196995, 0.0351776,
 											   0.0562842, 0.0809086, 0.104705, 0.122156,

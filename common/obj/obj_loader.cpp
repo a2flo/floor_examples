@@ -126,7 +126,7 @@ if(src_surface->format->Rshift == rshift && \
 
 COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
 	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
-	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type);
+	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type)
 	if(image_type == COMPUTE_IMAGE_TYPE::NONE) {
 		log_error("unknown surface format: %u, %u, %u, %u, %u",
 				  (uint32_t)surface->format->BitsPerPixel,
@@ -534,7 +534,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		GLint internal_format = 0;
 		GLenum format = 0;
 		GLenum type = 0;
-		check_format(surface, internal_format, format, type);
+		check_format(surface, internal_format, format, type)
 		if(format == GL_BGR || format == GL_BGRA) {
 			SDL_PixelFormat new_pformat;
 			memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
@@ -699,7 +699,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			GLint internal_format = 0;
 			GLenum format = 0;
 			GLenum type = 0;
-			check_format(surface, internal_format, format, type);
+			check_format(surface, internal_format, format, type)
 			
 			//
 			glBindTexture(GL_TEXTURE_2D, (*model_gl_textures)[i]);
