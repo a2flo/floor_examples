@@ -22,7 +22,7 @@
 #include <libwarp/libwarp.h>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
-#include "vulkan_renderer.hpp"
+#include "vulkan_renderer_legacy.hpp"
 #include "unified_renderer.hpp"
 #include "obj_loader.hpp"
 #include "auto_cam.hpp"
@@ -38,6 +38,8 @@ typedef option_handler<warp_option_context> warp_opt_handler;
 static unique_ptr<camera> cam;
 static const float3 cam_speeds { 75.0f /* default */, 150.0f /* faster */, 10.0f /* slower */ };
 
+static shared_ptr<unified_renderer> uni_renderer;
+
 //! option -> function map
 template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
 	{ "--help", [](warp_option_context&, char**&) {
@@ -45,6 +47,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t--scatter: warp in scatter mode" << endl;
 		cout << "\t--gather: warp in gather mode" << endl;
 		cout << "\t--gather-forward: warp in gather forward-only mode" << endl;
+		cout << "\t--no-warp: disables warping at the start (enable at run-time by pressing '1')" << endl;
 		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal/vulkan)" << endl;
 		cout << "\t                  NOTE: obviously an upper limit" << endl;
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
@@ -88,6 +91,10 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.is_gather_forward = true;
 		cout << "using gather-forward" << endl;
 	}},
+	{ "--no-warp", [](warp_option_context&, char**&) {
+		warp_state.is_warping = false;
+		cout << "warping disabled" << endl;
+	}},
 	{ "--depth-zw", [](warp_option_context&, char**&) {
 		warp_state.is_zw_depth = true;
 		cout << "using separate z/w depth buffer" << endl;
@@ -118,6 +125,11 @@ static void cam_dump() {
 static bool compile_program() {
 	// reset libwarp programs/kernels
 	libwarp_cleanup();
+	
+	if (warp_state.unified_renderer && uni_renderer) {
+		uni_renderer->rebuild_renderer();
+	}
+	
 	return true;
 }
 
@@ -297,7 +309,6 @@ int main(int, char* argv[]) {
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
 	const auto floor_renderer = floor::get_renderer();
 	shared_ptr<common_renderer> renderer;
-	shared_ptr<unified_renderer> uni_renderer;
 	
 	if(floor_renderer == floor::RENDERER::NONE) {
 		log_error("no renderer was initialized");
@@ -429,7 +440,7 @@ int main(int, char* argv[]) {
 			else if(!warp_state.no_vulkan) {
 				warp_state.is_zw_depth = false; // not applicable to vulkan
 		
-				renderer = make_shared<vulkan_renderer>();
+				renderer = make_shared<vulkan_renderer_legacy>();
 				if(!renderer->init()) {
 					log_error("error during vulkan initialization!");
 					return -1;

@@ -26,10 +26,12 @@
 #include <floor/compute/vulkan/vulkan_image.hpp>
 #include <floor/compute/vulkan/vulkan_queue.hpp>
 #include <floor/compute/vulkan/vulkan_kernel.hpp>
+#include <floor/graphics/graphics_renderer.hpp>
+#include <floor/graphics/vulkan/vulkan_shader.hpp>
 
 static VkRenderPass render_pass { nullptr };
-static VkPipeline pipeline { nullptr };
-static VkPipelineLayout pipeline_layout { nullptr };
+static VkPipeline vk_pipeline { nullptr };
+static VkPipelineLayout vk_pipeline_layout { nullptr };
 static compute_kernel* nbody_vs { nullptr };
 static compute_kernel* nbody_fs { nullptr };
 static const vulkan_kernel::vulkan_kernel_entry* vs_entry;
@@ -189,7 +191,7 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.pushConstantRangeCount = 0,
 		.pPushConstantRanges = nullptr,
 	};
-	VK_CALL_RET(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout),
+	VK_CALL_RET(vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &vk_pipeline_layout),
 				"failed to create pipeline layout", false)
 	
 	// create the pipeline
@@ -319,13 +321,13 @@ bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
 		.pDepthStencilState = &depth_stencil_state,
 		.pColorBlendState = &color_blend_state,
 		.pDynamicState = /*&dynamic_state*/ nullptr,
-		.layout = pipeline_layout,
+		.layout = vk_pipeline_layout,
 		.renderPass = render_pass,
 		.subpass = 0,
 		.basePipelineHandle = nullptr,
 		.basePipelineIndex = 0,
 	};
-	VK_CALL_RET(vkCreateGraphicsPipelines(device, nullptr, 1, &gfx_pipeline_info, nullptr, &pipeline),
+	VK_CALL_RET(vkCreateGraphicsPipelines(device, nullptr, 1, &gfx_pipeline_info, nullptr, &vk_pipeline),
 				"failed to create pipeline", false)
 	
 	// create framebuffers from the created render pass + swapchain image views
@@ -433,22 +435,23 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 		.mass_minmax = nbody_state.mass_minmax
 	};
 	
-	static const vector<vulkan_kernel::multi_draw_entry> nbody_draw_info {{
+	static const vector<graphics_renderer::multi_draw_entry> nbody_draw_info {{
 		.vertex_count = nbody_state.body_count
 	}};
 	
 	// hijack the vertex shader (kernel) for now
-	((vulkan_kernel*)nbody_vs)->multi_draw(dev_queue, &cmd_buffer,
-										   pipeline,
-										   pipeline_layout,
-										   vs_entry,
-										   fs_entry,
-										   nbody_draw_info,
-										   // vs args
-										   position_buffer,
-										   uniforms,
-										   // fs args
-										   body_textures[0]);
+	((vulkan_shader*)nbody_vs)->draw(dev_queue, cmd_buffer,
+									 vk_pipeline,
+									 vk_pipeline_layout,
+									 vs_entry,
+									 fs_entry,
+									 &nbody_draw_info,
+									 nullptr,
+									 // vs args
+									 position_buffer,
+									 uniforms,
+									 // fs args
+									 body_textures[0]);
 	
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	

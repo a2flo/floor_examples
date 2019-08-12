@@ -234,8 +234,8 @@ static float4 scene_fs(const scene_base_in_out& in,
 		const auto shadow_bias = math::clamp(fixed_bias * slope, 0.0f, fixed_bias * 2.0f);
 		
 		float3 shadow_coord = in.shadow_coord.xyz / in.shadow_coord.w;
-#if defined(FLOOR_COMPUTE_METAL)
-		shadow_coord.y = 1.0f - shadow_coord.y; // why metal, why?
+#if defined(WARP_LEGACY_METAL)
+		shadow_coord.y = 1.0f - shadow_coord.y;
 #endif
 #if 0
 		if(in.shadow_coord.w > 0.0f) {
@@ -428,22 +428,18 @@ struct skybox_gather_uniforms_t : skybox_base_uniforms_t {
 
 
 static void skybox_vs(skybox_base_in_out& out, const skybox_base_uniforms_t& uniforms) {
-	// correct position depending on the definition of "up" ....
-#if defined(FLOOR_COMPUTE_METAL)
-	switch(vertex_id) {
+	switch (vertex_id) {
+#if !defined(WARP_LEGACY_METAL)
+		case 0: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
+		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
+		case 2: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
+#else
 		case 0: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
 		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 2: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
-		default: floor_unreachable();
-	}
-#else // vulkan
-	switch(vertex_id) {
-		case 2: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
-		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
-		case 0: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
-		default: floor_unreachable();
-	}
 #endif
+		default: floor_unreachable();
+	}
 	out.cube_tex_coord = (out.position * uniforms.imvpm).xyz;
 }
 
@@ -513,10 +509,17 @@ struct blit_in_out {
 
 vertex blit_in_out blit_vs() {
 	switch(vertex_id) {
+#if !defined(WARP_LEGACY_METAL)
+		case 0: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
+		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
+		case 2: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
+		default: floor_unreachable();
+#else
 		case 0: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
 		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
 		case 2: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
 		default: floor_unreachable();
+#endif
 	}
 }
 

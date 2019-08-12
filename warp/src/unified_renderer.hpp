@@ -36,6 +36,8 @@ public:
 	void destroy();
 	void render(const floor_obj_model& model, const camera& cam);
 	
+	bool rebuild_renderer();
+	
 	// pipelines
 	enum WARP_PIPELINE : uint32_t {
 		SCENE_SCATTER = 0,
@@ -132,7 +134,6 @@ protected:
 	
 	// rendering + warp uniforms
 	float3 light_pos;
-	matrix4f clip;
 	matrix4f pm, mvm, rmvm;
 	matrix4f prev_mvm, prev_prev_mvm;
 	matrix4f prev_rmvm, prev_prev_rmvm;
@@ -152,10 +153,6 @@ protected:
 		matrix4f m0; // prev_imvpm (scatter), next_mvpm (gather)
 		matrix4f m1; // unused (scatter), prev_mvpm (gather)
 	} skybox_uniforms;
-	
-	shared_ptr<compute_buffer> light_mvpm_buffer;
-	shared_ptr<compute_buffer> scene_uniforms_buffer;
-	shared_ptr<compute_buffer> skybox_uniforms_buffer;
 	
 	// shader
 	shared_ptr<compute_program> shader_prog;

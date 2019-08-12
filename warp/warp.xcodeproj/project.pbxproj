@@ -179,13 +179,11 @@
 		5C8646A51C19BFB6000518C7 /* posy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEA1BCED83F000732F9 /* posy.png */; };
 		5C8646A61C19BFB6000518C7 /* posz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEB1BCED83F000732F9 /* posz.png */; };
 		5C8646A71C19BFB6000518C7 /* readme.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEC1BCED83F000732F9 /* readme.txt */; };
+		5C8A035422E4E5D8009F6589 /* vulkan_renderer_legacy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8A035322E4E5D7009F6589 /* vulkan_renderer_legacy.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
 		5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
-		5CBA3EEE1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EEC1D97F148001BEDEC /* vulkan_renderer.cpp */; };
-		5CBA3EEF1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EEC1D97F148001BEDEC /* vulkan_renderer.cpp */; };
-		5CBA3EF01D97F148001BEDEC /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EEC1D97F148001BEDEC /* vulkan_renderer.cpp */; };
 		5CBA3EF31D97F61F001BEDEC /* common_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */; };
 		5CBA3EF41D97F61F001BEDEC /* common_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */; };
 		5CBA3EF51D97F61F001BEDEC /* common_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */; };
@@ -557,13 +555,13 @@
 		5C56D5141BB2F6690024467C /* vase_round_spec.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_spec.png; path = ../data/sponza/textures/vase_round_spec.png; sourceTree = "<group>"; };
 		5C56D5151BB2F6690024467C /* vase_round.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round.png; path = ../data/sponza/textures/vase_round.png; sourceTree = "<group>"; };
 		5C8646AB1C19BFB6000518C7 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C8A035222E4E5D7009F6589 /* vulkan_renderer_legacy.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vulkan_renderer_legacy.hpp; sourceTree = "<group>"; };
+		5C8A035322E4E5D7009F6589 /* vulkan_renderer_legacy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vulkan_renderer_legacy.cpp; sourceTree = "<group>"; };
 		5C8FD0941AD3366800215230 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5C8FEF411AF22325001D47BF /* auto_cam.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = auto_cam.cpp; sourceTree = "<group>"; };
 		5C8FEF421AF22325001D47BF /* auto_cam.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = auto_cam.hpp; sourceTree = "<group>"; };
-		5CBA3EEC1D97F148001BEDEC /* vulkan_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vulkan_renderer.cpp; sourceTree = "<group>"; };
-		5CBA3EED1D97F148001BEDEC /* vulkan_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vulkan_renderer.hpp; sourceTree = "<group>"; };
 		5CBA3EF11D97F53D001BEDEC /* common_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = common_renderer.hpp; sourceTree = "<group>"; };
 		5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common_renderer.cpp; sourceTree = "<group>"; };
 		5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
@@ -843,12 +841,12 @@
 				5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */,
 				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
 				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
-				5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */,
-				5C2F836A1B654E8200B27BE3 /* metal_renderer.hpp */,
-				5CBA3EEC1D97F148001BEDEC /* vulkan_renderer.cpp */,
-				5CBA3EED1D97F148001BEDEC /* vulkan_renderer.hpp */,
 				5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */,
 				5CBA3EF11D97F53D001BEDEC /* common_renderer.hpp */,
+				5C2F836D1B654EAE00B27BE3 /* metal_renderer.mm */,
+				5C2F836A1B654E8200B27BE3 /* metal_renderer.hpp */,
+				5C8A035322E4E5D7009F6589 /* vulkan_renderer_legacy.cpp */,
+				5C8A035222E4E5D7009F6589 /* vulkan_renderer_legacy.hpp */,
 				5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */,
 				5CEC08AD22C00D7D00033467 /* unified_renderer.hpp */,
 				5CE8AEC31D1F356400369136 /* obj_loader.cpp */,
@@ -1068,7 +1066,6 @@
 				5CF9489E1D2AB40600FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489F1D2AB40600FEA7AE /* camera.cpp in Sources */,
 				5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */,
-				5CBA3EEF1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5CEC08B022C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
@@ -1085,7 +1082,6 @@
 				5CF948A01D2AB41600FEA7AE /* obj_loader.cpp in Sources */,
 				5CF948A11D2AB41600FEA7AE /* camera.cpp in Sources */,
 				5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */,
-				5CBA3EF01D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5C8646491C19BFB6000518C7 /* main.cpp in Sources */,
 				5CEC08B122C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */,
@@ -1102,10 +1098,10 @@
 				5CE8AEC51D1F356400369136 /* obj_loader.cpp in Sources */,
 				5C2F836E1B654EAE00B27BE3 /* metal_renderer.mm in Sources */,
 				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
-				5CBA3EEE1D97F148001BEDEC /* vulkan_renderer.cpp in Sources */,
 				5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */,
 				5CEC08AF22C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
+				5C8A035422E4E5D8009F6589 /* vulkan_renderer_legacy.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
 				5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 				5CBA3EF31D97F61F001BEDEC /* common_renderer.cpp in Sources */,

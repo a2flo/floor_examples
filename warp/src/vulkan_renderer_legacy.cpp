@@ -16,7 +16,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "vulkan_renderer.hpp"
+#include "vulkan_renderer_legacy.hpp"
 
 #if !defined(FLOOR_NO_VULKAN)
 #include "warp_state.hpp"
@@ -26,6 +26,8 @@
 #include <floor/compute/vulkan/vulkan_image.hpp>
 #include <floor/compute/vulkan/vulkan_queue.hpp>
 #include <floor/compute/vulkan/vulkan_kernel.hpp>
+#include <floor/graphics/graphics_renderer.hpp>
+#include <floor/graphics/vulkan/vulkan_shader.hpp>
 
 static constexpr const uint32_t render_swap_count = 2;
 static struct {
@@ -58,15 +60,15 @@ struct pipeline_object {
 	VkPipeline pipeline { nullptr };
 	VkPipelineLayout layout { nullptr };
 };
-static array<pipeline_object, vulkan_renderer::warp_pipeline_count()> pipelines;
+static array<pipeline_object, vulkan_renderer_legacy::warp_pipeline_count()> pipelines;
 
-const vulkan_kernel::vulkan_kernel_entry* vulkan_renderer::get_shader_entry(const WARP_SHADER& shader) const {
+const vulkan_kernel::vulkan_kernel_entry* vulkan_renderer_legacy::get_shader_entry(const WARP_SHADER& shader) const {
 	return (shader < __MAX_WARP_SHADER ?
 			(const vulkan_kernel::vulkan_kernel_entry*)shader_entries[shader] :
 			nullptr);
 };
 
-void vulkan_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
+void vulkan_renderer_legacy::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 	common_renderer::create_textures(color_format);
 	
 	// TODO: update fbo attachments
@@ -159,15 +161,15 @@ static VkRenderPass make_render_pass(VkDevice device, vector<compute_image*> att
 	return render_pass;
 }
 
-bool vulkan_renderer::make_pipeline(const vulkan_device& vk_dev,
-									VkRenderPass render_pass,
-									const WARP_PIPELINE pipeline_id,
-									const WARP_SHADER vertex_shader,
-									const WARP_SHADER fragment_shader,
-									const uint2& render_size,
-									const uint32_t color_attachment_count,
-									const bool has_depth_attachment,
-									const VkCompareOp depth_compare_op) {
+bool vulkan_renderer_legacy::make_pipeline(const vulkan_device& vk_dev,
+										   VkRenderPass render_pass,
+										   const WARP_PIPELINE pipeline_id,
+										   const WARP_SHADER vertex_shader,
+										   const WARP_SHADER fragment_shader,
+										   const uint2& render_size,
+										   const uint32_t color_attachment_count,
+										   const bool has_depth_attachment,
+										   const VkCompareOp depth_compare_op) {
 	//log_debug("creating pipeline #%u", pipeline_id);
 	auto device = vk_dev.device;
 	
@@ -327,7 +329,7 @@ bool vulkan_renderer::make_pipeline(const vulkan_device& vk_dev,
 	return true;
 }
 
-bool vulkan_renderer::init() {
+bool vulkan_renderer_legacy::init() {
 	if(!common_renderer::init()) {
 		return false;
 	}
@@ -519,11 +521,11 @@ bool vulkan_renderer::init() {
 	return true;
 }
 
-void vulkan_renderer::destroy() {
+void vulkan_renderer_legacy::destroy() {
 	// TODO: clean up renderer stuff
 }
 
-void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
+void vulkan_renderer_legacy::render(const floor_obj_model& model, const camera& cam) {
 	auto vk_ctx = (vulkan_compute*)warp_state.ctx.get();
 	auto vk_queue = (vulkan_queue*)warp_state.dev_queue.get();
 	
@@ -565,19 +567,20 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 		};
 		vkCmdBeginRenderPass(blit_cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
-		const vector<vulkan_kernel::multi_draw_entry> blit_draw_info {
+		const vector<graphics_renderer::multi_draw_entry> blit_draw_info {
 			{ .vertex_count = 3 }
 		};
-		((vulkan_kernel*)shaders[BLIT_VS])->multi_draw(*warp_state.dev_queue, &blit_cmd_buffer,
-													   pipeline.pipeline,
-													   pipeline.layout,
-													   get_shader_entry(BLIT_VS),
-													   get_shader_entry(BLIT_FS),
-													   blit_draw_info,
-													   // if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
-													   blit_frame ?
-													   scene_fbo.color[warp_state.cur_fbo] :
-													   scene_fbo.compute_color);
+		((vulkan_shader*)shaders[BLIT_VS])->draw(*warp_state.dev_queue, blit_cmd_buffer,
+												 pipeline.pipeline,
+												 pipeline.layout,
+												 get_shader_entry(BLIT_VS),
+												 get_shader_entry(BLIT_FS),
+												 &blit_draw_info,
+												 nullptr,
+												 // if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
+												 blit_frame ?
+												 scene_fbo.color[warp_state.cur_fbo] :
+												 scene_fbo.compute_color);
 		
 		vkCmdEndRenderPass(blit_cmd_buffer.cmd_buffer);
 	}
@@ -588,7 +591,7 @@ void vulkan_renderer::render(const floor_obj_model& model, const camera& cam) {
 	vk_ctx->present_image(drawable);
 }
 
-void vulkan_renderer::render_full_scene(const floor_obj_model& model, const camera& cam) {
+void vulkan_renderer_legacy::render_full_scene(const floor_obj_model& model, const camera& cam) {
 	auto vk_queue = (vulkan_queue*)warp_state.dev_queue.get();
 	
 	// this updates all uniforms
@@ -611,11 +614,11 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 	};
 	
 	// our draw info is static, so only create it once
-	static const vector<vulkan_kernel::multi_draw_indexed_entry> scene_draw_info {{
+	static const vector<graphics_renderer::multi_draw_indexed_entry> scene_draw_info {{
 		.index_buffer = model.indices_buffer.get(),
 		.index_count = model.index_count
 	}};
-	static const vector<vulkan_kernel::multi_draw_entry> skybox_draw_info {{
+	static const vector<graphics_renderer::multi_draw_entry> skybox_draw_info {{
 		.vertex_count = 3
 	}};
 	
@@ -664,14 +667,15 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SHADOW_VS])->multi_draw_indexed(*warp_state.dev_queue, &cmd_buffer,
-																 pipeline.pipeline,
-																 pipeline.layout,
-																 get_shader_entry(SHADOW_VS),
-																 nullptr,
-																 scene_draw_info,
-																 model.vertices_buffer,
-																 light_mvpm_buffer /* TODO: light_mvpm */);
+		((vulkan_shader*)shaders[SHADOW_VS])->draw(*warp_state.dev_queue, cmd_buffer,
+												   pipeline.pipeline,
+												   pipeline.layout,
+												   get_shader_entry(SHADOW_VS),
+												   nullptr,
+												   nullptr,
+												   &scene_draw_info,
+												   model.vertices_buffer,
+												   light_mvpm_buffer /* TODO: light_mvpm */);
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
@@ -712,26 +716,27 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SCENE_GATHER_VS])->multi_draw_indexed(*warp_state.dev_queue, &cmd_buffer,
-																	   pipeline.pipeline,
-																	   pipeline.layout,
-																	   get_shader_entry(SCENE_GATHER_VS),
-																	   get_shader_entry(SCENE_GATHER_FS),
-																	   scene_draw_info,
-																	   // vertex shader
-																	   model.vertices_buffer,
-																	   model.tex_coords_buffer,
-																	   model.normals_buffer,
-																	   model.binormals_buffer,
-																	   model.tangents_buffer,
-																	   model.materials_buffer,
-																	   scene_uniforms_buffer,
-																	   // fragment shader
-																	   model.diffuse_textures,
-																	   model.specular_textures,
-																	   model.normal_textures,
-																	   model.mask_textures,
-																	   shadow_map.shadow_image);
+		((vulkan_shader*)shaders[SCENE_GATHER_VS])->draw(*warp_state.dev_queue, cmd_buffer,
+														 pipeline.pipeline,
+														 pipeline.layout,
+														 get_shader_entry(SCENE_GATHER_VS),
+														 get_shader_entry(SCENE_GATHER_FS),
+														 nullptr,
+														 &scene_draw_info,
+														 // vertex shader
+														 model.vertices_buffer,
+														 model.tex_coords_buffer,
+														 model.normals_buffer,
+														 model.binormals_buffer,
+														 model.tangents_buffer,
+														 model.materials_buffer,
+														 scene_uniforms_buffer,
+														 // fragment shader
+														 model.diffuse_textures,
+														 model.specular_textures,
+														 model.normal_textures,
+														 model.mask_textures,
+														 shadow_map.shadow_image);
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
@@ -769,14 +774,15 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 		vkCmdBeginRenderPass(cmd_buffer.cmd_buffer, &pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 		
 		// hijack the vertex shader (kernel) for now
-		((vulkan_kernel*)shaders[SKYBOX_GATHER_VS])->multi_draw(*warp_state.dev_queue, &cmd_buffer,
-																pipeline.pipeline,
-																pipeline.layout,
-																get_shader_entry(SKYBOX_GATHER_VS),
-																get_shader_entry(SKYBOX_GATHER_FS),
-																skybox_draw_info,
-																skybox_uniforms_buffer,
-																skybox_tex);
+		((vulkan_shader*)shaders[SKYBOX_GATHER_VS])->draw(*warp_state.dev_queue, cmd_buffer,
+														  pipeline.pipeline,
+														  pipeline.layout,
+														  get_shader_entry(SKYBOX_GATHER_VS),
+														  get_shader_entry(SKYBOX_GATHER_FS),
+														  &skybox_draw_info,
+														  nullptr,
+														  skybox_uniforms_buffer,
+														  skybox_tex);
 		
 		vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 		
@@ -785,7 +791,7 @@ void vulkan_renderer::render_full_scene(const floor_obj_model& model, const came
 	}
 }
 
-bool vulkan_renderer::compile_shaders(const string add_cli_options) {
+bool vulkan_renderer_legacy::compile_shaders(const string add_cli_options) {
 	return common_renderer::compile_shaders(add_cli_options +
 											// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
 											" -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT"

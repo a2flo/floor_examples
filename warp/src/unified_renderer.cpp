@@ -51,7 +51,7 @@ void unified_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 		scene_fbo.depth[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 														  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 														  COMPUTE_IMAGE_TYPE::D32F |
-														  COMPUTE_IMAGE_TYPE::READ |
+														  COMPUTE_IMAGE_TYPE::READ_WRITE |
 														  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 														  COMPUTE_MEMORY_FLAG::READ);
 		
@@ -163,7 +163,7 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 	return false;
 }
 
-bool unified_renderer::init() {
+bool unified_renderer::rebuild_renderer() {
 	// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
 	// + we want to use the "bind everything" method and draw the scene with 1 draw call
 	const string additional_compile_options = " -DFLOOR_METAL_ADDRESS_MODE=metal_image::sampler::ADDRESS_MODE::REPEAT -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT -DWARP_IMAGE_ARRAY_SUPPORT";
@@ -171,6 +171,13 @@ bool unified_renderer::init() {
 		return false;
 	}
 	
+	create_passes();
+	create_pipelines();
+	
+	return true;
+}
+
+bool unified_renderer::init() {
 	create_textures(warp_state.ctx->get_renderer_image_type());
 	
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
@@ -186,14 +193,9 @@ bool unified_renderer::init() {
 														   COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 														   COMPUTE_MEMORY_FLAG::READ);
 	
-	// uniforms
-	light_mvpm_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(matrix4f));
-	scene_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(scene_uniforms));
-	skybox_uniforms_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, sizeof(skybox_uniforms));
-	
-	//
-	create_passes();
-	create_pipelines();
+	if (!rebuild_renderer()) {
+		return false;
+	}
 	
 	return true;
 }
@@ -444,6 +446,7 @@ void unified_renderer::create_pipelines() {
 			.primitive = PRIMITIVE::TRIANGLE,
 			.cull_mode = CULL_MODE::BACK,
 			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+			.viewport = shadow_map.dim,
 			.depth = {
 				.write = true,
 				.compare = DEPTH_COMPARE::LESS,
@@ -551,7 +554,9 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 			.vertex_count = 3 // fullscreen triangle
 		}};
 		renderer->multi_draw(blit_draw_info,
-							 blit_frame ? scene_fbo.color[warp_state.cur_fbo] : scene_fbo.compute_color);
+							 // NOTE: for gather: 1 - cur_fbo, because this is flipped in render_full_scene (-> this is the current FBO)
+							 blit_frame ? scene_fbo.color[warp_state.is_scatter || warp_state.is_gather_forward ?
+														  0u : 1u - warp_state.cur_fbo] : scene_fbo.compute_color);
 		
 		renderer->end();
 		renderer->present();
@@ -584,7 +589,7 @@ void unified_renderer::render_kernels(const float& delta, const float& render_de
 	
 	// slow fixed delta for debugging/demo purposes
 	static float dbg_delta = 0.0f;
-	static constexpr const float delta_eps = 0.00025f;
+	static constexpr const float delta_eps = 0.0025f;
 	if(warp_state.is_debug_delta) {
 		if(dbg_delta >= (1.0f - delta_eps)) {
 			dbg_delta = delta_eps;
@@ -648,9 +653,9 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	
 	// update shadow map uniforms
 	{
-		const matrix4f light_pm = clip * matrix4f().perspective(120.0f, 1.0f,
-																warp_state.shadow_near_far_plane.x,
-																warp_state.shadow_near_far_plane.y);
+		const matrix4f light_pm = matrix4f::perspective(120.0f, 1.0f,
+														warp_state.shadow_near_far_plane.x,
+														warp_state.shadow_near_far_plane.y);
 		const matrix4f light_mvm {
 			matrix4f::translation(-light_pos) *
 			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
@@ -663,8 +668,8 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	
 	// update scene uniforms
 	{
-		pm = clip * matrix4f::perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-										  warp_state.near_far_plane.x, warp_state.near_far_plane.y);
+		pm = matrix4f::perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
+								   warp_state.near_far_plane.x, warp_state.near_far_plane.y);
 		rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 				matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
 		mvm = matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm;
@@ -704,11 +709,6 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		};
 	}
 	
-	// update constant buffers
-	light_mvpm_buffer->write(*warp_state.dev_queue, &light_mvpm);
-	scene_uniforms_buffer->write(*warp_state.dev_queue, &scene_uniforms);
-	skybox_uniforms_buffer->write(*warp_state.dev_queue, &skybox_uniforms);
-	
 	// our draw info is static, so only create it once
 	static const vector<graphics_renderer::multi_draw_indexed_entry> scene_draw_info {{
 		.index_buffer = model.indices_buffer.get(),
@@ -729,9 +729,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->set_attachments(shadow_map.shadow_image);
 		renderer->begin();
 		
-		renderer->multi_draw_indexed(scene_draw_info,
-									 model.vertices_buffer,
-									 light_mvpm_buffer /* TODO: light_mvpm */);
+		renderer->multi_draw_indexed(scene_draw_info, model.vertices_buffer, light_mvpm);
 		
 		renderer->end();
 		renderer->commit();
@@ -741,8 +739,10 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	// render actual scene
 	{
 		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue,
-																 (warp_state.is_scatter ? *scatter_passes[0] : (warp_state.is_gather_forward ? *gather_fwd_passes[0] : *gather_passes[0])),
-																 (warp_state.is_scatter ? *scatter_pipeline : (warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline)));
+																 (warp_state.is_scatter ? *scatter_passes[0] :
+																  (warp_state.is_gather_forward ? *gather_fwd_passes[0] : *gather_passes[0])),
+																 (warp_state.is_scatter ? *scatter_pipeline :
+																  (warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline)));
 		if (!renderer->is_valid()) {
 			return;
 		}
@@ -768,7 +768,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 									 model.binormals_buffer,
 									 model.tangents_buffer,
 									 model.materials_buffer,
-									 scene_uniforms_buffer,
+									 scene_uniforms,
 									 // fragment shader
 									 model.diffuse_textures,
 									 model.specular_textures,
@@ -802,9 +802,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		
 		// skybox
 		renderer->begin();
-		renderer->multi_draw(skybox_draw_info,
-							 skybox_uniforms_buffer,
-							 skybox_tex);
+		renderer->multi_draw(skybox_draw_info, skybox_uniforms, skybox_tex);
 		renderer->end();
 		renderer->commit();
 	}
@@ -824,15 +822,19 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 }
 
 bool unified_renderer::compile_shaders(const string add_cli_options) {
-	shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
-												   "-I" + floor::data_path("../warp/src") +
-												   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +
-												   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
-												   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) + "f" +
-												   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
-												   add_cli_options);
+	shared_ptr<compute_program> new_shader_prog;
+	array<compute_kernel*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shaders;
+	array<const compute_kernel::kernel_entry*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shader_entries;
 	
-	if(shader_prog == nullptr) {
+	new_shader_prog = warp_state.ctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
+													   "-I" + floor::data_path("../warp/src") +
+													   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +
+													   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
+													   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) + "f" +
+													   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
+													   add_cli_options);
+	
+	if (new_shader_prog == nullptr) {
 		log_error("shader compilation failed");
 		return false;
 	}
@@ -858,20 +860,22 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 		"blit_swizzle_fs",
 	};
 	
-	for(size_t i = 0; i < warp_shader_count(); ++i) {
-		shaders[i] = (compute_kernel*)shader_prog->get_kernel(shader_names[i]).get();
-		if(shaders[i] == nullptr) {
+	for (size_t i = 0; i < warp_shader_count(); ++i) {
+		new_shaders[i] = (compute_kernel*)new_shader_prog->get_kernel(shader_names[i]).get();
+		if (new_shaders[i] == nullptr) {
 			log_error("failed to retrieve shader \"%s\" from program", shader_names[i]);
-			//return false;
-			continue;
+			return false;
 		}
-		shader_entries[i] = (const compute_kernel::kernel_entry*)shaders[i]->get_kernel_entry(*warp_state.dev);
-		if(shader_entries[i] == nullptr) {
+		new_shader_entries[i] = (const compute_kernel::kernel_entry*)new_shaders[i]->get_kernel_entry(*warp_state.dev);
+		if (new_shader_entries[i] == nullptr) {
 			log_error("failed to retrieve shader entry \"%s\" for the current device", shader_names[i]);
-			//return false;
-			continue;
+			return false;
 		}
 	}
 	
+	// successful
+	shader_prog = new_shader_prog;
+	shaders = new_shaders;
+	shader_entries = new_shader_entries;
 	return true;
 }

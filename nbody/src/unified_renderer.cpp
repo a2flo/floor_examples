@@ -84,6 +84,9 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		}
 	};
 	renderer_pass = ctx.create_graphics_pass(pass_desc);
+	if (!renderer_pass) {
+		return false;
+	}
 	
 	const render_pipeline_description pipeline_desc {
 		.vertex_shader = &vs,
@@ -112,6 +115,9 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		},
 	};
 	renderer_pipeline = ctx.create_graphics_pipeline(pipeline_desc);
+	if (!renderer_pipeline) {
+		return false;
+	}
 	
 	return true;
 }

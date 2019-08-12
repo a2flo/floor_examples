@@ -16,15 +16,15 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_VULKAN_RENDERER_HPP__
-#define __FLOOR_WARP_VULKAN_RENDERER_HPP__
+#ifndef __FLOOR_WARP_VULKAN_RENDERER_LEGACY_HPP__
+#define __FLOOR_WARP_VULKAN_RENDERER_LEGACY_HPP__
 
 #include "common_renderer.hpp"
 #if !defined(FLOOR_NO_VULKAN)
 #include <floor/compute/vulkan/vulkan_kernel.hpp>
 #endif
 
-class vulkan_renderer final : public common_renderer {
+class vulkan_renderer_legacy final : public common_renderer {
 public:
 	bool init() override;
 	void destroy() override;

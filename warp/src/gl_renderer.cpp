@@ -555,9 +555,9 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glBindVertexArray(global_vao);
 	
 	// draw shadow map
-	const matrix4f light_pm { matrix4f().perspective(120.0f, 1.0f,
-													 warp_state.shadow_near_far_plane.x,
-													 warp_state.shadow_near_far_plane.y) };
+	const matrix4f light_pm { matrix4f::perspective<false>(120.0f, 1.0f,
+														   warp_state.shadow_near_far_plane.x,
+														   warp_state.shadow_near_far_plane.y) };
 	const matrix4f light_mvm {
 		matrix4f::translation(-light_pos) *
 		matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
@@ -642,8 +642,8 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 							   !warp_state.is_bidir_scatter ? "SCENE_SCATTER" : "SCENE_SCATTER_BIDIR"];
 	glUseProgram(shd.program.program);
 	
-	const matrix4f pm { matrix4f().perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-											   warp_state.near_far_plane.x, warp_state.near_far_plane.y) };
+	const matrix4f pm { matrix4f::perspective<false>(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
+													 warp_state.near_far_plane.x, warp_state.near_far_plane.y) };
 	const matrix4f rmvm {
 		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
 		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
