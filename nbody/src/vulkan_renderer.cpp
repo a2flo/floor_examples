@@ -41,7 +41,7 @@ static vector<VkFramebuffer> screen_framebuffers;
 
 static array<shared_ptr<vulkan_image>, 2> body_textures {};
 static void create_textures(const compute_queue& dev_queue) {
-	auto ctx = floor::get_compute_context();
+	auto ctx = dev_queue.get_device().context;
 	const auto& vk_queue = (const vulkan_queue&)dev_queue;
 
 	// images must be transitioned after creation

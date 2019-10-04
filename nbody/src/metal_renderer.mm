@@ -36,7 +36,7 @@ static MTLRenderPassDescriptor* render_pass_desc { nullptr };
 
 static array<shared_ptr<metal_image>, 2> body_textures {};
 static void create_textures(const compute_queue& dev_queue) {
-	auto ctx = floor::get_compute_context();
+	auto ctx = dev_queue.get_device().context;
 	
 	// create/generate an opengl texture and bind it
 	for(size_t i = 0; i < body_textures.size(); ++i) {
