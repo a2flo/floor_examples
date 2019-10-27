@@ -86,7 +86,7 @@ void gl_renderer::render(const compute_queue& dev_queue,
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 	glBindVertexArray(global_vao);
-	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
+	glViewport(0, 0, (GLsizei)floor::get_physical_width(), (GLsizei)floor::get_physical_height());
 	
 	// clear the color/depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

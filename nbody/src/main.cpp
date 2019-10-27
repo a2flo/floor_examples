@@ -272,6 +272,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
+	{ "-ApplePersistenceIgnoreState", [](nbody_option_context&, char**&) {} },
 };
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
@@ -538,7 +539,8 @@ int main(int, char* argv[]) {
 	
 	// disable resp. other renderers when using opengl/metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
+	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+							(floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST && floor_renderer == floor::RENDERER::METAL));
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
 							(floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA && floor_renderer == floor::RENDERER::VULKAN));
 	
@@ -715,11 +717,18 @@ int main(int, char* argv[]) {
 		if (!nbody_state.no_opengl) {
 			// will be using the buffer with OpenGL
 			graphics_sharing_flags = COMPUTE_MEMORY_FLAG::OPENGL_SHARING;
-		} else if (!nbody_state.no_vulkan && compute_ctx != render_ctx) {
-			// compute context differs from the rendering context (CUDA/Host/OpenCL) and we're using a Vulkan renderer
-			// -> enable Vulkan buffer sharing
-			// NOTE/TODO: Host/OpenCL <-> Vulkan sharing is not implemented yet
-			graphics_sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+		} else if (compute_ctx != render_ctx) {
+			// compute context (CUDA/Host/OpenCL) differs from the rendering context and ...
+			if (!nbody_state.no_vulkan) {
+				// ... we're using a Vulkan renderer
+				// -> enable Vulkan buffer sharing
+				// NOTE/TODO: Host/OpenCL <-> Vulkan sharing is not implemented yet
+				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+			} else if (!nbody_state.no_metal) {
+				// ... we're using a Metal renderer
+				// -> enable Metal buffer sharing and automatic synchronization of the shared Metal buffer
+				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::METAL_SHARING | COMPUTE_MEMORY_FLAG::METAL_SHARING_SYNC_SHARED;
+			}
 		}
 		for(size_t i = 0; i < pos_buffer_count; ++i) {
 			position_buffers[i] = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * nbody_state.body_count,
