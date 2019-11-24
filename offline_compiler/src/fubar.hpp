@@ -27,6 +27,7 @@ namespace fubar {
 		USER_JSON,
 		ALL,
 		MINIMAL,
+		GRAPHICS,
 	};
 	
 	struct options_t {

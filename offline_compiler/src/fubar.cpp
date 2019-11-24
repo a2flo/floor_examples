@@ -270,9 +270,9 @@ namespace fubar {
 					.version = universal_binary::target_format_version,
 					.type = COMPUTE_TYPE::VULKAN,
 					.vulkan_major = 1,
-					.vulkan_minor = 0,
+					.vulkan_minor = 1,
 					.spirv_major = 1,
-					.spirv_minor = 0,
+					.spirv_minor = 3,
 					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
@@ -280,6 +280,111 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+#endif
+		};
+		
+		static const vector<universal_binary::target> graphics_targets {
+#if 1
+			// Metal
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 1,
+					.minor = 1,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 1,
+					.minor = 1,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 0,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 0,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 1,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 1,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 2,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 2,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+#endif
+#if 1
+			// Vulkan
 			{
 				.vulkan = {
 					.version = universal_binary::target_format_version,
@@ -300,6 +405,8 @@ namespace fubar {
 		
 		if (target_set == TARGET_SET::MINIMAL) {
 			ret_targets = minimal_targets;
+		} else if (target_set == TARGET_SET::GRAPHICS) {
+			ret_targets = graphics_targets;
 		} else {
 			//return all_targets; // TODO: implement this
 			ret_targets = minimal_targets;
