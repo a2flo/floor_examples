@@ -42,7 +42,7 @@ static void create_textures() {
 		array<uint32_t, texture_size.x * texture_size.y> pixel_data;
 		for(uint32_t y = 0; y < texture_size.y; ++y) {
 			for(uint32_t x = 0; x < texture_size.x; ++x) {
-				float2 dir = (float2(x, y) / texture_sizef) * 2.0f - 1.0f;
+				float2 dir = (uint2(x, y).cast<float>() / texture_sizef) * 2.0f - 1.0f;
 #if 1 // smoother, less of a center point
 				float fval = dir.dot();
 #else

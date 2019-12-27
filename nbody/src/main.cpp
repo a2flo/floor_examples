@@ -22,6 +22,7 @@
 #include <floor/compute/compute_kernel.hpp>
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/vulkan/vulkan_compute.hpp>
+#include <floor/vr/vr_context.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
 #include "vulkan_renderer.hpp"
@@ -276,11 +277,10 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 };
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
-	if(type == EVENT_TYPE::QUIT) {
+	if (type == EVENT_TYPE::QUIT) {
 		nbody_state.done = true;
 		return true;
-	}
-	else if(type == EVENT_TYPE::KEY_UP) {
+	} else if (type == EVENT_TYPE::KEY_UP) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
 			case SDLK_q:
 				nbody_state.done = true;
@@ -321,8 +321,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			default: break;
 		}
 		return true;
-	}
-	else if(type == EVENT_TYPE::KEY_DOWN) {
+	} else if (type == EVENT_TYPE::KEY_DOWN) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
 			case SDLK_w:
 				nbody_state.distance = const_math::clamp(nbody_state.distance - 5.0f, 1.0f, nbody_state.max_distance);
@@ -333,36 +332,31 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			default: break;
 		}
 		return true;
-	}
-	else if(type == EVENT_TYPE::MOUSE_LEFT_DOWN
+	} else if (type == EVENT_TYPE::MOUSE_LEFT_DOWN
 #if defined(FLOOR_IOS) // NOTE: trackpads also generate finger events -> would lead to double input
-			|| type == EVENT_TYPE::FINGER_DOWN
+			   || type == EVENT_TYPE::FINGER_DOWN
 #endif
-			) {
+			  ) {
 		nbody_state.enable_cam_rotate = true;
 		return true;
-	}
-	else if(type == EVENT_TYPE::MOUSE_LEFT_UP
+	} else if (type == EVENT_TYPE::MOUSE_LEFT_UP
 #if defined(FLOOR_IOS)
-			|| type == EVENT_TYPE::FINGER_UP
+			   || type == EVENT_TYPE::FINGER_UP
 #endif
-			) {
+			  ) {
 		nbody_state.enable_cam_rotate = false;
 		return true;
-	}
-	else if(type == EVENT_TYPE::MOUSE_RIGHT_DOWN) {
+	} else if(type == EVENT_TYPE::MOUSE_RIGHT_DOWN) {
 		nbody_state.enable_cam_move = true;
 		return true;
-	}
-	else if(type == EVENT_TYPE::MOUSE_RIGHT_UP) {
+	} else if(type == EVENT_TYPE::MOUSE_RIGHT_UP) {
 		nbody_state.enable_cam_move = false;
 		return true;
-	}
-	else if(type == EVENT_TYPE::MOUSE_MOVE
+	} else if(type == EVENT_TYPE::MOUSE_MOVE
 #if defined(FLOOR_IOS)
-			|| type == EVENT_TYPE::FINGER_MOVE
+			   || type == EVENT_TYPE::FINGER_MOVE
 #endif
-			) {
+			  ) {
 		if(!(nbody_state.enable_cam_rotate ^ nbody_state.enable_cam_move)) {
 			return true;
 		}
@@ -385,13 +379,68 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			// multiply existing rotation by newly computed rotation around the x and y axis
 			nbody_state.cam_rotation *= (quaternionf::rotation_deg(delta.x, float3 { 0.0f, 1.0f, 0.0f }) *
 										 quaternionf::rotation_deg(delta.y, float3 { 1.0f, 0.0f, 0.0f }));
-		}
-		else {
+		} else {
 			// multiply by desired move speed
 			static constexpr const float move_speed { 250.0f };
 			delta *= move_speed;
 			nbody_state.distance = const_math::clamp(nbody_state.distance + delta.y, 1.0f, nbody_state.max_distance);
 		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_APP_MENU_PRESS) {
+		// rotate setup
+		const auto& press_evt = (shared_ptr<vr_app_menu_press_event>&)obj;
+		if (press_evt->state) {
+			nbody_setup = (NBODY_SETUP) ((uint32_t(nbody_setup) + 1u) % uint32_t(NBODY_SETUP::__MAX_NBODY_SETUP));
+			init_system();
+		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_MAIN_PRESS) {
+		// pause
+		const auto& press_evt = (shared_ptr<vr_main_press_event>&)obj;
+		if (press_evt->state) {
+			nbody_state.stop ^= true;
+		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_GRIP_PRESS) {
+		// reset
+		const auto& press_evt = (shared_ptr<vr_grip_press_event>&)obj;
+		if (press_evt->state) {
+			init_system();
+		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_THUMBSTICK_PRESS) {
+		// quit if both thumbstick buttons are pressed
+		const auto& press_evt = (shared_ptr<vr_grip_press_event>&)obj;
+		static bool left_thumbstick_pressed = false;
+		static bool right_thumbstick_pressed = false;
+		if (press_evt->is_left_controller()) {
+			left_thumbstick_pressed = press_evt->state;
+		} else {
+			right_thumbstick_pressed = press_evt->state;
+		}
+		if (left_thumbstick_pressed && right_thumbstick_pressed) {
+			nbody_state.done = true;
+		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_TRIGGER_PULL) {
+		// slow-mo
+		const auto& pull_evt = (shared_ptr<vr_trigger_pull_event>&)obj;
+		static const auto default_time_step = nbody_state.time_step;
+		nbody_state.time_step = default_time_step * (1.0f - pull_evt->pull);
+		return true;
+	} else if (type == EVENT_TYPE::VR_THUMBSTICK_MOVE) {
+		// rotate cam
+		const auto& move_evt = (shared_ptr<vr_thumbstick_move_event>&)obj;
+		static constexpr const float rot_speed { 2.0f };
+		// multiply existing rotation by newly computed rotation around the x and y axis
+		nbody_state.cam_rotation *= (quaternionf::rotation_deg(move_evt->position.x * rot_speed, float3 { 0.0f, 1.0f, 0.0f }) *
+									 quaternionf::rotation_deg(-move_evt->position.y * rot_speed, float3 { 1.0f, 0.0f, 0.0f }));
+		return true;
+	} else if (type == EVENT_TYPE::VR_TRACKPAD_MOVE) {
+		// move cam
+		const auto& move_evt = (shared_ptr<vr_trackpad_move_event>&)obj;
+		static constexpr const float move_speed { 2.0f };
+		nbody_state.distance = const_math::clamp(nbody_state.distance - move_evt->position.y * move_speed, 1.0f, nbody_state.max_distance);
 		return true;
 	}
 	return false;
@@ -680,7 +729,10 @@ int main(int, char* argv[]) {
 			if (!unified_renderer::init(*render_ctx,
 										*render_dev_queue,
 										*nbody_render_prog->get_kernel("lighting_vertex"),
-										*nbody_render_prog->get_kernel("lighting_fragment"))) {
+										*nbody_render_prog->get_kernel("lighting_fragment"),
+										nbody_render_prog->get_kernel("blit_vs").get(),
+										nbody_render_prog->get_kernel("blit_fs").get(),
+										nbody_render_prog->get_kernel("blit_fs_layered").get())) {
 				log_error("error during unified renderer initialization!");
 				return -1;
 			}
@@ -763,7 +815,10 @@ int main(int, char* argv[]) {
 													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
 													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
 													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
+													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
+													   EVENT_TYPE::VR_THUMBSTICK_MOVE, EVENT_TYPE::VR_TRACKPAD_MOVE,
+													   EVENT_TYPE::VR_APP_MENU_PRESS, EVENT_TYPE::VR_MAIN_PRESS,
+													   EVENT_TYPE::VR_GRIP_PRESS, EVENT_TYPE::VR_TRIGGER_PULL, EVENT_TYPE::VR_THUMBSTICK_PRESS);
 		
 		// init done, release context
 	}

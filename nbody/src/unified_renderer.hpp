@@ -23,7 +23,9 @@
 #include <floor/compute/compute_context.hpp>
 
 struct unified_renderer {
-	static bool init(const compute_context& ctx, const compute_queue& dev_queue, const compute_kernel& vs, const compute_kernel& fs);
+	static bool init(const compute_context& ctx, const compute_queue& dev_queue,
+					 const compute_kernel& vs, const compute_kernel& fs,
+					 const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered);
 	static void destroy(const compute_context& ctx);
 	static void render(const compute_context& ctx, const compute_queue& dev_queue, const compute_buffer& position_buffer);
 };

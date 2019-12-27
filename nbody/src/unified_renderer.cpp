@@ -27,22 +27,27 @@
 #include <floor/graphics/graphics_renderer.hpp>
 #include <floor/graphics/graphics_pipeline.hpp>
 #include <floor/graphics/graphics_pass.hpp>
+#include <floor/vr/vr_context.hpp>
 
 // renderer
 static unique_ptr<graphics_pass> renderer_pass;
 static unique_ptr<graphics_pipeline> renderer_pipeline;
+static shared_ptr<compute_image> render_image;
+static unique_ptr<graphics_pass> blit_pass;
+static unique_ptr<graphics_pipeline> blit_pipeline;
+static bool is_vr_renderer { false };
 
 static array<shared_ptr<compute_image>, 2> body_textures {};
 static void create_textures(const compute_context& ctx, const compute_queue& dev_queue) {
 	// create/generate an opengl texture and bind it
-	for (size_t i = 0; i < body_textures.size(); ++i) {
+	for (auto& body_texture : body_textures) {
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
 		static constexpr float2 texture_sizef { texture_size };
 		array<ushort4, texture_size.x * texture_size.y> pixel_data;
 		for (uint32_t y = 0; y < texture_size.y; ++y) {
 			for (uint32_t x = 0; x < texture_size.x; ++x) {
-				float2 dir = (float2(x, y) / texture_sizef) * 2.0f - 1.0f;
+				float2 dir = (uint2(x, y).cast<float>() / texture_sizef) * 2.0f - 1.0f;
 #if 1 // smoother, less of a center point
 				float fval = dir.dot();
 #else
@@ -55,23 +60,33 @@ static void create_textures(const compute_context& ctx, const compute_queue& dev
 				pixel_data[y * texture_size.x + x] = { half_val, half_val, half_val, half_alpha_val };
 			}
 		}
-		
-		body_textures[i] = ctx.create_image(dev_queue, texture_size,
-											(COMPUTE_IMAGE_TYPE::IMAGE_2D |
-											 COMPUTE_IMAGE_TYPE::RGBA16F |
-											 COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
-											 COMPUTE_IMAGE_TYPE::READ),
-											&pixel_data[0],
-											(COMPUTE_MEMORY_FLAG::READ |
-											 COMPUTE_MEMORY_FLAG::HOST_WRITE |
-											 COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS));
+
+		body_texture = ctx.create_image(dev_queue, texture_size,
+										(COMPUTE_IMAGE_TYPE::IMAGE_2D |
+										 COMPUTE_IMAGE_TYPE::RGBA16F |
+										 COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
+										 COMPUTE_IMAGE_TYPE::READ),
+										&pixel_data[0],
+										(COMPUTE_MEMORY_FLAG::READ |
+										 COMPUTE_MEMORY_FLAG::HOST_WRITE |
+										 COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS));
 	}
 }
 
-bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, const compute_kernel& vs, const compute_kernel& fs) {
+bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue,
+							const compute_kernel& vs, const compute_kernel& fs,
+							const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered) {
+	if (blit_vs == nullptr || blit_fs == nullptr || blit_fs_layered == nullptr) {
+		log_error("missing blit shader(s)");
+		return false;
+	}
+
 	create_textures(ctx, dev_queue);
-	
-	const auto render_format = ctx.get_renderer_image_type();
+
+	is_vr_renderer = ctx.is_vr_supported();
+
+	// nbody rendering pipeline/pass
+	const auto render_format = COMPUTE_IMAGE_TYPE::RGBA16F;
 
 	const render_pass_description pass_desc {
 		.attachments = {
@@ -94,7 +109,6 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		.primitive = PRIMITIVE::POINT,
 		.cull_mode = CULL_MODE::BACK,
 		.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
-		.viewport = floor::get_physical_screen_size(),
 		.depth = {
 			.write = false,
 			.compare = DEPTH_COMPARE::ALWAYS,
@@ -118,6 +132,46 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 	if (!renderer_pipeline) {
 		return false;
 	}
+
+	// intermediate render output image
+	render_image = ctx.create_image(dev_queue, ctx.get_renderer_image_dim(),
+									render_format |
+									(!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
+									COMPUTE_IMAGE_TYPE::READ_WRITE |
+									COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
+									COMPUTE_MEMORY_FLAG::READ_WRITE);
+
+	// blit pipeline/pass
+	const auto screen_format = ctx.get_renderer_image_type();
+
+	const render_pass_description blit_pass_desc {
+		.attachments = {
+			// color
+			{
+				.format = screen_format,
+				.load_op = LOAD_OP::DONT_CARE, // don't care b/c drawing the whole screen
+				.store_op = STORE_OP::STORE,
+				.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
+			},
+		}
+	};
+	blit_pass = ctx.create_graphics_pass(blit_pass_desc);
+
+	const render_pipeline_description blit_pipeline_desc {
+		.vertex_shader = blit_vs,
+		.fragment_shader = (!is_vr_renderer ? blit_fs : blit_fs_layered),
+		.primitive = PRIMITIVE::TRIANGLE,
+		.cull_mode = CULL_MODE::BACK,
+		.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+		.depth = {
+			.write = false,
+			.compare = DEPTH_COMPARE::ALWAYS,
+		},
+		.color_attachments = {
+			{ .format = screen_format, },
+		},
+	};
+	blit_pipeline = ctx.create_graphics_pipeline(blit_pipeline_desc);
 	
 	return true;
 }
@@ -133,50 +187,86 @@ void unified_renderer::destroy(const compute_context& ctx floor_unused) {
 }
 
 void unified_renderer::render(const compute_context& ctx, const compute_queue& dev_queue, const compute_buffer& position_buffer) {
-	// create the renderer for this frame
-	auto renderer = ctx.create_graphics_renderer(dev_queue, *renderer_pass, *renderer_pipeline);
-	if (!renderer->is_valid()) {
-		return;
+	// render scene
+	{
+		// create the renderer for this frame
+		auto renderer = ctx.create_graphics_renderer(dev_queue, *renderer_pass, *renderer_pipeline, is_vr_renderer);
+		if (!renderer->is_valid()) {
+			return;
+		}
+		
+		renderer->set_attachments(render_image);
+		
+		// attachments set, can begin rendering now
+		renderer->begin();
+
+		// setup uniforms
+		struct uniforms_t {
+			matrix4f mvpms[2];
+			matrix4f mvms[2];
+			float2 mass_minmax;
+		};
+
+		uniforms_t uniforms {
+			.mass_minmax = nbody_state.mass_minmax
+		};
+		const matrix4f mview_scene { nbody_state.cam_rotation.to_matrix4() * matrix4f::translation(0.0f, 0.0f, -nbody_state.distance) };
+		if (!is_vr_renderer) {
+			const matrix4f mproj { matrix4f::perspective(90.0f, render_image->get_aspect_ratio(), 0.25f, nbody_state.max_distance) };
+			uniforms.mvpms[0] = mview_scene * mproj;
+			uniforms.mvms[0] = mview_scene;
+		} else {
+#if !defined(FLOOR_NO_VR)
+			const auto vr_ctx = ctx.get_renderer_vr_context();
+
+			auto mview_hmd = vr_ctx->get_hmd_matrix();
+			mview_hmd.set_translation(0.0f, 0.0f, 0.0f); // don't want any HMD translation here
+			const auto mview_eye_left = vr_ctx->get_eye_matrix(VR_EYE::LEFT);
+			const auto mview_eye_right = vr_ctx->get_eye_matrix(VR_EYE::RIGHT);
+
+			uniforms.mvms[0] = mview_scene * mview_hmd * mview_eye_left;
+			uniforms.mvms[1] = mview_scene * mview_hmd * mview_eye_right;
+			uniforms.mvpms[0] = uniforms.mvms[0] * vr_ctx->get_projection_matrix(VR_EYE::LEFT, 0.25f, nbody_state.max_distance);
+			uniforms.mvpms[1] = uniforms.mvms[1] * vr_ctx->get_projection_matrix(VR_EYE::RIGHT, 0.25f, nbody_state.max_distance);
+#endif
+		}
+		
+		// draw
+		static const vector<graphics_renderer::multi_draw_entry> nbody_draw_info {{
+			.vertex_count = nbody_state.body_count
+		}};
+		renderer->multi_draw(nbody_draw_info,
+							 // vs args
+							 position_buffer,
+							 uniforms,
+							 // fs args
+							 body_textures[0]);
+		renderer->end();
+		renderer->commit();
 	}
-	
-	// setup drawable and attachments
-	auto drawable = renderer->get_next_drawable();
-	if (drawable == nullptr || !drawable->is_valid()) {
-		log_error("failed to get next drawable");
-		return;
+
+	// blit to screen
+	{
+		auto blitter = ctx.create_graphics_renderer(dev_queue, *blit_pass, *blit_pipeline, is_vr_renderer);
+		if (!blitter->is_valid()) {
+			return;
+		}
+		
+		auto drawable = blitter->get_next_drawable(is_vr_renderer);
+		if (drawable == nullptr || !drawable->is_valid()) {
+			log_error("failed to get next drawable");
+			return;
+		}
+		blitter->set_attachments(drawable);
+		blitter->begin();
+		
+		static const vector<graphics_renderer::multi_draw_entry> blit_draw_info {{
+			.vertex_count = 3 // fullscreen triangle
+		}};
+		blitter->multi_draw(blit_draw_info, render_image);
+		
+		blitter->end();
+		blitter->present();
+		blitter->commit();
 	}
-	renderer->set_attachments(drawable);
-	
-	// attachments set, can begin rendering now
-	renderer->begin();
-	
-	// setup uniforms
-	const matrix4f mproj { matrix4f().perspective(90.0f, float(floor::get_width()) / float(floor::get_height()),
-												  0.25f, nbody_state.max_distance) };
-	const matrix4f mview { nbody_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -nbody_state.distance) };
-	const struct {
-		matrix4f mvpm;
-		matrix4f mvm;
-		float2 mass_minmax;
-	} uniforms {
-		.mvpm = mview * mproj,
-		.mvm = mview,
-		.mass_minmax = nbody_state.mass_minmax
-	};
-	
-	// draw
-	static const vector<graphics_renderer::multi_draw_entry> nbody_draw_info {{
-		.vertex_count = nbody_state.body_count
-	}};
-	renderer->multi_draw(nbody_draw_info,
-						 // vs args
-						 position_buffer,
-						 uniforms,
-						 // fs args
-						 body_textures[0]);
-	renderer->end();
-	
-	// present to the screen and commit
-	renderer->present();
-	renderer->commit();
 }

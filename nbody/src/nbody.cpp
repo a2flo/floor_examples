@@ -172,8 +172,8 @@ kernel void nbody_raster(buffer<const float4> positions,
 // shader: metal and vulkan only
 #if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN)
 struct uniforms_t {
-	matrix4f mvpm;
-	matrix4f mvm;
+	matrix4f mvpms[2];
+	matrix4f mvms[2];
 	float2 mass_minmax;
 };
 
@@ -186,13 +186,13 @@ struct stage_in_out {
 vertex auto lighting_vertex(buffer<const float4> vertex_array,
 							param<uniforms_t> uniforms) {
 	const auto in_vertex = vertex_array[vertex_id];
-	float size = 128.0f / (1.0f - (float4 { in_vertex.xyz, 1.0f } * uniforms.mvm).z);
+	float size = 128.0f / (1.0f - (float4 { in_vertex.xyz, 1.0f } * uniforms.mvms[view_index]).z);
 	float mass_scale = (in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x);
 	mass_scale *= mass_scale; // ^2
 	size *= mass_scale;
 	return stage_in_out {
-		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpm,
-		.size = math::clamp(size, 2.0f, 255.0f),
+		.position = float4 { in_vertex.xyz, 1.0f } * uniforms.mvpms[view_index],
+		.size = math::clamp(size, 1.5f, 65.0f),
 		.color = float4 { compute_gradient((in_vertex.w - uniforms.mass_minmax.x) / (uniforms.mass_minmax.y - uniforms.mass_minmax.x)), 1.0f }
 	};
 }
@@ -200,6 +200,39 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 fragment auto lighting_fragment(stage_in_out in [[stage_input]],
 								const_image_2d<float> tex) {
 	return tex.read_linear(point_coord) * in.color;
+}
+
+struct blit_in_out {
+	float4 position [[position]];
+};
+
+vertex blit_in_out blit_vs() {
+	switch (vertex_id) {
+		case 0: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
+		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
+		case 2: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
+		default: floor_unreachable();
+	}
+}
+
+fragment float4 blit_fs(const blit_in_out in [[stage_input]],
+						const_image_2d<float> img) {
+#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
+	const auto color = img.read(in.position.xy.cast<uint32_t>());
+#else
+	const auto color = img.read(frag_coord.xy.cast<uint32_t>());
+#endif
+	return color;
+}
+
+fragment float4 blit_fs_layered(const blit_in_out in [[stage_input]],
+								const_image_2d_array<float> img) {
+#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
+	const auto color = img.read(in.position.xy.cast<uint32_t>(), view_index);
+#else
+	const auto color = img.read(frag_coord.xy.cast<uint32_t>(), view_index);
+#endif
+	return color;
 }
 
 #endif

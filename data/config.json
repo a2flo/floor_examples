@@ -12,11 +12,24 @@
 		// if enabled, will create a opengl/metal window/surface using the native device/display resolution
 		"hidpi": true,
 		// if enabled, use a wide-gamut render target/surface/view for Metal and Vulkan
-		"wide_gamut": false,
+		"wide_gamut": true,
+		// if enabled, use a HDR-supported render target/surface/view for Vulkan
+		"hdr": true,
 		// 0 = auto-detect, other values can be used to override the detected value
 		"dpi": 0,
-		// serves no purpose right now
-		"stereo": false
+		// VR settings
+		"vr": {
+			// if enabled, performs rendering on the VR HMD
+			"enabled": false,
+			// if enabled, also renders on the companion window (monitor)
+			"companion": true,
+			// physical X render resolution (for each eye)
+			// NOTE: set to 0 to use the recommended render size
+			"width": 0,
+			// physical Y render resolution (for each eye)
+			// NOTE: set to 0 to use the recommended render size
+			"height": 0
+		}
 	},
 	
 	// openal audio options
