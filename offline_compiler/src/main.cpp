@@ -867,7 +867,7 @@ static int run_normal_build(option_context& option_ctx) {
 			} break;
 			case llvm_toolchain::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
-				auto ctx = make_shared<metal_compute>(false, floor::get_metal_whitelist());
+				auto ctx = make_shared<metal_compute>(false, nullptr, floor::get_metal_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
@@ -933,7 +933,7 @@ static int run_normal_build(option_context& option_ctx) {
 			} break;
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
-				auto ctx = make_shared<vulkan_compute>(false, floor::get_vulkan_whitelist());
+				auto ctx = make_shared<vulkan_compute>(false, nullptr, floor::get_vulkan_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
