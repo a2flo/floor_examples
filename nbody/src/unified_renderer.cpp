@@ -210,24 +210,26 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		uniforms_t uniforms {
 			.mass_minmax = nbody_state.mass_minmax
 		};
-		const matrix4f mview_scene { nbody_state.cam_rotation.to_matrix4() * matrix4f::translation(0.0f, 0.0f, -nbody_state.distance) };
+		const matrix4f mview_scene {
+			nbody_state.cam_rotation.to_matrix4() *
+			matrix4f::translation(0.0f, 0.0f, -nbody_state.distance)
+		};
 		if (!is_vr_renderer) {
-			const matrix4f mproj { matrix4f::perspective(90.0f, render_image->get_aspect_ratio(), 0.25f, nbody_state.max_distance) };
+			const matrix4f mproj {
+				matrix4f::perspective(90.0f, render_image->get_aspect_ratio(),
+									  0.25f, nbody_state.max_distance)
+			};
 			uniforms.mvpms[0] = mview_scene * mproj;
 			uniforms.mvms[0] = mview_scene;
 		} else {
 #if !defined(FLOOR_NO_VR)
 			const auto vr_ctx = ctx.get_renderer_vr_context();
-
-			auto mview_hmd = vr_ctx->get_hmd_matrix();
-			mview_hmd.set_translation(0.0f, 0.0f, 0.0f); // don't want any HMD translation here
-			const auto mview_eye_left = vr_ctx->get_eye_matrix(VR_EYE::LEFT);
-			const auto mview_eye_right = vr_ctx->get_eye_matrix(VR_EYE::RIGHT);
-
-			uniforms.mvms[0] = mview_scene * mview_hmd * mview_eye_left;
-			uniforms.mvms[1] = mview_scene * mview_hmd * mview_eye_right;
-			uniforms.mvpms[0] = uniforms.mvms[0] * vr_ctx->get_projection_matrix(VR_EYE::LEFT, 0.25f, nbody_state.max_distance);
-			uniforms.mvpms[1] = uniforms.mvms[1] * vr_ctx->get_projection_matrix(VR_EYE::RIGHT, 0.25f, nbody_state.max_distance);
+			const auto [mv_left, mv_right, pm_left, pm_right] =
+				vr_ctx->get_frame_matrices(0.25f, nbody_state.max_distance, false /* MV w/o position*/);
+			uniforms.mvms[0] = mview_scene * mv_left;
+			uniforms.mvms[1] = mview_scene * mv_right;
+			uniforms.mvpms[0] = uniforms.mvms[0] * pm_left;
+			uniforms.mvpms[1] = uniforms.mvms[1] * pm_right;
 #endif
 		}
 		
