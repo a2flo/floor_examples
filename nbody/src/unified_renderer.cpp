@@ -265,7 +265,8 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		static const vector<graphics_renderer::multi_draw_entry> blit_draw_info {{
 			.vertex_count = 3 // fullscreen triangle
 		}};
-		blitter->multi_draw(blit_draw_info, render_image);
+		const auto hdr_scaler = (floor::get_hdr() && floor::get_hdr_linear() ? ctx.get_hdr_range_max() : 1.0f);
+		blitter->multi_draw(blit_draw_info, render_image, hdr_scaler);
 		
 		blitter->end();
 		blitter->present();

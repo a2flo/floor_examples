@@ -13,8 +13,10 @@
 		"hidpi": true,
 		// if enabled, use a wide-gamut render target/surface/view for Metal and Vulkan
 		"wide_gamut": true,
-		// if enabled, use a HDR-supported render target/surface/view for Vulkan
+		// if enabled, use a HDR-supported render target/surface/view for Metal and Vulkan
 		"hdr": true,
+		// if enabled and HDR is enabled, use a linear extended colorspace instead of a normalized one
+		"hdr_linear": false,
 		// 0 = auto-detect, other values can be used to override the detected value
 		"dpi": 0,
 		// VR settings

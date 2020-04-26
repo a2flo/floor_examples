@@ -216,22 +216,26 @@ vertex blit_in_out blit_vs() {
 }
 
 fragment float4 blit_fs(const blit_in_out in [[stage_input]],
-						const_image_2d<float> img) {
+						const_image_2d<float> img,
+						param<float> scaler) {
 #if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
-	const auto color = img.read(in.position.xy.cast<uint32_t>());
+	auto color = img.read(in.position.xy.cast<uint32_t>());
 #else
-	const auto color = img.read(frag_coord.xy.cast<uint32_t>());
+	auto color = img.read(frag_coord.xy.cast<uint32_t>());
 #endif
+	color.xyz *= scaler;
 	return color;
 }
 
 fragment float4 blit_fs_layered(const blit_in_out in [[stage_input]],
-								const_image_2d_array<float> img) {
+								const_image_2d_array<float> img,
+								param<float> scaler) {
 #if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
-	const auto color = img.read(in.position.xy.cast<uint32_t>(), view_index);
+	auto color = img.read(in.position.xy.cast<uint32_t>(), view_index);
 #else
-	const auto color = img.read(frag_coord.xy.cast<uint32_t>(), view_index);
+	auto color = img.read(frag_coord.xy.cast<uint32_t>(), view_index);
 #endif
+	color.xyz *= scaler;
 	return color;
 }
 
