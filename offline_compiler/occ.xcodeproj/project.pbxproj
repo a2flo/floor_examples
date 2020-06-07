@@ -179,8 +179,6 @@
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
 					"-isystem",
 					/usr/local/opt/openssl/include,
@@ -238,8 +236,6 @@
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
 					"-isystem",
 					/usr/local/opt/openssl/include,
@@ -265,7 +261,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -332,9 +328,9 @@
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
+					"-faligned-allocation",
 				);
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
@@ -375,7 +371,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -435,9 +431,9 @@
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
+					"-faligned-allocation",
 				);
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (

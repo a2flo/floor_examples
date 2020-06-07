@@ -96,13 +96,13 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar <targets-json|all|minimal|graphics>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal/graphics target set)\n"
 				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_82|sm_86], defaults to sm_20\n"
+				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0|2.1|2.2>: sets the supported Metal version (defaults to 1.1)\n"
-				 "\t--ptx-version <43|50|60|61|62|63|64|65>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
+				 "\t--ptx-version <43|50|60|61|62|63|64|65|70>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
 				 "\t--vulkan-std <1.0|1.1>: sets the supported Vulkan version (defaults to 1.0)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -242,7 +242,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.ptx_version = stou(*arg_ptr);
 		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 &&
 		   ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63 &&
-		   ctx.ptx_version != 64 && ctx.ptx_version != 65) {
+		   ctx.ptx_version != 64 && ctx.ptx_version != 65 && ctx.ptx_version != 70) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
