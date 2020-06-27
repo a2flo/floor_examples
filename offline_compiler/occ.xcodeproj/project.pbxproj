@@ -363,6 +363,8 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Debug;
@@ -466,6 +468,8 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Release;

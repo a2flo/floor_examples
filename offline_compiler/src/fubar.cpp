@@ -251,6 +251,30 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 3,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 3,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// OpenCL
@@ -389,6 +413,30 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 2,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 3,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 2,
+					.minor = 3,
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
