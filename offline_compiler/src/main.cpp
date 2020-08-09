@@ -542,49 +542,55 @@ static int run_normal_build(option_context& option_ctx) {
 			string info_str = "";
 			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
 				switch(info.args[i].address_space) {
-					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::GLOBAL:
+					case llvm_toolchain::ARG_ADDRESS_SPACE::GLOBAL:
 						info_str += "global ";
 						break;
-					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::LOCAL:
+					case llvm_toolchain::ARG_ADDRESS_SPACE::LOCAL:
 						info_str += "local ";
 						break;
-					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::CONSTANT:
+					case llvm_toolchain::ARG_ADDRESS_SPACE::CONSTANT:
 						info_str += "constant ";
 						break;
-					case llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE:
+					case llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE:
 						info_str += "image ";
 						break;
 					default: break;
 				}
 				
 				switch(info.args[i].special_type) {
-					case llvm_toolchain::function_info::SPECIAL_TYPE::STAGE_INPUT:
+					case llvm_toolchain::SPECIAL_TYPE::STAGE_INPUT:
 						info_str += "stage_input ";
 						break;
-					case llvm_toolchain::function_info::SPECIAL_TYPE::PUSH_CONSTANT:
+					case llvm_toolchain::SPECIAL_TYPE::PUSH_CONSTANT:
 						info_str += "push_constant ";
 						break;
-					case llvm_toolchain::function_info::SPECIAL_TYPE::SSBO:
+					case llvm_toolchain::SPECIAL_TYPE::SSBO:
 						info_str += "ssbo ";
 						break;
-					case llvm_toolchain::function_info::SPECIAL_TYPE::IMAGE_ARRAY:
+					case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
 						info_str += "array [" + to_string(info.args[i].size) + "] ";
+						break;
+					case llvm_toolchain::SPECIAL_TYPE::IUB:
+						info_str += "iub ";
+						break;
+					case llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER:
+						info_str += "argument_buffer ";
 						break;
 					default: break;
 				}
 				
-				if(info.args[i].address_space != llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE) {
+				if(info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
 					info_str += to_string(info.args[i].size);
 				}
 				else {
 					switch(info.args[i].image_access) {
-						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ:
+						case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
 							info_str += "read_only ";
 							break;
-						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::WRITE:
+						case llvm_toolchain::ARG_IMAGE_ACCESS::WRITE:
 							info_str += "write_only ";
 							break;
-						case llvm_toolchain::function_info::ARG_IMAGE_ACCESS::READ_WRITE:
+						case llvm_toolchain::ARG_IMAGE_ACCESS::READ_WRITE:
 							info_str += "read_write ";
 							break;
 						default:
@@ -599,52 +605,52 @@ static int run_normal_build(option_context& option_ctx) {
 					}
 					else {
 						switch(info.args[i].image_type) {
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D:
 								info_str += "1D";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
 								info_str += "1D array";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
 								info_str += "1D buffer";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D:
 								info_str += "2D";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
 								info_str += "2D array";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
 								info_str += "2D depth";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
 								info_str += "2D array depth";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
 								info_str += "2D msaa";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
 								info_str += "2D array msaa";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
 								info_str += "2D msaa depth";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
 								info_str += "2D array msaa depth";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_3D:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_3D:
 								info_str += "3D";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE:
 								info_str += "cube";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
 								info_str += "cube array";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
 								info_str += "cube depth";
 								break;
-							case llvm_toolchain::function_info::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
+							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
 								info_str += "cube array depth";
 								break;
 							default:
@@ -658,9 +664,10 @@ static int run_normal_build(option_context& option_ctx) {
 			}
 			info_str = core::trim(info_str);
 			log_msg("compiled %s function: %s (%s)",
-					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::KERNEL ? "kernel" :
-					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::VERTEX ? "vertex" :
-					info.type == llvm_toolchain::function_info::FUNCTION_TYPE::FRAGMENT ? "fragment" : "unknown",
+					info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
+					info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
+					info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
+					info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
 					info.name, info_str);
 		}
 		
