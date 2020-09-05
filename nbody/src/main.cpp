@@ -737,7 +737,7 @@ int main(int, char* argv[]) {
 				return -1;
 			}
 		} else {
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 			if (!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
 				// setup renderer
 				if (!metal_renderer::init(*render_ctx,
@@ -887,7 +887,7 @@ int main(int, char* argv[]) {
 				++iteration;
 			}
 			
-			dev_queue->execute(nbody_compute,
+			dev_queue->execute(*nbody_compute,
 							   // total amount of work:
 							   uint1 { nbody_state.body_count },
 							   // work per work-group:
@@ -919,7 +919,7 @@ int main(int, char* argv[]) {
 				.body_count = nbody_state.body_count,
 			};
 			img_buffer_flip_flop = 1 - img_buffer_flip_flop;
-			dev_queue->execute(nbody_raster,
+			dev_queue->execute(*nbody_raster,
 							   // total amount of work:
 							   uint1 { img_size.x * img_size.y },
 							   // work per work-group:
@@ -966,7 +966,7 @@ int main(int, char* argv[]) {
 			} else if (nbody_state.unified_renderer) {
 				unified_renderer::render(*render_ctx, *render_dev_queue, *position_buffers[cur_buffer]);
 			}
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 			else if (!nbody_state.no_metal) {
 				metal_renderer::render(*render_ctx, *render_dev_queue, position_buffers[cur_buffer]);
 			}

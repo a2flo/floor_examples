@@ -19,6 +19,9 @@
 #ifndef __FLOOR_NBODY_METAL_RENDERER_HPP__
 #define __FLOOR_NBODY_METAL_RENDERER_HPP__
 
+#include <floor/core/essentials.hpp>
+
+#if !defined(FLOOR_NO_METAL)
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_context.hpp>
 
@@ -26,5 +29,7 @@ struct metal_renderer {
 	static bool init(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_kernel> vs,  shared_ptr<compute_kernel> fs);
 	static void render(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_buffer> position_buffer);
 };
+
+#endif
 
 #endif
