@@ -19,6 +19,9 @@
 #ifndef __FLOOR_HLBVH_METAL_RENDERER_HPP__
 #define __FLOOR_HLBVH_METAL_RENDERER_HPP__
 
+#include <floor/core/essentials.hpp>
+
+#if !defined(FLOOR_NO_METAL)
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_context.hpp>
 #include "animation.hpp"
@@ -33,5 +36,7 @@ struct metal_renderer {
 					   const bool cam_mode,
 					   const camera& cam);
 };
+
+#endif
 
 #endif

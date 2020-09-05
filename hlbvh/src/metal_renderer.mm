@@ -76,7 +76,7 @@ bool metal_renderer::init(shared_ptr<compute_kernel> vs,
 	}
 	
 	// since sdl doesn't have metal support (yet), we need to create a metal view ourselves
-	view = darwin_helper::create_metal_view(floor::get_window(), device);
+	view = darwin_helper::create_metal_view(floor::get_window(), device, {});
 	if(view == nullptr) {
 		log_error("failed to create metal view!");
 		return false;

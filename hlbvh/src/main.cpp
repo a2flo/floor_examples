@@ -373,7 +373,7 @@ int main(int, char* argv[]) {
 	}
 #endif
 	// init metal renderer (need compiled prog first)
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 	shared_ptr<compute_program> shader_prog;
 	if(!hlbvh_state.no_metal) {
 		shader_prog = hlbvh_state.ctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
@@ -459,7 +459,7 @@ int main(int, char* argv[]) {
 			if(!hlbvh_state.no_opengl) {
 				gl_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
 			}
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 			else if(!hlbvh_state.no_metal) {
 				metal_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
 			}
@@ -483,7 +483,7 @@ int main(int, char* argv[]) {
 		models.clear();
 		floor::release_context();
 	}
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 	if(!hlbvh_state.no_metal) {
 		metal_renderer::destroy();
 	}
