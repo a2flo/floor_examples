@@ -425,7 +425,7 @@ int main(int, char* argv[]) {
 					return -1;
 				}
 			}
-#if defined(__APPLE__)
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 			else if(!warp_state.no_metal) {
 				warp_state.is_zw_depth = false; // not applicable to metal
 		

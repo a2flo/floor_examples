@@ -19,6 +19,9 @@
 #ifndef __FLOOR_WARP_METAL_RENDERER_HPP__
 #define __FLOOR_WARP_METAL_RENDERER_HPP__
 
+#include <floor/core/essentials.hpp>
+
+#if !defined(FLOOR_NO_METAL)
 #include "common_renderer.hpp"
 
 class metal_renderer final : public common_renderer {
@@ -33,5 +36,7 @@ protected:
 	void render_full_scene(const floor_obj_model& model, const camera& cam) override;
 	
 };
+
+#endif
 
 #endif
