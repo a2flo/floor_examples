@@ -41,6 +41,9 @@
 #include <floor/compute/vulkan/vulkan_compute.hpp>
 #include <floor/compute/vulkan/vulkan_device.hpp>
 
+#include <floor/compute/host/host_compute.hpp>
+#include <floor/compute/host/host_device.hpp>
+
 #include "fubar.hpp"
 
 #define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
@@ -94,12 +97,13 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--src <input-file>: the source file that should be compiled\n"
 				 "\t--out <output-file>: the output file name (defaults to {$file.fubar,spir.bc,cuda.ptx,metal.air})\n"
 				 "\t--fubar <targets-json|all|minimal|graphics>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal/graphics target set)\n"
-				 "\t--target [spir|ptx|air|spirv]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, or Vulkan/OpenCL SPIR-V\n"
+				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86], defaults to sm_20\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
+				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0|2.1|2.2|2.3>: sets the supported Metal version (defaults to 1.1)\n"
 				 "\t--ptx-version <43|50|60|61|62|63|64|65|70>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
@@ -186,6 +190,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			// very hacky and undocumented way of compiling std opencl c on the native opencl platform
 			ctx.target = llvm_toolchain::TARGET::SPIR;
 			ctx.native_cl = true;
+		}
+		else if(target == "host") {
+			ctx.target = llvm_toolchain::TARGET::HOST_COMPUTE_CPU;
 		}
 		else {
 			cerr << "invalid target: " << target << endl;
@@ -407,7 +414,7 @@ static int run_normal_build(option_context& option_ctx) {
 		
 		// create target specific device
 		shared_ptr<compute_device> device;
-		switch(option_ctx.target) {
+		switch (option_ctx.target) {
 			case llvm_toolchain::TARGET::SPIR:
 			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
 				const char* target_name = (option_ctx.target == llvm_toolchain::TARGET::SPIR ? "SPIR" :
@@ -448,7 +455,8 @@ static int run_normal_build(option_context& option_ctx) {
 					}
 				}
 				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
-			} break;
+				break;
+			}
 			case llvm_toolchain::TARGET::PTX:
 				device = make_shared<cuda_device>();
 				if(option_ctx.sub_target != "") {
@@ -492,13 +500,14 @@ static int run_normal_build(option_context& option_ctx) {
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				log_debug("compiling to AIR (type: %u, tier: %u) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
-			} break;
+				break;
+			}
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 				device = make_shared<vulkan_device>();
 				vulkan_device* dev = (vulkan_device*)device.get();
 				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
 					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
-					return -4;
+					return -5;
 				}
 				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
@@ -525,7 +534,61 @@ static int run_normal_build(option_context& option_ctx) {
 				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
 				
 				log_debug("compiling to SPIR-V Vulkan ...");
-			} break;
+				break;
+			}
+			case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: {
+				device = make_shared<host_device>();
+				device->platform_vendor = COMPUTE_VENDOR::HOST;
+				device->type = compute_device::TYPE::CPU0;
+				host_device* dev = (host_device*)device.get();
+				
+				dev->cpu_tier = HOST_CPU_TIER::X86_TIER_1;
+				if (option_ctx.sub_target.find("x86") == 0) {
+					if (option_ctx.sub_target == "x86-4") {
+						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_4;
+					} else if (option_ctx.sub_target == "x86-3") {
+						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_3;
+					} else if (option_ctx.sub_target == "x86-2") {
+						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_2;
+					}
+				} else if (option_ctx.sub_target.find("arm") == 0) {
+					if (option_ctx.sub_target == "arm-2") {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_2;
+					} else {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_1;
+					}
+				} else {
+					log_error("invalid Host-Compute sub-target: %s", option_ctx.sub_target);
+					return -6;
+				}
+				
+				// overwrite SIMD defaults based on target
+				switch (dev->cpu_tier) {
+					case HOST_CPU_TIER::X86_TIER_1:
+						device->simd_width = 4u; // SSE
+						break;
+					case HOST_CPU_TIER::X86_TIER_2:
+					case HOST_CPU_TIER::X86_TIER_3:
+						device->simd_width = 8u; // AVX
+						break;
+					case HOST_CPU_TIER::X86_TIER_4:
+						device->simd_width = 16u; // AVX-512
+						break;
+					case HOST_CPU_TIER::ARM_TIER_1:
+					case HOST_CPU_TIER::ARM_TIER_2:
+						device->simd_width = 4u; // NEON
+						break;
+					default:
+						log_error("unknown/unhandled CPU tier");
+						return -7;
+				}
+				device->simd_range = { 1, device->simd_width };
+				
+				device->double_support = (option_ctx.double_support == 1); // disabled by default
+				
+				log_debug("compiling to Host-Compute (tier: %u) ...", dev->cpu_tier);
+				break;
+			}
 		}
 		
 		// compile
@@ -679,10 +742,11 @@ static int run_normal_build(option_context& option_ctx) {
 			switch(option_ctx.target) {
 				case llvm_toolchain::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
 				case llvm_toolchain::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
-				// don't do anything for air and spir-v, it's already stored in a file
+				// don't do anything for air, spir-v and host-compute, it's already stored in a file
 				case llvm_toolchain::TARGET::AIR:
 				case llvm_toolchain::TARGET::SPIRV_VULKAN:
-				case llvm_toolchain::TARGET::SPIRV_OPENCL: option_ctx.output_filename = ""; break;
+				case llvm_toolchain::TARGET::SPIRV_OPENCL:
+				case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: option_ctx.output_filename = ""; break;
 			}
 		}
 		
@@ -766,7 +830,7 @@ static int run_normal_build(option_context& option_ctx) {
 	}
 	
 	// test the compiled binary (if this was specified)
-	if(option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
+	if (option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
 			case llvm_toolchain::TARGET::SPIR:
 			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
@@ -872,7 +936,8 @@ static int run_normal_build(option_context& option_ctx) {
 #else
 				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
 #endif
-			} break;
+				break;
+			}
 			case llvm_toolchain::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
 				auto ctx = make_shared<metal_compute>(false, nullptr, floor::get_metal_whitelist());
@@ -906,7 +971,8 @@ static int run_normal_build(option_context& option_ctx) {
 #else
 				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
 #endif
-			} break;
+				break;
+			}
 			case llvm_toolchain::TARGET::PTX: {
 #if !defined(FLOOR_NO_CUDA)
 				auto ctx = make_shared<cuda_compute>(floor::get_cuda_whitelist());
@@ -938,7 +1004,8 @@ static int run_normal_build(option_context& option_ctx) {
 #else
 				log_error("cuda testing not supported on this platform (or disabled during floor compilation)");
 #endif
-			} break;
+				break;
+			}
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
 				auto ctx = make_shared<vulkan_compute>(false, nullptr, floor::get_vulkan_whitelist());
@@ -973,7 +1040,13 @@ static int run_normal_build(option_context& option_ctx) {
 #else
 				log_error("vulkan testing not supported on this platform (or disabled during floor compilation)");
 #endif
-			} break;
+				break;
+			}
+			case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: {
+				// TODO: implement this
+				log_error("host-compute testing is not supported yet");
+				break;
+			}
 		}
 	}
 	

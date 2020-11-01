@@ -1043,6 +1043,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-fno-aligned-allocation",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1142,6 +1143,7 @@
 				MTL_OPTIMIZATION_LEVEL = s;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
+					"-fno-aligned-allocation",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);

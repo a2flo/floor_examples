@@ -286,13 +286,13 @@ int main(int, char* argv[]) {
 		dev_queue->finish();
 		dev_queue->start_profiling();
 		if(fastest_device->cooperative_kernel_support) {
-			dev_queue->execute_cooperative(reduction_kernels[REDUCTION_ADD_F32_1024],
+			dev_queue->execute_cooperative(*reduction_kernels[REDUCTION_ADD_F32_1024],
 										   uint1 { fastest_device->max_coop_total_local_size /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
 										   uint1 { 1024 },
 										   red_data, red_data_sum, reduction_elem_count);
 		}
 		else {
-			dev_queue->execute(reduction_kernels[REDUCTION_ADD_F32_1024],
+			dev_queue->execute(*reduction_kernels[REDUCTION_ADD_F32_1024],
 							   uint1 { reduction_global_size },
 							   uint1 { 1024 },
 							   red_data, red_data_sum, reduction_elem_count);

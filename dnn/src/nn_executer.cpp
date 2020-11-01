@@ -174,7 +174,7 @@ void nn_executer::dump(const string name, const uint64_t max_elems) {
 shared_ptr<compute_image> nn_executer::resample(shared_ptr<compute_image> img) {
 	auto ret = dnn_state.ctx->create_image(*dnn_state.dev_queue, uint4 { 224, 224, 1, 0 }, img->get_image_type());
 	const uint2 in_dim = img->get_image_dim().xy;
-	dev_queue->execute(dnn_kernels[DNN_resample_image_224],
+	dev_queue->execute(*dnn_kernels[DNN_resample_image_224],
 					   uint2 { 224, 224 },
 					   // TODO: find a proper supported size
 					   uint2 { 16, 16 },
@@ -239,7 +239,7 @@ void nn_executer::convolution(const string& layer_name, const bool dump_output) 
 		const uint2 conv_local_dim { dnn_max_local_sizes_3d[DNN_convolution_vgg_rgb_3x3_relu_f32].xy };
 		log_debug("running conv kernel #%u: global: %v, local %v",
 				  DNN_convolution_vgg_rgb_3x3_relu_f32, cur_dim.xy, conv_local_dim);
-		dev_queue->execute(dnn_kernels[DNN_convolution_vgg_rgb_3x3_relu_f32],
+		dev_queue->execute(*dnn_kernels[DNN_convolution_vgg_rgb_3x3_relu_f32],
 						   cur_dim.xy,
 						   // TODO: find a proper supported size
 						   //conv_local_dim,
@@ -258,7 +258,7 @@ void nn_executer::convolution(const string& layer_name, const bool dump_output) 
 		}
 		log_debug("running conv kernel #%u: global: %v, local %v, #out-ch: %u",
 				  kernel_idx, uint2 { cur_dim.x * conv_out_channel_count, cur_dim.y }, uint2 { conv_out_channel_count, 1 }, conv_out_channel_count);
-		dev_queue->execute(dnn_kernels[kernel_idx],
+		dev_queue->execute(*dnn_kernels[kernel_idx],
 						   uint2 { cur_dim.x * conv_out_channel_count, cur_dim.y },
 						   uint2 { conv_out_channel_count, 1 },
 						   *buf, stage_output, conv.filters, conv.biases, conv_out_channel_count);
@@ -300,7 +300,7 @@ void nn_executer::max_pooling(const bool dump_output) {
 																				   COMPUTE_MEMORY_FLAG::NONE));
 	
 	log_debug("running max pooling (%u)", max_pool_out_elem_count);
-	dev_queue->execute(dnn_kernels[DNN_max_pooling],
+	dev_queue->execute(*dnn_kernels[DNN_max_pooling],
 					   uint1 { max_pool_out_elem_count },
 					   uint1 { dnn_max_local_sizes[DNN_max_pooling] },
 					   *input, stage_output, cur_dim);
@@ -385,14 +385,14 @@ void nn_executer::fully_connected(const string& layer_name, const bool with_relu
 			kernel_idx, local_size, fc_width, fc_height, partials_count);
 	log_msg("buffer sizes: %u, %u, %u, %u",
 			(*input)->get_size(), fc.matrix->get_size(), partials_buf->get_size(), stage_output->get_size());
-	dev_queue->execute(dnn_kernels[kernel_idx],
+	dev_queue->execute(*dnn_kernels[kernel_idx],
 					   uint1 { fc_height },
 					   uint1 { local_size },
 					   *input, fc.matrix, partials_buf, fc_height, fc_width, partials_count);
 	
 	dev_queue->finish();
 	
-	dev_queue->execute(dnn_kernels[out_type == DATA_TYPE::FLOAT_32 ? DNN_fc_matrix_mul_total_f32 : DNN_fc_matrix_mul_total_f16],
+	dev_queue->execute(*dnn_kernels[out_type == DATA_TYPE::FLOAT_32 ? DNN_fc_matrix_mul_total_f32 : DNN_fc_matrix_mul_total_f16],
 					   uint1 { fc_width },
 					   uint1 { local_size },
 					   partials_buf, stage_output, fc.biases, partials_count, fc_width, with_relu ? 1u : 0u);
@@ -459,7 +459,7 @@ void nn_executer::softmax(const bool dump_output) {
 	}
 	log_msg("softmax: local size: %u, idx %u", local_size, kernel_idx);
 	
-	dev_queue->execute(dnn_kernels[kernel_idx],
+	dev_queue->execute(*dnn_kernels[kernel_idx],
 					   uint1 { local_size },
 					   uint1 { local_size },
 					   *input, out_buffer, cur_dim.x);

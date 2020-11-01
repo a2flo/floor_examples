@@ -678,12 +678,14 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (c++17 with gnu and clang extensions is required)
+# remove std compat warnings (c++17/c++20 with gnu and clang extensions is required)
 WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
+WARNINGS="${WARNINGS} -Wno-nullability-extension"
 # don't be too pedantic
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"
 WARNINGS="${WARNINGS} -Wno-global-constructors -Wno-exit-time-destructors -Wno-reserved-id-macro -Wno-date-time"
@@ -699,10 +701,8 @@ WARNINGS="${WARNINGS} -Wno-nested-anon-types"
 WARNINGS="${WARNINGS} -Wno-partial-availability"
 # enable thread-safety warnings
 WARNINGS="${WARNINGS} -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
-if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-	# ignore warnings about required alignment increases on 32-bit platforms (won't and can't fix)
-	WARNINGS="${WARNINGS} -Wno-cast-align"
-fi
+# ignore "explicit move to avoid copying on older compilers" warning
+WARNINGS="${WARNINGS} -Wno-return-std-move-in-c++11"
 COMMON_FLAGS="${COMMON_FLAGS} ${WARNINGS}"
 
 # diagnostics

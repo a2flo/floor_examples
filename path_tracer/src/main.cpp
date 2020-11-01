@@ -69,7 +69,7 @@ int main(int, char* argv[]) {
 	bool done = false;
 	static constexpr const uint32_t iteration_count { 16384 };
 	for(uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
-		dev_queue->execute(path_tracer_kernel,
+		dev_queue->execute(*path_tracer_kernel,
 						   // total amount of work:
 						   uint1 { pixel_count },
 						   // work per work-group:

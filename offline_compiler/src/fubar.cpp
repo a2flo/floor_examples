@@ -318,6 +318,59 @@ namespace fubar {
 				}
 			},
 #endif
+#if 1
+			// Host-Compute
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::X86_TIER_1,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::X86_TIER_2,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::X86_TIER_3,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::X86_TIER_4,
+					._unused = 0,
+				}
+			},
+#if 0 // TODO: enable this once ARM is supported
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::ARM_TIER_1,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::ARM_TIER_2,
+					._unused = 0,
+				}
+			},
+#endif
+#endif
 		};
 		
 		static const vector<universal_binary::target> graphics_targets {

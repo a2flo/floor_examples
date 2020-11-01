@@ -468,6 +468,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -1191,6 +1192,7 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -1207,6 +1209,8 @@
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
 					"-Wno-return-std-move-in-c++11",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Debug;
@@ -1291,6 +1295,7 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -1307,6 +1312,8 @@
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
 					"-Wno-return-std-move-in-c++11",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Release;

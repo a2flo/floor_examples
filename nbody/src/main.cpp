@@ -22,6 +22,7 @@
 #include <floor/compute/compute_kernel.hpp>
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/vulkan/vulkan_compute.hpp>
+#include <floor/compute/host/host_compute.hpp>
 #include <floor/vr/vr_context.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
@@ -588,10 +589,12 @@ int main(int, char* argv[]) {
 	
 	// disable resp. other renderers when using opengl/metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
-							(floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST && floor_renderer == floor::RENDERER::METAL));
-	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
-							(floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA && floor_renderer == floor::RENDERER::VULKAN));
+	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+						   floor_renderer == floor::RENDERER::METAL);
+	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA) &&
+							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (is_metal) {
 		nbody_state.no_opengl = true;
@@ -676,7 +679,7 @@ int main(int, char* argv[]) {
 			nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
 			log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
 		}
-		if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
+		if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST && !((const host_compute*)compute_ctx.get())->has_host_device_support() &&
 		   nbody_state.tile_size != NBODY_TILE_SIZE) {
 			log_error("compiled NBODY_TILE_SIZE (%u) must match run-time tile-size when using host compute! - using it now",
 					  NBODY_TILE_SIZE);
