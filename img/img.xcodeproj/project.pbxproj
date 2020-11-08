@@ -236,6 +236,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -507,7 +508,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
@@ -572,7 +572,6 @@
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
-					/usr/X11/lib,
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
@@ -685,6 +684,7 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -700,6 +700,9 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Debug;
@@ -777,6 +780,7 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -792,6 +796,9 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
+					"-Wno-c11-extensions",
+					"-Wno-poison-system-directories",
 				);
 			};
 			name = Release;
