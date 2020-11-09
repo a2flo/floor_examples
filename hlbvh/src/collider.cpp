@@ -84,7 +84,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		const auto triangle_count = mdl->tri_count;
 		
 		log_if_debug("build_aabbs: %u (%u)", mdl_idx, triangle_count);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["build_aabbs"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["build_aabbs"],
 									   uint1 { triangle_count },
 									   uint1 { ROOT_AABB_GROUP_SIZE },
 									   mdl->frames_triangles_buffer[cur_frame],
@@ -103,7 +103,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 	{
 		log_if_debug("collide_root_aabbs");
 		auto aabb_collision_flags_host = make_unique<uint32_t[]>(total_aabb_checks);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["collide_root_aabbs"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["collide_root_aabbs"],
 									   uint1 { total_aabb_checks },
 									   uint1 { hlbvh_state.kernel_max_local_size["collide_root_aabbs"] },
 									   aabbs,
@@ -139,7 +139,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		const auto morton_codes_count = uint32_t(mdl->morton_codes->get_size() / sizeof(uint2));
 		
 		log_if_debug("compute_morton_codes: %u", i);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["compute_morton_codes"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["compute_morton_codes"],
 									   uint1 { morton_codes_count },
 									   uint1 { hlbvh_state.kernel_max_local_size["compute_morton_codes"] },
 									   aabbs,
@@ -157,7 +157,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		const auto leaf_count = triangle_count;
 		const auto internal_node_count = leaf_count - 1u;
 		log_if_debug("build_bvh: %u (node count: %u/%u)", i, leaf_count, internal_node_count);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["build_bvh"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["build_bvh"],
 									   uint1 { internal_node_count },
 									   uint1 { hlbvh_state.kernel_max_local_size["build_bvh"] },
 									   mdl->morton_codes,
@@ -166,7 +166,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 									   internal_node_count);
 		
 		log_if_debug("build_bvh_aabbs_leaves: %u", i);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["build_bvh_aabbs_leaves"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["build_bvh_aabbs_leaves"],
 									   uint1 { leaf_count },
 									   uint1 { hlbvh_state.kernel_max_local_size["build_bvh_aabbs_leaves"] },
 									   mdl->morton_codes,
@@ -176,7 +176,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		
 		log_if_debug("build_bvh_aabbs: %u", i);
 		mdl->bvh_aabbs_counters->zero(*hlbvh_state.dev_queue);
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["build_bvh_aabbs"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["build_bvh_aabbs"],
 									   uint1 { leaf_count },
 									   uint1 { hlbvh_state.kernel_max_local_size["build_bvh_aabbs"] },
 									   mdl->morton_codes,
@@ -201,7 +201,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		const auto leaf_count_j = mdl_j->tri_count;
 		
 		if(hlbvh_state.triangle_vis) {
-			hlbvh_state.dev_queue->execute(hlbvh_state.kernels["collide_bvhs_tri_vis"],
+			hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["collide_bvhs_tri_vis"],
 										   uint1 { leaf_count_i },
 										   uint1 { hlbvh_state.kernel_max_local_size["collide_bvhs_tri_vis"] },
 										   // the leaves of bvh A that we want to collide with bvh B
@@ -225,7 +225,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 										   mdl_j->colliding_triangles[mdl_j->colliding_triangles_idx]);
 		}
 		else {
-			hlbvh_state.dev_queue->execute(hlbvh_state.kernels["collide_bvhs_no_tri_vis"],
+			hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["collide_bvhs_no_tri_vis"],
 										   uint1 { leaf_count_i },
 										   uint1 { hlbvh_state.kernel_max_local_size["collide_bvhs_no_tri_vis"] },
 										   // the leaves of bvh A that we want to collide with bvh B
@@ -275,7 +275,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 			const auto triangle_count = mdl->tri_count;
 			mdl->colliding_vertices->zero(*hlbvh_state.dev_queue);
 			if(collision_flags_host[i] > 0) {
-				hlbvh_state.dev_queue->execute(hlbvh_state.kernels["map_collided_triangles"],
+				hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["map_collided_triangles"],
 											   uint1 { triangle_count },
 											   uint1 { hlbvh_state.kernel_max_local_size["map_collided_triangles"] },
 											   mdl->colliding_triangles[mdl->colliding_triangles_idx],
@@ -303,7 +303,7 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 		const auto mask_op_bit = uint32_t(1u << bit);
 		//log_if_debug("radix sort: %u, %X, size: %u", bit, mask_op_bit, size);
 		
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["radix_sort_count"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["radix_sort_count"],
 									   uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },
 									   uint1 { COMPACTION_GROUP_SIZE },
 									   buffer,
@@ -312,13 +312,13 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 									   mask_op_bit,
 									   valid_counts_buffer);
 		
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["radix_sort_prefix_sum"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["radix_sort_prefix_sum"],
 									   uint1 { PREFIX_SUM_GROUP_SIZE },
 									   uint1 { PREFIX_SUM_GROUP_SIZE },
 									   valid_counts_buffer,
 									   uint32_t(COMPACTION_GROUP_COUNT));
 		
-		hlbvh_state.dev_queue->execute(hlbvh_state.kernels["radix_sort_stream_split"],
+		hlbvh_state.dev_queue->execute(*hlbvh_state.kernels["radix_sort_stream_split"],
 									   uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },
 									   uint1 { COMPACTION_GROUP_SIZE },
 									   buffer,

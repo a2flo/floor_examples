@@ -26,7 +26,7 @@
 #define ROOT_AABB_GROUP_SIZE 256u
 
 #include <floor/math/quaternion.hpp>
-#if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
+#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
 #include <floor/compute/compute_context.hpp>
 #include <floor/compute/compute_device.hpp>
 #include <floor/compute/compute_queue.hpp>
@@ -56,7 +56,7 @@ struct hlbvh_state_struct {
 	// if false: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
 	bool triangle_vis { true };
 	
-#if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
+#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
 	// main compute context
 	shared_ptr<compute_context> ctx;
 	// active compute device
@@ -69,7 +69,7 @@ struct hlbvh_state_struct {
 #endif
 	
 };
-#if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
+#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
 extern hlbvh_state_struct hlbvh_state;
 #endif
 
