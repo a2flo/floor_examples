@@ -106,8 +106,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <1.1|1.2|2.0|2.1|2.2|2.3>: sets the supported Metal version (defaults to 1.1)\n"
-				 "\t--ptx-version <43|50|60|61|62|63|64|65|70>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
-				 "\t--vulkan-std <1.0|1.1>: sets the supported Vulkan version (defaults to 1.0)\n"
+				 "\t--ptx-version <43|50|60|61|62|63|64|65|70|71>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
+				 "\t--vulkan-std <1.0|1.1|1.2>: sets the supported Vulkan version (defaults to 1.0)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -264,6 +264,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		const string vlk_version_str = *arg_ptr;
 		if(vlk_version_str == "1.0") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_0; }
 		else if(vlk_version_str == "1.1") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_1; }
+		else if(vlk_version_str == "1.2") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_2; }
 		else {
 			cerr << "invalid --vulkan-std argument" << endl;
 			return;
@@ -526,6 +527,9 @@ static int run_normal_build(option_context& option_ctx) {
 						break;
 					case VULKAN_VERSION::VULKAN_1_1:
 						dev->spirv_version = SPIRV_VERSION::SPIRV_1_3;
+						break;
+					case VULKAN_VERSION::VULKAN_1_2:
+						dev->spirv_version = SPIRV_VERSION::SPIRV_1_5;
 						break;
 				}
 				
