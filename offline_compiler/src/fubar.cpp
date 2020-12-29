@@ -44,7 +44,7 @@ namespace fubar {
 					.ptx_isa_major = 4,
 					.ptx_isa_minor = 3,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -57,7 +57,7 @@ namespace fubar {
 					.ptx_isa_major = 4,
 					.ptx_isa_minor = 3,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -70,7 +70,7 @@ namespace fubar {
 					.ptx_isa_major = 4,
 					.ptx_isa_minor = 3,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -83,7 +83,7 @@ namespace fubar {
 					.ptx_isa_major = 4,
 					.ptx_isa_minor = 3,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -96,7 +96,7 @@ namespace fubar {
 					.ptx_isa_major = 5,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -109,7 +109,7 @@ namespace fubar {
 					.ptx_isa_major = 5,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -122,7 +122,7 @@ namespace fubar {
 					.ptx_isa_major = 6,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -135,7 +135,7 @@ namespace fubar {
 					.ptx_isa_major = 6,
 					.ptx_isa_minor = 3,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -148,7 +148,7 @@ namespace fubar {
 					.ptx_isa_major = 7,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
@@ -161,7 +161,7 @@ namespace fubar {
 					.ptx_isa_major = 7,
 					.ptx_isa_minor = 1,
 					.is_ptx = 1,
-					.image_depth_compare_support = 1,
+					.image_depth_compare_support = 0,
 					._unused = 0,
 				}
 			},
