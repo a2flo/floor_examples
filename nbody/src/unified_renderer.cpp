@@ -33,6 +33,7 @@
 static unique_ptr<graphics_pass> renderer_pass;
 static unique_ptr<graphics_pipeline> renderer_pipeline;
 static shared_ptr<compute_image> render_image;
+static shared_ptr<compute_image> resolve_image;
 static unique_ptr<graphics_pass> blit_pass;
 static unique_ptr<graphics_pipeline> blit_pipeline;
 static bool is_vr_renderer { false };
@@ -73,7 +74,7 @@ static void create_textures(const compute_context& ctx, const compute_queue& dev
 	}
 }
 
-bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue,
+bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, const bool enable_msaa,
 							const compute_kernel& vs, const compute_kernel& fs,
 							const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered) {
 	if (blit_vs == nullptr || blit_fs == nullptr || blit_fs_layered == nullptr) {
@@ -86,14 +87,15 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 	is_vr_renderer = ctx.is_vr_supported();
 
 	// nbody rendering pipeline/pass
+	static constexpr const auto msaa_flags = COMPUTE_IMAGE_TYPE::FLAG_MSAA | COMPUTE_IMAGE_TYPE::FLAG_TRANSIENT | COMPUTE_IMAGE_TYPE::SAMPLE_COUNT_4;
 	const auto render_format = COMPUTE_IMAGE_TYPE::RGBA16F;
 
 	const render_pass_description pass_desc {
 		.attachments = {
 			{
-				.format = render_format,
+				.format = render_format | (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE),
 				.load_op = LOAD_OP::CLEAR,
-				.store_op = STORE_OP::STORE,
+				.store_op = (enable_msaa ? STORE_OP::RESOLVE : STORE_OP::STORE),
 				.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
 			}
 		}
@@ -109,13 +111,14 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		.primitive = PRIMITIVE::POINT,
 		.cull_mode = CULL_MODE::BACK,
 		.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
+		.sample_count = (enable_msaa ? 4 : 1),
 		.depth = {
 			.write = false,
 			.compare = DEPTH_COMPARE::ALWAYS,
 		},
 		.color_attachments = {
 			{
-				.format = render_format,
+				.format = render_format | (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE),
 				.blend = {
 					.enable = true,
 					.src_color_factor = BLEND_FACTOR::ONE,
@@ -137,9 +140,20 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 	render_image = ctx.create_image(dev_queue, ctx.get_renderer_image_dim(),
 									render_format |
 									(!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
+									(enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE) |
 									COMPUTE_IMAGE_TYPE::READ_WRITE |
 									COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 									COMPUTE_MEMORY_FLAG::READ_WRITE);
+	render_image->set_debug_label("render_image");
+	if (enable_msaa) {
+		resolve_image = ctx.create_image(dev_queue, ctx.get_renderer_image_dim(),
+										 render_format |
+										 (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
+										 COMPUTE_IMAGE_TYPE::READ_WRITE |
+										 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
+										 COMPUTE_MEMORY_FLAG::READ_WRITE);
+		resolve_image->set_debug_label("resolve_image");
+	}
 
 	// blit pipeline/pass
 	const auto screen_format = ctx.get_renderer_image_type();
@@ -180,10 +194,14 @@ void unified_renderer::destroy(const compute_context& ctx floor_unused) {
 	for (auto& tex : body_textures) {
 		tex = nullptr;
 	}
-	
+
 	// clean up renderer stuff
-	renderer_pass = nullptr;
+	blit_pipeline = nullptr;
+	blit_pass = nullptr;
 	renderer_pipeline = nullptr;
+	renderer_pass = nullptr;
+	render_image = nullptr;
+	resolve_image = nullptr;
 }
 
 void unified_renderer::render(const compute_context& ctx, const compute_queue& dev_queue, const compute_buffer& position_buffer) {
@@ -195,7 +213,12 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 			return;
 		}
 		
-		renderer->set_attachments(render_image);
+		if (!resolve_image) {
+			renderer->set_attachments(render_image);
+		} else {
+			graphics_renderer::resolve_and_store_attachment_t att { *render_image, *resolve_image };
+			renderer->set_attachments(att);
+		}
 		
 		// attachments set, can begin rendering now
 		renderer->begin();
@@ -266,7 +289,7 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 			.vertex_count = 3 // fullscreen triangle
 		}};
 		const auto hdr_scaler = (floor::get_hdr() && floor::get_hdr_linear() ? ctx.get_hdr_range_max() : 1.0f);
-		blitter->multi_draw(blit_draw_info, render_image, hdr_scaler);
+		blitter->multi_draw(blit_draw_info, resolve_image ? resolve_image : render_image, hdr_scaler);
 		
 		blitter->end();
 		blitter->present();

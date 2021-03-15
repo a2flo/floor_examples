@@ -27,4 +27,8 @@ add_executable(${PROJECT_NAME}
 
 # include libfloor base configuration
 set(LIBFLOOR_USER 1)
-include($ENV{ProgramW6432}/floor/include/floor/libfloor.cmake)
+if (WIN32)
+	include($ENV{ProgramW6432}/floor/include/floor/libfloor.cmake)
+else ()
+	include(/opt/floor/include/floor/libfloor.cmake)
+endif (WIN32)

@@ -95,6 +95,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
+		cout << "\t--msaa: enable 4xMSAA rendering" << endl;
 		for(const auto& desc : nbody_setup_desc) {
 			cout << "\t\t" << desc << endl;
 		}
@@ -118,7 +119,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << endl;
 		
 		// performance stats
-		cout << "expected performace (with --benchmark):" << endl;
+		cout << "expected performance (with --benchmark):" << endl;
 		cout << "\tRTX 3090:     ~21200 gflops (--count 335872 --tile-size 512)" << endl;
 		cout << "\tRTX 2080 Ti:  ~10970 gflops (--count 278528 --tile-size 256)" << endl;
 		cout << "\tP6000:        ~ 8400 gflops (--count 262144 --tile-size 512)" << endl;
@@ -272,6 +273,10 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		}
 		nbody_state.render_size = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
 		cout << "render size set to: " << nbody_state.render_size << endl;
+	}},
+	{ "--msaa", [](nbody_option_context&, char**&) {
+		nbody_state.msaa = true;
+		cout << "MSAA rendering enabled" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
@@ -732,6 +737,7 @@ int main(int, char* argv[]) {
 			// setup renderer
 			if (!unified_renderer::init(*render_ctx,
 										*render_dev_queue,
+										nbody_state.msaa,
 										*nbody_render_prog->get_kernel("lighting_vertex"),
 										*nbody_render_prog->get_kernel("lighting_fragment"),
 										nbody_render_prog->get_kernel("blit_vs").get(),
