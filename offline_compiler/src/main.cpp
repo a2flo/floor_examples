@@ -82,6 +82,7 @@ struct option_context {
 	string config_path { "../../data/" };
 	bool done { false };
 	bool native_cl { false };
+	bool soft_printf { false };
 	
 	bool is_fubar_build { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
@@ -122,6 +123,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-max-registers <#registers>: restricts/specifies how many registers can be used when jitting the PTX code (default: 0/unlimited)\n"
 				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
+				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
@@ -377,6 +379,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.spirv_text_filename = *arg_ptr;
 		ctx.spirv_text = true;
 	}},
+	{ "--soft-printf", [](option_context& ctx, char**&) {
+		ctx.soft_printf = true;
+	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
 	}},
@@ -604,6 +609,8 @@ static int run_normal_build(option_context& option_ctx) {
 			.cuda.ptx_version = option_ctx.ptx_version,
 			.cuda.max_registers = option_ctx.cuda_max_registers,
 			.cuda.short_ptr = (option_ctx.cuda_no_short_ptr ? false : true),
+			.metal.soft_printf = option_ctx.soft_printf,
+			.vulkan.soft_printf = option_ctx.soft_printf,
 		};
 		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
@@ -878,7 +885,7 @@ static int run_normal_build(option_context& option_ctx) {
 						opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
 																   &binary_length, &binary_ptr, &status, &create_err);
 						if(create_err != CL_SUCCESS) {
-							log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
+							log_error("failed to create opencl program: %u: %s", create_err, cl_error_to_string(create_err));
 							log_error("devices binary status: %s", status);
 							return {};
 						}
@@ -1098,6 +1105,7 @@ int main(int, char* argv[]) {
 			.enable_warnings = option_ctx.warnings,
 			.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED)),
 			.cuda_max_registers = option_ctx.cuda_max_registers,
+			.enable_soft_printf = option_ctx.soft_printf,
 		};
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {

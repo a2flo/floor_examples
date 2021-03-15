@@ -34,6 +34,7 @@ namespace fubar {
 		string additional_cli_options;
 		bool enable_warnings { false };
 		bool verbose_compile_output { false };
+		bool enable_soft_printf { false };
 		
 		uint32_t cuda_max_registers { 0 };
 	};

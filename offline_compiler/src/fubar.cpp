@@ -589,6 +589,8 @@ namespace fubar {
 			.enable_warnings = options.enable_warnings,
 			.silence_debug_output = !options.verbose_compile_output,
 			.cuda.max_registers = options.cuda_max_registers,
+			.metal.soft_printf = options.enable_soft_printf,
+			.vulkan.soft_printf = options.enable_soft_printf,
 		};
 		
 		const auto targets = get_targets(target_set, targets_json_file_name, toolchain_options);

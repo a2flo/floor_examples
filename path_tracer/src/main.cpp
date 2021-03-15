@@ -132,6 +132,11 @@ int main(int, char* argv[]) {
 	log_msg("done!");
 	
 	// kthxbye
+	path_tracer_kernel = nullptr;
+	path_tracer_prog = nullptr;
+	img_buffer = nullptr;
+	dev_queue = nullptr;
+	compute_ctx = nullptr;
 	floor::destroy();
 	return 0;
 }
