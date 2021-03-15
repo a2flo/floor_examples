@@ -921,7 +921,7 @@ static int run_normal_build(option_context& option_ctx) {
 					cl_int create_err = CL_SUCCESS;
 					opencl_program = clCreateProgramWithSource(cl_ctx, 1, &src_ptr, &src_size, &create_err);
 					if(create_err != CL_SUCCESS) {
-						log_error("failed to create opencl program: %u", create_err, cl_error_to_string(create_err));
+						log_error("failed to create opencl program: %u: %s", create_err, cl_error_to_string(create_err));
 						return {};
 					}
 					else log_debug("successfully created opencl program!");
@@ -1104,8 +1104,8 @@ int main(int, char* argv[]) {
 			.additional_cli_options = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings,
 			.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED)),
-			.cuda_max_registers = option_ctx.cuda_max_registers,
 			.enable_soft_printf = option_ctx.soft_printf,
+			.cuda_max_registers = option_ctx.cuda_max_registers,
 		};
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {
