@@ -113,7 +113,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			render_pipeline_state_scatter = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!render_pipeline_state_scatter) {
-				log_error("failed to create (scatter) scene pipeline state: %s",
+				log_error("failed to create (scatter) scene pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -139,7 +139,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			render_pipeline_state_gather = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!render_pipeline_state_gather) {
-				log_error("failed to create (gather) scene pipeline state: %s",
+				log_error("failed to create (gather) scene pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -161,7 +161,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			render_pipeline_state_gather_fwd = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!render_pipeline_state_gather_fwd) {
-				log_error("failed to create (gather forward-only) scene pipeline state: %s",
+				log_error("failed to create (gather forward-only) scene pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -254,7 +254,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			skybox_pipeline_state_scatter = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!skybox_pipeline_state_scatter) {
-				log_error("failed to create (scatter) skybox pipeline state: %s",
+				log_error("failed to create (scatter) skybox pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -280,7 +280,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			skybox_pipeline_state_gather = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!skybox_pipeline_state_gather) {
-				log_error("failed to create (gather) skybox pipeline state: %s",
+				log_error("failed to create (gather) skybox pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -302,7 +302,7 @@ bool metal_renderer::init() {
 			NSError* error = nullptr;
 			skybox_pipeline_state_gather_fwd = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 			if(!skybox_pipeline_state_gather_fwd) {
-				log_error("failed to create (gather forward-only) skybox pipeline state: %s",
+				log_error("failed to create (gather forward-only) skybox pipeline state: $",
 						  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 				return false;
 			}
@@ -391,7 +391,7 @@ bool metal_renderer::init() {
 		NSError* error = nullptr;
 		shadow_pipeline_state = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 		if(!shadow_pipeline_state) {
-			log_error("failed to create shadow pipeline state: %s",
+			log_error("failed to create shadow pipeline state: $",
 					  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 			return false;
 		}
@@ -422,7 +422,7 @@ bool metal_renderer::init() {
 		NSError* error = nullptr;
 		blit_pipeline_state = [device newRenderPipelineStateWithDescriptor:pipeline_desc error:&error];
 		if(!blit_pipeline_state) {
-			log_error("failed to create blit pipeline state: %s",
+			log_error("failed to create blit pipeline state: $",
 					  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 			return false;
 		}

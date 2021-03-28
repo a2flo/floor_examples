@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2021 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,8 +41,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 3,
 					.sm_minor = 0,
-					.ptx_isa_major = 4,
-					.ptx_isa_minor = 3,
+					.ptx_isa_major = 6,
+					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
@@ -54,8 +54,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 3,
 					.sm_minor = 5,
-					.ptx_isa_major = 4,
-					.ptx_isa_minor = 3,
+					.ptx_isa_major = 6,
+					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
@@ -67,8 +67,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 0,
-					.ptx_isa_major = 4,
-					.ptx_isa_minor = 3,
+					.ptx_isa_major = 6,
+					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
@@ -80,8 +80,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 2,
-					.ptx_isa_major = 4,
-					.ptx_isa_minor = 3,
+					.ptx_isa_major = 6,
+					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
@@ -93,7 +93,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 0,
-					.ptx_isa_major = 5,
+					.ptx_isa_major = 6,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
@@ -106,7 +106,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 1,
-					.ptx_isa_major = 5,
+					.ptx_isa_major = 6,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
@@ -168,30 +168,6 @@ namespace fubar {
 #endif
 #if 1
 			// Metal
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
-					.major = 1,
-					.minor = 1,
-					.is_ios = 0,
-					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
-					.simd_width = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
-					.major = 1,
-					.minor = 1,
-					.is_ios = 1,
-					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
-					.simd_width = 0,
-					._unused = 0,
-				}
-			},
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
@@ -320,21 +296,6 @@ namespace fubar {
 					.version = universal_binary::target_format_version,
 					.type = COMPUTE_TYPE::VULKAN,
 					.vulkan_major = 1,
-					.vulkan_minor = 1,
-					.spirv_major = 1,
-					.spirv_minor = 3,
-					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
-					.double_support = 0,
-					.basic_64_bit_atomics_support = 0,
-					.extended_64_bit_atomics_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.vulkan = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::VULKAN,
-					.vulkan_major = 1,
 					.vulkan_minor = 2,
 					.spirv_major = 1,
 					.spirv_minor = 5,
@@ -404,30 +365,6 @@ namespace fubar {
 		static const vector<universal_binary::target> graphics_targets {
 #if 1
 			// Metal
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
-					.major = 1,
-					.minor = 1,
-					.is_ios = 0,
-					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
-					.simd_width = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
-					.major = 1,
-					.minor = 1,
-					.is_ios = 1,
-					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
-					.simd_width = 0,
-					._unused = 0,
-				}
-			},
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
@@ -527,21 +464,6 @@ namespace fubar {
 #endif
 #if 1
 			// Vulkan
-			{
-				.vulkan = {
-					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::VULKAN,
-					.vulkan_major = 1,
-					.vulkan_minor = 1,
-					.spirv_major = 1,
-					.spirv_minor = 3,
-					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
-					.double_support = 0,
-					.basic_64_bit_atomics_support = 0,
-					.extended_64_bit_atomics_support = 0,
-					._unused = 0,
-				}
-			},
 			{
 				.vulkan = {
 					.version = universal_binary::target_format_version,

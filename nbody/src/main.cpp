@@ -627,7 +627,7 @@ int main(int, char* argv[]) {
 		nbody_state.unified_renderer = false;
 	}
 	
-	log_debug("using %s",
+	log_debug("using $",
 			  (nbody_state.unified_renderer ? "unified renderer" :
 			   !nbody_state.no_opengl ? "opengl renderer" :
 			   !nbody_state.no_metal ? "metal renderer" :
@@ -679,15 +679,15 @@ int main(int, char* argv[]) {
 		// parameter sanity check
 		if(nbody_state.tile_size > compute_dev->max_total_local_size) {
 			nbody_state.tile_size = (uint32_t)compute_dev->max_total_local_size;
-			log_error("tile size too large, > max possible work-group size! - setting tile size to %u now", nbody_state.tile_size);
+			log_error("tile size too large, > max possible work-group size! - setting tile size to $ now", nbody_state.tile_size);
 		}
 		if((nbody_state.body_count % nbody_state.tile_size) != 0u) {
 			nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
-			log_error("body count not a multiple of tile size! - setting body count to %u now", nbody_state.body_count);
+			log_error("body count not a multiple of tile size! - setting body count to $ now", nbody_state.body_count);
 		}
 		if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST && !((const host_compute*)compute_ctx.get())->has_host_device_support() &&
 		   nbody_state.tile_size != NBODY_TILE_SIZE) {
-			log_error("compiled NBODY_TILE_SIZE (%u) must match run-time tile-size when using host compute! - using it now",
+			log_error("compiled NBODY_TILE_SIZE ($) must match run-time tile-size when using host compute! - using it now",
 					  NBODY_TILE_SIZE);
 			nbody_state.tile_size = NBODY_TILE_SIZE;
 		}
@@ -874,14 +874,14 @@ int main(int, char* argv[]) {
 		const size_t cur_buffer = buffer_flip_flop;
 		const size_t next_buffer = (buffer_flip_flop + 1) % pos_buffer_count;
 		if(!nbody_state.stop) {
-			//log_debug("delta: %fms /// %f gflops", 1000.0f * float(((double)delta.count()) / time_den),
+			//log_debug("delta: $ms /// $ gflops", 1000.0f * float(((double)delta.count()) / time_den),
 			//		  compute_gflops(1000.0 * (((double)delta.count()) / time_den), false));
 			
 			// in ms
 			sim_time_sum += ((double)delta.count()) / (time_den / 1000.0);
 			
 			if(iteration == 99) {
-				log_debug("avg of 100 iterations: %fms ### %s gflops",
+				log_debug("avg of 100 iterations: $ms ### $ gflops",
 						  sim_time_sum / 100.0, compute_gflops(sim_time_sum / 100.0, false));
 				floor::set_caption("nbody / " + to_string(nbody_state.body_count) + " bodies / " +
 								   to_string(compute_gflops(sim_time_sum / 100.0, false)) + " gflops");

@@ -126,7 +126,7 @@ static bool compile_kernels() {
 	for(uint32_t i = 0; i < REDUCTION_KERNEL::__MAX_REDUCTION_KERNEL; ++i) {
 		new_reduction_kernels[i] = new_reduction_prog->get_kernel(reduction_kernel_names[i]);
 		if(new_reduction_kernels[i] == nullptr) {
-			log_error("failed to retrieve kernel %s from program", reduction_kernel_names[i]);
+			log_error("failed to retrieve kernel $ from program", reduction_kernel_names[i]);
 			return false;
 		}
 		new_reduction_max_local_sizes[i] = new_reduction_kernels[i]->get_kernel_entry(*fastest_device)->max_total_local_size;
@@ -139,7 +139,7 @@ static bool compile_kernels() {
 			// always usable with host-compute
 			new_reduction_kernel_usable[i] = true;
 		}
-		log_debug("%s: local size: %u, usable: %u", reduction_kernel_names[i], new_reduction_max_local_sizes[i],
+		log_debug("$: local size: $, usable: $", reduction_kernel_names[i], new_reduction_max_local_sizes[i],
 				  new_reduction_kernel_usable[i]);
 	}
 	
@@ -239,7 +239,7 @@ int main(int, char* argv[]) {
 	// compute the ideal global size (#units * local size), if the unit count is unknown, assume 16, so that we still get good throughput
 	static constexpr const uint32_t unit_count_fallback { 12u };
 	if (fastest_device->units == 0) {
-		log_error("device #units is 0 - assuming %u", unit_count_fallback);
+		log_error("device #units is 0 - assuming $", unit_count_fallback);
 	}
 	const uint32_t dev_unit_count = (fastest_device->units != 0 ? fastest_device->units : unit_count_fallback);
 	const uint32_t reduction_global_size = dev_unit_count * 1024u * (fastest_device->is_gpu() ? 2u : 1u);
@@ -306,12 +306,12 @@ int main(int, char* argv[]) {
 			const auto size_per_second = (double(red_size) / 1000000000.0) / (double(microseconds) / 1000000.0);
 			return size_per_second;
 		};
-		log_debug("reduction computed in %fms -> %u GB/s", double(prof_time) / 1000.0, compute_bandwidth(prof_time));
+		log_debug("reduction computed in $ms -> $ GB/s", double(prof_time) / 1000.0, compute_bandwidth(prof_time));
 		
 		float sum = 0.0f;
 		red_data_sum->read_to(sum, *dev_queue);
 		const auto abs_diff = abs(double(sum) - expected_sum);
-		log_debug("sum: %f, expected: kahan: %f, linear: %f, %f -> diff: %f (sp: %f)",
+		log_debug("sum: $, expected: kahan: $, linear: $, $ -> diff: $ (sp: $)",
 				  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));
 		
 		// next

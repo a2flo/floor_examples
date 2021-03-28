@@ -148,7 +148,7 @@ struct conv_layer_t {
 			stream << "\t" << bias << "," << endl;
 		}
 		stream << "}" << endl;
-		log_undecorated("%s", stream.str());
+		log_undecorated("$", stream.str());
 	}
 	
 	static constexpr uint4 shape() {
@@ -301,7 +301,7 @@ struct test_dummy {
 		for (uint32_t i = 0; i < count; ++i) {
 			stream << i << ": " << data[i] << endl;
 		}
-		log_undecorated("%s", stream.str());
+		log_undecorated("$", stream.str());
 	}
 	
 	SERIALIZATION(test_dummy, data)

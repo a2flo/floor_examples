@@ -292,7 +292,7 @@ int main(int, char* argv[]) {
 		hlbvh_state.no_vulkan = true;
 	}
 	
-	log_debug("using %s",
+	log_debug("using $",
 			  (!hlbvh_state.no_opengl ? "opengl renderer" :
 			   !hlbvh_state.no_metal ? "metal renderer" :
 			   !hlbvh_state.no_vulkan ? "vulkan renderer" : "no renderer at all"));
@@ -355,11 +355,11 @@ int main(int, char* argv[]) {
 	for(auto& kernel : hlbvh_state.kernels) {
 		kernel.second = prog->get_kernel(kernel.first);
 		if(kernel.second == nullptr) {
-			log_error("failed to retrieve kernel \"%s\" from program", kernel.first);
+			log_error("failed to retrieve kernel \"$\" from program", kernel.first);
 			return -1;
 		}
 		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(*hlbvh_state.dev)->max_total_local_size;
-		log_debug("max local size for \"%s\": %u", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
+		log_debug("max local size for \"$\": $", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
 	}
 	
 	// init gl renderer

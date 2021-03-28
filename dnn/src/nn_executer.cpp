@@ -122,16 +122,16 @@ bool nn_executer::rebuild_kernels() {
 		if (new_dnn_kernels[i] == nullptr && string(dnn_kernel_names[i]).find("1024") != string::npos) {
 			new_dnn_max_local_sizes[i] = 0;
 			new_dnn_max_local_sizes_3d[i] = { 0, 0, 0 };
-			log_debug("%s: unavailable on this device", dnn_kernel_names[i]);
+			log_debug("$: unavailable on this device", dnn_kernel_names[i]);
 			continue;
 		}
 		if (new_dnn_kernels[i] == nullptr) {
-			log_error("failed to retrieve kernel %s from program", dnn_kernel_names[i]);
+			log_error("failed to retrieve kernel $ from program", dnn_kernel_names[i]);
 			return false;
 		}
 		new_dnn_max_local_sizes[i] = new_dnn_kernels[i]->get_kernel_entry(*dnn_state.dev)->max_total_local_size;
 		new_dnn_max_local_sizes_3d[i] = new_dnn_kernels[i]->get_kernel_entry(*dnn_state.dev)->max_local_size;
-		log_debug("%s: local size: %u", dnn_kernel_names[i], new_dnn_max_local_sizes[i]);
+		log_debug("$: local size: $", dnn_kernel_names[i], new_dnn_max_local_sizes[i]);
 	}
 	
 	// everything was successful, exchange objects
@@ -166,7 +166,7 @@ void nn_executer::dump(const string name, const uint64_t max_elems) {
 	for (uint64_t i = 0; i < display_elem_count; ++i) {
 		data_sstr << *data_ptr++ << ", ";
 	}
-	log_undecorated("%s data:\n%s", name, data_sstr.str());
+	log_undecorated("$ data:\n$", name, data_sstr.str());
 	
 	data_buf->unmap(*dev_queue, data);
 }
@@ -214,12 +214,12 @@ void nn_executer::input(const compute_buffer& buf, const uint3 dim) {
 void nn_executer::convolution(const string& layer_name, const bool dump_output) {
 	const auto layer = mdl.get_conv_layer(layer_name);
 	if (!layer) {
-		log_error("no such layer: %s", layer_name);
+		log_error("no such layer: $", layer_name);
 		return;
 	}
 	
 	if (cur_data_type != DATA_TYPE::FLOAT_32) {
-		log_error("%s: data type != float is currently not supported", layer_name);
+		log_error("$: data type != float is currently not supported", layer_name);
 		return;
 	}
 	
@@ -233,11 +233,11 @@ void nn_executer::convolution(const string& layer_name, const bool dump_output) 
 	
 	if (auto img = get_if<const compute_image*>(&cur_input)) {
 		if (cur_dim.z != 3) {
-			log_error("layer %s: non-RGB image convolution not implemented", layer_name);
+			log_error("layer $: non-RGB image convolution not implemented", layer_name);
 			return;
 		}
 		const uint2 conv_local_dim { dnn_max_local_sizes_3d[DNN_convolution_vgg_rgb_3x3_relu_f32].xy };
-		log_debug("running conv kernel #%u: global: %v, local %v",
+		log_debug("running conv kernel #$: global: $, local $",
 				  DNN_convolution_vgg_rgb_3x3_relu_f32, cur_dim.xy, conv_local_dim);
 		dev_queue->execute(*dnn_kernels[DNN_convolution_vgg_rgb_3x3_relu_f32],
 						   cur_dim.xy,
@@ -253,17 +253,17 @@ void nn_executer::convolution(const string& layer_name, const bool dump_output) 
 			case 256: kernel_idx = DNN_convolution_3x3_256_relu_f32; break;
 			case 512: kernel_idx = DNN_convolution_3x3_512_relu_f32; break;
 			default:
-				log_error("layer %s: convolution with an input layer count of %u is not implemented", layer_name, cur_dim.z);
+				log_error("layer $: convolution with an input layer count of $ is not implemented", layer_name, cur_dim.z);
 				return;
 		}
-		log_debug("running conv kernel #%u: global: %v, local %v, #out-ch: %u",
+		log_debug("running conv kernel #$: global: $, local $, #out-ch: $",
 				  kernel_idx, uint2 { cur_dim.x * conv_out_channel_count, cur_dim.y }, uint2 { conv_out_channel_count, 1 }, conv_out_channel_count);
 		dev_queue->execute(*dnn_kernels[kernel_idx],
 						   uint2 { cur_dim.x * conv_out_channel_count, cur_dim.y },
 						   uint2 { conv_out_channel_count, 1 },
 						   *buf, stage_output, conv.filters, conv.biases, conv_out_channel_count);
 	} else {
-		log_error("layer %s: no input set", layer_name);
+		log_error("layer $: no input set", layer_name);
 		return;
 	}
 	
@@ -299,7 +299,7 @@ void nn_executer::max_pooling(const bool dump_output) {
 																				   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE :
 																				   COMPUTE_MEMORY_FLAG::NONE));
 	
-	log_debug("running max pooling (%u)", max_pool_out_elem_count);
+	log_debug("running max pooling ($)", max_pool_out_elem_count);
 	dev_queue->execute(*dnn_kernels[DNN_max_pooling],
 					   uint1 { max_pool_out_elem_count },
 					   uint1 { dnn_max_local_sizes[DNN_max_pooling] },
@@ -320,7 +320,7 @@ void nn_executer::max_pooling(const bool dump_output) {
 void nn_executer::fully_connected(const string& layer_name, const bool with_relu, const bool dump_output) {
 	const auto layer = mdl.get_fully_connected_layer(layer_name);
 	if (!layer) {
-		log_error("no such layer: %s", layer_name);
+		log_error("no such layer: $", layer_name);
 		return;
 	}
 	
@@ -359,7 +359,7 @@ void nn_executer::fully_connected(const string& layer_name, const bool with_relu
 		kernel_idx = DNN_fc_matrix_mul_partial_checked_1024_f16_f16;
 		kernel_end_idx = DNN_fc_matrix_mul_partial_checked_32_f16_f16 + 2;
 	} else {
-		log_error("invalid in/out data type combination: %u, %u", in_type, out_type);
+		log_error("invalid in/out data type combination: $, $", in_type, out_type);
 		return;
 	}
 	
@@ -381,9 +381,9 @@ void nn_executer::fully_connected(const string& layer_name, const bool with_relu
 	const auto partials_count = (fc_height / local_size) + ((fc_height % local_size) != 0 ? 1 : 0);
 	auto partials_buf = dnn_state.ctx->create_buffer(*dev_queue, out_type_size * partials_count * fc_width, COMPUTE_MEMORY_FLAG::READ_WRITE);
 	
-	log_msg("partials kernel: %u, %u (w: %u, h: %u), partials: %u",
+	log_msg("partials kernel: $, $ (w: $, h: $), partials: $",
 			kernel_idx, local_size, fc_width, fc_height, partials_count);
-	log_msg("buffer sizes: %u, %u, %u, %u",
+	log_msg("buffer sizes: $, $, $, $",
 			(*input)->get_size(), fc.matrix->get_size(), partials_buf->get_size(), stage_output->get_size());
 	dev_queue->execute(*dnn_kernels[kernel_idx],
 					   uint1 { fc_height },
@@ -444,7 +444,7 @@ void nn_executer::softmax(const bool dump_output) {
 		kernel_idx = DNN_softmax_inplace_1024_f16_f32;
 		kernel_end_idx = DNN_softmax_inplace_256_f16_f32 + 1;
 	} else {
-		log_error("invalid in/out data type combination: %u, %u", in_type, out_type);
+		log_error("invalid in/out data type combination: $, $", in_type, out_type);
 		return;
 	}
 	
@@ -457,7 +457,7 @@ void nn_executer::softmax(const bool dump_output) {
 		log_error("did not find a matching fully connected (partials) kernel");
 		return;
 	}
-	log_msg("softmax: local size: %u, idx %u", local_size, kernel_idx);
+	log_msg("softmax: local size: $, idx $", local_size, kernel_idx);
 	
 	dev_queue->execute(*dnn_kernels[kernel_idx],
 					   uint1 { local_size },

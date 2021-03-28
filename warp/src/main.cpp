@@ -116,7 +116,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 };
 static float3 last_cam_pos;
 static void cam_dump() {
-	log_undecorated("{ { %ff, %ff, %ff }, { %ff, %ff } },",
+	log_undecorated("{ { $f, $f, $f }, { $f, $f } },",
 					cam->get_position().x, cam->get_position().y, cam->get_position().z,
 					cam->get_rotation().x, cam->get_rotation().y);
 	last_cam_pos = cam->get_position();
@@ -155,22 +155,22 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_i:
 				warp_state.gather_eps_1 += eps1_step_size;
 				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
-				log_debug("eps 1: %f", warp_state.gather_eps_1);
+				log_debug("eps 1: $", warp_state.gather_eps_1);
 				break;
 			case SDLK_u:
 				warp_state.gather_eps_1 -= eps1_step_size;
 				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
-				log_debug("eps 1: %f", warp_state.gather_eps_1);
+				log_debug("eps 1: $", warp_state.gather_eps_1);
 				break;
 			case SDLK_k:
 				warp_state.gather_eps_2 += eps2_step_size;
 				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
-				log_debug("eps 2: %f", warp_state.gather_eps_2);
+				log_debug("eps 2: $", warp_state.gather_eps_2);
 				break;
 			case SDLK_j:
 				warp_state.gather_eps_2 -= eps2_step_size;
 				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
-				log_debug("eps 2: %f", warp_state.gather_eps_2);
+				log_debug("eps 2: $", warp_state.gather_eps_2);
 				break;
 			default: break;
 		}
@@ -208,49 +208,49 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				break;
 			case SDLK_1:
 				warp_state.is_warping ^= true;
-				log_debug("warping? %b", warp_state.is_warping);
+				log_debug("warping? $", warp_state.is_warping);
 				break;
 			case SDLK_2:
 				warp_state.is_render_full ^= true;
-				log_debug("render full scene? %b", warp_state.is_render_full);
+				log_debug("render full scene? $", warp_state.is_render_full);
 				break;
 			case SDLK_3:
 				warp_state.is_clear_frame ^= true;
-				log_debug("frame clearing? %b", warp_state.is_clear_frame);
+				log_debug("frame clearing? $", warp_state.is_clear_frame);
 				break;
 			case SDLK_4:
 				warp_state.is_fixup ^= true;
-				log_debug("px fixup? %b", warp_state.is_fixup);
+				log_debug("px fixup? $", warp_state.is_fixup);
 				break;
 			case SDLK_5:
 				warp_state.cur_fbo = 0;
 				warp_state.is_bidir_scatter ^= true;
-				log_debug("bidirectional scatter? %b", warp_state.is_bidir_scatter);
+				log_debug("bidirectional scatter? $", warp_state.is_bidir_scatter);
 				break;
 			case SDLK_g:
 				warp_state.cur_fbo = 0;
 				warp_state.is_scatter ^= true;
-				log_debug("scatter/gather? %s", (warp_state.is_scatter ? "scatter" : "gather"));
+				log_debug("scatter/gather? $", (warp_state.is_scatter ? "scatter" : "gather"));
 				break;
 			case SDLK_TAB:
 				warp_state.is_frame_repeat ^= true;
-				log_debug("frame repeat? %b", warp_state.is_frame_repeat);
+				log_debug("frame repeat? $", warp_state.is_frame_repeat);
 				break;
 			case SDLK_p:
 				if(warp_state.gather_dbg < gather_max_dbg) ++warp_state.gather_dbg;
-				log_debug("dbg: %u", warp_state.gather_dbg);
+				log_debug("dbg: $", warp_state.gather_dbg);
 				break;
 			case SDLK_o:
 				if(warp_state.gather_dbg > 0) --warp_state.gather_dbg;
-				log_debug("dbg: %u", warp_state.gather_dbg);
+				log_debug("dbg: $", warp_state.gather_dbg);
 				break;
 			case SDLK_t:
 				warp_state.is_debug_delta ^= true;
-				log_debug("debug delta? %b", warp_state.is_debug_delta);
+				log_debug("debug delta? $", warp_state.is_debug_delta);
 				break;
 			case SDLK_b:
 				warp_state.is_split_view ^= true;
-				log_debug("split view? %b", warp_state.is_split_view);
+				log_debug("split view? $", warp_state.is_split_view);
 				break;
 			default: break;
 		}
@@ -340,7 +340,7 @@ int main(int, char* argv[]) {
 		warp_state.unified_renderer = false;
 	}
 	
-	log_debug("using %s",
+	log_debug("using $",
 			  (warp_state.unified_renderer ? "unified renderer" :
 			   !warp_state.no_opengl ? "opengl renderer" :
 			   !warp_state.no_metal ? "metal renderer" :
@@ -401,7 +401,7 @@ int main(int, char* argv[]) {
 			}
 		}
 		if(warp_state.target_frame_count > 0) {
-			log_debug("using target frame rate: %u", warp_state.target_frame_count);
+			log_debug("using target frame rate: $", warp_state.target_frame_count);
 		}
 		else log_debug("using a variable target frame rate");
 		

@@ -128,7 +128,7 @@ COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surfac
 	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
 	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type)
 	if(image_type == COMPUTE_IMAGE_TYPE::NONE) {
-		log_error("unknown surface format: %u, %u, %u, %u, %u",
+		log_error("unknown surface format: $, $, $, $, $",
 				  (uint32_t)surface->format->BitsPerPixel,
 				  (uint32_t)surface->format->Rshift,
 				  (uint32_t)surface->format->Gshift,
@@ -498,7 +498,7 @@ struct mtl_grammar {
 			error_msg += " \"" + ctx.deepest_iter->second.to_string() + "\"";
 			
 			const auto line_and_column = obj_lexer::get_line_and_column_from_iter(ctx.tu, ctx.deepest_iter->second.begin);
-			log_error("%s:%u:%u: %s",
+			log_error("$:$:$: $",
 					  ctx.tu.file_name, line_and_column.first, line_and_column.second, error_msg);
 			return {};
 		}
@@ -519,7 +519,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 	if(filename.find(".pvr") == string::npos) {
 		SDL_Surface* surface = IMG_Load(filename.c_str());
 		if(surface == nullptr) {
-			log_error("error loading texture file \"%s\": %s!", filename, SDL_GetError());
+			log_error("error loading texture file \"$\": $!", filename, SDL_GetError());
 			return { false, {} };
 		}
 		
@@ -591,7 +591,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		
 		string img_data;
 		if(!file_io::file_to_string(filename, img_data)) {
-			log_error("error loading texture file \"%s\"!", filename);
+			log_error("error loading texture file \"$\"!", filename);
 			return { false, {} };
 		}
 		
@@ -602,18 +602,18 @@ FLOOR_POP_WARNINGS()
 		
 		// sanity checks
 		if(header->header_size != pvrtc_header_size) {
-			log_error("invalid pvrtc header size: got %u, expected %u!", header->header_size, pvrtc_header_size);
+			log_error("invalid pvrtc header size: got $, expected $!", header->header_size, pvrtc_header_size);
 			return { false, {} };
 		}
 		if(header->pvr_id != 0x21525650u) {
-			log_error("invalid pvrtc id: %X!", header->pvr_id);
+			log_error("invalid pvrtc id: $X!", header->pvr_id);
 			return { false, {} };
 		}
 		if(header->format != 0xC &&
 		   header->format != 0xD &&
 		   header->format != 0x18 &&
 		   header->format != 0x19) {
-			log_error("pvr pixel format (%X) is not PVRTC!", header->format);
+			log_error("pvr pixel format ($X) is not PVRTC!", header->format);
 			return { false, {} };
 		}
 		
@@ -660,7 +660,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 					if(!file_io::is_file(filename)) {
 						filename = prefix + filenames[id]; // finally, check with prefix
 						if(!file_io::is_file(filename)) {
-							log_error("couldn't find texture \"%s\"!", filenames[id]);
+							log_error("couldn't find texture \"$\"!", filenames[id]);
 							continue;
 						}
 					}
@@ -677,7 +677,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 		this_thread::sleep_for(10ms);
 	}
 #if defined(FLOOR_DEBUG)
-	log_debug("%u textures loaded to mem", textures.size());
+	log_debug("$ textures loaded to mem", textures.size());
 #endif
 	
 #if !defined(FLOOR_IOS)
@@ -688,7 +688,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 		for(size_t i = 0, count = model_gl_textures->size(); i < count; ++i) {
 			const SDL_Surface* surface = textures[i].surface;
 			if(surface == nullptr) {
-				log_debug("surface #%u invalid due to texture load failure - continuing ...", i);
+				log_debug("surface #$ invalid due to texture load failure - continuing ...", i);
 				continue;
 			}
 			
@@ -714,7 +714,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			// check for format problems
 			const auto gl_error = glGetError();
 			if(gl_error != 0) {
-				log_error("gl error in texture #%u: %X", i, gl_error);
+				log_error("gl error in texture #$: $X", i, gl_error);
 			}
 		}
 #if defined(FLOOR_DEBUG)
@@ -730,7 +730,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
 			
 			if(textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
-				log_debug("texture #%u invalid due to load failure - continuing ...", i);
+				log_debug("texture #$ invalid due to load failure - continuing ...", i);
 				continue;
 			}
 			
@@ -748,7 +748,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 				pixels = tex->pixels.get();
 				
 				if(tex->bpp != 2 && tex->bpp != 4) {
-					log_error("invalid bpp for pvrtc texture: %u", tex->bpp);
+					log_error("invalid bpp for pvrtc texture: $", tex->bpp);
 					continue;
 				}
 				
@@ -764,7 +764,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 						   COMPUTE_IMAGE_TYPE::READ |
 						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
 			
-			//log_debug("tex %s: %v, %s", filenames[i], dim, compute_image::image_type_to_string(image_type));
+			//log_debug("tex $: $, $", filenames[i], dim, compute_image::image_type_to_string(image_type));
 			
 			(*model_floor_textures)[i] = ctx.create_image(cqueue,
 														  dim,
@@ -925,7 +925,7 @@ struct obj_grammar {
 				case 13: type = 2; break;
 				case 16: type = 3; break;
 				default:
-					log_error("face_3: invalid match count: %u", count);
+					log_error("face_3: invalid match count: $", count);
 					return {};
 			}
 			
@@ -983,7 +983,7 @@ struct obj_grammar {
 				case 17: type = 2; break;
 				case 21: type = 3; break;
 				default:
-					log_error("face_4: invalid match count: %u", count);
+					log_error("face_4: invalid match count: $", count);
 					return {};
 			}
 			
@@ -1092,7 +1092,7 @@ struct obj_grammar {
 			error_msg += " \"" + ctx.deepest_iter->second.to_string() + "\"";
 			
 			const auto line_and_column = obj_lexer::get_line_and_column_from_iter(ctx.tu, ctx.deepest_iter->second.begin);
-			log_error("%s:%u:%u: %s",
+			log_error("$:$:$: $",
 					  ctx.tu.file_name, line_and_column.first, line_and_column.second, error_msg);
 			return;
 		}
@@ -1132,7 +1132,7 @@ struct obj_grammar {
 					++used;
 					return;
 				}
-				log_error("meh: %u: %u %u", used, tc, n);
+				log_error("meh: $: $ $", used, tc, n);
 				targets.emplace_back(target { tc, n, dst });
 				++used;
 			}
@@ -1205,7 +1205,7 @@ struct obj_grammar {
 		}
 #if defined(FLOOR_DEBUG)
 		log_debug("objects done");
-		log_debug("indices: %u -> %u", vertices.size(), index_counter);
+		log_debug("indices: $ -> $", vertices.size(), index_counter);
 #endif
 		
 		//
@@ -1250,11 +1250,11 @@ struct obj_grammar {
 				prefix = ctx.tu.file_name.substr(0, slash_pos + 1);
 			}
 #if defined(FLOOR_DEBUG)
-			log_debug("loading mat: %s", mat_filename);
+			log_debug("loading mat: $", mat_filename);
 #endif
 			string mat_data = "";
 			if(!file_io::file_to_string(prefix + mat_filename, mat_data)) {
-				log_error("failed to load .mtl file: %s", prefix + mat_filename);
+				log_error("failed to load .mtl file: $", prefix + mat_filename);
 				return;
 			}
 			
@@ -1295,7 +1295,7 @@ struct obj_grammar {
 			for(const auto& obj : sub_objects) {
 				const auto mat_iter = mats.find(obj->mat);
 				if(mat_iter == mats.end()) {
-					log_error("object \"%s\" references an unknown material \"%s\"!",
+					log_error("object \"$\" references an unknown material \"$\"!",
 							  obj->name, obj->mat);
 					continue;
 				}
@@ -1314,7 +1314,7 @@ struct obj_grammar {
 			core::erase_if(texture_filenames, [](const auto& iter) -> bool {
 				if(iter->second.first == 0) {
 #if defined(FLOOR_DEBUG)
-					log_debug("killing unused texture \"%s\"", iter->first);
+					log_debug("killing unused texture \"$\"", iter->first);
 #endif
 				}
 				return (iter->second.first == 0);
@@ -1412,7 +1412,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 	if(!file_io::is_file(file_name + ".bin")) {
 		string obj_data = "";
 		if(!file_io::file_to_string(file_name, obj_data)) {
-			log_error("failed to load .obj file: %s", file_name);
+			log_error("failed to load .obj file: $", file_name);
 			return {};
 		}
 #if defined(FLOOR_DEBUG)
@@ -1532,7 +1532,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		
 		//
 		if(bin_file.get_uint() != bin_obj_version) {
-			log_error("version mismatch - expected %u!", bin_obj_version);
+			log_error("version mismatch - expected $!", bin_obj_version);
 		}
 		
 		const auto vertex_count = bin_file.get_uint();

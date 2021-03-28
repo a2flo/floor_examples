@@ -120,7 +120,7 @@ bool metal_renderer::init(const compute_context& ctx, const compute_queue& dev_q
 	NSError* error = nullptr;
 	pipeline_state = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
 	if(!pipeline_state) {
-		log_error("failed to create pipeline state: %s",
+		log_error("failed to create pipeline state: $",
 				  (error != nullptr ? [[error localizedDescription] UTF8String] : "unknown error"));
 		return false;
 	}

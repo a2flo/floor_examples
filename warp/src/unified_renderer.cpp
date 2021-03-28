@@ -639,11 +639,11 @@ void unified_renderer::render_kernels(const float& delta, const float& render_de
 									   scene_fbo.compute_color);
 		}
 	}
-	if(err != LIBWARP_SUCCESS) log_error("libwarp error: %u", err);
+	if(err != LIBWARP_SUCCESS) log_error("libwarp error: $", err);
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
-	log_debug("warp timing: %f", double(floor_timer::stop<chrono::microseconds>(timing_start)) / 1000.0);
+	log_debug("warp timing: $", double(floor_timer::stop<chrono::microseconds>(timing_start)) / 1000.0);
 #endif
 }
 
@@ -863,12 +863,12 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	for (size_t i = 0; i < warp_shader_count(); ++i) {
 		new_shaders[i] = (compute_kernel*)new_shader_prog->get_kernel(shader_names[i]).get();
 		if (new_shaders[i] == nullptr) {
-			log_error("failed to retrieve shader \"%s\" from program", shader_names[i]);
+			log_error("failed to retrieve shader \"$\" from program", shader_names[i]);
 			return false;
 		}
 		new_shader_entries[i] = (const compute_kernel::kernel_entry*)new_shaders[i]->get_kernel_entry(*warp_state.dev);
 		if (new_shader_entries[i] == nullptr) {
-			log_error("failed to retrieve shader entry \"%s\" for the current device", shader_names[i]);
+			log_error("failed to retrieve shader entry \"$\" for the current device", shader_names[i]);
 			return false;
 		}
 	}

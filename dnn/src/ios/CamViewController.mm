@@ -90,7 +90,7 @@ static image_evaluator img_eval;
 															options:nullptr
 															  error:nullptr];
 			auto img = make_shared<metal_image>(*dnn_state.dev_queue, tex);
-			log_debug("got camera image of type: %s",
+			log_debug("got camera image of type: $",
 					  compute_image::image_type_to_string(img->get_image_type()));
 			img_label = img_eval(img);
 		} else {
@@ -124,7 +124,7 @@ bool init_cam_view(SDL_Window* wnd, image_evaluator img_eval_) {
 	SDL_SysWMinfo info;
 	SDL_VERSION(&info.version);
 	if(!SDL_GetWindowWMInfo(wnd, &info)) {
-		log_error("failed to retrieve window info: %s", SDL_GetError());
+		log_error("failed to retrieve window info: $", SDL_GetError());
 		return false;
 	}
 	

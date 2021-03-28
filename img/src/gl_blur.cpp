@@ -41,7 +41,7 @@ bool gl_blur::init(const uint2& dim, const uint32_t& tap_count) {
 		offsets << (((long double)i) * px_size);
 		if(i != half_width) offsets << ", ";
 	}
-	log_debug("offsets: %s", offsets.str());
+	log_debug("offsets: $", offsets.str());
 	
 	static const char blur_vs_text[] { R"RAWSTR(
 		in vec2 in_vertex;

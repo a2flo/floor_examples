@@ -170,7 +170,7 @@ bool vulkan_renderer_legacy::make_pipeline(const vulkan_device& vk_dev,
 										   const uint32_t color_attachment_count,
 										   const bool has_depth_attachment,
 										   const VkCompareOp depth_compare_op) {
-	//log_debug("creating pipeline #%u", pipeline_id);
+	//log_debug("creating pipeline #$", pipeline_id);
 	auto device = vk_dev.device;
 	
 	auto vs_entry = get_shader_entry(vertex_shader);

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2021 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -55,9 +55,9 @@ struct option_context {
 	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
 	string sub_target;
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
-	METAL_VERSION metal_std { METAL_VERSION::METAL_1_1 };
-	uint32_t ptx_version { 43 };
-	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_0 };
+	METAL_VERSION metal_std { METAL_VERSION::METAL_2_0 };
+	uint32_t ptx_version { 60 };
+	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_2 };
 	bool warnings { false };
 	bool workarounds { false };
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
@@ -100,15 +100,15 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar <targets-json|all|minimal|graphics>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal/graphics target set)\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_20|sm_21|sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86], defaults to sm_20\n"
+				 "\t    PTX:           [sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86], defaults to sm_30\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <1.1|1.2|2.0|2.1|2.2|2.3>: sets the supported Metal version (defaults to 1.1)\n"
-				 "\t--ptx-version <43|50|60|61|62|63|64|65|70|71|72>: sets/overwrites the PTX version that should be used/emitted (defaults to 43)\n"
-				 "\t--vulkan-std <1.0|1.1|1.2>: sets the supported Vulkan version (defaults to 1.0)\n"
+				 "\t--metal-std <2.0|2.1|2.2|2.3>: sets the supported Metal version (defaults to 2.0)\n"
+				 "\t--ptx-version <60|61|62|63|64|65|70|71|72>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
+				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -232,9 +232,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		const string mtl_version_str = *arg_ptr;
-		if(mtl_version_str == "1.1") { ctx.metal_std = METAL_VERSION::METAL_1_1; }
-		else if(mtl_version_str == "1.2") { ctx.metal_std = METAL_VERSION::METAL_1_2; }
-		else if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
+		if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
 		else if(mtl_version_str == "2.1") { ctx.metal_std = METAL_VERSION::METAL_2_1; }
 		else if(mtl_version_str == "2.2") { ctx.metal_std = METAL_VERSION::METAL_2_2; }
 		else if(mtl_version_str == "2.3") { ctx.metal_std = METAL_VERSION::METAL_2_3; }
@@ -250,8 +248,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.ptx_version = stou(*arg_ptr);
-		if(ctx.ptx_version != 43 && ctx.ptx_version != 50 &&
-		   ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63 &&
+		if(ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63 &&
 		   ctx.ptx_version != 64 && ctx.ptx_version != 65 &&
 		   ctx.ptx_version != 70 && ctx.ptx_version != 71 && ctx.ptx_version != 72) {
 			cerr << "invalid --ptx-version argument" << endl;
@@ -265,9 +262,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		const string vlk_version_str = *arg_ptr;
-		if(vlk_version_str == "1.0") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_0; }
-		else if(vlk_version_str == "1.1") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_1; }
-		else if(vlk_version_str == "1.2") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_2; }
+		if (vlk_version_str == "1.2") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_2; }
 		else {
 			cerr << "invalid --vulkan-std argument" << endl;
 			return;
@@ -435,7 +430,7 @@ static int run_normal_build(option_context& option_ctx) {
 					device->type = compute_device::TYPE::CPU;
 				}
 				else {
-					log_error("invalid %s sub-target: %s", target_name, option_ctx.sub_target);
+					log_error("invalid $ sub-target: $", target_name, option_ctx.sub_target);
 					return -4;
 				}
 				((opencl_device*)device.get())->cl_version = option_ctx.cl_std;
@@ -461,7 +456,7 @@ static int run_normal_build(option_context& option_ctx) {
 						option_ctx.additional_options += " -Xclang -cl-spir-intel-workarounds ";
 					}
 				}
-				log_debug("compiling to %s (%s) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
+				log_debug("compiling to $ ($) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
 				break;
 			}
 			case llvm_toolchain::TARGET::PTX:
@@ -469,7 +464,7 @@ static int run_normal_build(option_context& option_ctx) {
 				if(option_ctx.sub_target != "") {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
 					if(sm_pos == string::npos) {
-						log_error("invalid PTX sub-target: %s", option_ctx.sub_target);
+						log_error("invalid PTX sub-target: $", option_ctx.sub_target);
 						return -2;
 					}
 					else {
@@ -479,12 +474,11 @@ static int run_normal_build(option_context& option_ctx) {
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
 					}
 				}
-				else option_ctx.sub_target = "sm_20";
+				else option_ctx.sub_target = "sm_30";
 				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
-				device->sub_group_shuffle_support = (((cuda_device*)device.get())->sm.x >= 3);
 				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
 														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
-				log_debug("compiling to PTX (sm_%u) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
+				log_debug("compiling to PTX (sm_$) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
 			case llvm_toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
@@ -501,11 +495,11 @@ static int run_normal_build(option_context& option_ctx) {
 						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
 					}
 				} else {
-					log_error("invalid AIR sub-target: %s", option_ctx.sub_target);
+					log_error("invalid AIR sub-target: $", option_ctx.sub_target);
 					return -3;
 				}
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
-				log_debug("compiling to AIR (type: %u, tier: %u) ...",
+				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
 			}
@@ -513,7 +507,7 @@ static int run_normal_build(option_context& option_ctx) {
 				device = make_shared<vulkan_device>();
 				vulkan_device* dev = (vulkan_device*)device.get();
 				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
-					log_error("invalid SPIR-V Vulkan sub-target: %s", option_ctx.sub_target);
+					log_error("invalid SPIR-V Vulkan sub-target: $", option_ctx.sub_target);
 					return -5;
 				}
 				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
@@ -528,12 +522,6 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->vulkan_version = option_ctx.vulkan_std;
 				switch (dev->vulkan_version) {
 					default:
-					case VULKAN_VERSION::VULKAN_1_0:
-						dev->spirv_version = SPIRV_VERSION::SPIRV_1_0;
-						break;
-					case VULKAN_VERSION::VULKAN_1_1:
-						dev->spirv_version = SPIRV_VERSION::SPIRV_1_3;
-						break;
 					case VULKAN_VERSION::VULKAN_1_2:
 						dev->spirv_version = SPIRV_VERSION::SPIRV_1_5;
 						break;
@@ -568,7 +556,7 @@ static int run_normal_build(option_context& option_ctx) {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_1;
 					}
 				} else {
-					log_error("invalid Host-Compute sub-target: %s", option_ctx.sub_target);
+					log_error("invalid Host-Compute sub-target: $", option_ctx.sub_target);
 					return -6;
 				}
 				
@@ -596,7 +584,7 @@ static int run_normal_build(option_context& option_ctx) {
 				
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				
-				log_debug("compiling to Host-Compute (tier: %u) ...", dev->cpu_tier);
+				log_debug("compiling to Host-Compute (tier: $) ...", dev->cpu_tier);
 				break;
 			}
 		}
@@ -670,7 +658,7 @@ static int run_normal_build(option_context& option_ctx) {
 							break;
 						default:
 							info_str += "no_access? "; // shouldn't happen ...
-							log_error("kernel image argument #%u has no access qualifier (%X)!", i, info.args[i].image_access);
+							log_error("kernel image argument #$ has no access qualifier ($X)!", i, info.args[i].image_access);
 							break;
 					}
 					
@@ -730,7 +718,7 @@ static int run_normal_build(option_context& option_ctx) {
 								break;
 							default:
 								info_str += "unknown_type";
-								log_error("kernel image argument #%u has no type or an unknown type (%X)!", i, info.args[i].image_type);
+								log_error("kernel image argument #$ has no type or an unknown type ($X)!", i, info.args[i].image_type);
 								break;
 						}
 					}
@@ -738,7 +726,7 @@ static int run_normal_build(option_context& option_ctx) {
 				info_str += (i + 1 < count ? ", " : " ");
 			}
 			info_str = core::trim(info_str);
-			log_msg("compiled %s function: %s (%s)",
+			log_msg("compiled $ function: $ ($)",
 					info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
 					info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
 					info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
@@ -780,12 +768,12 @@ static int run_normal_build(option_context& option_ctx) {
 			if(option_ctx.target == llvm_toolchain::TARGET::AIR) {
 				string output = "";
 				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
-				log_undecorated("%s", output);
+				log_undecorated("$", output);
 			}
 			else if(option_ctx.target == llvm_toolchain::TARGET::SPIR) {
 				string output = "";
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
-				log_undecorated("%s", output);
+				log_undecorated("$", output);
 			}
 			else if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
 					option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
@@ -793,10 +781,10 @@ static int run_normal_build(option_context& option_ctx) {
 				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
 							 "\" --debug-asm " + option_ctx.output_filename, output);
-				log_undecorated("%s", output);
+				log_undecorated("$", output);
 			}
 			else {
-				log_undecorated("%s", program.data_or_filename);
+				log_undecorated("$", program.data_or_filename);
 			}
 		}
 	}
@@ -817,17 +805,17 @@ static int run_normal_build(option_context& option_ctx) {
 			" -o " + cubin_filename + ".cubin " +
 			option_ctx.output_filename
 		};
-		if(floor::get_toolchain_log_commands()) log_debug("ptxas cmd: %s", ptxas_cmd);
+		if(floor::get_toolchain_log_commands()) log_debug("ptxas cmd: $", ptxas_cmd);
 		const string cuobjdump_cmd {
 			cuda_bin_path + "cuobjdump --dump-sass " + cubin_filename + ".cubin" +
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
-		if(floor::get_toolchain_log_commands()) log_debug("cuobjdump cmd: %s", cuobjdump_cmd);
+		if(floor::get_toolchain_log_commands()) log_debug("cuobjdump cmd: $", cuobjdump_cmd);
 		string ptxas_output = "", cuobjdump_output = "";
 		core::system(ptxas_cmd, ptxas_output);
-		log_undecorated("%s", ptxas_output);
+		log_undecorated("$", ptxas_output);
 		core::system(cuobjdump_cmd, cuobjdump_output);
-		log_undecorated("%s", cuobjdump_output);
+		log_undecorated("$", cuobjdump_output);
 	}
 	
 	// handle spir-v text assembly output
@@ -837,7 +825,7 @@ static int run_normal_build(option_context& option_ctx) {
 		string spirv_dis_output = "";
 		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
 		if(spirv_dis_output != "") {
-			log_msg("spirv-dis: %s", spirv_dis_output);
+			log_msg("spirv-dis: $", spirv_dis_output);
 		}
 	}
 	
@@ -855,7 +843,7 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("no device available!");
 					break;
 				}
-				log_debug("using device: %s", dev->name);
+				log_debug("using device: $", dev->name);
 				auto cl_dev = ((const opencl_device&)dev).device_id;
 				
 				cl_program opencl_program { nullptr };
@@ -871,7 +859,7 @@ static int run_normal_build(option_context& option_ctx) {
 					}
 					else {
 						if(!file_io::file_to_string(option_ctx.test_bin_filename, binary_str)) {
-							log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+							log_error("failed to read test binary $", option_ctx.test_bin_filename);
 							break;
 						}
 						binary_length = binary_str.size();
@@ -885,8 +873,8 @@ static int run_normal_build(option_context& option_ctx) {
 						opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
 																   &binary_length, &binary_ptr, &status, &create_err);
 						if(create_err != CL_SUCCESS) {
-							log_error("failed to create opencl program: %u: %s", create_err, cl_error_to_string(create_err));
-							log_error("devices binary status: %s", status);
+							log_error("failed to create opencl program: $: $", create_err, cl_error_to_string(create_err));
+							log_error("devices binary status: $", status);
 							return {};
 						}
 						else log_debug("successfully created opencl program!");
@@ -898,7 +886,7 @@ static int run_normal_build(option_context& option_ctx) {
 #else
 						opencl_program = clCreateProgramWithIL(cl_ctx, (const void*)binary_ptr, binary_length, &create_err);
 						if(create_err != CL_SUCCESS) {
-							log_error("failed to create opencl program from IL/SPIR-V: %u: %s", create_err, cl_error_to_string(create_err));
+							log_error("failed to create opencl program from IL/SPIR-V: $: $", create_err, cl_error_to_string(create_err));
 							return {};
 						}
 						else log_debug("successfully created opencl program (from IL/SPIR-V)!");
@@ -921,7 +909,7 @@ static int run_normal_build(option_context& option_ctx) {
 					cl_int create_err = CL_SUCCESS;
 					opencl_program = clCreateProgramWithSource(cl_ctx, 1, &src_ptr, &src_size, &create_err);
 					if(create_err != CL_SUCCESS) {
-						log_error("failed to create opencl program: %u: %s", create_err, cl_error_to_string(create_err));
+						log_error("failed to create opencl program: $: $", create_err, cl_error_to_string(create_err));
 						return {};
 					}
 					else log_debug("successfully created opencl program!");
@@ -933,12 +921,12 @@ static int run_normal_build(option_context& option_ctx) {
 				}
 				
 				// print out build log
-				log_debug("build log: %s", cl_get_info<CL_PROGRAM_BUILD_LOG>(opencl_program, cl_dev));
+				log_debug("build log: $", cl_get_info<CL_PROGRAM_BUILD_LOG>(opencl_program, cl_dev));
 				
 				// print kernel info
 				const auto kernel_count = cl_get_info<CL_PROGRAM_NUM_KERNELS>(opencl_program);
 				const auto kernel_names_str = cl_get_info<CL_PROGRAM_KERNEL_NAMES>(opencl_program);
-				log_debug("got %u kernels in program: %s", kernel_count, kernel_names_str);
+				log_debug("got $ kernels in program: $", kernel_count, kernel_names_str);
 				
 				// retrieve the compiled binaries again
 				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(opencl_program);
@@ -958,7 +946,7 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("no device available!");
 					break;
 				}
-				log_debug("using device: %s", dev->name);
+				log_debug("using device: $", dev->name);
 				
 				//
 				if(option_ctx.test_bin) {
@@ -966,7 +954,7 @@ static int run_normal_build(option_context& option_ctx) {
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
 					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
-						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
+						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
 					}
 				}
@@ -993,18 +981,18 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("no device available!");
 					break;
 				}
-				log_debug("using device: %s", dev->name);
+				log_debug("using device: $", dev->name);
 				
 				//
 				if(option_ctx.test_bin) {
 					program.data_or_filename = "";
 					if(!file_io::file_to_string(option_ctx.test_bin_filename, program.data_or_filename)) {
-						log_error("failed to read test binary %s", option_ctx.test_bin_filename);
+						log_error("failed to read test binary $", option_ctx.test_bin_filename);
 						break;
 					}
 					
 					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_cuda_toolchain_version())) {
-						log_error("failed to create floor function info from specified ffi file %s", option_ctx.ffi_filename);
+						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
 					}
 				}
@@ -1026,7 +1014,7 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("no device available!");
 					break;
 				}
-				log_debug("using device: %s", dev->name);
+				log_debug("using device: $", dev->name);
 				
 				//
 				if(option_ctx.test_bin) {
@@ -1035,7 +1023,7 @@ static int run_normal_build(option_context& option_ctx) {
 					
 					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions,
 																   floor::get_vulkan_toolchain_version())) {
-						log_error("failed to create floor function info from specified ffi file %s",
+						log_error("failed to create floor function info from specified ffi file $",
 								  option_ctx.ffi_filename);
 						break;
 					}

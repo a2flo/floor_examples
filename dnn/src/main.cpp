@@ -108,7 +108,7 @@ static shared_ptr<compute_image> load_test_image(const string& file_name) {
 	
 	const auto tex = obj_loader::load_texture(file_name[0] == '/' ? file_name : floor::data_path(file_name));
 	if (!tex.first) {
-		log_error("failed to load image %s", file_name);
+		log_error("failed to load image $", file_name);
 		return {};
 	}
 	SDL_Surface* surface = tex.second.surface;
@@ -147,7 +147,7 @@ static optional<string> run_vgg(nn_executer& nn_exec, shared_ptr<compute_image> 
 	}
 
 	const auto classes_tokens = core::tokenize(classes_data, '\n');
-	log_debug("#image-net classes: %u", classes_tokens.size());
+	log_debug("#image-net classes: $", classes_tokens.size());
 	
 	//
 	shared_ptr<compute_image> input_img = img;
@@ -195,7 +195,7 @@ static optional<string> run_vgg(nn_executer& nn_exec, shared_ptr<compute_image> 
 	
 	// profiling end
 	const auto vgg_exec_time = dnn_state.dev_queue->stop_profiling();
-	log_msg("VGG16 executed in %ums", double(vgg_exec_time) / 1000.0);
+	log_msg("VGG16 executed in $ms", double(vgg_exec_time) / 1000.0);
 
 	// eval/read results
 	auto readback_buffer = nn_exec.get_cur_buffer()->clone(*dnn_state.dev_queue, true,
@@ -216,7 +216,7 @@ static optional<string> run_vgg(nn_executer& nn_exec, shared_ptr<compute_image> 
 
 	// print top 5
 	for (uint32_t i = 0; i < 5; ++i) {
-		log_msg("#%u: %f -> %u (%s)", i, kv_probabilities[i].second * 100.0f, kv_probabilities[i].first,
+		log_msg("#$: $ -> $ ($)", i, kv_probabilities[i].second * 100.0f, kv_probabilities[i].first,
 				kv_probabilities[i].first < classes_tokens.size() ?
 				classes_tokens[kv_probabilities[i].first] : "<out-of-bounds>");
 	}
@@ -306,7 +306,7 @@ int main(int, char* argv[]) {
 		if (!input_img) break;
 		
 		if ((input_img->get_image_dim().trim<2>() != expected_img_dim).any()) {
-			log_error("unexpected image dim: expected %v, got %v",
+			log_error("unexpected image dim: expected $, got $",
 					  expected_img_dim, input_img->get_image_dim().trim<2>());
 			break;
 		}

@@ -28,7 +28,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 	static_assert(sizeof(data_type) == 4 || sizeof(data_type) == 8, "invalid data type size (must be 4 or 8 bytes)");
 	
 	if constexpr(device_info::has_cooperative_kernel_support() && device_info::has_sub_group_shuffle()) {
-#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0 && FLOOR_COMPUTE_INFO_CUDA_SM >= 60 /* TODO: proper define */
+#if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0 && defined(FLOOR_COMPUTE_INFO_CUDA_SM) && FLOOR_COMPUTE_INFO_CUDA_SM >= 60 /* TODO: proper define */
 		// can use shuffle/swizzle + coop kernel
 		static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };
 		static constexpr const uint32_t tile_count { max(1u, tile_size / sub_group_width) };
@@ -95,7 +95,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 			}
 		}
 		
-		if constexpr(device_info::has_sub_group_shuffle()) {
+		if constexpr(device_info::has_sub_group_shuffle() && max(1u, device_info::simd_width_min()) <= tile_size) {
 #if FLOOR_COMPUTE_INFO_HAS_SUB_GROUPS != 0
 			// can use shuffle/swizzle
 			static constexpr const uint32_t sub_group_width { max(1u, device_info::simd_width_min()) };

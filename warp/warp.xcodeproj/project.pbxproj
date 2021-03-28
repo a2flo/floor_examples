@@ -1542,7 +1542,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1590,16 +1590,16 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
 				MTL_OPTIMIZATION_LEVEL = s;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
+					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1648,7 +1648,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1691,15 +1691,15 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
 				MTL_OPTIMIZATION_LEVEL = s;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++1z",
+					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);

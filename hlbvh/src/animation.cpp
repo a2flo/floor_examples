@@ -55,7 +55,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			// load
 			file_name.insert(0, file_prefix);
 			file_name += file_suffix;
-			//log_debug("file name: %s", file_name);
+			//log_debug("file name: $", file_name);
 			bool success = false;
 			auto model = obj_loader::load(floor::data_path(file_name), success, *hlbvh_state.ctx, *hlbvh_state.dev_queue,
 										  // don't scale anything
@@ -146,12 +146,12 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			tri_count = frame_tri_count;
 		}
 		else if(tri_count != frame_tri_count) {
-			log_error("variable triangle count for \"%s\" frame #%u (first frame: %u, this frame: %u)",
+			log_error("variable triangle count for \"$\" frame #$ (first frame: $, this frame: $)",
 					  file_prefix + file_suffix, i, tri_count, frame_tri_count);
 			return;
 		}
 	}
-	log_debug("%s #triangles: %u", file_prefix, tri_count);
+	log_debug("$ #triangles: $", file_prefix, tri_count);
 	
 	// now that we have the max triangle count, allocate the morton codes + ping buffer with this max size.
 	// note that radix sort requires a multiple of 8192 (32 * 256) elements to function.
@@ -174,7 +174,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	
 	// for visualization purposes
 	if(hlbvh_state.triangle_vis) {
-		log_debug("max vertex count: %u", max_vertex_count.load());
+		log_debug("max vertex count: $", max_vertex_count.load());
 		colliding_vertices = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, max_vertex_count * sizeof(uint32_t),
 															COMPUTE_MEMORY_FLAG::READ_WRITE |
 															COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
@@ -182,7 +182,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 															GL_ARRAY_BUFFER);
 		colliding_triangles[0] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
 		colliding_triangles[1] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
-		log_debug("check tri col buffer: %u, %u", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
+		log_debug("check tri col buffer: $, $", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
 	}
 }
 

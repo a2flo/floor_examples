@@ -22,7 +22,7 @@ namespace nn_importer {
 	template <typename layer_type>
 	bool load_with_layer_type(const string& file_name, const string& layer_name, nn_model& mdl, const bool dump = false) {
 		auto data = file_io::file_to_vector<uint8_t>(floor::data_path(file_name));
-		log_debug("importing %s ...", file_name);
+		log_debug("importing $ ...", file_name);
 		if (!data) {
 			return false;
 		}
@@ -30,7 +30,7 @@ namespace nn_importer {
 		// check size if it's known statically
 		if (layer_type::is_serialization_size_static()) {
 			if (layer_type::static_serialization_size() > data->size()) {
-				log_error("insufficent data for %s layer %s: expected %u bytes, got %u",
+				log_error("insufficent data for $ layer $: expected $ bytes, got $",
 						  file_name, layer_name, layer_type::static_serialization_size(), data->size());
 				return false;
 			}

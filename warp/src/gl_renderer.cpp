@@ -178,7 +178,7 @@ static void create_textures() {
 			const auto err = glGetError();
 			const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 			if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
-				log_error("scene fbo/tex error: %X %X", err, fbo_err);
+				log_error("scene fbo/tex error: $X $X", err, fbo_err);
 			}
 			
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -206,7 +206,7 @@ static void create_textures() {
 		const auto err = glGetError();
 		const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
-			log_error("scene fbo/tex error: %X %X", err, fbo_err);
+			log_error("scene fbo/tex error: $X $X", err, fbo_err);
 		}
 		
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -320,7 +320,7 @@ bool gl_renderer::init() {
 		const auto err = glGetError();
 		const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
-			log_error("shadow map fbo/tex error: %X %X", err, fbo_err);
+			log_error("shadow map fbo/tex error: $X $X", err, fbo_err);
 		}
 		
 		//
@@ -542,11 +542,11 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 								 scene_fbo.compute_color);
 		}
 	}
-	if(err != LIBWARP_SUCCESS) log_error("libwarp error: %u", err);
+	if(err != LIBWARP_SUCCESS) log_error("libwarp error: $", err);
 	
 #if defined(WARP_TIMING)
 	warp_state.dev_queue->finish();
-	log_debug("warp timing: %f", double(floor_timer2::stop<chrono::microseconds>(timing_start)) / 1000.0);
+	log_debug("warp timing: $", double(floor_timer2::stop<chrono::microseconds>(timing_start)) / 1000.0);
 #endif
 }
 

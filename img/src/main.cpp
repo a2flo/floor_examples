@@ -283,7 +283,7 @@ int main(int, char* argv[]) {
 	static constexpr const uint32_t overlap { tap_count / 2u };
 	static constexpr const uint32_t tile_size { inner_tile_size + overlap * 2u };
 	static const uint2 img_global_size { (image_size / inner_tile_size) * tile_size };
-	log_debug("running blur kernel on an %v image, with a tap count of %u, inner tile size of %v and work-group tile size of %v -> global work size: %v -> %u texture fetches",
+	log_debug("running blur kernel on an $ image, with a tap count of $, inner tile size of $ and work-group tile size of $ -> global work size: $ -> $ texture fetches",
 			  image_size, tap_count, inner_tile_size, tile_size, img_global_size, img_global_size.x * img_global_size.y);
 #if !defined(FLOOR_IOS)
 	auto img_prog = compute_ctx->add_program_file(floor::data_path("../img/src/img_kernels.cpp"),
@@ -391,7 +391,7 @@ int main(int, char* argv[]) {
 	
 	// -> compute blur
 	if(!run_gl_blur) {
-		log_debug("running %scompute blur ...", (dumb ? "dumb " : ""));
+		log_debug("running $compute blur ...", (dumb ? "dumb " : ""));
 		for(size_t i = 0; i < run_count; ++i) {
 			if(!dumb) {
 				const auto blur_start = floor_timer::start();
@@ -404,7 +404,7 @@ int main(int, char* argv[]) {
 								   imgs[0], imgs[1]);
 				dev_queue->finish();
 				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
-				log_debug("blur run in %fms", double(blur_end) / 1000.0);
+				log_debug("blur run in $ms", double(blur_end) / 1000.0);
 			}
 			else {
 				const auto blur_start = floor_timer::start();
@@ -424,7 +424,7 @@ int main(int, char* argv[]) {
 								   imgs[2], imgs[1]);
 				dev_queue->finish();
 				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
-				log_debug("dumb blur run in %fms", double(blur_end) / 1000.0);
+				log_debug("dumb blur run in $ms", double(blur_end) / 1000.0);
 			}
 		}
 	}
@@ -449,7 +449,7 @@ int main(int, char* argv[]) {
 			gl_blur::blur(imgs[0]->get_opengl_object(), imgs[1]->get_opengl_object(), imgs[2]->get_opengl_object(), vbo_fullscreen_triangle);
 			glFlush(); glFinish();
 			const auto gl_blur_end = floor_timer::stop<chrono::microseconds>(gl_blur_start);
-			log_debug("blur run in %fms", double(gl_blur_end) / 1000.0);
+			log_debug("blur run in $ms", double(gl_blur_end) / 1000.0);
 		}
 	}
 #endif
