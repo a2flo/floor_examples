@@ -36,9 +36,9 @@ verbose() {
 # if no CXX/CC are specified, try using clang++/clang
 if [ -z "${CXX}" ]; then
 	# try using clang++ directly (avoid any nasty wrappers)
-	if [ -n $(command -v /usr/bin/clang++) ]; then
+	if [[ -n $(command -v /usr/bin/clang++) ]]; then
 		CXX=/usr/bin/clang++
-	elif [ -n $(command -v /usr/local/bin/clang++) ]; then
+	elif [[ -n $(command -v /usr/local/bin/clang++) ]]; then
 		CXX=/usr/local/bin/clang++
 	else
 		CXX=clang++
@@ -48,9 +48,9 @@ command -v ${CXX} >/dev/null 2>&1 || error "clang++ binary not found, please set
 
 if [ -z "${CC}" ]; then
 	# try using clang directly (avoid any nasty wrappers)
-	if [ -n $(command -v /usr/bin/clang) ]; then
-		CC=/usr/bin/clang++
-	elif [ -n $(command -v /usr/local/bin/clang) ]; then
+	if [[ -n $(command -v /usr/bin/clang) ]]; then
+		CC=/usr/bin/clang
+	elif [[ -n $(command -v /usr/local/bin/clang) ]]; then
 		CC=/usr/local/bin/clang
 	else
 		CC=clang
@@ -62,16 +62,16 @@ command -v ${CC} >/dev/null 2>&1 || error "clang binary not found, please set CC
 CXX_VERSION=$(${CXX} -v 2>&1)
 if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
-	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
+	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor|clang_patchlevel" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 8.1.0 is required (ships with Xcode 8.3)
-		if [ $CLANG_MAJOR -lt 8 ] || [ $CLANG_MAJOR -eq 8 -a $CLANG_MINOR -lt 1 ]; then
-			error "at least Xcode 8.3 / clang/LLVM 8.1.0 is required to compile this project!"
+		# apple xcode/llvm/clang versioning scheme -> at least 11.0 is required (ships with Xcode 12.5)
+		if [ $CLANG_MAJOR -lt 12 ] || [ $CLANG_MAJOR -eq 12 -a $CLANG_MINOR -eq 0 -a $CLANG_PATCHLEVEL -lt 5 ]; then
+			error "at least Xcode 12.5 / Apple clang/LLVM 12.0.5 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 4.0 is required
-		if [ $CLANG_MAJOR -lt 4 ] || [ $CLANG_MAJOR -eq 4 -a $CLANG_MINOR -lt 0 ]; then
-			error "at least clang 4.0 is required to compile this project!"
+		# standard clang versioning scheme -> at least 10.0 is required
+		if [ $CLANG_MAJOR -lt 10 ] || [ $CLANG_MAJOR -eq 10 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 10.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -93,8 +93,7 @@ BUILD_CONF_HOST_COMPUTE=$((1 - $((${FLOOR_NO_HOST_COMPUTE}))))
 BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
 BUILD_CONF_VULKAN=$((1 - $((${FLOOR_NO_VULKAN}))))
 BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
-BUILD_CONF_EXCEPTIONS=$((1 - $((${FLOOR_NO_EXCEPTIONS}))))
-BUILD_CONF_POCL=0
+BUILD_CONF_VR=$((1 - $((${FLOOR_NO_VR}))))
 BUILD_CONF_LIBSTDCXX=0
 BUILD_CONF_NATIVE=0
 
@@ -104,17 +103,15 @@ BUILD_CONF_MSAN=0
 BUILD_CONF_TSAN=0
 BUILD_CONF_UBSAN=0
 
-BUILD_ARCH_SIZE="x64"
 BUILD_ARCH=$(${CC} -dumpmachine | sed "s/-.*//")
 case $BUILD_ARCH in
 	"i386"|"i486"|"i586"|"i686"|"arm7"*|"armv7"*)
-		BUILD_ARCH_SIZE="x32"
+		error "32-bit builds are not supported"
 		;;
 	"x86_64"|"amd64"|"arm64")
-		BUILD_ARCH_SIZE="x64"
 		;;
 	*)
-		warning "unknown architecture (${BUILD_ARCH}) - using ${BUILD_ARCH_SIZE}!"
+		warning "unknown architecture (${BUILD_ARCH})!"
 		;;
 esac
 
@@ -131,8 +128,6 @@ for arg in "$@"; do
 			echo ""
 			echo "build configuration:"
 			echo "	libstdc++          use libstdc++ instead of libc++ (highly discouraged unless building on mingw)"
-			echo "	x32                build a 32-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x32" ]; then printf "(default on this platform)"; fi)
-			echo "	x64                build a 64-bit binary "$(if [ "${BUILD_ARCH_SIZE}" == "x64" ]; then printf "(default on this platform)"; fi)
 			echo "	native             optimize and specifically build for the host cpu"
 			echo ""
 			echo "sanitizers:"
@@ -176,12 +171,6 @@ for arg in "$@"; do
 		"libstdc++")
 			BUILD_CONF_LIBSTDCXX=1
 			;;
-		"x32")
-			BUILD_ARCH_SIZE="x32"
-			;;
-		"x64")
-			BUILD_ARCH_SIZE="x64"
-			;;
 		"native")
 			BUILD_CONF_NATIVE=1
 			;;
@@ -217,6 +206,7 @@ TARGET_NAME=warp
 BUILD_PLATFORM=$(uname | tr [:upper:] [:lower:])
 BUILD_OS="unknown"
 BUILD_CPU_COUNT=1
+STAT_IS_BSD=0
 case ${BUILD_PLATFORM} in
 	"darwin")
 		if expr `uname -p` : "arm.*" >/dev/null; then
@@ -225,6 +215,7 @@ case ${BUILD_PLATFORM} in
 			BUILD_OS="osx"
 		fi
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"linux")
 		BUILD_OS="linux"
@@ -234,25 +225,46 @@ case ${BUILD_PLATFORM} in
 	"freebsd")
 		BUILD_OS="freebsd"
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"openbsd")
 		BUILD_OS="openbsd"
 		BUILD_CPU_COUNT=$(sysctl -n hw.ncpu)
+		STAT_IS_BSD=1
 		;;
 	"cygwin"*)
 		# untested
 		BUILD_OS="cygwin"
-		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([:digit:]*)/\1/g')
+		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([[:digit:]]*)/\1/g')
 		warning "cygwin support is untested and unsupported!"
 		;;
 	"mingw"*)
 		BUILD_OS="mingw"
-		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([:digit:]*)/\1/g')
+		BUILD_CPU_COUNT=$(env | grep 'NUMBER_OF_PROCESSORS' | sed -E 's/.*=([[:digit:]]*)/\1/g')
 		;;
 	*)
 		warning "unknown build platform - trying to continue! ${BUILD_PLATFORM}"
 		;;
 esac
+
+# runs the platform specific stat cmd to get the modification date of the specified file(s) as a unix timestamp
+file_mod_time() {
+	if [ ${STAT_IS_BSD} -gt 0 ]; then
+		echo $(stat -f "%m" $@)
+	else
+		echo $(stat -c "%Y" $@)
+	fi
+}
+
+# figure out which md5 cmd/binary can be used
+MD5_CMD=
+if [[ $(command -v md5sum) ]]; then
+	MD5_CMD=md5sum
+elif [[ $(command -v md5) ]]; then
+	MD5_CMD=md5
+else
+	error "neither md5 nor md5sum was found"
+fi
 
 # if an explicit job count was specified, overwrite BUILD_CPU_COUNT with it
 if [ ${BUILD_JOB_COUNT} -gt 0 ]; then
@@ -273,7 +285,7 @@ if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 fi
 # all else: no file ending
 
-# disable metal support on non-iOS/-OS X targets
+# disable metal support on non-iOS/macOS targets
 if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	BUILD_CONF_METAL=0
 fi
@@ -324,13 +336,9 @@ if [ -z "${AR}" ]; then
 	AR=ar
 fi
 
-# set the correct 32/64-bit linker flag (use the default on mingw)
+# set the correct 64-bit linker flag (use the default on mingw)
 if [ $BUILD_OS != "mingw" ]; then
-	if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-		LDFLAGS="${LDFLAGS} -m32"
-	else
-		LDFLAGS="${LDFLAGS} -m64"
-	fi
+	LDFLAGS="${LDFLAGS} -m64"
 fi
 
 # handle clang/llvm sanitizers
@@ -353,34 +361,11 @@ if [ ${BUILD_CONF_SANITIZERS} -gt 0 ]; then
 	fi
 fi
 
-# link against floor (note: floor debug lib is suffixed by "d")
+# link against floor and libwarp (note: debug libs are suffixed by "d")
 if [ $BUILD_MODE == "debug" ]; then
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lfloord_static"
-	else
-		LDFLAGS="${LDFLAGS} -lfloord"
-	fi
+	LDFLAGS="${LDFLAGS} -lfloord -lwarpd"
 else
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lfloor_static"
-	else
-		LDFLAGS="${LDFLAGS} -lfloor"
-	fi
-fi
-
-# link against libwarp (note: libwarp debug lib is suffixed by "d")
-if [ $BUILD_MODE == "debug" ]; then
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lwarpd_static"
-	else
-		LDFLAGS="${LDFLAGS} -lwarpd"
-	fi
-else
-	if [ $BUILD_OS == "mingw" ]; then
-		LDFLAGS="${LDFLAGS} -lwarp_static"
-	else
-		LDFLAGS="${LDFLAGS} -lwarp"
-	fi
+	LDFLAGS="${LDFLAGS} -lfloor -lwarp"
 fi
 
 # use pkg-config (and some manual libs/includes) on all platforms except osx/ios
@@ -395,8 +380,9 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	LDFLAGS="${LDFLAGS} -rpath /opt/libwarp/lib" # otherwise expected in /usr/lib
 
 	# use PIC
+	# NOTE: -fno-pic -fno-pie is used at the front to disable/reset any defaults
 	LDFLAGS="${LDFLAGS} -fPIC"
-	COMMON_FLAGS="${COMMON_FLAGS} -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
+	COMMON_FLAGS="${COMMON_FLAGS} -fno-pic -fno-pie -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
 	PACKAGES="sdl2 SDL2_image"
@@ -406,9 +392,6 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	fi
 	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
 		PACKAGES_OPT="${PACKAGES_OPT} openal"
-	fi
-	if [ ${BUILD_CONF_POCL} -gt 0 ]; then
-		PACKAGES_OPT="${PACKAGES_OPT} pocl"
 	fi
 
 	# TODO: error checking + check if libs exist
@@ -430,14 +413,12 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 		# must link winpthread instead on windows/mingw
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} winpthread"
 	fi
-	if [ ${BUILD_CONF_OPENCL} -gt 0 -a ${BUILD_CONF_POCL} -eq 0 ]; then
+	if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} OpenCL"
 	fi
 	if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
 		if [ $BUILD_OS != "mingw" ]; then
 			UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan"
-		else
-			UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan-1"
 		fi
 	fi
 
@@ -464,20 +445,17 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 			if [ ! -z "${AMDAPPSDKROOT}" ]; then
 				# use amd opencl sdk
 				AMDAPPSDKROOT_FIXED=$(echo ${AMDAPPSDKROOT} | sed -E "s/\\\\/\//g")
-				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86\""
-				else
-					LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86_64\""
-				fi
+				LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86_64\""
 				INCLUDES="${INCLUDES} -isystem \"${AMDAPPSDKROOT_FIXED}include\""
+			elif [ ! -z "${OCL_ROOT}" ]; then
+				# use new amd opencl sdk
+				OCL_ROOT_FIXED=$(echo ${OCL_ROOT} | sed -E "s/\\\\/\//g")
+				LDFLAGS="${LDFLAGS} -L\"${OCL_ROOT_FIXED}/lib/x86_64\""
+				INCLUDES="${INCLUDES} -isystem \"${OCL_ROOT_FIXED}/include\""
 			elif [ ! -z "${INTELOCLSDKROOT}" ]; then
 				# use intel opencl sdk
 				INTELOCLSDKROOT_FIXED=$(echo ${INTELOCLSDKROOT} | sed -E "s/\\\\/\//g")
-				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					LDFLAGS="${LDFLAGS} -L\"${INTELOCLSDKROOT_FIXED}lib/x86\""
-				else
-					LDFLAGS="${LDFLAGS} -L\"${INTELOCLSDKROOT_FIXED}lib/x64\""
-				fi
+				LDFLAGS="${LDFLAGS} -L\"${INTELOCLSDKROOT_FIXED}lib/x64\""
 				INCLUDES="${INCLUDES} -isystem \"${INTELOCLSDKROOT_FIXED}include\""
 			else
 				error "building with OpenCL support, but no OpenCL SDK was found - please install the Intel or AMD OpenCL SDK!"
@@ -485,16 +463,18 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 		fi
 		
 		if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
-			if [ ! -z "${VK_SDK_PATH}" ]; then
+			if [ "$(pkg-config --exists vulkan && echo $?)" == "0" ]; then
+				# use MSYS2/MinGW package
+				LIBS="${LIBS} $(pkg-config --libs vulkan)"
+				COMMON_FLAGS="${COMMON_FLAGS} $(pkg-config --cflags vulkan)"
+			elif [ ! -z "${VK_SDK_PATH}" ]; then
+				# use official SDK
+				UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan-1"
 				VK_SDK_PATH_FIXED=$(echo ${VK_SDK_PATH} | sed -E "s/\\\\/\//g")
-				if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-					LDFLAGS="${LDFLAGS} -L\"${VK_SDK_PATH_FIXED}/Bin32\""
-				else
-					LDFLAGS="${LDFLAGS} -L\"${VK_SDK_PATH_FIXED}/Bin\""
-				fi
+				LDFLAGS="${LDFLAGS} -L\"${VK_SDK_PATH_FIXED}/Bin\""
 				INCLUDES="${INCLUDES} -isystem \"${VK_SDK_PATH_FIXED}/Include\""
 			else
-				error "Vulkan SDK not installed (VK_SDK_PATH not set)"
+				error "Vulkan SDK not installed (install official SDK or mingw-w64-x86_64-vulkan)"
 			fi
 		fi
 	fi
@@ -518,8 +498,10 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	# add all libs to LDFLAGS
 	LDFLAGS="${LDFLAGS} ${LIBS}"
 else
+	# aligned allocation is only available with macOS 10.14+, so disable it while we're still targeting 10.13+
+	COMMON_FLAGS="${COMMON_FLAGS} -fno-aligned-allocation"
+	
 	# on osx/ios: assume everything is installed, pkg-config doesn't really exist
-	INCLUDES="${INCLUDES} -isystem /opt/X11/include"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
 	fi
@@ -529,7 +511,6 @@ else
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
 	# additional lib paths
-	LDFLAGS="${LDFLAGS} -L/opt/X11/lib"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openssl/lib"
 	fi
@@ -545,11 +526,12 @@ else
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /opt/floor/lib"
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /opt/libwarp/lib"
-
+	
 	# probably necessary
 	LDFLAGS="${LDFLAGS} -fobjc-link-runtime"
 	
 	# frameworks and libs
+	LDFLAGS="${LDFLAGS} -F/Library/Frameworks"
 	LDFLAGS="${LDFLAGS} -framework SDL2 -framework SDL2_image"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
@@ -575,7 +557,7 @@ LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib -L/opt/libwarp/
 # flags
 
 # set up initial c++ and c flags
-CXXFLAGS="${CXXFLAGS} -std=gnu++1z"
+CXXFLAGS="${CXXFLAGS} -std=gnu++2a"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -588,51 +570,24 @@ if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	OBJCFLAGS="${OBJCFLAGS} -fobjc-arc"
 fi
 
-# disable exception support
-if [ ${BUILD_CONF_EXCEPTIONS} -eq 0 ]; then
-	CXXFLAGS="${CXXFLAGS} -fno-exceptions"
-fi
-
 # so not standard compliant ...
 if [ $BUILD_OS == "mingw" ]; then
 	CXXFLAGS="${CXXFLAGS} -pthread"
 fi
 
-# arch handling (use -arch on osx/ios and -m32/-m64 everywhere else, except for mingw)
+# arch handling (use -arch on osx/ios and -m64 everywhere else, except for mingw)
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
-	if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-		case $BUILD_ARCH in
-			"i386"|"i486"|"i586"|"i686")
-				COMMON_FLAGS="${COMMON_FLAGS} -arch $BUILD_ARCH"
-				;;
-			"x86_64"|"amd64")
-				COMMON_FLAGS="${COMMON_FLAGS} -arch i686"
-				;;
-			"arm"*)
-				COMMON_FLAGS="${COMMON_FLAGS} -arch armv7"
-				;;
-			*)
-				warning "unknown arch (${BUILD_ARCH}) - building for arch i686!"
-				COMMON_FLAGS="${COMMON_FLAGS} -arch i686"
-				;;
-		esac
-	else
-		case $BUILD_ARCH in
-			"arm"*)
-				COMMON_FLAGS="${COMMON_FLAGS} -arch arm64"
-				;;
-			*)
-				COMMON_FLAGS="${COMMON_FLAGS} -arch x86_64"
-				;;
-		esac
-	fi
+	case $BUILD_ARCH in
+		"arm"*)
+			COMMON_FLAGS="${COMMON_FLAGS} -arch arm64"
+			;;
+		*)
+			COMMON_FLAGS="${COMMON_FLAGS} -arch x86_64"
+			;;
+	esac
 elif [ $BUILD_OS != "mingw" ]; then
 	# NOTE: mingw will/should/has to use the compiler default
-	if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-		COMMON_FLAGS="${COMMON_FLAGS} -m32"
-	else
-		COMMON_FLAGS="${COMMON_FLAGS} -m64"
-	fi
+	COMMON_FLAGS="${COMMON_FLAGS} -m64"
 fi
 
 # c++ and c flags that apply to all build configurations
@@ -644,7 +599,7 @@ if [ $BUILD_CONF_NATIVE -gt 0 ]; then
 fi
 
 # debug flags, only used in the debug target
-DEBUG_FLAGS="-O0 -DFLOOR_DEBUG=1 -DDEBUG"
+DEBUG_FLAGS="-O0 -DFLOOR_DEBUG=1 -DDEBUG -fno-limit-debug-info"
 if [ $BUILD_OS != "mingw" ]; then
 	DEBUG_FLAGS="${DEBUG_FLAGS} -gdwarf-2"
 else
@@ -666,19 +621,13 @@ REL_OPT_LD_FLAGS="-flto"
 # osx/ios: set min version
 if [ $BUILD_OS == "osx" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "osx" ]; then
-		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.11"
+		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.13"
 	else # ios
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=9.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=11.0"
 	fi
 fi
 
 # defines:
-# set platform size define
-if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-	COMMON_FLAGS="${COMMON_FLAGS} -DPLATFORM_X32"
-else
-	COMMON_FLAGS="${COMMON_FLAGS} -DPLATFORM_X64"
-fi
 if [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
 	# common windows "unix environment" flag
 	COMMON_FLAGS="${COMMON_FLAGS} -DWIN_UNIXENV"
@@ -697,15 +646,19 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (c++17 with gnu and clang extensions is required)
+# remove std compat warnings (C++20 with gnu and clang extensions is required)
 WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic"
+WARNINGS="${WARNINGS} -Wno-c++2a-compat -Wno-c++2a-compat-pedantic -Wno-c++2a-extensions"
 WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
+WARNINGS="${WARNINGS} -Wno-nullability-extension"
 # don't be too pedantic
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"
 WARNINGS="${WARNINGS} -Wno-global-constructors -Wno-exit-time-destructors -Wno-reserved-id-macro -Wno-date-time"
+WARNINGS="${WARNINGS} -Wno-poison-system-directories"
 # suppress warnings in system headers
 WARNINGS="${WARNINGS} -Wno-system-headers"
 # these two are only useful in certain situations, but are quite noisy
@@ -718,10 +671,8 @@ WARNINGS="${WARNINGS} -Wno-nested-anon-types"
 WARNINGS="${WARNINGS} -Wno-partial-availability"
 # enable thread-safety warnings
 WARNINGS="${WARNINGS} -Wthread-safety -Wthread-safety-negative -Wthread-safety-beta -Wthread-safety-verbose"
-if [ ${BUILD_ARCH_SIZE} == "x32" ]; then
-	# ignore warnings about required alignment increases on 32-bit platforms (won't and can't fix)
-	WARNINGS="${WARNINGS} -Wno-cast-align"
-fi
+# ignore "explicit move to avoid copying on older compilers" warning
+WARNINGS="${WARNINGS} -Wno-return-std-move-in-c++11"
 COMMON_FLAGS="${COMMON_FLAGS} ${WARNINGS}"
 
 # diagnostics
