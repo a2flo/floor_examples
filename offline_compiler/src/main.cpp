@@ -87,6 +87,7 @@ struct option_context {
 	bool is_fubar_build { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
 	string fubar_target_set_file_name { "" };
+	bool fubar_pch { false };
 };
 typedef option_handler<option_context> occ_opt_handler;
 
@@ -124,6 +125,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
+				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t-v: verbose output (DBG level)\n"
@@ -376,6 +378,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--soft-printf", [](option_context& ctx, char**&) {
 		ctx.soft_printf = true;
+	}},
+	{ "--fubar-pch", [](option_context& ctx, char**&) {
+		ctx.fubar_pch = true;
 	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
@@ -1093,6 +1098,7 @@ int main(int, char* argv[]) {
 			.enable_warnings = option_ctx.warnings,
 			.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED)),
 			.enable_soft_printf = option_ctx.soft_printf,
+			.use_precompiled_header = option_ctx.fubar_pch,
 			.cuda_max_registers = option_ctx.cuda_max_registers,
 		};
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,

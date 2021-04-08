@@ -519,7 +519,8 @@ namespace fubar {
 		if (targets.empty()) return false;
 		
 		return universal_binary::build_archive_from_file(src_file_name, dst_archive_file_name,
-														 toolchain_options, targets);
+														 toolchain_options, targets,
+														 options.use_precompiled_header);
 	}
 	
 }

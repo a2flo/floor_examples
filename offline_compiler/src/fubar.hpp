@@ -35,6 +35,7 @@ namespace fubar {
 		bool enable_warnings { false };
 		bool verbose_compile_output { false };
 		bool enable_soft_printf { false };
+		bool use_precompiled_header { false };
 		
 		uint32_t cuda_max_registers { 0 };
 	};
