@@ -1,0 +1,55 @@
+[
+	{
+		"type": "CUDA",
+		"sm": [ 7, 5 ],
+		"ptx": [ 6, 3 ],
+		// generate PTX or CUBIN?
+		"is_ptx": true,
+		"image_depth_compare_support": false,
+		"max_registers": 0
+	},
+	{
+		"type": "OpenCL",
+		"version": [ 1, 2 ],
+		// generate SPIR or SPIR-V?
+		"is_spir": true,
+		// one of: "generic", "generic_cpu", "generic_gpu", "intel_cpu", "intel_gpu", "amd_cpu", "amd_gpu"
+		"target": "generic",
+		"image_depth_support": false,
+		"image_msaa_support": false,
+		"image_mipmap_support": false,
+		"image_mipmap_write_support": false,
+		"image_read_write_support": false,
+		"double_support": false,
+		"basic_64_bit_atomics_support": false,
+		"extended_64_bit_atomics_support": false,
+		"sub_group_support": false,
+		"simd_width": 0
+	},
+	{
+		"type": "Metal",
+		"version": [ 2, 0 ],
+		// target iOS or macOS?
+		"is_ios": false,
+		// one of: "generic", "nvidia", "amd", "intel"
+		"target": "generic",
+		"simd_width": 0
+	},
+	{
+		"type": "Vulkan",
+		"version": [ 1, 2 ],
+		"spirv": [ 1, 5 ],
+		// one of: "generic", "nvidia", "amd", "intel"
+		"target": "generic",
+		"double_support": false,
+		"basic_64_bit_atomics_support": false,
+		"extended_64_bit_atomics_support": false
+	},
+	{
+		"type": "Host",
+		// one of: "x86", "ARM"
+		"arch": "x86",
+		// x86: 1 - 4, ARM: 1 - 2
+		"tier": 1
+	}
+]

@@ -1104,6 +1104,7 @@ int main(int, char* argv[]) {
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {
 			ret_code = -42;
+			log_error("failed to build FUBAR");
 		}
 	} else {
 		ret_code = run_normal_build(option_ctx);
