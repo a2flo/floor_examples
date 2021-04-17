@@ -135,6 +135,7 @@ namespace fubar {
 				.is_ios = target_obj.at("is_ios").get_or_throw<bool>(),
 				.device_target = target,
 				.simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>(),
+				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -238,6 +239,7 @@ namespace fubar {
 				.double_support = target_obj.at("double_support").get_or_throw<bool>(),
 				.basic_64_bit_atomics_support = target_obj.at("basic_64_bit_atomics_support").get_or_throw<bool>(),
 				.extended_64_bit_atomics_support = target_obj.at("extended_64_bit_atomics_support").get_or_throw<bool>(),
+				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -431,6 +433,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -443,6 +446,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -455,6 +459,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -467,6 +472,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -479,6 +485,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -491,6 +498,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -503,6 +511,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -515,6 +524,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -557,6 +567,7 @@ namespace fubar {
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -628,6 +639,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -640,6 +652,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -652,6 +665,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -664,6 +678,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -676,6 +691,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -688,6 +704,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -700,6 +717,7 @@ namespace fubar {
 					.is_ios = 0,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -712,6 +730,7 @@ namespace fubar {
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},
@@ -730,6 +749,7 @@ namespace fubar {
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
+					.soft_printf = 0,
 					._unused = 0,
 				}
 			},

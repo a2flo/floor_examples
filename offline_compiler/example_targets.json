@@ -33,7 +33,8 @@
 		"is_ios": false,
 		// one of: "generic", "nvidia", "amd", "intel"
 		"target": "generic",
-		"simd_width": 0
+		"simd_width": 0,
+		"soft_printf": false
 	},
 	{
 		"type": "Vulkan",
@@ -43,7 +44,8 @@
 		"target": "generic",
 		"double_support": false,
 		"basic_64_bit_atomics_support": false,
-		"extended_64_bit_atomics_support": false
+		"extended_64_bit_atomics_support": false,
+		"soft_printf": false
 	},
 	{
 		"type": "Host",
