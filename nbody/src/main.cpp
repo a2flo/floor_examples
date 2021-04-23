@@ -121,7 +121,8 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		// performance stats
 		cout << "expected performance (with --benchmark):" << endl;
 		cout << "\tRTX 3090:     ~21200 gflops (--count 335872 --tile-size 512)" << endl;
-		cout << "\tRTX 2080 Ti:  ~10970 gflops (--count 278528 --tile-size 256)" << endl;
+		cout << "\tRX 6900 XT:   ~14760 gflops (--count 327680 --tile-size 32)" << endl;
+		cout << "\tRTX 2080 Ti:  ~11190 gflops (--count 278528 --tile-size 256)" << endl;
 		cout << "\tP6000:        ~ 8400 gflops (--count 262144 --tile-size 512)" << endl;
 		cout << "\tGP100:        ~ 7600 gflops (--count 262144 --tile-size 512)" << endl;
 		cout << "\tRX 590:       ~ 4120 gflops (--count 221184 --tile-size 64)" << endl;
