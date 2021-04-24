@@ -112,6 +112,8 @@ namespace fubar {
 			version_arr[1].get_or_throw<uint32_t>(),
 		};
 		
+		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
+		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
 		decltype(universal_binary::target_v2::metal)::DEVICE_TARGET target {};
 		if (target_str == "generic") {
@@ -120,6 +122,9 @@ namespace fubar {
 			target = decltype(universal_binary::target_v2::metal)::NVIDIA;
 		} else if (target_str == "amd") {
 			target = decltype(universal_binary::target_v2::metal)::AMD;
+			if (simd_width == 0) {
+				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
+			}
 		} else if (target_str == "intel") {
 			target = decltype(universal_binary::target_v2::metal)::INTEL;
 		} else {
@@ -134,7 +139,7 @@ namespace fubar {
 				.minor = version.y,
 				.is_ios = target_obj.at("is_ios").get_or_throw<bool>(),
 				.device_target = target,
-				.simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>(),
+				.simd_width = simd_width,
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
 				._unused = 0,
 			}
@@ -150,6 +155,8 @@ namespace fubar {
 			version_arr[0].get_or_throw<uint32_t>(),
 			version_arr[1].get_or_throw<uint32_t>(),
 		};
+		
+		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
 		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
 		decltype(universal_binary::target_v2::opencl)::DEVICE_TARGET target {};
@@ -167,6 +174,9 @@ namespace fubar {
 			target = decltype(universal_binary::target_v2::opencl)::AMD_CPU;
 		} else if (target_str == "amd_gpu") {
 			target = decltype(universal_binary::target_v2::opencl)::AMD_GPU;
+			if (simd_width == 0) {
+				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
+			}
 		} else {
 			throw runtime_error("unknown target: " + target_str);
 		}
@@ -188,7 +198,7 @@ namespace fubar {
 				.basic_64_bit_atomics_support = target_obj.at("basic_64_bit_atomics_support").get_or_throw<bool>(),
 				.extended_64_bit_atomics_support = target_obj.at("extended_64_bit_atomics_support").get_or_throw<bool>(),
 				.sub_group_support = target_obj.at("sub_group_support").get_or_throw<bool>(),
-				.simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>(),
+				.simd_width = simd_width,
 				._unused = 0,
 			}
 		};
