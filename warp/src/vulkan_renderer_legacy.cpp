@@ -793,8 +793,6 @@ void vulkan_renderer_legacy::render_full_scene(const floor_obj_model& model, con
 
 bool vulkan_renderer_legacy::compile_shaders(const string add_cli_options) {
 	return common_renderer::compile_shaders(add_cli_options +
-											// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
-											" -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT"
 											// we want to use the "bind everything" method and draw the scene with 1 draw call
 											" -DWARP_IMAGE_ARRAY_SUPPORT");
 }

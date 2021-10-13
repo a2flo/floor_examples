@@ -644,9 +644,7 @@ void metal_renderer::render_full_scene(const floor_obj_model& model, const camer
 }
 
 bool metal_renderer::compile_shaders(const string add_cli_options) {
-	return common_renderer::compile_shaders(add_cli_options +
-											// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
-											" -DFLOOR_METAL_ADDRESS_MODE=metal_image::sampler::ADDRESS_MODE::REPEAT -DWARP_LEGACY_METAL");
+	return common_renderer::compile_shaders(add_cli_options + " -DWARP_LEGACY_METAL");
 }
 
 #endif

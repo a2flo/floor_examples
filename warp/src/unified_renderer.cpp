@@ -164,10 +164,7 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 }
 
 bool unified_renderer::rebuild_renderer() {
-	// a total hack until I implement run-time samplers (samplers are otherwise clamp-to-edge)
-	// + we want to use the "bind everything" method and draw the scene with 1 draw call
-	const string additional_compile_options = " -DFLOOR_METAL_ADDRESS_MODE=metal_image::sampler::ADDRESS_MODE::REPEAT -DFLOOR_VULKAN_ADDRESS_MODE=vulkan_image::sampler::REPEAT -DWARP_IMAGE_ARRAY_SUPPORT";
-	if (!compile_shaders(additional_compile_options)) {
+	if (!compile_shaders("")) {
 		return false;
 	}
 	

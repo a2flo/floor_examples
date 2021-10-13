@@ -206,12 +206,12 @@ static float4 scene_fs(const scene_base_in_out& in,
 					   const_image_2d_depth<float> shadow_tex) {
 	const auto tex_coord = in.tex_coord;
 	
-	if(mask_tex.read_lod_linear(tex_coord, 0) < 0.5f) {
+	if(mask_tex.read_lod_linear_repeat(tex_coord, 0) < 0.5f) {
 		discard_fragment();
 	}
 	
 	const auto tex_grad = dfdx_dfdy_gradient(tex_coord);
-	auto diff = diff_tex.read_gradient_linear(tex_coord, tex_grad);
+	auto diff = diff_tex.read_gradient_linear_repeat(tex_coord, tex_grad);
 	
 	//
 	constexpr float fixed_bias = 0.001f;
@@ -224,7 +224,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 	const auto norm_view_dir = in.view_dir.normalized();
 	const auto norm_light_dir = in.light_dir.normalized();
 	const auto norm_half_dir = (norm_view_dir + norm_light_dir).normalized();
-	const auto normal = norm_tex.read_gradient_linear(tex_coord, tex_grad).xyz * 2.0f - 1.0f;
+	const auto normal = norm_tex.read_gradient_linear_repeat(tex_coord, tex_grad).xyz * 2.0f - 1.0f;
 	
 	const auto lambert = normal.dot(norm_light_dir);
 	if(lambert > 0.0f) {
@@ -273,7 +273,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 		lighting += lambert;
 		
 		// specular
-		const auto spec = spec_tex.read_gradient_linear(tex_coord, tex_grad).x;
+		const auto spec = spec_tex.read_gradient_linear_repeat(tex_coord, tex_grad).x;
 		const auto specular = pow(max(norm_half_dir.dot(normal), 0.0f), spec * 10.0f);
 		lighting += specular;
 		
