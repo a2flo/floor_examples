@@ -64,6 +64,7 @@ struct option_context {
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
 	bool sub_groups { false };
+	uint32_t simd_width { 0 };
 	bool sw_depth_compare { true };
 	uint32_t image_rw_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool test { false };
@@ -107,7 +108,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <2.0|2.1|2.2|2.3>: sets the supported Metal version (defaults to 2.0)\n"
+				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4>: sets the supported Metal version (defaults to 2.0)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -117,6 +118,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
+				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
@@ -238,6 +240,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(mtl_version_str == "2.1") { ctx.metal_std = METAL_VERSION::METAL_2_1; }
 		else if(mtl_version_str == "2.2") { ctx.metal_std = METAL_VERSION::METAL_2_2; }
 		else if(mtl_version_str == "2.3") { ctx.metal_std = METAL_VERSION::METAL_2_3; }
+		else if(mtl_version_str == "2.4") { ctx.metal_std = METAL_VERSION::METAL_2_4; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
@@ -290,6 +293,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--sub-groups", [](option_context& ctx, char**&) {
 		ctx.sub_groups = true;
+	}},
+	{ "--simd-width", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.simd_width = stou(*arg_ptr);
 	}},
 	{ "--depth-compare", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -441,7 +452,13 @@ static int run_normal_build(option_context& option_ctx) {
 				((opencl_device*)device.get())->cl_version = option_ctx.cl_std;
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
-				if(option_ctx.sub_groups) device->sub_group_support = true;
+				if(option_ctx.sub_groups) {
+					device->sub_group_support = true;
+					if (option_ctx.simd_width > 0) {
+						device->simd_width = option_ctx.simd_width;
+						device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
+					}
+				}
 				device->double_support = (option_ctx.double_support != 2); // enabled by default
 				// enable common image support
 				device->image_support = true;
@@ -504,6 +521,15 @@ static int run_normal_build(option_context& option_ctx) {
 					return -3;
 				}
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
+				if (dev->family_type == metal_device::FAMILY_TYPE::MAC || option_ctx.sub_groups) {
+					// sub-group support is always available since macOS Metal 2.0, for iOS this needs to be enabled explicitly
+					device->sub_group_support = true;
+					device->sub_group_shuffle_support = true;
+					if (option_ctx.simd_width > 0) {
+						device->simd_width = option_ctx.simd_width;
+						device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
+					}
+				}
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
@@ -535,6 +561,10 @@ static int run_normal_build(option_context& option_ctx) {
 				// not supported right now
 				//if(option_ctx.sub_groups) device->sub_group_support = true;
 				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
+				//if (option_ctx.simd_width > 0) {
+				//	device->simd_width = option_ctx.simd_width;
+				//	device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
+				//}
 				
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;
