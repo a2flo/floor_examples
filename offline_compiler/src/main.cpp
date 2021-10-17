@@ -63,6 +63,7 @@ struct option_context {
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool basic_64_atomics { false };
 	bool extended_64_atomics { false };
+	bool basic_32_bit_float_atomics { false };
 	bool sub_groups { false };
 	uint32_t simd_width { 0 };
 	bool sw_depth_compare { true };
@@ -117,6 +118,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--no-double: explicitly disables double support (only SPIR/SPIR-V)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
+				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (only Vulkan/SPIR-V, always enabled on PTX)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
@@ -290,6 +292,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--ext-64-bit-atomics", [](option_context& ctx, char**&) {
 		ctx.extended_64_atomics = true;
+	}},
+	{ "--32-bit-float-atomics", [](option_context& ctx, char**&) {
+		ctx.basic_32_bit_float_atomics = true;
 	}},
 	{ "--sub-groups", [](option_context& ctx, char**&) {
 		ctx.sub_groups = true;
@@ -544,6 +549,7 @@ static int run_normal_build(option_context& option_ctx) {
 				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
+				if(option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				
 				// mip-mapping support is already enabled, just need to set the max supported mip level count
