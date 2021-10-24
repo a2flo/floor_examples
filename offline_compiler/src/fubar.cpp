@@ -589,6 +589,27 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.opencl = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::OPENCL,
+					.major = 2,
+					.minor = 0,
+					.is_spir = 0,
+					.device_target = decltype(universal_binary::target_v2::opencl)::GENERIC,
+					.image_depth_support = 0,
+					.image_msaa_support = 0,
+					.image_mipmap_support = 0,
+					.image_mipmap_write_support = 0,
+					.image_read_write_support = 0,
+					.double_support = 0,
+					.basic_64_bit_atomics_support = 0,
+					.extended_64_bit_atomics_support = 0,
+					.sub_group_support = 0,
+					.simd_width = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// Vulkan

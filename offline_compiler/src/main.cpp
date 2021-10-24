@@ -108,7 +108,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
-				 "\t--cl-std <1.2|2.0|2.1|2.2>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
+				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4>: sets the supported Metal version (defaults to 2.0)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
@@ -226,6 +226,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(cl_version_str == "2.0") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_0; }
 		else if(cl_version_str == "2.1") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_1; }
 		else if(cl_version_str == "2.2") { ctx.cl_std = OPENCL_VERSION::OPENCL_2_2; }
+		else if(cl_version_str == "3.0") { ctx.cl_std = OPENCL_VERSION::OPENCL_3_0; }
 		else {
 			cerr << "invalid --cl-std argument" << endl;
 			return;
