@@ -77,7 +77,9 @@ void nbody_compute(buffer<const float4> in_positions,
 		local_barrier();
 
 		// TODO: should probably add some kind of "max supported/good unroll count" define
-#if (!defined(FLOOR_COMPUTE_METAL) || (defined(FLOOR_COMPUTE_INFO_OS_OSX) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL) && !defined(FLOOR_COMPUTE_INFO_VENDOR_AMD))) \
+#if (!defined(FLOOR_COMPUTE_METAL) || \
+     (defined(FLOOR_COMPUTE_INFO_OS_OSX) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL) && \
+        !defined(FLOOR_COMPUTE_INFO_VENDOR_AMD) && !defined(FLOOR_COMPUTE_INFO_VENDOR_APPLE))) \
 	&& !defined(FLOOR_COMPUTE_HOST)
 #pragma clang loop unroll_count(NBODY_TILE_SIZE)
 #elif defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL)

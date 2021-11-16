@@ -125,6 +125,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tRTX 2080 Ti:  ~11190 gflops (--count 278528 --tile-size 256)" << endl;
 		cout << "\tP6000:        ~ 8400 gflops (--count 262144 --tile-size 512)" << endl;
 		cout << "\tGP100:        ~ 7600 gflops (--count 262144 --tile-size 512)" << endl;
+		cout << "\tM1 Max:       ~ 5070 gflops (--count 262144 --tile-size 256)" << endl;
 		cout << "\tRX 590:       ~ 4120 gflops (--count 221184 --tile-size 64)" << endl;
 		cout << "\tRX 580:       ~ 3225 gflops (--count 221184 --tile-size 64)" << endl;
 		cout << "\tGTX 970:      ~ 2770 gflops (--count 131072 --tile-size 256)" << endl;
@@ -556,7 +557,6 @@ void init_system() {
 }
 
 int main(int, char* argv[]) {
-	// handle options
 	nbody_option_context option_ctx;
 	nbody_opt_handler::parse_options(argv + 1, option_ctx);
 	if(nbody_state.done) return 0;

@@ -876,7 +876,11 @@
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
+					/opt/homebrew/lib,
+					"/opt/homebrew/opt/openssl@1.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-fparse-all-comments",
@@ -891,6 +895,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
+					"-w",
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -907,7 +912,7 @@
 					"-framework",
 					SDL2,
 				);
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Debug;
 		};
@@ -946,8 +951,12 @@
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
+					/opt/homebrew/lib,
+					"/opt/homebrew/opt/openssl@1.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
 				LLVM_LTO = YES;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-fparse-all-comments",
@@ -962,6 +971,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
+					"-w",
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",
@@ -978,7 +988,7 @@
 					"-framework",
 					SDL2,
 				);
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Release;
 		};
