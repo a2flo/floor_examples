@@ -31,7 +31,7 @@
 		"version": [ 2, 0 ],
 		// target iOS or macOS?
 		"is_ios": false,
-		// one of: "generic", "nvidia", "amd", "intel"
+		// one of: "generic", "nvidia", "amd", "intel", "apple"
 		"target": "generic",
 		"simd_width": 0,
 		"soft_printf": false

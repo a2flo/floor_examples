@@ -127,6 +127,8 @@ namespace fubar {
 			}
 		} else if (target_str == "intel") {
 			target = decltype(universal_binary::target_v2::metal)::INTEL;
+		} else if (target_str == "apple") {
+			target = decltype(universal_binary::target_v2::metal)::APPLE;
 		} else {
 			throw runtime_error("unknown target: " + target_str);
 		}
