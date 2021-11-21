@@ -107,7 +107,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
-				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2], defaults to x86-1\n"
+				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4>: sets the supported Metal version (defaults to 2.0)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
@@ -593,7 +593,13 @@ static int run_normal_build(option_context& option_ctx) {
 						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_2;
 					}
 				} else if (option_ctx.sub_target.find("arm") == 0) {
-					if (option_ctx.sub_target == "arm-2") {
+					if (option_ctx.sub_target == "arm-5") {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_5;
+					} else if (option_ctx.sub_target == "arm-4") {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_4;
+					} else if (option_ctx.sub_target == "arm-3") {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_3;
+					} else if (option_ctx.sub_target == "arm-2") {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_2;
 					} else {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_1;
@@ -617,6 +623,9 @@ static int run_normal_build(option_context& option_ctx) {
 						break;
 					case HOST_CPU_TIER::ARM_TIER_1:
 					case HOST_CPU_TIER::ARM_TIER_2:
+					case HOST_CPU_TIER::ARM_TIER_3:
+					case HOST_CPU_TIER::ARM_TIER_4:
+					case HOST_CPU_TIER::ARM_TIER_5:
 						device->simd_width = 4u; // NEON
 						break;
 					default:
@@ -779,10 +788,10 @@ static int run_normal_build(option_context& option_ctx) {
 		
 		// output
 		const bool wants_console_output = (option_ctx.output_filename == "-");
-		if(option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
+		if (option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
 			// output file name?
 			option_ctx.output_filename = "unknown.bin";
-			switch(option_ctx.target) {
+			switch (option_ctx.target) {
 				case llvm_toolchain::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
 				case llvm_toolchain::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				// don't do anything for air, spir-v and host-compute, it's already stored in a file
@@ -794,39 +803,45 @@ static int run_normal_build(option_context& option_ctx) {
 		}
 		
 		// write to file
-		if(option_ctx.target == llvm_toolchain::TARGET::AIR ||
+		if (option_ctx.target == llvm_toolchain::TARGET::AIR ||
 		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
-		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
+		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ||
+		   option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
 			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
-			if(option_ctx.output_filename != "") {
+			if (option_ctx.output_filename != "") {
 				core::system("mv \"" + program.data_or_filename + "\" \"" + option_ctx.output_filename + "\"");
+			} else {
+				option_ctx.output_filename = program.data_or_filename;
 			}
-			else option_ctx.output_filename = program.data_or_filename;
+		} else {
+			file_io::string_to_file(option_ctx.output_filename, program.data_or_filename);
 		}
-		else file_io::string_to_file(option_ctx.output_filename, program.data_or_filename);
 		
 		// print to console, as well as to file!
-		if(wants_console_output) {
-			if(option_ctx.target == llvm_toolchain::TARGET::AIR) {
-				string output = "";
+		if (wants_console_output) {
+			string output;
+			if (option_ctx.target == llvm_toolchain::TARGET::AIR) {
 				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			}
-			else if(option_ctx.target == llvm_toolchain::TARGET::SPIR) {
-				string output = "";
+			} else if (option_ctx.target == llvm_toolchain::TARGET::SPIR) {
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			}
-			else if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
-					option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
-				string output = "";
+			} else if (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
+					   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
 				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
 							 "\" --debug-asm " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			}
-			else {
+			} else if (option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
+				core::system("readelf -a " + option_ctx.output_filename, output);
+				core::system("objdump -d -T -C "
+#if defined(__APPLE__)
+							 "--symbolize-operands "
+#endif
+							 + option_ctx.output_filename, output);
+				log_undecorated("$", output);
+			} else {
 				log_undecorated("$", program.data_or_filename);
 			}
 		}
