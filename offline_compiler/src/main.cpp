@@ -58,7 +58,7 @@ struct option_context {
 	METAL_VERSION metal_std { METAL_VERSION::METAL_2_0 };
 	uint32_t ptx_version { 60 };
 	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_2 };
-	bool warnings { false };
+	optional<bool> warnings;
 	bool workarounds { false };
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool basic_64_atomics { false };
@@ -74,22 +74,28 @@ struct option_context {
 	bool spirv_text { false };
 	string cuda_sdk_path { "" };
 	string cuda_sass_filename { "" };
-	uint32_t cuda_max_registers { 0 };
-	bool cuda_no_short_ptr { false };
+	optional<uint32_t> cuda_max_registers;
+	optional<bool> cuda_no_short_ptr;
 	string spirv_text_filename { "" };
 	string test_bin_filename { "" };
 	string ffi_filename { "" };
 	string additional_options { "" };
-	size_t verbosity { (size_t)logger::LOG_TYPE::WARNING_MSG };
+	static constexpr const auto default_verbosity = (size_t)logger::LOG_TYPE::WARNING_MSG;
+	size_t verbosity { default_verbosity };
 	string config_path { "../../data/" };
 	bool done { false };
 	bool native_cl { false };
-	bool soft_printf { false };
+	optional<bool> soft_printf;
 	
 	bool is_fubar_build { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
 	string fubar_target_set_file_name { "" };
-	bool fubar_pch { false };
+	string fubar_options_file_name { "" };
+	optional<bool> fubar_pch;
+	
+	optional<bool> emit_debug_info;
+	optional<bool> preprocess_condense;
+	optional<bool> preprocess_preserve_comments;
 };
 typedef option_handler<option_context> occ_opt_handler;
 
@@ -130,8 +136,12 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
+				 "\t--fubar-options: reads compile options (-> llvm_toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
+				 "\t--emit-debug-info: enables emission of target dependent debug info\n"
+				 "\t--debug-preprocess-condense: preprocesses the input into a single .ii file before compiling it to the target format (only Metal)\n"
+				 "\t--debug-preprocess-preserve-comments: when '--debug-preprocess-condense' is set, disable stripping of comments (only Metal)\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--version: prints the occ/floor version\n"
@@ -400,6 +410,23 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
 	}},
+	{ "--fubar-options", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if(*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.fubar_options_file_name = *arg_ptr;
+	}},
+	{ "--emit-debug-info", [](option_context& ctx, char**&) {
+		ctx.emit_debug_info = true;
+	}},
+	{ "--debug-preprocess-condense", [](option_context& ctx, char**&) {
+		ctx.preprocess_condense = true;
+	}},
+	{ "--debug-preprocess-preserve-comments", [](option_context& ctx, char**&) {
+		ctx.preprocess_preserve_comments = true;
+	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
 	}},
@@ -645,12 +672,15 @@ static int run_normal_build(option_context& option_ctx) {
 		llvm_toolchain::compile_options options {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
-			.enable_warnings = option_ctx.warnings,
+			.enable_warnings = option_ctx.warnings.value_or(false),
+			.debug.emit_debug_info = option_ctx.emit_debug_info.value_or(false),
+			.debug.preprocess_condense = option_ctx.preprocess_condense.value_or(false),
+			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
 			.cuda.ptx_version = option_ctx.ptx_version,
-			.cuda.max_registers = option_ctx.cuda_max_registers,
-			.cuda.short_ptr = (option_ctx.cuda_no_short_ptr ? false : true),
-			.metal.soft_printf = option_ctx.soft_printf,
-			.vulkan.soft_printf = option_ctx.soft_printf,
+			.cuda.max_registers = option_ctx.cuda_max_registers.value_or(0u),
+			.cuda.short_ptr = !option_ctx.cuda_no_short_ptr.value_or(false),
+			.metal.soft_printf = option_ctx.soft_printf.value_or(false),
+			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
 		};
 		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
 		for(const auto& info : program.functions) {
@@ -834,12 +864,17 @@ static int run_normal_build(option_context& option_ctx) {
 							 "\" --debug-asm " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
 			} else if (option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
+#if 1
 				core::system("readelf -a " + option_ctx.output_filename, output);
 				core::system("objdump -d -T -C "
 #if defined(__APPLE__)
 							 "--symbolize-operands "
 #endif
 							 + option_ctx.output_filename, output);
+#else
+				core::system("llvm-readelf -a " + option_ctx.output_filename, output);
+				core::system("llvm-objdump -d -T -C --reloc " + option_ctx.output_filename, output);
+#endif
 				log_undecorated("$", output);
 			} else {
 				log_undecorated("$", program.data_or_filename);
@@ -1146,15 +1181,38 @@ int main(int, char* argv[]) {
 			dst_archive_file_name += ".fubar";
 		}
 		
-		const fubar::options_t options {
-			.additional_cli_options = option_ctx.additional_options,
-			.enable_warnings = option_ctx.warnings,
-			.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED)),
-			.enable_soft_printf = option_ctx.soft_printf,
-			.use_precompiled_header = option_ctx.fubar_pch,
-			.cuda_max_registers = option_ctx.cuda_max_registers,
-		};
-		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name,
+		fubar::options_t options {};
+		if (!option_ctx.additional_options.empty()) {
+			options.additional_cli_options = option_ctx.additional_options;
+		}
+		if (option_ctx.warnings) {
+			options.enable_warnings = option_ctx.warnings;
+		}
+		if (option_ctx.verbosity != option_context::default_verbosity) {
+			options.verbose_compile_output = (option_ctx.verbosity == size_t(logger::LOG_TYPE::UNDECORATED));
+		}
+		if (option_ctx.soft_printf) {
+			options.enable_soft_printf = option_ctx.soft_printf;
+		}
+		if (option_ctx.fubar_pch) {
+			options.use_precompiled_header = option_ctx.fubar_pch;
+		}
+		if (option_ctx.cuda_max_registers) {
+			options.cuda_max_registers = option_ctx.cuda_max_registers;
+		}
+		if (option_ctx.cuda_no_short_ptr) {
+			options.cuda_short_ptr = !*option_ctx.cuda_no_short_ptr;
+		}
+		if (option_ctx.emit_debug_info) {
+			options.emit_debug_info = option_ctx.emit_debug_info;
+		}
+		if (option_ctx.preprocess_condense) {
+			options.preprocess_condense = option_ctx.preprocess_condense;
+		}
+		if (option_ctx.preprocess_preserve_comments) {
+			options.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments;
+		}
+		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name, option_ctx.fubar_options_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {
 			ret_code = -42;
 			log_error("failed to build FUBAR");

@@ -1,0 +1,18 @@
+{
+	"cli": "",
+	"enable_warnings": true,
+	"silence_debug_output": false,
+	"debug": {
+		"emit_debug_info": false,
+		"preprocess_condense": false,
+		"preprocess_preserve_comments": false
+	},
+	"cuda": {
+		"max_registers": 0,
+		"short_ptr": true
+	},
+	"vulkan": {
+		"pre_structurization_pass": false
+	},
+	"pch": ""
+}

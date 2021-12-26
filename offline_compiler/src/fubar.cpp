@@ -891,26 +891,115 @@ namespace fubar {
 		return ret_targets;
 	}
 	
+	static llvm_toolchain::compile_options get_compile_options(const string& options_json_file_name) {
+		if (options_json_file_name.empty()) {
+			return {};
+		}
+		
+		llvm_toolchain::compile_options options {};
+		try {
+			auto doc = create_document(options_json_file_name);
+			if (!doc.valid) {
+				throw runtime_error("invalid JSON");
+			}
+			const auto opts_obj = doc.root.get_or_throw<json_object>();
+			for (const auto& opt_entry : opts_obj) {
+				if (opt_entry.first == "cli") {
+					options.cli = opt_entry.second.get_or_throw<string>();
+				} else if (opt_entry.first == "enable_warnings") {
+					options.enable_warnings = opt_entry.second.get_or_throw<bool>();
+				} else if (opt_entry.first == "silence_debug_output") {
+					options.silence_debug_output = opt_entry.second.get_or_throw<bool>();
+				} else if (opt_entry.first == "pch") {
+					options.pch = opt_entry.second.get_or_throw<string>();
+				} else if (opt_entry.first == "debug") {
+					auto dbg_obj = opt_entry.second.get_or_throw<json_object>();
+					for (const auto& dbg_entry : dbg_obj) {
+						if (dbg_entry.first == "emit_debug_info") {
+							options.debug.emit_debug_info = dbg_entry.second.get_or_throw<bool>();
+						} else if (dbg_entry.first == "preprocess_condense") {
+							options.debug.preprocess_condense = dbg_entry.second.get_or_throw<bool>();
+						} else if (dbg_entry.first == "preprocess_preserve_comments") {
+							options.debug.preprocess_preserve_comments = dbg_entry.second.get_or_throw<bool>();
+						} else {
+							log_warn("ignoring unknown debug option: $", dbg_entry.first);
+						}
+					}
+				} else if (opt_entry.first == "cuda") {
+					auto cuda_obj = opt_entry.second.get_or_throw<json_object>();
+					for (const auto& cuda_entry : cuda_obj) {
+						if (cuda_entry.first == "max_registers") {
+							options.cuda.max_registers = cuda_entry.second.get_or_throw<uint32_t>();
+						} else if (cuda_entry.first == "short_ptr") {
+							options.cuda.short_ptr = cuda_entry.second.get_or_throw<bool>();
+						} else {
+							log_warn("ignoring unknown CUDA option: $", cuda_entry.first);
+						}
+					}
+				} else if (opt_entry.first == "vulkan") {
+					auto vulkan_obj = opt_entry.second.get_or_throw<json_object>();
+					for (const auto& vulkan_entry : vulkan_obj) {
+						if (vulkan_entry.first == "pre_structurization_pass") {
+							options.vulkan.pre_structurization_pass = vulkan_entry.second.get_or_throw<bool>();
+						} else {
+							log_warn("ignoring unknown Vulkan option: $", vulkan_entry.first);
+						}
+					}
+				} else {
+					log_warn("ignoring unknown option: $", opt_entry.first);
+				}
+			}
+		} catch (exception& exc) {
+			log_error("failed to parse options JSON: $", exc.what());
+		}
+		return options;
+	}
+	
 	bool build(const TARGET_SET target_set,
 			   const string& targets_json_file_name,
+			   const string& options_json_file_name,
 			   const string& src_file_name,
 			   const string& dst_archive_file_name,
 			   const options_t& options) {
-		llvm_toolchain::compile_options toolchain_options {
-			.cli = options.additional_cli_options,
-			.enable_warnings = options.enable_warnings,
-			.silence_debug_output = !options.verbose_compile_output,
-			.cuda.max_registers = options.cuda_max_registers,
-			.metal.soft_printf = options.enable_soft_printf,
-			.vulkan.soft_printf = options.enable_soft_printf,
-		};
+		// parse options and/or get defaults
+		auto toolchain_options = get_compile_options(options_json_file_name);
+		
+		// override options with CLI specified options (which have priority)
+		if (options.additional_cli_options && !options.additional_cli_options->empty()) {
+			toolchain_options.cli += " " + *options.additional_cli_options;
+		}
+		if (options.enable_warnings) {
+			toolchain_options.enable_warnings = *options.enable_warnings;
+		}
+		if (options.verbose_compile_output) {
+			toolchain_options.silence_debug_output = !*options.verbose_compile_output;
+		}
+		if (options.enable_soft_printf) {
+			toolchain_options.metal.soft_printf = *options.enable_soft_printf;
+			toolchain_options.vulkan.soft_printf = *options.enable_soft_printf;
+		}
+		if (options.cuda_max_registers) {
+			toolchain_options.cuda.max_registers = *options.cuda_max_registers;
+		}
+		if (options.cuda_short_ptr) {
+			toolchain_options.cuda.short_ptr = *options.cuda_short_ptr;
+		}
+		if (options.emit_debug_info) {
+			toolchain_options.debug.emit_debug_info = *options.emit_debug_info;
+		}
+		if (options.preprocess_condense) {
+			toolchain_options.debug.preprocess_condense = *options.preprocess_condense;
+		}
+		if (options.preprocess_preserve_comments) {
+			toolchain_options.debug.preprocess_preserve_comments = *options.preprocess_preserve_comments;
+		}
 		
 		const auto targets = get_targets(target_set, targets_json_file_name, toolchain_options);
 		if (targets.empty()) return false;
 		
 		return universal_binary::build_archive_from_file(src_file_name, dst_archive_file_name,
 														 toolchain_options, targets,
-														 options.use_precompiled_header);
+														 options.use_precompiled_header.value_or(false));
 	}
 	
 }
