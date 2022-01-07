@@ -152,6 +152,8 @@ namespace fubar {
 				.device_target = target,
 				.simd_width = simd_width,
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
+				.primitive_id_support = target_obj.at("primitive_id_support").get_or_throw<bool>(),
+				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -260,8 +262,10 @@ namespace fubar {
 				.double_support = target_obj.at("double_support").get_or_throw<bool>(),
 				.basic_64_bit_atomics_support = target_obj.at("basic_64_bit_atomics_support").get_or_throw<bool>(),
 				.extended_64_bit_atomics_support = target_obj.at("extended_64_bit_atomics_support").get_or_throw<bool>(),
-				.basic_32_bit_float_atomics_support = target_obj.at("basic_32_bit_float_atomics_support").get_or_throw<bool>(),
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
+				.basic_32_bit_float_atomics_support = target_obj.at("basic_32_bit_float_atomics_support").get_or_throw<bool>(),
+				.primitive_id_support = target_obj.at("primitive_id_support").get_or_throw<bool>(),
+				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -456,6 +460,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -469,6 +475,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -482,6 +490,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -495,6 +505,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -508,6 +520,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -521,6 +535,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -534,6 +550,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -547,6 +565,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -560,6 +580,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -573,6 +595,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -636,8 +660,10 @@ namespace fubar {
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
-					.basic_32_bit_float_atomics_support = 0,
 					.soft_printf = 0,
+					.basic_32_bit_float_atomics_support = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -732,6 +758,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -745,6 +773,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -758,6 +788,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -771,6 +803,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -784,6 +818,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -797,6 +833,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -810,6 +848,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -823,6 +863,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -836,6 +878,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -849,6 +893,8 @@ namespace fubar {
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
 					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},
@@ -867,8 +913,10 @@ namespace fubar {
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
-					.basic_32_bit_float_atomics_support = 0,
 					.soft_printf = 0,
+					.basic_32_bit_float_atomics_support = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
 					._unused = 0,
 				}
 			},

@@ -34,7 +34,9 @@
 		// one of: "generic", "nvidia", "amd", "intel", "apple"
 		"target": "generic",
 		"simd_width": 0,
-		"soft_printf": false
+		"soft_printf": false,
+		"primitive_id_support": false,
+		"barycentric_coord_support": false
 	},
 	{
 		"type": "Vulkan",
@@ -45,8 +47,10 @@
 		"double_support": false,
 		"basic_64_bit_atomics_support": false,
 		"extended_64_bit_atomics_support": false,
+		"soft_printf": false,
 		"basic_32_bit_float_atomics_support": false,
-		"soft_printf": false
+		"primitive_id_support": false,
+		"barycentric_coord_support": false
 	},
 	{
 		"type": "Host",
