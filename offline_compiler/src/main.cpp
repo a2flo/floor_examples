@@ -55,7 +55,7 @@ struct option_context {
 	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
 	string sub_target;
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
-	METAL_VERSION metal_std { METAL_VERSION::METAL_2_0 };
+	METAL_VERSION metal_std { METAL_VERSION::METAL_2_4 };
 	uint32_t ptx_version { 60 };
 	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_2 };
 	optional<bool> warnings;
@@ -115,7 +115,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4>: sets the supported Metal version (defaults to 2.0)\n"
+				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4>: sets the supported Metal version (defaults to 2.4; 2.0 not supported on iOS)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
