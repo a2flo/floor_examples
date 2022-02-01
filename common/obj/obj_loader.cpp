@@ -395,7 +395,7 @@ struct mtl_grammar {
 	FLOOR_MTL_GRAMMAR_OBJECTS(global_scope, statement, newmtl,
 							  ns, ni, d, tr, tf, illum,
 							  ka, kd, ks, ke,
-							  map_ka, map_kd, map_ks, map_ke, map_bump, map_d,
+							  map_ka, map_kd, map_ks, map_ke, map_bump, map_d, disp,
 							  map_options)
 	
 	struct obj_material {
@@ -404,6 +404,7 @@ struct mtl_grammar {
 		string specular { "" };
 		string normal { "" };
 		string mask { "" };
+		string displacement { "" };
 	};
 	unordered_map<string, unique_ptr<obj_material>> materials;
 	obj_material* cur_mtl { nullptr };
@@ -414,7 +415,7 @@ struct mtl_grammar {
 		static constexpr literal_matcher<const char*, SOURCE_TOKEN_TYPE::IDENTIFIER> IDENTIFIER {};
 		
 		//
-		static constexpr keyword_matcher NEWMTL("newmtl"), NS("Ns"), NI("Ni"), D("d"), TR("Tr"), TF("Tf"), ILLUM("illum"), KA("Ka"), KD("Kd"), KS("Ks"), KE("Ke"), MAP_KA("map_Ka"), MAP_KD("map_Kd"), MAP_KS("map_Ks"), MAP_KE("map_Ke"), MAP_BUMP("map_bump"), MAP_BUMP2("map_Bump"), BUMP("bump"), MAP_D("map_d");
+		static constexpr keyword_matcher NEWMTL("newmtl"), NS("Ns"), NI("Ni"), D("d"), TR("Tr"), TF("Tf"), ILLUM("illum"), KA("Ka"), KD("Kd"), KS("Ks"), KE("Ke"), MAP_KA("map_Ka"), MAP_KD("map_Kd"), MAP_KS("map_Ks"), MAP_KE("map_Ke"), MAP_BUMP("map_bump"), MAP_BUMP2("map_Bump"), BUMP("bump"), MAP_D("map_d"), DISP("disp");
 		static constexpr keyword_matcher MAP_OPT_BM("-bm");
 		
 #if defined(FLOOR_DEBUG_PARSER) || defined(FLOOR_DEBUG_PARSER_SET_NAMES)
@@ -424,7 +425,7 @@ struct mtl_grammar {
 		// grammar:
 		// ref: http://paulbourke.net/dataformats/mtl/
 		global_scope = *statement;
-		statement = (newmtl | ns | ni | d | tr | tf | illum | ka | kd | ks | ke | map_ka | map_kd | map_ks | map_ke | map_bump | map_d);
+		statement = (newmtl | ns | ni | d | tr | tf | illum | ka | kd | ks | ke | map_ka | map_kd | map_ks | map_ke | map_bump | map_d | disp);
 		newmtl = NEWMTL & IDENTIFIER;
 		ns = NS & FP_CONSTANT;
 		ni = NI & FP_CONSTANT;
@@ -442,6 +443,7 @@ struct mtl_grammar {
 		map_ke = MAP_KE & *map_options & IDENTIFIER;
 		map_bump = (MAP_BUMP | MAP_BUMP2 | BUMP) & *map_options & IDENTIFIER;
 		map_d = MAP_D & *map_options & IDENTIFIER;
+		disp = DISP & *map_options & IDENTIFIER;
 		map_options = MAP_OPT_BM & FP_CONSTANT; // TODO: more
 		
 		//
@@ -470,6 +472,10 @@ struct mtl_grammar {
 		});
 		map_d.on_match([this](auto& matches) -> parser_context::match_list {
 			cur_mtl->mask = matches.back().token->second.to_string();
+			return {};
+		});
+		disp.on_match([this](auto& matches) -> parser_context::match_list {
+			cur_mtl->displacement = matches.back().token->second.to_string();
 			return {};
 		});
 		map_options.on_match([](auto& matches floor_unused) -> parser_context::match_list {
@@ -531,9 +537,9 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		};
 		
 		// check format, BGR(A) needs to be converted to RGB(A)
-		GLint internal_format = 0;
+		[[maybe_unused]] GLint internal_format = 0;
 		GLenum format = 0;
-		GLenum type = 0;
+		[[maybe_unused]] GLenum type = 0;
 		check_format(surface, internal_format, format, type)
 		if(format == GL_BGR || format == GL_BGRA) {
 			SDL_PixelFormat new_pformat;
@@ -1289,6 +1295,7 @@ struct obj_grammar {
 				texture_filenames.emplace(mat.second->specular, pair<uint32_t, compute_image*> { 0, nullptr });
 				texture_filenames.emplace(mat.second->normal, pair<uint32_t, compute_image*> { 0, nullptr });
 				texture_filenames.emplace(mat.second->mask, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->displacement, pair<uint32_t, compute_image*> { 0, nullptr });
 			}
 			
 			// check use count
@@ -1304,6 +1311,7 @@ struct obj_grammar {
 				++texture_filenames[mat_iter->second->specular].first;
 				++texture_filenames[mat_iter->second->normal].first;
 				++texture_filenames[mat_iter->second->mask].first;
+				++texture_filenames[mat_iter->second->displacement].first;
 			}
 			
 			// kill empty string
@@ -1336,6 +1344,7 @@ struct obj_grammar {
 				floor_model->specular_textures.resize(mats.size());
 				floor_model->normal_textures.resize(mats.size());
 				floor_model->mask_textures.resize(mats.size());
+				floor_model->displacement_textures.resize(mats.size());
 			}
 			model->material_infos.resize(mats.size());
 			if(is_load_textures) {
@@ -1359,6 +1368,7 @@ struct obj_grammar {
 				mdl_mat_info.specular_file_name = (mat.second->specular != "" ? mat.second->specular : "black.png");
 				mdl_mat_info.normal_file_name = (mat.second->normal != "" ? mat.second->normal : "up_normal.png");
 				mdl_mat_info.mask_file_name = (mat.second->mask != "" ? mat.second->mask : "white.png");
+				mdl_mat_info.displacement_file_name = (mat.second->displacement != "" ? mat.second->displacement : "black.png");
 				
 				if(is_opengl) {
 					auto& mdl_mat = gl_model->materials[mat_map[mat.first]];
@@ -1366,12 +1376,14 @@ struct obj_grammar {
 					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].first;
 					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].first;
 					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].first;
+					// NOTE: displacement map is ignored for OpenGL
 				}
 				else {
 					floor_model->diffuse_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.diffuse_file_name].second;
 					floor_model->specular_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.specular_file_name].second;
 					floor_model->normal_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.normal_file_name].second;
 					floor_model->mask_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.mask_file_name].second;
+					floor_model->displacement_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.displacement_file_name].second;
 				}
 			}
 			
@@ -1473,6 +1485,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 				bin_file.write_terminated_block(mtl.specular_file_name, 0);
 				bin_file.write_terminated_block(mtl.normal_file_name, 0);
 				bin_file.write_terminated_block(mtl.mask_file_name, 0);
+				bin_file.write_terminated_block(mtl.displacement_file_name, 0);
 			}
 			
 			for(const auto& obj : model->objects) {
@@ -1557,6 +1570,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			floor_model->specular_textures.reserve(mat_count);
 			floor_model->normal_textures.reserve(mat_count);
 			floor_model->mask_textures.reserve(mat_count);
+			floor_model->displacement_textures.reserve(mat_count);
 		}
 		model->material_infos.reserve(mat_count);
 		model->objects.reserve(sub_object_count);
@@ -1568,6 +1582,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			mat_info.specular_file_name = bin_file.get_terminated_block(0);
 			mat_info.normal_file_name = bin_file.get_terminated_block(0);
 			mat_info.mask_file_name = bin_file.get_terminated_block(0);
+			mat_info.displacement_file_name = bin_file.get_terminated_block(0);
 			model->material_infos.emplace_back(mat_info);
 		}
 		
@@ -1577,6 +1592,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			texture_filenames.emplace(mat.specular_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace(mat.normal_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace(mat.mask_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.displacement_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 		}
 		if(is_load_textures) {
 			load_textures(texture_filenames, is_opengl,
@@ -1593,6 +1609,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 					texture_filenames[mdl_mat_info.specular_file_name].first,
 					texture_filenames[mdl_mat_info.normal_file_name].first,
 					texture_filenames[mdl_mat_info.mask_file_name].first
+					// NOTE: displacement map is ignored for OpenGL
 				});
 			}
 			else {
@@ -1600,6 +1617,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 				floor_model->specular_textures.emplace_back(texture_filenames[mdl_mat_info.specular_file_name].second);
 				floor_model->normal_textures.emplace_back(texture_filenames[mdl_mat_info.normal_file_name].second);
 				floor_model->mask_textures.emplace_back(texture_filenames[mdl_mat_info.mask_file_name].second);
+				floor_model->displacement_textures.emplace_back(texture_filenames[mdl_mat_info.displacement_file_name].second);
 			}
 		}
 		

@@ -37,6 +37,7 @@ struct obj_model {
 		string specular_file_name;
 		string normal_file_name;
 		string mask_file_name;
+		string displacement_file_name;
 	};
 	vector<material_info> material_infos;
 	
@@ -86,6 +87,7 @@ struct floor_obj_model : obj_model {
 	vector<compute_image*> specular_textures;
 	vector<compute_image*> normal_textures;
 	vector<compute_image*> mask_textures;
+	vector<compute_image*> displacement_textures;
 	
 	vector<shared_ptr<compute_image>> textures;
 };

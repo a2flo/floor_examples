@@ -497,7 +497,7 @@
 		5C3B0BEB1BCED83F000732F9 /* posz.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = posz.png; path = ../data/skybox/posz.png; sourceTree = "<group>"; };
 		5C3B0BEC1BCED83F000732F9 /* readme.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = readme.txt; path = ../data/skybox/readme.txt; sourceTree = "<group>"; };
 		5C5487821B608E110088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
-		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.json; };
+		5C5487831B608E110088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C56D4DD1BB2F64D0024467C /* sponza.mtl */ = {isa = PBXFileReference; lastKnownFileType = text; name = sponza.mtl; path = ../data/sponza/sponza.mtl; sourceTree = "<group>"; };
 		5C56D4DE1BB2F64D0024467C /* sponza.obj */ = {isa = PBXFileReference; lastKnownFileType = text; name = sponza.obj; path = ../data/sponza/sponza.obj; sourceTree = "<group>"; };
 		5C56D4DF1BB2F64D0024467C /* sponza.obj.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; name = sponza.obj.bin; path = ../data/sponza/sponza.obj.bin; sourceTree = "<group>"; };
@@ -562,6 +562,17 @@
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5C8FEF411AF22325001D47BF /* auto_cam.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = auto_cam.cpp; sourceTree = "<group>"; };
 		5C8FEF421AF22325001D47BF /* auto_cam.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = auto_cam.hpp; sourceTree = "<group>"; };
+		5CA2ADD227A9E6470061D07E /* chain_texture_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = chain_texture_bump.png; path = ../data/sponza/textures/chain_texture_bump.png; sourceTree = "<group>"; };
+		5CA2ADD327A9E6470061D07E /* sponza_arch_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_arch_bump.png; path = ../data/sponza/textures/sponza_arch_bump.png; sourceTree = "<group>"; };
+		5CA2ADD427A9E6470061D07E /* vase_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_bump.png; path = ../data/sponza/textures/vase_bump.png; sourceTree = "<group>"; };
+		5CA2ADD527A9E6470061D07E /* sponza_column_b_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_column_b_bump.png; path = ../data/sponza/textures/sponza_column_b_bump.png; sourceTree = "<group>"; };
+		5CA2ADD627A9E6470061D07E /* vase_round_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_bump.png; path = ../data/sponza/textures/vase_round_bump.png; sourceTree = "<group>"; };
+		5CA2ADD727A9E6470061D07E /* lion_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = lion_bump.png; path = ../data/sponza/textures/lion_bump.png; sourceTree = "<group>"; };
+		5CA2ADD827A9E6470061D07E /* sponza_column_c_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_column_c_bump.png; path = ../data/sponza/textures/sponza_column_c_bump.png; sourceTree = "<group>"; };
+		5CA2ADD927A9E6470061D07E /* sponza_thorn_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_thorn_bump.png; path = ../data/sponza/textures/sponza_thorn_bump.png; sourceTree = "<group>"; };
+		5CA2ADDA27A9E6470061D07E /* spnza_bricks_a_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = spnza_bricks_a_bump.png; path = ../data/sponza/textures/spnza_bricks_a_bump.png; sourceTree = "<group>"; };
+		5CA2ADDB27A9E6470061D07E /* background_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = background_bump.png; path = ../data/sponza/textures/background_bump.png; sourceTree = "<group>"; };
+		5CA2ADDC27A9E6470061D07E /* sponza_column_a_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_column_a_bump.png; path = ../data/sponza/textures/sponza_column_a_bump.png; sourceTree = "<group>"; };
 		5CBA3EF11D97F53D001BEDEC /* common_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = common_renderer.hpp; sourceTree = "<group>"; };
 		5CBA3EF21D97F61F001BEDEC /* common_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common_renderer.cpp; sourceTree = "<group>"; };
 		5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
@@ -754,6 +765,17 @@
 		5C56D4E11BB2F65B0024467C /* textures */ = {
 			isa = PBXGroup;
 			children = (
+				5CA2ADDB27A9E6470061D07E /* background_bump.png */,
+				5CA2ADD227A9E6470061D07E /* chain_texture_bump.png */,
+				5CA2ADD727A9E6470061D07E /* lion_bump.png */,
+				5CA2ADDA27A9E6470061D07E /* spnza_bricks_a_bump.png */,
+				5CA2ADD327A9E6470061D07E /* sponza_arch_bump.png */,
+				5CA2ADDC27A9E6470061D07E /* sponza_column_a_bump.png */,
+				5CA2ADD527A9E6470061D07E /* sponza_column_b_bump.png */,
+				5CA2ADD827A9E6470061D07E /* sponza_column_c_bump.png */,
+				5CA2ADD927A9E6470061D07E /* sponza_thorn_bump.png */,
+				5CA2ADD427A9E6470061D07E /* vase_bump.png */,
+				5CA2ADD627A9E6470061D07E /* vase_round_bump.png */,
 				5C56D4E21BB2F6690024467C /* background_ddn.png */,
 				5C56D4E31BB2F6690024467C /* background.png */,
 				5C56D4E41BB2F6690024467C /* chain_texture_ddn.png */,
@@ -947,7 +969,7 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0930;
+				LastUpgradeCheck = 1330;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -967,10 +989,9 @@
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "warp" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				English,
 				en,
 				Base,
 			);
@@ -1372,7 +1393,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -1405,6 +1426,9 @@
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/libwarp/lib,
+					/opt/homebrew/lib,
+					"/opt/homebrew/opt/openssl@1.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -1416,6 +1440,7 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
+					"-w",
 					"-framework",
 					SDL2,
 					"-framework",
@@ -1431,7 +1456,7 @@
 					"-framework",
 					Metal,
 				);
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Debug;
 		};
@@ -1442,7 +1467,7 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
@@ -1471,6 +1496,9 @@
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/libwarp/lib,
+					/opt/homebrew/lib,
+					"/opt/homebrew/opt/openssl@1.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -1482,6 +1510,7 @@
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
+					"-w",
 					"-framework",
 					SDL2,
 					"-framework",
@@ -1497,7 +1526,7 @@
 					"-framework",
 					Metal,
 				);
-				VALID_ARCHS = x86_64;
+				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Release;
 		};
@@ -1542,7 +1571,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1560,6 +1589,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1590,7 +1620,7 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -1648,7 +1678,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -1666,6 +1696,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1691,12 +1722,13 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
 				MTL_OPTIMIZATION_LEVEL = s;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-std=gnu++2a",
