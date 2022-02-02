@@ -33,11 +33,6 @@
 #define WARP_SHADOW_FAR_PLANE 260.0f
 #endif
 
-// set externally: WARP_IMAGE_ARRAY_SUPPORT
-// this is used for drawing the scene all at once by binding *all* materials/images
-// and encoding the material index in a separate per-vertex buffer, then using said
-// index in the fragment shader to access the appropriate image from the image array
-
 //////////////////////////////////////////
 // scene
 
@@ -47,9 +42,7 @@ struct scene_base_in_out {
 	float2 tex_coord;
 	float3 view_dir;
 	float3 light_dir;
-#if defined(WARP_IMAGE_ARRAY_SUPPORT)
 	uint32_t material_idx;
-#endif
 };
 
 struct scene_scatter_in_out : scene_base_in_out {
@@ -95,14 +88,16 @@ struct scene_gather_fragment_out {
 };
 
 // props to:
-// * http://outerra.blogspot.sk/2012/11/maximizing-depth-buffer-range-and.html
-// * http://outerra.blogspot.sk/2009/08/logarithmic-z-buffer.html
+// * https://outerra.blogspot.com/2013/07/logarithmic-depth-buffer-optimizations.html
+// * https://outerra.blogspot.sk/2012/11/maximizing-depth-buffer-range-and.html
+// * https://outerra.blogspot.sk/2009/08/logarithmic-z-buffer.html
 static float4 log_depth(float4 transformed_position) {
-	// actual computation:
-	constexpr const float C = WARP_SHADOW_NEAR_PLANE; // 1.0
-	constexpr const float far = WARP_SHADOW_FAR_PLANE; // 260.0
-	constexpr const float ce_term = 2.0f / math::log(far * C + 1.0f);
-	transformed_position.z = log(transformed_position.w * C + 1.0f) * ce_term - 1.0f;
+	// using the [0, 1] Z variant here
+	// -> 2013 w/ optimized log and no near
+	//static constexpr const float C = WARP_SHADOW_NEAR_PLANE; // 1.0
+	static constexpr const float far_plane = WARP_SHADOW_FAR_PLANE; // 260.0
+	static constexpr const float f_coef = 1.0f / math::log2(far_plane + 1.0f);
+	transformed_position.z = math::log2(math::max(1.0e-6f, transformed_position.w + 1.0f)) * f_coef;
 	transformed_position.z *= transformed_position.w;
 	return transformed_position;
 }
@@ -113,11 +108,7 @@ static void scene_vs(scene_base_in_out& out,
 					 buffer<const float3> in_normal,
 					 buffer<const float3> in_binormal,
 					 buffer<const float3> in_tangent,
-					 buffer<const uint32_t> in_materials
-#if !defined(WARP_IMAGE_ARRAY_SUPPORT)
-					 floor_unused
-#endif
-					 ,
+					 buffer<const uint32_t> in_materials,
 					 const scene_base_uniforms_t& uniforms) {
 	out.tex_coord = in_tex_coord[vertex_id];
 	
@@ -135,9 +126,7 @@ static void scene_vs(scene_base_in_out& out,
 	out.light_dir.y = vlight.dot(in_binormal[vertex_id]);
 	out.light_dir.z = vlight.dot(in_normal[vertex_id]);
 	
-#if defined(WARP_IMAGE_ARRAY_SUPPORT)
 	out.material_idx = in_materials[vertex_id];
-#endif
 }
 
 vertex auto scene_scatter_vs(buffer<const float3> in_position,
@@ -199,11 +188,11 @@ static uint32_t encode_2d_motion(const float2& motion) {
 }
 
 static float4 scene_fs(const scene_base_in_out& in,
-					   const_image_2d<float> diff_tex,
-					   const_image_2d<float> spec_tex,
-					   const_image_2d<float> norm_tex,
-					   const_image_2d<float1> mask_tex,
-					   const_image_2d_depth<float> shadow_tex) {
+					   const_image_2d<float>& diff_tex,
+					   const_image_2d<float>& spec_tex,
+					   const_image_2d<float>& norm_tex,
+					   const_image_2d<float1>& mask_tex,
+					   const_image_2d_depth<float>& shadow_tex) {
 	const auto tex_coord = in.tex_coord;
 	
 	if(mask_tex.read_lod_linear_repeat(tex_coord, 0) < 0.5f) {
@@ -214,9 +203,9 @@ static float4 scene_fs(const scene_base_in_out& in,
 	auto diff = diff_tex.read_gradient_linear_repeat(tex_coord, tex_grad);
 	
 	//
-	constexpr float fixed_bias = 0.001f;
-	constexpr float ambient = 0.2f;
-	constexpr float attenuation = 0.9f;
+	constexpr const float fixed_bias = 0.0001f;
+	constexpr const float ambient = 0.2f;
+	constexpr const float attenuation = 0.9f;
 	float lighting = 0.0f;
 	float light_vis = 1.0f;
 	
@@ -224,19 +213,16 @@ static float4 scene_fs(const scene_base_in_out& in,
 	const auto norm_view_dir = in.view_dir.normalized();
 	const auto norm_light_dir = in.light_dir.normalized();
 	const auto norm_half_dir = (norm_view_dir + norm_light_dir).normalized();
-	const auto normal = norm_tex.read_gradient_linear_repeat(tex_coord, tex_grad).xyz * 2.0f - 1.0f;
+	const auto normal = (norm_tex.read_gradient_linear_repeat(tex_coord, tex_grad).xyz * 2.0f - 1.0f).normalized();
 	
 	const auto lambert = normal.dot(norm_light_dir);
-	if(lambert > 0.0f) {
+	{
 		// shadow hackery
-		const auto bias_lambert = min(lambert, 0.99995f); // clamp to "(0, 1)", already > 0 here
+		const auto bias_lambert = math::clamp(lambert, 0.000005f, 0.999995f); // clamp to "(0, 1)"
 		const auto slope = sqrt(1.0f - bias_lambert * bias_lambert) / bias_lambert; // = tan(acos(lambert))
 		const auto shadow_bias = math::clamp(fixed_bias * slope, 0.0f, fixed_bias * 2.0f);
 		
 		float3 shadow_coord = in.shadow_coord.xyz / in.shadow_coord.w;
-#if defined(WARP_LEGACY_METAL)
-		shadow_coord.y = 1.0f - shadow_coord.y;
-#endif
 #if 0
 		if(in.shadow_coord.w > 0.0f) {
 			light_vis = shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy, shadow_coord.z - shadow_bias);
@@ -262,82 +248,44 @@ static float4 scene_fs(const scene_base_in_out& in,
 			{ 0.14383161f, -0.14100790f }
 		};
 		
+		const float coord_factor = 3.0f /* wider / more blur */ / float(shadow_tex.dim().x);
 #pragma unroll
-		for(const auto& poisson_coord : poisson_disk) {
-			light_vis -= 0.05f * (1.0f - shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy + poisson_coord / 2048.0f,
-																									shadow_coord.z - shadow_bias));
+		for (const auto& poisson_coord : poisson_disk) {
+			light_vis -= 0.0625f * (1.0f - shadow_tex.compare_linear<COMPARE_FUNCTION::LESS_OR_EQUAL>(shadow_coord.xy + poisson_coord * coord_factor,
+																									  shadow_coord.z - shadow_bias));
 		}
 #endif
 		
 		// diffuse
-		lighting += lambert;
+		lighting += max(lambert, 0.0f);
 		
 		// specular
 		const auto spec = spec_tex.read_gradient_linear_repeat(tex_coord, tex_grad).x;
 		const auto specular = pow(max(norm_half_dir.dot(normal), 0.0f), spec * 10.0f);
-		lighting += specular;
+		lighting += max(specular, 0.0f);
 		
 		// mul with shadow and light attenuation
 		lighting *= light_vis * attenuation;
 	}
 	lighting = max(lighting, ambient);
 	
-	return { diff.xyz * lighting, 1.0f };
+	auto color = diff.xyz * lighting;
+#if defined(WARP_APPLY_GAMMA)
+	// apply fixed inv gamma for non-wide-gamut/non-HDR displays
+	// NOTE: not really accurate, but good enough
+	color.pow(1.0f / 2.2f);
+#endif
+	return { color, 1.0f };
 }
-
-#if !defined(WARP_IMAGE_ARRAY_SUPPORT)
-
-fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
-							   const_image_2d<float> diff_tex,
-							   const_image_2d<float> spec_tex,
-							   const_image_2d<float> norm_tex,
-							   const_image_2d<float1> mask_tex,
-							   const_image_2d_depth<float> shadow_tex) {
-	return scene_scatter_fragment_out {
-		scene_fs(in, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
-		encode_3d_motion(in.motion)
-	};
-}
-
-fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
-							  const_image_2d<float> diff_tex,
-							  const_image_2d<float> spec_tex,
-							  const_image_2d<float> norm_tex,
-							  const_image_2d<float1> mask_tex,
-							  const_image_2d_depth<float> shadow_tex) {
-	return scene_gather_fragment_out {
-		scene_fs(in, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
-		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
-		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
-		{
-			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
-			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
-		}
-	};
-}
-
-fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
-								  const_image_2d<float> diff_tex,
-								  const_image_2d<float> spec_tex,
-								  const_image_2d<float> norm_tex,
-								  const_image_2d<float1> mask_tex,
-								  const_image_2d_depth<float> shadow_tex) {
-	return scene_scatter_fragment_out /* reuse */ {
-		scene_fs(in, diff_tex, spec_tex, norm_tex, mask_tex, shadow_tex),
-		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
-	};
-}
-
-#else
 
 // Sponza scene consists of 25 different materials
-#define MAT_COUNT 25
+static constexpr constant const uint32_t material_count { 25u };
 
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
-							   array<const_image_2d<float>, MAT_COUNT> diff_tex,
-							   array<const_image_2d<float>, MAT_COUNT> spec_tex,
-							   array<const_image_2d<float>, MAT_COUNT> norm_tex,
-							   array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+							   array<const_image_2d<float>, material_count> diff_tex,
+							   array<const_image_2d<float>, material_count> spec_tex,
+							   array<const_image_2d<float>, material_count> norm_tex,
+							   array<const_image_2d<float1>, material_count> mask_tex,
 							   const_image_2d_depth<float> shadow_tex) {
 	return scene_scatter_fragment_out {
 		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
@@ -346,10 +294,10 @@ fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 }
 
 fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
-							  array<const_image_2d<float>, MAT_COUNT> diff_tex,
-							  array<const_image_2d<float>, MAT_COUNT> spec_tex,
-							  array<const_image_2d<float>, MAT_COUNT> norm_tex,
-							  array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+							  array<const_image_2d<float>, material_count> diff_tex,
+							  array<const_image_2d<float>, material_count> spec_tex,
+							  array<const_image_2d<float>, material_count> norm_tex,
+							  array<const_image_2d<float1>, material_count> mask_tex,
 							  const_image_2d_depth<float> shadow_tex) {
 	return scene_gather_fragment_out {
 		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
@@ -363,18 +311,16 @@ fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 }
 
 fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
-								  array<const_image_2d<float>, MAT_COUNT> diff_tex,
-								  array<const_image_2d<float>, MAT_COUNT> spec_tex,
-								  array<const_image_2d<float>, MAT_COUNT> norm_tex,
-								  array<const_image_2d<float1>, MAT_COUNT> mask_tex,
+								  array<const_image_2d<float>, material_count> diff_tex,
+								  array<const_image_2d<float>, material_count> spec_tex,
+								  array<const_image_2d<float>, material_count> norm_tex,
+								  array<const_image_2d<float1>, material_count> mask_tex,
 								  const_image_2d_depth<float> shadow_tex) {
 	return scene_scatter_fragment_out /* reuse */ {
 		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }
-
-#endif
 
 //////////////////////////////////////////
 // shadow map
@@ -429,15 +375,9 @@ struct skybox_gather_uniforms_t : skybox_base_uniforms_t {
 
 static void skybox_vs(skybox_base_in_out& out, const skybox_base_uniforms_t& uniforms) {
 	switch (vertex_id) {
-#if !defined(WARP_LEGACY_METAL)
 		case 0: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 2: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
-#else
-		case 0: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
-		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
-		case 2: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
-#endif
 		default: floor_unreachable();
 	}
 	out.cube_tex_coord = (out.position * uniforms.imvpm).xyz;
@@ -509,17 +449,10 @@ struct blit_in_out {
 
 vertex blit_in_out blit_vs() {
 	switch(vertex_id) {
-#if !defined(WARP_LEGACY_METAL)
 		case 0: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
 		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
 		case 2: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
 		default: floor_unreachable();
-#else
-		case 0: return {{ -3.0f, 1.0f, 0.0f, 1.0f }};
-		case 1: return {{ 1.0f, -3.0f, 0.0f, 1.0f }};
-		case 2: return {{ 1.0f, 1.0f, 0.0f, 1.0f }};
-		default: floor_unreachable();
-#endif
 	}
 }
 

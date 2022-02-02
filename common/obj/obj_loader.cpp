@@ -769,6 +769,15 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
 						   COMPUTE_IMAGE_TYPE::READ |
 						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
+#if !defined(FLOOR_IOS) && defined(__APPLE__) // TODO: PVRTC+sRGB for iOS, 3ch sRGB for Vulkan
+			// load diffuse and specular maps as sRGB
+			if (floor::get_wide_gamut() || true) {
+				if (filenames[i].find("_diff.") != string::npos ||
+					filenames[i].find("_spec.") != string::npos) {
+					image_type |= COMPUTE_IMAGE_TYPE::FLAG_SRGB;
+				}
+			}
+#endif
 			
 			//log_debug("tex $: $, $", filenames[i], dim, compute_image::image_type_to_string(image_type));
 			

@@ -5,3 +5,7 @@ changes:
  * fixed material file: use existing textures everywhere / fixed map_* entries
  * removed unused stuff
  * added sponza_curtain_spec
+
+
+bump/height maps curtesy of:
+Models downloaded from Morgan McGuire's Computer Graphics Archive https://casual-effects.com/data

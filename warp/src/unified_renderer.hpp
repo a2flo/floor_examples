@@ -125,7 +125,13 @@ protected:
 	} scene_fbo;
 	struct {
 		shared_ptr<compute_image> shadow_image;
-		uint2 dim { 2048 };
+		uint2 dim {
+#if !defined(FLOOR_IOS)
+			16384u
+#else
+			4096u
+#endif
+		};
 	} shadow_map;
 	shared_ptr<compute_image> skybox_tex;
 	static constexpr const double4 clear_color { 0.215, 0.412, 0.6, 0.0 };

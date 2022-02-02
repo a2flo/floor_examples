@@ -483,10 +483,10 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 	
 	// light handling (TODO: proper light)
 	{
-		static const float3 light_min { -105.0f, 250.0f, 0.0f }, light_max { 105.0f, 250.0f, 0.0f };
+		static const float3 light_min { -80.0f, 250.0f, 0.0f }, light_max { 80.0f, 250.0f, 0.0f };
 		//static const float3 light_min { -115.0f, 300.0f, 0.0f }, light_max { 115.0f, 0.0f, 0.0f };
 		static float light_interp { 0.5f }, light_interp_dir { 1.0f };
-		static constexpr const float light_slow_down { 0.0f };
+		static constexpr const float light_slow_down { 0.01f };
 		
 		light_interp += (deltaf * light_slow_down) * light_interp_dir;
 		if(light_interp > 1.0f) {
@@ -650,7 +650,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	
 	// update shadow map uniforms
 	{
-		const matrix4f light_pm = matrix4f::perspective(120.0f, 1.0f,
+		const matrix4f light_pm = matrix4f::perspective(110.0f, 1.0f,
 														warp_state.shadow_near_far_plane.x,
 														warp_state.shadow_near_far_plane.y);
 		const matrix4f light_mvm {
@@ -829,6 +829,7 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 													   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
 													   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) + "f" +
 													   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
+													   (floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
 													   add_cli_options);
 	
 	if (new_shader_prog == nullptr) {

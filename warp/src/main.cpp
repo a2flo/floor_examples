@@ -21,8 +21,6 @@
 #include <floor/core/gl_shader.hpp>
 #include <libwarp/libwarp.h>
 #include "gl_renderer.hpp"
-#include "metal_renderer.hpp"
-#include "vulkan_renderer_legacy.hpp"
 #include "unified_renderer.hpp"
 #include "obj_loader.hpp"
 #include "auto_cam.hpp"
@@ -53,7 +51,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
 		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
 		cout << "\t--depth-zw: write depth as z/w into a separate color fbo attachment (use this if OpenGL/OpenCL depth buffer sharing is not supported or broken)" << endl;
-		cout << "\t--unified: use the unified renderer (requires Metal or Vulkan)" << endl;
+		cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
@@ -107,9 +105,9 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.no_vulkan = true;
 		cout << "vulkan disabled" << endl;
 	}},
-	{ "--unified", [](warp_option_context&, char**&) {
-		warp_state.unified_renderer = true;
-		cout << "unified renderer enabled" << endl;
+	{ "--no-unified", [](warp_option_context&, char**&) {
+		warp_state.unified_renderer = false;
+		cout << "unified renderer disabled" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -293,10 +291,10 @@ int main(int, char* argv[]) {
 		.app_name = "warp",
 		.renderer = (// if neither opengl or vulkan is disabled, use the default
 					 // (this will choose vulkan if the config compute backend is vulkan)
-					 (!warp_state.no_opengl && !warp_state.no_vulkan) ? floor::RENDERER::DEFAULT :
+					 (!warp_state.no_opengl && !warp_state.no_vulkan && warp_state.unified_renderer) ? floor::RENDERER::DEFAULT :
 					 // else: choose a specific one
-					 !warp_state.no_vulkan ? floor::RENDERER::VULKAN :
-					 !warp_state.no_metal ? floor::RENDERER::METAL :
+					 !warp_state.no_vulkan && warp_state.unified_renderer ? floor::RENDERER::VULKAN :
+					 !warp_state.no_metal && warp_state.unified_renderer ? floor::RENDERER::METAL :
 					 !warp_state.no_opengl ? floor::RENDERER::OPENGL :
 					 // opengl/vulkan/metal are disabled
 					 floor::RENDERER::NONE),
@@ -308,7 +306,6 @@ int main(int, char* argv[]) {
 	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL);
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN);
 	const auto floor_renderer = floor::get_renderer();
-	shared_ptr<common_renderer> renderer;
 	
 	if(floor_renderer == floor::RENDERER::NONE) {
 		log_error("no renderer was initialized");
@@ -340,11 +337,8 @@ int main(int, char* argv[]) {
 		warp_state.unified_renderer = false;
 	}
 	
-	log_debug("using $",
-			  (warp_state.unified_renderer ? "unified renderer" :
-			   !warp_state.no_opengl ? "opengl renderer" :
-			   !warp_state.no_metal ? "metal renderer" :
-			   !warp_state.no_vulkan ? "vulkan renderer" : "no renderer at all"));
+	log_debug("using $", (warp_state.unified_renderer ? "unified renderer" :
+						  !warp_state.no_opengl ? "opengl renderer" : "no renderer at all"));
 	
 	// floor context handling
 	struct floor_ctx_guard {
@@ -425,28 +419,6 @@ int main(int, char* argv[]) {
 					return -1;
 				}
 			}
-#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
-			else if(!warp_state.no_metal) {
-				warp_state.is_zw_depth = false; // not applicable to metal
-		
-				renderer = make_shared<metal_renderer>();
-				if(!renderer->init()) {
-					log_error("error during metal initialization!");
-					return -1;
-				}
-			}
-#endif
-#if !defined(FLOOR_NO_VULKAN)
-			else if(!warp_state.no_vulkan) {
-				warp_state.is_zw_depth = false; // not applicable to vulkan
-		
-				renderer = make_shared<vulkan_renderer_legacy>();
-				if(!renderer->init()) {
-					log_error("error during vulkan initialization!");
-					return -1;
-				}
-			}
-#endif
 		}
 		
 		//
@@ -495,8 +467,6 @@ int main(int, char* argv[]) {
 				uni_renderer->render((const floor_obj_model&)*model.get(), *cam.get());
 			} else if (!warp_state.no_opengl) {
 				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
-			} else {
-				renderer->render((const floor_obj_model&)*model.get(), *cam.get());
 			}
 			floor::end_frame();
 		}
@@ -506,7 +476,6 @@ int main(int, char* argv[]) {
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	gl_renderer::destroy();
-	renderer = nullptr;
 	uni_renderer = nullptr;
 	cam = nullptr;
 	
