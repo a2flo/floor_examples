@@ -1339,6 +1339,7 @@ struct obj_grammar {
 			
 			// add dummy textures for later
 			texture_filenames.emplace("black.png", pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace("gray.png", pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace("white.png", pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace("up_normal.png", pair<uint32_t, compute_image*> { 0, nullptr });
 			
@@ -1377,7 +1378,7 @@ struct obj_grammar {
 				mdl_mat_info.specular_file_name = (mat.second->specular != "" ? mat.second->specular : "black.png");
 				mdl_mat_info.normal_file_name = (mat.second->normal != "" ? mat.second->normal : "up_normal.png");
 				mdl_mat_info.mask_file_name = (mat.second->mask != "" ? mat.second->mask : "white.png");
-				mdl_mat_info.displacement_file_name = (mat.second->displacement != "" ? mat.second->displacement : "black.png");
+				mdl_mat_info.displacement_file_name = (mat.second->displacement != "" ? mat.second->displacement : "gray.png");
 				
 				if(is_opengl) {
 					auto& mdl_mat = gl_model->materials[mat_map[mat.first]];

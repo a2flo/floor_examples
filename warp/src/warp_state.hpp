@@ -52,6 +52,9 @@ struct warp_state_struct {
 	bool is_bidir_scatter { false };
 	bool is_zw_depth { false };
 	
+	// 0 = off, 1 = parallax mapping
+	uint32_t displacement_mode { 1u };
+	
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)
 	uint32_t cur_fbo = 0;

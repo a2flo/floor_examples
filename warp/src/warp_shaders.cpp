@@ -188,15 +188,33 @@ static uint32_t encode_2d_motion(const float2& motion) {
 }
 
 static float4 scene_fs(const scene_base_in_out& in,
+					   const uint32_t disp_mode,
 					   const_image_2d<float>& diff_tex,
 					   const_image_2d<float>& spec_tex,
 					   const_image_2d<float>& norm_tex,
 					   const_image_2d<float1>& mask_tex,
+					   const_image_2d<float1>& disp_tex,
 					   const_image_2d_depth<float>& shadow_tex) {
-	const auto tex_coord = in.tex_coord;
-	
-	if(mask_tex.read_lod_linear_repeat(tex_coord, 0) < 0.5f) {
+	const auto in_tex_coord = in.tex_coord;
+	const auto norm_view_dir = in.view_dir.normalized();
+
+	// mask out
+	if (mask_tex.read_lod_linear_repeat(in_tex_coord, 0) < 0.5f) {
 		discard_fragment();
+	}
+	
+	// compute parallax tex coord
+	static constexpr constant const float parallax { 0.03f };
+	float2 tex_coord = in_tex_coord;
+	if (disp_mode == 1) {
+		float height = 0.0f, offset = 0.0f;
+#pragma unroll
+		for (uint32_t i = 1u; i < 8u; ++i) {
+			auto grad = dfdx_dfdy_gradient(tex_coord);
+			height += disp_tex.read_gradient_linear_repeat(tex_coord, grad);
+			offset = parallax * ((2.0f / float(i)) * height - 1.0f);
+			tex_coord = in_tex_coord + offset * norm_view_dir.xy;
+		}
 	}
 	
 	const auto tex_grad = dfdx_dfdy_gradient(tex_coord);
@@ -210,7 +228,6 @@ static float4 scene_fs(const scene_base_in_out& in,
 	float light_vis = 1.0f;
 	
 	//
-	const auto norm_view_dir = in.view_dir.normalized();
 	const auto norm_light_dir = in.light_dir.normalized();
 	const auto norm_half_dir = (norm_view_dir + norm_light_dir).normalized();
 	const auto normal = (norm_tex.read_gradient_linear_repeat(tex_coord, tex_grad).xyz * 2.0f - 1.0f).normalized();
@@ -282,25 +299,31 @@ static float4 scene_fs(const scene_base_in_out& in,
 static constexpr constant const uint32_t material_count { 25u };
 
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
+							   param<uint32_t> disp_mode,
 							   array<const_image_2d<float>, material_count> diff_tex,
 							   array<const_image_2d<float>, material_count> spec_tex,
 							   array<const_image_2d<float>, material_count> norm_tex,
 							   array<const_image_2d<float1>, material_count> mask_tex,
+							   array<const_image_2d<float1>, material_count> disp_tex,
 							   const_image_2d_depth<float> shadow_tex) {
 	return scene_scatter_fragment_out {
-		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
+				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
 		encode_3d_motion(in.motion)
 	};
 }
 
 fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
+							  param<uint32_t> disp_mode,
 							  array<const_image_2d<float>, material_count> diff_tex,
 							  array<const_image_2d<float>, material_count> spec_tex,
 							  array<const_image_2d<float>, material_count> norm_tex,
 							  array<const_image_2d<float1>, material_count> mask_tex,
+							  array<const_image_2d<float1>, material_count> disp_tex,
 							  const_image_2d_depth<float> shadow_tex) {
 	return scene_gather_fragment_out {
-		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
+				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
 		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
 		{
@@ -311,13 +334,16 @@ fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 }
 
 fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
+								  param<uint32_t> disp_mode,
 								  array<const_image_2d<float>, material_count> diff_tex,
 								  array<const_image_2d<float>, material_count> spec_tex,
 								  array<const_image_2d<float>, material_count> norm_tex,
 								  array<const_image_2d<float1>, material_count> mask_tex,
+								  array<const_image_2d<float1>, material_count> disp_tex,
 								  const_image_2d_depth<float> shadow_tex) {
 	return scene_scatter_fragment_out /* reuse */ {
-		scene_fs(in, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx], mask_tex[in.material_idx], shadow_tex),
+		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
+				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }

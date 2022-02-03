@@ -250,6 +250,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.is_split_view ^= true;
 				log_debug("split view? $", warp_state.is_split_view);
 				break;
+			case SDLK_0:
+				warp_state.displacement_mode = (warp_state.displacement_mode + 1u) % 2u;
+				break;
 			default: break;
 		}
 		return true;

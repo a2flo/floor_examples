@@ -767,10 +767,12 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 									 model.materials_buffer,
 									 scene_uniforms,
 									 // fragment shader
+									 warp_state.displacement_mode,
 									 model.diffuse_textures,
 									 model.specular_textures,
 									 model.normal_textures,
 									 model.mask_textures,
+									 model.displacement_textures,
 									 shadow_map.shadow_image);
 		renderer->end();
 		renderer->commit();
