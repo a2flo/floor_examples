@@ -29,7 +29,7 @@ struct obj_model {
 	vector<float3> normals { float3 { 0.0f, 1.0f, 0.0f } };
 	vector<float3> binormals { float3 { 1.0f, 0.0f, 0.0f } };
 	vector<float3> tangents { float3 { 0.0f, 0.0f, -1.0f } };
-	vector<uint32_t> material_indices { 0 };
+	vector<uint32_t> materials_data { 0 }; // { index : 16, should-displace : 16 }
 	
 	struct material_info {
 		string name;
@@ -38,6 +38,7 @@ struct obj_model {
 		string normal_file_name;
 		string mask_file_name;
 		string displacement_file_name;
+		bool has_proper_displacement { false };
 	};
 	vector<material_info> material_infos;
 	
@@ -76,7 +77,7 @@ struct floor_obj_model : obj_model {
 	shared_ptr<compute_buffer> normals_buffer;
 	shared_ptr<compute_buffer> binormals_buffer;
 	shared_ptr<compute_buffer> tangents_buffer;
-	shared_ptr<compute_buffer> materials_buffer;
+	shared_ptr<compute_buffer> materials_data_buffer;
 	
 	// contains *all* indices
 	shared_ptr<compute_buffer> indices_buffer;

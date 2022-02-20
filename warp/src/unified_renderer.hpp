@@ -58,10 +58,13 @@ public:
 	// shaders
 	enum WARP_SHADER : uint32_t {
 		SCENE_SCATTER_VS = 0,
+		SCENE_SCATTER_TES,
 		SCENE_SCATTER_FS,
 		SCENE_GATHER_VS,
+		SCENE_GATHER_TES,
 		SCENE_GATHER_FS,
 		SCENE_GATHER_FWD_VS,
+		SCENE_GATHER_FWD_TES,
 		SCENE_GATHER_FWD_FS,
 		SKYBOX_SCATTER_VS,
 		SKYBOX_SCATTER_FS,
@@ -74,6 +77,7 @@ public:
 		BLIT_FS,
 		BLIT_SWIZZLE_VS,
 		BLIT_SWIZZLE_FS,
+		TESS_UPDATE_FACTORS,
 		__MAX_WARP_SHADER
 	};
 	static constexpr size_t warp_shader_count() {
@@ -111,6 +115,8 @@ protected:
 	unique_ptr<graphics_pipeline> shadow_pipeline;
 	unique_ptr<graphics_pipeline> blit_pipeline;
 	void create_pipelines();
+	
+	shared_ptr<compute_buffer> tess_factors_buffer;
 	
 	//
 	struct {

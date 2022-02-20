@@ -812,6 +812,8 @@ static int run_normal_build(option_context& option_ctx) {
 					info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
 					info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
 					info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
+					info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL ? "tessellation-control" :
+					info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION ? "tessellation-evaluation" :
 					info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
 					info.name, info_str);
 		}

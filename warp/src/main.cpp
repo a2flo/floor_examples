@@ -250,9 +250,11 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.is_split_view ^= true;
 				log_debug("split view? $", warp_state.is_split_view);
 				break;
-			case SDLK_0:
-				warp_state.displacement_mode = (warp_state.displacement_mode + 1u) % 2u;
+			case SDLK_0: {
+				static const uint32_t max_disp_mode = (warp_state.dev->tessellation_support ? 3u : 2u);
+				warp_state.displacement_mode = (warp_state.displacement_mode + 1u) % max_disp_mode;
 				break;
+			}
 			default: break;
 		}
 		return true;
@@ -415,6 +417,9 @@ int main(int, char* argv[]) {
 				log_error("error during unified renderer initialization!");
 				return -1;
 			}
+			
+			// init displacement mode depending on tessellation support
+			warp_state.displacement_mode = (warp_state.dev->tessellation_support ? 2u : 1u);
 		} else {
 			if(!warp_state.no_opengl) {
 				if(!gl_renderer::init()) {

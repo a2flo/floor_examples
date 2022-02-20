@@ -1121,7 +1121,7 @@ struct obj_grammar {
 		model->normals.reserve(vertices.size());
 		model->binormals.reserve(vertices.size());
 		model->tangents.reserve(vertices.size());
-		model->material_indices.reserve(vertices.size());
+		model->materials_data.reserve(vertices.size());
 		model->objects.reserve(sub_objects.size());
 #if defined(FLOOR_DEBUG)
 		log_debug("alloc #0");
@@ -1181,7 +1181,7 @@ struct obj_grammar {
 			model->normals.push_back(float3 {});
 			model->binormals.push_back(float3 {});
 			model->tangents.push_back(float3 {});
-			model->material_indices.push_back(0);
+			model->materials_data.push_back(0u);
 			entry.add(tc_idx, n_idx, dst);
 			return dst;
 		};
@@ -1379,6 +1379,7 @@ struct obj_grammar {
 				mdl_mat_info.normal_file_name = (mat.second->normal != "" ? mat.second->normal : "up_normal.png");
 				mdl_mat_info.mask_file_name = (mat.second->mask != "" ? mat.second->mask : "white.png");
 				mdl_mat_info.displacement_file_name = (mat.second->displacement != "" ? mat.second->displacement : "gray.png");
+				mdl_mat_info.has_proper_displacement = (mat.second->displacement != "" ? 1u : 0u);
 				
 				if(is_opengl) {
 					auto& mdl_mat = gl_model->materials[mat_map[mat.first]];
@@ -1593,6 +1594,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			mat_info.normal_file_name = bin_file.get_terminated_block(0);
 			mat_info.mask_file_name = bin_file.get_terminated_block(0);
 			mat_info.displacement_file_name = bin_file.get_terminated_block(0);
+			mat_info.has_proper_displacement = (mat_info.displacement_file_name.find("gray.png") == string::npos ? 1u : 0u);
 			model->material_infos.emplace_back(mat_info);
 		}
 		
@@ -1729,13 +1731,13 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		}
 		else {
 			// set material indices (only needed for floor_obj_model)
-			model->material_indices.clear();
-			model->material_indices.resize(floor_model->vertices.size());
+			model->materials_data.clear();
+			model->materials_data.resize(floor_model->vertices.size());
 			for(const auto& obj : floor_model->objects) {
 				for(const auto& index : obj->indices) {
-					floor_model->material_indices[index.x] = obj->mat_idx;
-					floor_model->material_indices[index.y] = obj->mat_idx;
-					floor_model->material_indices[index.z] = obj->mat_idx;
+					floor_model->materials_data[index.x] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
+					floor_model->materials_data[index.y] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
+					floor_model->materials_data[index.z] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
 				}
 			}
 			
@@ -1747,7 +1749,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
 			floor_model->binormals_buffer = ctx.create_buffer(cqueue, floor_model->binormals, buffer_type);
 			floor_model->tangents_buffer = ctx.create_buffer(cqueue, floor_model->tangents, buffer_type);
-			floor_model->materials_buffer = ctx.create_buffer(cqueue, floor_model->material_indices, buffer_type);
+			floor_model->materials_data_buffer = ctx.create_buffer(cqueue, floor_model->materials_data, buffer_type);
 			
 			vector<uint3> all_indices;
 			for(auto& obj : floor_model->objects) {
@@ -1766,7 +1768,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		model->normals.clear();
 		model->binormals.clear();
 		model->tangents.clear();
-		model->material_indices.clear();
+		model->materials_data.clear();
 		model->material_infos.clear();
 		for(auto& obj : model->objects) {
 			obj->indices.clear();

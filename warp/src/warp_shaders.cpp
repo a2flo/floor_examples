@@ -25,13 +25,12 @@
 // metal and vulkan only
 #if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_GRAPHICS_HOST)
 
-#if !defined(WARP_SHADOW_NEAR_PLANE)
-#define WARP_SHADOW_NEAR_PLANE 1.0f
-#endif
-
 #if !defined(WARP_SHADOW_FAR_PLANE)
 #define WARP_SHADOW_FAR_PLANE 260.0f
 #endif
+
+// Sponza scene consists of 25 different materials
+static constexpr constant const uint32_t material_count { 25u };
 
 //////////////////////////////////////////
 // scene
@@ -42,7 +41,7 @@ struct scene_base_in_out {
 	float2 tex_coord;
 	float3 view_dir;
 	float3 light_dir;
-	uint32_t material_idx;
+	uint32_t material_data;
 };
 
 struct scene_scatter_in_out : scene_base_in_out {
@@ -102,31 +101,79 @@ static float4 log_depth(float4 transformed_position) {
 	return transformed_position;
 }
 
-static void scene_vs(scene_base_in_out& out,
-					 buffer<const float3> in_position,
-					 buffer<const float2> in_tex_coord,
-					 buffer<const float3> in_normal,
-					 buffer<const float3> in_binormal,
-					 buffer<const float3> in_tangent,
-					 buffer<const uint32_t> in_materials,
-					 const scene_base_uniforms_t& uniforms) {
-	out.tex_coord = in_tex_coord[vertex_id];
+kernel void tess_update_factors(buffer<const float3> vertices,
+								buffer<const uint3> indices,
+								buffer<const uint32_t> materials_data,
+								buffer<triangle_tessellation_levels_t> factors,
+								param<uint32_t> triangle_count,
+								param<float3> cam_position,
+								param<float> max_tess_factor) {
+	if (global_id.x >= triangle_count) {
+		return;
+	}
 	
-	float4 pos { in_position[vertex_id], 1.0f };
+	const auto idx = indices[global_id.x];
+	half factor = 1.0f;
+	if ((materials_data[idx.x] & 0xFFFF'0000u) != 0u) {
+		const float3 distances_sq {
+			(vertices[idx.x] - cam_position).dot(),
+			(vertices[idx.y] - cam_position).dot(),
+			(vertices[idx.z] - cam_position).dot(),
+		};
+		const auto tri_area = (vertices[idx.z] - vertices[idx.x]).crossed(vertices[idx.z] - vertices[idx.y]).dot();
+		const auto factor_scaler = max(tri_area, 1.5f); // ensure large triangles get larger factors
+		const auto min_distance = sqrt(distances_sq.min_element());
+		factor = (half)math::clamp(max_tess_factor * factor_scaler * exp(-0.06f * min_distance), 1.0f, max_tess_factor);
+	}
+	
+	factors[global_id.x] = triangle_tessellation_levels_t {
+		.outer = {
+			factor,
+			factor,
+			factor,
+		},
+		.inner = factor,
+	};
+}
+
+struct __attribute__((packed)) control_point_t {
+	float3 position;
+	float2 tex_coord;
+	float3 normal;
+	float3 binormal;
+	float3 tangent;
+	uint32_t material_data;
+};
+
+struct patch_in_t {
+	patch_control_point<control_point_t> control_points;
+};
+
+static void scene_vs(scene_base_in_out& out,
+					 const float3& in_position,
+					 const float2& in_tex_coord,
+					 const float3& in_normal,
+					 const float3& in_binormal,
+					 const float3& in_tangent,
+					 const uint32_t& in_material_data,
+					 const scene_base_uniforms_t& uniforms) {
+	out.tex_coord = in_tex_coord;
+	
+	float4 pos { in_position, 1.0f };
 	out.shadow_coord = log_depth(pos * uniforms.light_bias_mvpm);
 	out.position = pos * uniforms.mvpm;
 	
-	const auto vview = uniforms.cam_pos - in_position[vertex_id];
-	out.view_dir.x = vview.dot(in_tangent[vertex_id]);
-	out.view_dir.y = vview.dot(in_binormal[vertex_id]);
-	out.view_dir.z = vview.dot(in_normal[vertex_id]);
+	const auto vview = uniforms.cam_pos - in_position;
+	out.view_dir.x = vview.dot(in_tangent);
+	out.view_dir.y = vview.dot(in_binormal);
+	out.view_dir.z = vview.dot(in_normal);
 	
-	const auto vlight = uniforms.light_pos - in_position[vertex_id];
-	out.light_dir.x = vlight.dot(in_tangent[vertex_id]);
-	out.light_dir.y = vlight.dot(in_binormal[vertex_id]);
-	out.light_dir.z = vlight.dot(in_normal[vertex_id]);
+	const auto vlight = uniforms.light_pos - in_position;
+	out.light_dir.x = vlight.dot(in_tangent);
+	out.light_dir.y = vlight.dot(in_binormal);
+	out.light_dir.z = vlight.dot(in_normal);
 	
-	out.material_idx = in_materials[vertex_id];
+	out.material_data = in_material_data;
 }
 
 vertex auto scene_scatter_vs(buffer<const float3> in_position,
@@ -134,10 +181,11 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 							 buffer<const float3> in_normal,
 							 buffer<const float3> in_binormal,
 							 buffer<const float3> in_tangent,
-							 buffer<const uint32_t> in_materials,
+							 buffer<const uint32_t> in_materials_data,
 							 param<scene_scatter_uniforms_t> uniforms) {
 	scene_scatter_in_out out;
-	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, in_materials, uniforms);
+	scene_vs(out, in_position[vertex_id], in_tex_coord[vertex_id], in_normal[vertex_id], in_binormal[vertex_id],
+			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	float4 prev_pos = pos * uniforms.prev_mvm;
@@ -147,16 +195,61 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 	return out;
 }
 
+#if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
+[[patch(triangle, 3)]]
+tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
+											   array<const_image_2d<float1>, material_count> disp_tex,
+											   param<uint32_t> disp_mode,
+											   param<scene_scatter_uniforms_t> uniforms) {
+	// interpolate vertex position from barycentric coordinate and control points
+	auto vertex_pos = (in.control_points[0].position * position_in_patch.x +
+					   in.control_points[1].position * position_in_patch.y +
+					   in.control_points[2].position * position_in_patch.z);
+	auto tex_coord = (in.control_points[0].tex_coord * position_in_patch.x +
+					  in.control_points[1].tex_coord * position_in_patch.y +
+					  in.control_points[2].tex_coord * position_in_patch.z);
+	auto normal = (in.control_points[0].normal * position_in_patch.x +
+				   in.control_points[1].normal * position_in_patch.y +
+				   in.control_points[2].normal * position_in_patch.z);
+	auto binormal = (in.control_points[0].binormal * position_in_patch.x +
+					 in.control_points[1].binormal * position_in_patch.y +
+					 in.control_points[2].binormal * position_in_patch.z);
+	auto tangent = (in.control_points[0].tangent * position_in_patch.x +
+					in.control_points[1].tangent * position_in_patch.y +
+					in.control_points[2].tangent * position_in_patch.z);
+	auto material_data = in.control_points[0].material_data;
+	auto material = material_data & 0xFFFFu; // material is the same for all
+	const bool should_displace = ((material_data & 0xFFFF'0000u) != 0u);
+	
+	if (should_displace && disp_mode == 2) {
+		static constexpr constant const float max_displacement { 0.25f };
+		auto displacement = disp_tex[material].read_linear_repeat(tex_coord) * 2.0f - 1.0f; // [-1, 1]
+		vertex_pos += max_displacement * displacement * normal.normalized();
+	}
+	
+	scene_scatter_in_out out;
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data, uniforms);
+	
+	float4 pos { vertex_pos, 1.0f };
+	float4 prev_pos = pos * uniforms.prev_mvm;
+	float4 cur_pos = pos * uniforms.mvm;
+	out.motion = cur_pos.xyz - prev_pos.xyz;
+	
+	return out;
+}
+#endif
+
 // also used for forward-only
 vertex auto scene_gather_vs(buffer<const float3> in_position,
 							buffer<const float2> in_tex_coord,
 							buffer<const float3> in_normal,
 							buffer<const float3> in_binormal,
 							buffer<const float3> in_tangent,
-							buffer<const uint32_t> in_materials,
+							buffer<const uint32_t> in_materials_data,
 							param<scene_gather_uniforms_t> uniforms) {
 	scene_gather_in_out out;
-	scene_vs(out, in_position, in_tex_coord, in_normal, in_binormal, in_tangent, in_materials, uniforms);
+	scene_vs(out, in_position[vertex_id], in_tex_coord[vertex_id], in_normal[vertex_id], in_binormal[vertex_id],
+			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	out.motion_prev = pos * uniforms.prev_mvpm;
@@ -165,6 +258,50 @@ vertex auto scene_gather_vs(buffer<const float3> in_position,
 	
 	return out;
 }
+
+#if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
+[[patch(triangle, 3)]]
+tessellation_evaluation auto scene_gather_tes(patch_in_t in [[stage_input]],
+											  array<const_image_2d<float1>, material_count> disp_tex,
+											  param<uint32_t> disp_mode,
+											  param<scene_gather_uniforms_t> uniforms) {
+	// interpolate vertex position from barycentric coordinate and control points
+	auto vertex_pos = (in.control_points[0].position * position_in_patch.x +
+					   in.control_points[1].position * position_in_patch.y +
+					   in.control_points[2].position * position_in_patch.z);
+	auto tex_coord = (in.control_points[0].tex_coord * position_in_patch.x +
+					  in.control_points[1].tex_coord * position_in_patch.y +
+					  in.control_points[2].tex_coord * position_in_patch.z);
+	auto normal = (in.control_points[0].normal * position_in_patch.x +
+				   in.control_points[1].normal * position_in_patch.y +
+				   in.control_points[2].normal * position_in_patch.z);
+	auto binormal = (in.control_points[0].binormal * position_in_patch.x +
+					 in.control_points[1].binormal * position_in_patch.y +
+					 in.control_points[2].binormal * position_in_patch.z);
+	auto tangent = (in.control_points[0].tangent * position_in_patch.x +
+					in.control_points[1].tangent * position_in_patch.y +
+					in.control_points[2].tangent * position_in_patch.z);
+	auto material_data = in.control_points[0].material_data;
+	auto material = material_data & 0xFFFFu; // material is the same for all
+	const bool should_displace = ((material_data & 0xFFFF'0000u) != 0u);
+	
+	if (should_displace && disp_mode == 2) {
+		static constexpr constant const float max_displacement { 0.25f };
+		auto displacement = disp_tex[material].read_linear_repeat(tex_coord) * 2.0f - 1.0f; // [-1, 1]
+		vertex_pos += max_displacement * displacement * normal.normalized();
+	}
+	
+	scene_gather_in_out out;
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data, uniforms);
+	
+	float4 pos { vertex_pos, 1.0f };
+	out.motion_prev = pos * uniforms.prev_mvpm;
+	out.motion_now = pos * uniforms.mvpm;
+	out.motion_next = pos * uniforms.next_mvpm;
+	
+	return out;
+}
+#endif
 
 static uint32_t encode_3d_motion(const float3& motion) {
 	constexpr const float range = 64.0f; // [-range, range]
@@ -204,7 +341,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 	}
 	
 	// compute parallax tex coord
-	static constexpr constant const float parallax { 0.03f };
+	static constexpr constant const float parallax { 0.035f };
 	float2 tex_coord = in_tex_coord;
 	if (disp_mode == 1) {
 		float height = 0.0f, offset = 0.0f;
@@ -295,9 +432,6 @@ static float4 scene_fs(const scene_base_in_out& in,
 	return { color, 1.0f };
 }
 
-// Sponza scene consists of 25 different materials
-static constexpr constant const uint32_t material_count { 25u };
-
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   param<uint32_t> disp_mode,
 							   array<const_image_2d<float>, material_count> diff_tex,
@@ -306,9 +440,11 @@ fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   array<const_image_2d<float1>, material_count> mask_tex,
 							   array<const_image_2d<float1>, material_count> disp_tex,
 							   const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
 	return scene_scatter_fragment_out {
-		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
-				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
+		scene_fs(in, should_displace ? disp_mode : 0u, diff_tex[mat_idx], spec_tex[mat_idx], norm_tex[mat_idx],
+				 mask_tex[mat_idx], disp_tex[mat_idx], shadow_tex),
 		encode_3d_motion(in.motion)
 	};
 }
@@ -321,9 +457,11 @@ fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 							  array<const_image_2d<float1>, material_count> mask_tex,
 							  array<const_image_2d<float1>, material_count> disp_tex,
 							  const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
 	return scene_gather_fragment_out {
-		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
-				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
+		scene_fs(in, should_displace ? disp_mode : 0u, diff_tex[mat_idx], spec_tex[mat_idx], norm_tex[mat_idx],
+				 mask_tex[mat_idx], disp_tex[mat_idx], shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
 		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
 		{
@@ -341,9 +479,11 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 								  array<const_image_2d<float1>, material_count> mask_tex,
 								  array<const_image_2d<float1>, material_count> disp_tex,
 								  const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
 	return scene_scatter_fragment_out /* reuse */ {
-		scene_fs(in, disp_mode, diff_tex[in.material_idx], spec_tex[in.material_idx], norm_tex[in.material_idx],
-				 mask_tex[in.material_idx], disp_tex[in.material_idx], shadow_tex),
+		scene_fs(in, should_displace ? disp_mode : 0u, diff_tex[mat_idx], spec_tex[mat_idx], norm_tex[mat_idx],
+				 mask_tex[mat_idx], disp_tex[mat_idx], shadow_tex),
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }

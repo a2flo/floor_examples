@@ -23,6 +23,7 @@
 #include <floor/graphics/graphics_renderer.hpp>
 #include <floor/graphics/graphics_pipeline.hpp>
 #include <floor/graphics/graphics_pass.hpp>
+#include <floor/compute/device/common.hpp>
 #include <libwarp/libwarp.h>
 
 unified_renderer::unified_renderer() :
@@ -359,8 +360,8 @@ void unified_renderer::create_pipelines() {
 	const auto motion_depth_format = scene_fbo.motion_depth[0]->get_image_type();
 	
 	{
-		const render_pipeline_description pipeline_desc {
-			.vertex_shader = shaders[SCENE_SCATTER_VS],
+		render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[warp_state.dev->tessellation_support ? SCENE_SCATTER_TES : SCENE_SCATTER_VS],
 			.fragment_shader = shaders[SCENE_SCATTER_FS],
 			.primitive = PRIMITIVE::TRIANGLE,
 			.cull_mode = CULL_MODE::BACK,
@@ -375,6 +376,22 @@ void unified_renderer::create_pipelines() {
 			},
 			.depth_attachment = { .format = depth_format },
 		};
+		if (warp_state.dev->tessellation_support) {
+			pipeline_desc.tessellation = {
+				.max_factor = warp_state.dev->max_tessellation_factor,
+				.vertex_attributes = {
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT2,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::UINT1,
+				},
+				.spacing = TESSELLATION_SPACING::FRACTIONAL_EVEN,
+				.winding = TESSELLATION_WINDING::COUNTER_CLOCKWISE,
+				.is_indexed_draw = true,
+			};
+		}
 		scatter_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
 		
 		auto skybox_desc = pipeline_desc;
@@ -384,8 +401,8 @@ void unified_renderer::create_pipelines() {
 		skybox_scatter_pipeline = warp_state.ctx->create_graphics_pipeline(skybox_desc);
 	}
 	{
-		const render_pipeline_description pipeline_desc {
-			.vertex_shader = shaders[SCENE_GATHER_VS],
+		render_pipeline_description pipeline_desc {
+			.vertex_shader = shaders[warp_state.dev->tessellation_support ? SCENE_GATHER_TES : SCENE_GATHER_VS],
 			.fragment_shader = shaders[SCENE_GATHER_FS],
 			.primitive = PRIMITIVE::TRIANGLE,
 			.cull_mode = CULL_MODE::BACK,
@@ -402,12 +419,29 @@ void unified_renderer::create_pipelines() {
 			},
 			.depth_attachment = { .format = depth_format },
 		};
+		if (warp_state.dev->tessellation_support) {
+			pipeline_desc.tessellation = {
+				.max_factor = warp_state.dev->max_tessellation_factor,
+				.vertex_attributes = {
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT2,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::FLOAT3,
+					VERTEX_FORMAT::UINT1,
+				},
+				.spacing = TESSELLATION_SPACING::FRACTIONAL_EVEN,
+				.winding = TESSELLATION_WINDING::COUNTER_CLOCKWISE,
+				.is_indexed_draw = true,
+			};
+		}
 		gather_pipeline = warp_state.ctx->create_graphics_pipeline(pipeline_desc);
 		
 		auto skybox_desc = pipeline_desc;
 		skybox_desc.vertex_shader = shaders[SKYBOX_GATHER_VS];
 		skybox_desc.fragment_shader = shaders[SKYBOX_GATHER_FS];
 		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_desc.tessellation = render_pipeline_description::tessellation_t {}; // reset tessellation
 		skybox_gather_pipeline = warp_state.ctx->create_graphics_pipeline(skybox_desc);
 	}
 	{
@@ -711,9 +745,42 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		.index_buffer = model.indices_buffer.get(),
 		.index_count = model.index_count
 	}};
+	static const graphics_renderer::patch_draw_indexed_entry scene_draw_patch_info {
+		.control_point_buffers = {
+			model.vertices_buffer.get(),
+			model.tex_coords_buffer.get(),
+			model.normals_buffer.get(),
+			model.binormals_buffer.get(),
+			model.tangents_buffer.get(),
+			model.materials_data_buffer.get(),
+		},
+		.control_point_index_buffer = model.indices_buffer.get(),
+		.patch_control_point_count = 3u,
+		.first_index = 0u,
+		.patch_count = model.index_count / 3u,
+		.first_patch = 0u,
+	};
 	static const vector<graphics_renderer::multi_draw_entry> skybox_draw_info {{
 		.vertex_count = 3
 	}};
+	
+	//////////////////////////////////////////
+	// update tessellation factors
+	{
+		if (!tess_factors_buffer) {
+			const auto tess_factors_size = sizeof(triangle_tessellation_levels_t) * (model.index_count / 3u);
+			tess_factors_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, tess_factors_size);
+		}
+		warp_state.dev_queue->execute(*shaders[TESS_UPDATE_FACTORS],
+									  uint1 { model.index_count / 3u }, uint1 { 1024u },
+									  model.vertices_buffer,
+									  model.indices_buffer,
+									  model.materials_data_buffer,
+									  tess_factors_buffer,
+									  model.index_count / 3u,
+									  scene_uniforms.cam_pos,
+									  float(gather_pipeline->get_description(false).tessellation.max_factor));
+	}
 	
 	//////////////////////////////////////////
 	// draw shadow map
@@ -757,23 +824,40 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		
 		// scene
 		renderer->begin();
-		renderer->multi_draw_indexed(scene_draw_info,
-									 // vertex shader
-									 model.vertices_buffer,
-									 model.tex_coords_buffer,
-									 model.normals_buffer,
-									 model.binormals_buffer,
-									 model.tangents_buffer,
-									 model.materials_buffer,
-									 scene_uniforms,
-									 // fragment shader
-									 warp_state.displacement_mode,
-									 model.diffuse_textures,
-									 model.specular_textures,
-									 model.normal_textures,
-									 model.mask_textures,
-									 model.displacement_textures,
-									 shadow_map.shadow_image);
+		if (warp_state.dev->tessellation_support) {
+			renderer->set_tessellation_factors(*tess_factors_buffer);
+			renderer->draw_patches_indexed(scene_draw_patch_info,
+										   // vertex shader
+										   model.displacement_textures,
+										   warp_state.displacement_mode,
+										   scene_uniforms,
+										   // fragment shader
+										   warp_state.displacement_mode,
+										   model.diffuse_textures,
+										   model.specular_textures,
+										   model.normal_textures,
+										   model.mask_textures,
+										   model.displacement_textures,
+										   shadow_map.shadow_image);
+		} else {
+			renderer->multi_draw_indexed(scene_draw_info,
+										 // vertex shader
+										 model.vertices_buffer,
+										 model.tex_coords_buffer,
+										 model.normals_buffer,
+										 model.binormals_buffer,
+										 model.tangents_buffer,
+										 model.materials_data_buffer,
+										 scene_uniforms,
+										 // fragment shader
+										 warp_state.displacement_mode,
+										 model.diffuse_textures,
+										 model.specular_textures,
+										 model.normal_textures,
+										 model.mask_textures,
+										 model.displacement_textures,
+										 shadow_map.shadow_image);
+		}
 		renderer->end();
 		renderer->commit();
 	}
@@ -829,7 +913,6 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 													   "-I" + floor::data_path("../warp/src") +
 													   " -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +
 													   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
-													   " -DWARP_SHADOW_NEAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.x) + "f" +
 													   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
 													   (floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
 													   add_cli_options);
@@ -842,10 +925,13 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	// NOTE: corresponds to WARP_SHADER
 	static const char* shader_names[warp_shader_count()] {
 		"scene_scatter_vs",
+		(warp_state.dev->tessellation_support ? "scene_scatter_tes" : "scene_scatter_vs"),
 		"scene_scatter_fs",
 		"scene_gather_vs",
+		(warp_state.dev->tessellation_support ? "scene_gather_tes" : "scene_gather_vs"),
 		"scene_gather_fs",
 		"scene_gather_vs",
+		(warp_state.dev->tessellation_support ? "scene_gather_tes" : "scene_gather_vs"),
 		"scene_gather_fwd_fs",
 		"skybox_scatter_vs",
 		"skybox_scatter_fs",
@@ -858,6 +944,7 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 		"blit_fs",
 		"blit_vs",
 		"blit_swizzle_fs",
+		"tess_update_factors",
 	};
 	
 	for (size_t i = 0; i < warp_shader_count(); ++i) {
