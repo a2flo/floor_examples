@@ -154,6 +154,8 @@ namespace fubar {
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
 				.primitive_id_support = target_obj.at("primitive_id_support").get_or_throw<bool>(),
 				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
+				.tessellation_support = target_obj.at("tessellation_support").get_or_throw<bool>(),
+				.tessellation_max_factor_tier = target_obj.at("tessellation_max_factor_tier").get_or_throw<uint32_t>(),
 				._unused = 0,
 			}
 		};
@@ -266,6 +268,7 @@ namespace fubar {
 				.basic_32_bit_float_atomics_support = target_obj.at("basic_32_bit_float_atomics_support").get_or_throw<bool>(),
 				.primitive_id_support = target_obj.at("primitive_id_support").get_or_throw<bool>(),
 				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
+				.tessellation_support = target_obj.at("tessellation_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -462,6 +465,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -477,6 +482,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -492,6 +499,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -507,6 +516,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -522,6 +533,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -537,6 +550,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -552,6 +567,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -567,6 +584,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -582,6 +601,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -649,6 +670,7 @@ namespace fubar {
 					.basic_32_bit_float_atomics_support = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
 					._unused = 0,
 				}
 			},
@@ -745,6 +767,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -760,6 +784,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -775,6 +801,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -790,6 +818,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -805,6 +835,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -820,6 +852,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -835,6 +869,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -850,6 +886,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
 					._unused = 0,
 				}
 			},
@@ -865,6 +903,8 @@ namespace fubar {
 					.soft_printf = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
 					._unused = 0,
 				}
 			},
@@ -887,6 +927,7 @@ namespace fubar {
 					.basic_32_bit_float_atomics_support = 0,
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
 					._unused = 0,
 				}
 			},
