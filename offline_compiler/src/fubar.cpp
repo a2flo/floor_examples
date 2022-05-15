@@ -450,6 +450,32 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
+					.sm_major = 8,
+					.sm_minor = 7,
+					.ptx_isa_major = 7,
+					.ptx_isa_minor = 6,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
+					.sm_major = 9,
+					.sm_minor = 0,
+					.ptx_isa_major = 7,
+					.ptx_isa_minor = 7,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// Metal
