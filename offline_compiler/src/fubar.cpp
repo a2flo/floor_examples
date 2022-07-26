@@ -632,6 +632,40 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// OpenCL
@@ -923,6 +957,40 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 2,
 					.minor = 4,
+					.is_ios = 1,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.is_ios = 0,
+					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
+					.simd_width = 0,
+					.soft_printf = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.tessellation_max_factor_tier = 1,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
 					.is_ios = 1,
 					.device_target = decltype(universal_binary::target_v2::metal)::GENERIC,
 					.simd_width = 0,
