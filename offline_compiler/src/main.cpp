@@ -124,7 +124,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--no-double: explicitly disables double support (only SPIR/SPIR-V)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
-				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (only Vulkan/SPIR-V, always enabled on PTX)\n"
+				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (Metal and Vulkan/SPIR-V, always enabled on PTX)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
@@ -565,6 +565,7 @@ static int run_normal_build(option_context& option_ctx) {
 						device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
 					}
 				}
+				if (option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
