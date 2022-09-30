@@ -113,7 +113,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
-				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5], defaults to x86-1\n"
+				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
@@ -622,7 +622,9 @@ static int run_normal_build(option_context& option_ctx) {
 						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_2;
 					}
 				} else if (option_ctx.sub_target.find("arm") == 0) {
-					if (option_ctx.sub_target == "arm-5") {
+					if (option_ctx.sub_target == "arm-6") {
+						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_6;
+					} else if (option_ctx.sub_target == "arm-5") {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_5;
 					} else if (option_ctx.sub_target == "arm-4") {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_4;
@@ -655,6 +657,7 @@ static int run_normal_build(option_context& option_ctx) {
 					case HOST_CPU_TIER::ARM_TIER_3:
 					case HOST_CPU_TIER::ARM_TIER_4:
 					case HOST_CPU_TIER::ARM_TIER_5:
+					case HOST_CPU_TIER::ARM_TIER_6:
 						device->simd_width = 4u; // NEON
 						break;
 					default:
