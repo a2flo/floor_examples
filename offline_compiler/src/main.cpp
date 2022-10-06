@@ -109,14 +109,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar <targets-json|all|minimal|graphics>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal/graphics target set)\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm_90], defaults to sm_30\n"
+				 "\t    PTX:           [sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_30\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
-				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
+				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -270,7 +270,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if(ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63 &&
 		   ctx.ptx_version != 64 && ctx.ptx_version != 65 &&
 		   ctx.ptx_version != 70 && ctx.ptx_version != 71 && ctx.ptx_version != 72 && ctx.ptx_version != 73 &&
-		   ctx.ptx_version != 74 && ctx.ptx_version != 75 && ctx.ptx_version != 76 && ctx.ptx_version != 77) {
+		   ctx.ptx_version != 74 && ctx.ptx_version != 75 && ctx.ptx_version != 76 && ctx.ptx_version != 77 &&
+		   ctx.ptx_version != 78) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
@@ -543,12 +544,26 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->metal_language_version = option_ctx.metal_std;
 				dev->metal_software_version = option_ctx.metal_std;
 				
+				if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
+					option_ctx.sub_groups = true;
+					if (option_ctx.simd_width == 0) {
+						option_ctx.simd_width = 32;
+					}
+				}
+				
 				dev->family_tier = 1;
-				if(option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
+				if (option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
 					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
-				} else if(option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
+					if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
+						dev->family_tier = 6;
+					}
+				} else if (option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
 					dev->family_type = metal_device::FAMILY_TYPE::MAC;
-					if(option_ctx.workarounds) {
+					if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
+						dev->family_tier = 2;
+						option_ctx.basic_32_bit_float_atomics = true;
+					}
+					if (option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
 					}
 				} else {
@@ -565,7 +580,9 @@ static int run_normal_build(option_context& option_ctx) {
 						device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
 					}
 				}
-				if (option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
+				if (option_ctx.basic_32_bit_float_atomics) {
+					device->basic_32_bit_float_atomics_support = true;
+				}
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
