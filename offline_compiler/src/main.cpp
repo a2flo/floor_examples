@@ -57,7 +57,7 @@ struct option_context {
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	METAL_VERSION metal_std { METAL_VERSION::METAL_3_0 };
 	uint32_t ptx_version { 60 };
-	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_2 };
+	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_3 };
 	optional<bool> warnings;
 	bool workarounds { false };
 	uint32_t double_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
@@ -117,7 +117,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
-				 "\t--vulkan-std <1.2>: sets the supported Vulkan version (defaults to 1.2)\n"
+				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -283,7 +283,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		const string vlk_version_str = *arg_ptr;
-		if (vlk_version_str == "1.2") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_2; }
+		if (vlk_version_str == "1.3") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_3; }
 		else {
 			cerr << "invalid --vulkan-std argument" << endl;
 			return;
@@ -455,8 +455,8 @@ static int run_normal_build(option_context& option_ctx) {
 	   (option_ctx.sub_target == "opencl" ||
 		option_ctx.sub_target == "opencl-gpu" ||
 		option_ctx.sub_target == "opencl-cpu")) {
-		   option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
-	   }
+		option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
+	}
 	
 	llvm_toolchain::program_data program {};
 	if(!option_ctx.test_bin && !option_ctx.native_cl) {
@@ -607,8 +607,8 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->vulkan_version = option_ctx.vulkan_std;
 				switch (dev->vulkan_version) {
 					default:
-					case VULKAN_VERSION::VULKAN_1_2:
-						dev->spirv_version = SPIRV_VERSION::SPIRV_1_5;
+					case VULKAN_VERSION::VULKAN_1_3:
+						dev->spirv_version = SPIRV_VERSION::SPIRV_1_6;
 						break;
 				}
 				
