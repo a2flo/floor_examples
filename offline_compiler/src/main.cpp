@@ -86,6 +86,7 @@ struct option_context {
 	bool done { false };
 	bool native_cl { false };
 	optional<bool> soft_printf;
+	bool vulkan_descriptor_buffer_support { false };
 	
 	bool is_fubar_build { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
@@ -135,6 +136,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
+				 "\t--vulkan-descriptor-buffer: enables Vulkan descriptor buffer support\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> llvm_toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
@@ -409,6 +411,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--soft-printf", [](option_context& ctx, char**&) {
 		ctx.soft_printf = true;
 	}},
+	{ "--vulkan-descriptor-buffer", [](option_context& ctx, char**&) {
+		ctx.vulkan_descriptor_buffer_support = true;
+	}},
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
 	}},
@@ -599,6 +604,7 @@ static int run_normal_build(option_context& option_ctx) {
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				if(option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
+				dev->descriptor_buffer_support = (option_ctx.vulkan_descriptor_buffer_support);
 				
 				// mip-mapping support is already enabled, just need to set the max supported mip level count
 				device->max_mip_levels = 15;

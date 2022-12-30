@@ -273,6 +273,7 @@ namespace fubar {
 				.primitive_id_support = target_obj.at("primitive_id_support").get_or_throw<bool>(),
 				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
 				.tessellation_support = target_obj.at("tessellation_support").get_or_throw<bool>(),
+				.descriptor_buffer_support = target_obj.at("descriptor_buffer_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -759,6 +760,28 @@ namespace fubar {
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
 					.tessellation_support = 1,
+					.descriptor_buffer_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.vulkan = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::VULKAN,
+					.vulkan_major = 1,
+					.vulkan_minor = 3,
+					.spirv_major = 1,
+					.spirv_minor = 6,
+					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
+					.double_support = 0,
+					.basic_64_bit_atomics_support = 0,
+					.extended_64_bit_atomics_support = 0,
+					.soft_printf = 0,
+					.basic_32_bit_float_atomics_support = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.descriptor_buffer_support = 1,
 					._unused = 0,
 				}
 			},
@@ -1069,6 +1092,28 @@ namespace fubar {
 					.primitive_id_support = 0,
 					.barycentric_coord_support = 0,
 					.tessellation_support = 1,
+					.descriptor_buffer_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.vulkan = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::VULKAN,
+					.vulkan_major = 1,
+					.vulkan_minor = 3,
+					.spirv_major = 1,
+					.spirv_minor = 6,
+					.device_target = decltype(universal_binary::target_v2::vulkan)::GENERIC,
+					.double_support = 0,
+					.basic_64_bit_atomics_support = 0,
+					.extended_64_bit_atomics_support = 0,
+					.soft_printf = 0,
+					.basic_32_bit_float_atomics_support = 0,
+					.primitive_id_support = 0,
+					.barycentric_coord_support = 0,
+					.tessellation_support = 1,
+					.descriptor_buffer_support = 1,
 					._unused = 0,
 				}
 			},
