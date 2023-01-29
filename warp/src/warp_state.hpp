@@ -55,6 +55,9 @@ struct warp_state_struct {
 	// 0 = off, 1 = parallax mapping, 2 = tessellation
 	uint32_t displacement_mode { 0u };
 	
+	// use an argument buffer for all materials (textures)?
+	bool use_material_argument_buffer { false };
+	
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)
 	uint32_t cur_fbo = 0;

@@ -89,6 +89,7 @@ struct floor_obj_model : obj_model {
 	vector<compute_image*> normal_textures;
 	vector<compute_image*> mask_textures;
 	vector<compute_image*> displacement_textures;
+	shared_ptr<argument_buffer> materials_arg_buffer;
 	
 	vector<shared_ptr<compute_image>> textures;
 };

@@ -326,12 +326,12 @@ static uint32_t encode_2d_motion(const float2& motion) {
 
 static float4 scene_fs(const scene_base_in_out& in,
 					   const uint32_t disp_mode,
-					   const_image_2d<float>& diff_tex,
-					   const_image_2d<float>& spec_tex,
-					   const_image_2d<float>& norm_tex,
-					   const_image_2d<float1>& mask_tex,
-					   const_image_2d<float1>& disp_tex,
-					   const_image_2d_depth<float>& shadow_tex) {
+					   const const_image_2d<float>& diff_tex,
+					   const const_image_2d<float>& spec_tex,
+					   const const_image_2d<float>& norm_tex,
+					   const const_image_2d<float1>& mask_tex,
+					   const const_image_2d<float1>& disp_tex,
+					   const const_image_2d_depth<float>& shadow_tex) {
 	const auto in_tex_coord = in.tex_coord;
 	const auto norm_view_dir = in.view_dir.normalized();
 
@@ -432,6 +432,10 @@ static float4 scene_fs(const scene_base_in_out& in,
 	return { color, 1.0f };
 }
 
+#if !defined(WARP_USE_MATERIAL_ARGUMENT_BUFFER)
+// non-argument-buffer variant: specify all material textures as separate parameters
+// NOTE: since this requires 126 textures (texture locations), this only works on macOS Tier1+ (128 limit) and or iOS Tier2/A13+
+
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   param<uint32_t> disp_mode,
 							   array<const_image_2d<float>, material_count> diff_tex,
@@ -487,6 +491,63 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }
+
+#else
+// argument-buffer variant: put all material textures into a single argument buffer
+
+struct materials_t {
+	array<const_image_2d<float>, material_count> diff_tex;
+	array<const_image_2d<float>, material_count> spec_tex;
+	array<const_image_2d<float>, material_count> norm_tex;
+	array<const_image_2d<float1>, material_count> mask_tex;
+	array<const_image_2d<float1>, material_count> disp_tex;
+};
+
+fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
+							   param<uint32_t> disp_mode,
+							   arg_buffer<materials_t> materials,
+							   const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_scatter_fragment_out {
+		scene_fs(in, should_displace ? disp_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], shadow_tex),
+		encode_3d_motion(in.motion)
+	};
+}
+
+fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
+							  param<uint32_t> disp_mode,
+							  arg_buffer<materials_t> materials,
+							  const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_gather_fragment_out {
+		scene_fs(in, should_displace ? disp_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+		}
+	};
+}
+
+fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
+								  param<uint32_t> disp_mode,
+								  arg_buffer<materials_t> materials,
+								  const_image_2d_depth<float> shadow_tex) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_scatter_fragment_out /* reuse */ {
+		scene_fs(in, should_displace ? disp_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
+	};
+}
+
+#endif
 
 //////////////////////////////////////////
 // shadow map

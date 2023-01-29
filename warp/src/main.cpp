@@ -19,6 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/gl_shader.hpp>
+#include <floor/compute/vulkan/vulkan_device.hpp>
 #include <libwarp/libwarp.h>
 #include "gl_renderer.hpp"
 #include "unified_renderer.hpp"
@@ -390,6 +391,11 @@ int main(int, char* argv[]) {
 		warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
 		warp_state.dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
 		
+		// enable argument_buffer materials when argument buffers with images are supported by the device
+		if (warp_state.unified_renderer) {
+			warp_state.use_material_argument_buffer = warp_state.dev->argument_buffer_image_support;
+		}
+		
 		// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
 		// compute the appropriate value according to the render/input frame rate and display refresh rate
 		if((floor::get_vsync() || warp_state.ctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
@@ -435,6 +441,10 @@ int main(int, char* argv[]) {
 								 *warp_state.ctx, *warp_state.dev_queue);
 		if(!model_success) {
 			return -1;
+		}
+		
+		if (warp_state.use_material_argument_buffer) {
+			uni_renderer->init_model_materials_arg_buffer(*warp_state.dev_queue, *(floor_obj_model*)model.get());
 		}
 	
 		// init done, release context

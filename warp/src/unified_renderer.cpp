@@ -26,6 +26,8 @@
 #include <floor/compute/device/common.hpp>
 #include <libwarp/libwarp.h>
 
+static atomic<uint32_t> active_render { 0u };
+
 unified_renderer::unified_renderer() :
 resize_handler_fnctr(bind(&unified_renderer::resize_handler, this, placeholders::_1, placeholders::_2)) {
 	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
@@ -33,6 +35,9 @@ resize_handler_fnctr(bind(&unified_renderer::resize_handler, this, placeholders:
 
 unified_renderer::~unified_renderer() {
 	floor::get_event()->remove_event_handler(resize_handler_fnctr);
+	while (active_render > 0) {
+		this_thread::sleep_for(50ms);
+	}
 }
 
 void unified_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
@@ -52,7 +57,7 @@ void unified_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 		scene_fbo.depth[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 														  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
 														  COMPUTE_IMAGE_TYPE::D32F |
-														  COMPUTE_IMAGE_TYPE::READ_WRITE |
+														  COMPUTE_IMAGE_TYPE::READ |
 														  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 														  COMPUTE_MEMORY_FLAG::READ);
 		
@@ -68,7 +73,7 @@ void unified_renderer::create_textures(const COMPUTE_IMAGE_TYPE color_format) {
 		scene_fbo.motion_depth[i] = warp_state.ctx->create_image(*warp_state.dev_queue, scene_fbo.dim,
 																 COMPUTE_IMAGE_TYPE::IMAGE_2D |
 																 COMPUTE_IMAGE_TYPE::RG16F |
-																 COMPUTE_IMAGE_TYPE::READ_WRITE |
+																 COMPUTE_IMAGE_TYPE::READ |
 																 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 																 COMPUTE_MEMORY_FLAG::READ_WRITE);
 	}
@@ -567,7 +572,7 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 	// blit to window
 	{
 		// create the blit renderer
-		auto renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue, *blit_pass, *blit_pipeline);
+		shared_ptr<graphics_renderer> renderer = warp_state.ctx->create_graphics_renderer(*warp_state.dev_queue, *blit_pass, *blit_pipeline);
 		if (!renderer->is_valid()) {
 			return;
 		}
@@ -578,6 +583,8 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 			log_error("failed to get next drawable");
 			return;
 		}
+		// prevent whole renderer destruction by signaling that we're rendering a frame
+		++active_render;
 		renderer->set_attachments(drawable);
 		renderer->begin();
 		
@@ -591,7 +598,12 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 		
 		renderer->end();
 		renderer->present();
-		renderer->commit();
+		renderer->commit([retained_renderer = move(renderer)] {
+			// must retain renderer object until completion -> auto-destruct via shared_ptr
+			
+			// signal that this frame is done -> may destruct the whole renderer (if 0)
+			--active_render;
+		});
 	}
 }
 
@@ -826,37 +838,65 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->begin();
 		if (warp_state.dev->tessellation_support) {
 			renderer->set_tessellation_factors(*tess_factors_buffer);
-			renderer->draw_patches_indexed(scene_draw_patch_info,
-										   // vertex shader
-										   model.displacement_textures,
-										   warp_state.displacement_mode,
-										   scene_uniforms,
-										   // fragment shader
-										   warp_state.displacement_mode,
-										   model.diffuse_textures,
-										   model.specular_textures,
-										   model.normal_textures,
-										   model.mask_textures,
-										   model.displacement_textures,
-										   shadow_map.shadow_image);
+			if (!warp_state.use_material_argument_buffer) {
+				renderer->draw_patches_indexed(scene_draw_patch_info,
+											   // vertex shader
+											   model.displacement_textures,
+											   warp_state.displacement_mode,
+											   scene_uniforms,
+											   // fragment shader
+											   warp_state.displacement_mode,
+											   model.diffuse_textures,
+											   model.specular_textures,
+											   model.normal_textures,
+											   model.mask_textures,
+											   model.displacement_textures,
+											   shadow_map.shadow_image);
+			} else {
+				renderer->draw_patches_indexed(scene_draw_patch_info,
+											   // vertex shader
+											   model.displacement_textures,
+											   warp_state.displacement_mode,
+											   scene_uniforms,
+											   // fragment shader
+											   warp_state.displacement_mode,
+											   model.materials_arg_buffer,
+											   shadow_map.shadow_image);
+			}
 		} else {
-			renderer->multi_draw_indexed(scene_draw_info,
-										 // vertex shader
-										 model.vertices_buffer,
-										 model.tex_coords_buffer,
-										 model.normals_buffer,
-										 model.binormals_buffer,
-										 model.tangents_buffer,
-										 model.materials_data_buffer,
-										 scene_uniforms,
-										 // fragment shader
-										 warp_state.displacement_mode,
-										 model.diffuse_textures,
-										 model.specular_textures,
-										 model.normal_textures,
-										 model.mask_textures,
-										 model.displacement_textures,
-										 shadow_map.shadow_image);
+			if (!warp_state.use_material_argument_buffer) {
+				renderer->multi_draw_indexed(scene_draw_info,
+											 // vertex shader
+											 model.vertices_buffer,
+											 model.tex_coords_buffer,
+											 model.normals_buffer,
+											 model.binormals_buffer,
+											 model.tangents_buffer,
+											 model.materials_data_buffer,
+											 scene_uniforms,
+											 // fragment shader
+											 warp_state.displacement_mode,
+											 model.diffuse_textures,
+											 model.specular_textures,
+											 model.normal_textures,
+											 model.mask_textures,
+											 model.displacement_textures,
+											 shadow_map.shadow_image);
+			} else {
+				renderer->multi_draw_indexed(scene_draw_info,
+											 // vertex shader
+											 model.vertices_buffer,
+											 model.tex_coords_buffer,
+											 model.normals_buffer,
+											 model.binormals_buffer,
+											 model.tangents_buffer,
+											 model.materials_data_buffer,
+											 scene_uniforms,
+											 // fragment shader
+											 warp_state.displacement_mode,
+											 model.materials_arg_buffer,
+											 shadow_map.shadow_image);
+			}
 		}
 		renderer->end();
 		renderer->commit();
@@ -915,6 +955,7 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 													   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
 													   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
 													   (floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
+													   (warp_state.use_material_argument_buffer ? " -DWARP_USE_MATERIAL_ARGUMENT_BUFFER=1" : "")+
 													   add_cli_options);
 	
 	if (new_shader_prog == nullptr) {
@@ -965,4 +1006,18 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	shaders = new_shaders;
 	shader_entries = new_shader_entries;
 	return true;
+}
+
+void unified_renderer::init_model_materials_arg_buffer(const compute_queue& dev_queue, floor_obj_model& model) {
+	// NOTE: scene_scatter_fs/scene_gather_fs/scene_gather_fwd_fs have the same function signature -> doesn't matter which one we take
+	model.materials_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(dev_queue, 2);
+	if (!model.materials_arg_buffer) {
+		throw runtime_error("failed to create materials argument buffer");
+	}
+	model.materials_arg_buffer->set_arguments(dev_queue,
+											  model.diffuse_textures,
+											  model.specular_textures,
+											  model.normal_textures,
+											  model.mask_textures,
+											  model.displacement_textures);
 }

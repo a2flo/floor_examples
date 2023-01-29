@@ -84,9 +84,12 @@ public:
 		return (size_t)WARP_SHADER::__MAX_WARP_SHADER;
 	}
 	
+	//! initializes the materials argument buffer in the specified model
+	void init_model_materials_arg_buffer(const compute_queue& dev_queue, floor_obj_model& model);
+	
 protected:
 	void create_textures(const COMPUTE_IMAGE_TYPE color_format);
-	 void destroy_textures(bool is_resize);
+	void destroy_textures(bool is_resize);
 	
 	void create_skybox();
 	void destroy_skybox();
