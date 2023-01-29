@@ -87,6 +87,7 @@ struct option_context {
 	bool native_cl { false };
 	optional<bool> soft_printf;
 	bool vulkan_descriptor_buffer_support { false };
+	bool barycentric_coord_support { false };
 	
 	bool is_fubar_build { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
@@ -137,6 +138,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--vulkan-descriptor-buffer: enables Vulkan descriptor buffer support\n"
+				 "\t--barycentric-coord: enables barycentric coordinate support (only Metal and Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> llvm_toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
@@ -414,6 +416,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--vulkan-descriptor-buffer", [](option_context& ctx, char**&) {
 		ctx.vulkan_descriptor_buffer_support = true;
 	}},
+	{ "--barycentric-coord", [](option_context& ctx, char**&) {
+		ctx.barycentric_coord_support = true;
+	}},
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
 	}},
@@ -588,6 +593,9 @@ static int run_normal_build(option_context& option_ctx) {
 				if (option_ctx.basic_32_bit_float_atomics) {
 					device->basic_32_bit_float_atomics_support = true;
 				}
+				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
+					dev->barycentric_coord_support = true;
+				}
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
@@ -605,9 +613,18 @@ static int run_normal_build(option_context& option_ctx) {
 				if(option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				dev->descriptor_buffer_support = (option_ctx.vulkan_descriptor_buffer_support);
+				if (dev->descriptor_buffer_support) {
+					// if we have descriptor buffer support, we also have full argument buffer support
+					dev->argument_buffer_support = true;
+					dev->argument_buffer_image_support = true;
+				}
 				
 				// mip-mapping support is already enabled, just need to set the max supported mip level count
 				device->max_mip_levels = 15;
+				
+				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
+					dev->barycentric_coord_support = true;
+				}
 				
 				// handle version
 				dev->vulkan_version = option_ctx.vulkan_std;
@@ -711,139 +728,174 @@ static int run_normal_build(option_context& option_ctx) {
 			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
 		};
 		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
-		for(const auto& info : program.functions) {
-			string info_str = "";
-			for(size_t i = 0, count = info.args.size(); i < count; ++i) {
-				switch(info.args[i].address_space) {
-					case llvm_toolchain::ARG_ADDRESS_SPACE::GLOBAL:
-						info_str += "global ";
-						break;
-					case llvm_toolchain::ARG_ADDRESS_SPACE::LOCAL:
-						info_str += "local ";
-						break;
-					case llvm_toolchain::ARG_ADDRESS_SPACE::CONSTANT:
-						info_str += "constant ";
-						break;
-					case llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE:
-						info_str += "image ";
-						break;
-					default: break;
-				}
-				
-				switch(info.args[i].special_type) {
-					case llvm_toolchain::SPECIAL_TYPE::STAGE_INPUT:
-						info_str += "stage_input ";
-						break;
-					case llvm_toolchain::SPECIAL_TYPE::PUSH_CONSTANT:
-						info_str += "push_constant ";
-						break;
-					case llvm_toolchain::SPECIAL_TYPE::SSBO:
-						info_str += "ssbo ";
-						break;
-					case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
-						info_str += "array [" + to_string(info.args[i].size) + "] ";
-						break;
-					case llvm_toolchain::SPECIAL_TYPE::IUB:
-						info_str += "iub ";
-						break;
-					case llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER:
-						info_str += "argument_buffer ";
-						break;
-					default: break;
-				}
-				
-				if(info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
-					info_str += to_string(info.args[i].size);
-				}
-				else {
-					switch(info.args[i].image_access) {
-						case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
-							info_str += "read_only ";
+		for (const auto& info_ : program.functions) {
+			vector<pair<const llvm_toolchain::function_info*, uint32_t /* arg idx */>> arg_buffers_info;
+			const auto dump_function_info = [&option_ctx, &arg_buffers_info](const llvm_toolchain::function_info& info, string info_prefix) {
+				string info_str = "";
+				for (size_t i = 0, count = info.args.size(); i < count; ++i) {
+					switch (info.args[i].address_space) {
+						case llvm_toolchain::ARG_ADDRESS_SPACE::GLOBAL:
+							info_str += "global ";
 							break;
-						case llvm_toolchain::ARG_IMAGE_ACCESS::WRITE:
-							info_str += "write_only ";
+						case llvm_toolchain::ARG_ADDRESS_SPACE::LOCAL:
+							info_str += "local ";
 							break;
-						case llvm_toolchain::ARG_IMAGE_ACCESS::READ_WRITE:
-							info_str += "read_write ";
+						case llvm_toolchain::ARG_ADDRESS_SPACE::CONSTANT:
+							info_str += "constant ";
 							break;
-						default:
-							info_str += "no_access? "; // shouldn't happen ...
-							log_error("kernel image argument #$ has no access qualifier ($X)!", i, info.args[i].image_access);
+						case llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE:
+							info_str += "image ";
 							break;
+						default: break;
 					}
 					
-					if(option_ctx.target == llvm_toolchain::TARGET::PTX) {
-						// image type is not stored for ptx
-						info_str += to_string(info.args[i].size);
+					switch (info.args[i].special_type) {
+						case llvm_toolchain::SPECIAL_TYPE::STAGE_INPUT:
+							info_str += "stage_input ";
+							break;
+						case llvm_toolchain::SPECIAL_TYPE::PUSH_CONSTANT:
+							info_str += "push_constant ";
+							break;
+						case llvm_toolchain::SPECIAL_TYPE::SSBO:
+							info_str += "ssbo ";
+							break;
+						case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
+							info_str += "array [" + to_string(info.args[i].size) + "] ";
+							break;
+						case llvm_toolchain::SPECIAL_TYPE::IUB:
+							info_str += "iub ";
+							break;
+						case llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER:
+							info_str += "argument_buffer ";
+							break;
+						default: break;
 					}
-					else {
-						switch(info.args[i].image_type) {
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D:
-								info_str += "1D";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
-								info_str += "1D array";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
-								info_str += "1D buffer";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D:
-								info_str += "2D";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
-								info_str += "2D array";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
-								info_str += "2D depth";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
-								info_str += "2D array depth";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
-								info_str += "2D msaa";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
-								info_str += "2D array msaa";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
-								info_str += "2D msaa depth";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
-								info_str += "2D array msaa depth";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_3D:
-								info_str += "3D";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE:
-								info_str += "cube";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
-								info_str += "cube array";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
-								info_str += "cube depth";
-								break;
-							case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
-								info_str += "cube array depth";
-								break;
-							default:
-								info_str += "unknown_type";
-								log_error("kernel image argument #$ has no type or an unknown type ($X)!", i, info.args[i].image_type);
-								break;
+					if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER) {
+						if (!info.args[i].argument_buffer_info) {
+							log_error("argument #$ in $ is an argument buffer, but no argument buffer info exists!",
+									  i, info.name);
+						} else {
+							arg_buffers_info.emplace_back(&info.args[i].argument_buffer_info.value(), i);
 						}
 					}
+					
+					if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
+						info_str += to_string(info.args[i].size);
+					} else {
+						switch (info.args[i].image_access) {
+							case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
+								info_str += "read_only ";
+								break;
+							case llvm_toolchain::ARG_IMAGE_ACCESS::WRITE:
+								info_str += "write_only ";
+								break;
+							case llvm_toolchain::ARG_IMAGE_ACCESS::READ_WRITE:
+								info_str += "read_write ";
+								break;
+							default:
+								info_str += "no_access? "; // shouldn't happen ...
+								log_error("kernel image argument #$ has no access qualifier ($X)!", i, info.args[i].image_access);
+								break;
+						}
+						
+						if (option_ctx.target == llvm_toolchain::TARGET::PTX) {
+							// image type is not stored for ptx
+							info_str += to_string(info.args[i].size);
+						} else {
+							switch(info.args[i].image_type) {
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D:
+									info_str += "1D";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
+									info_str += "1D array";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
+									info_str += "1D buffer";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D:
+									info_str += "2D";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
+									info_str += "2D array";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
+									info_str += "2D depth";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
+									info_str += "2D array depth";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
+									info_str += "2D msaa";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
+									info_str += "2D array msaa";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
+									info_str += "2D msaa depth";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
+									info_str += "2D array msaa depth";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_3D:
+									info_str += "3D";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE:
+									info_str += "cube";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
+									info_str += "cube array";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
+									info_str += "cube depth";
+									break;
+								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
+									info_str += "cube array depth";
+									break;
+								default:
+									info_str += "unknown_type";
+									log_error("kernel image argument #$ has no type or an unknown type ($X)!", i, info.args[i].image_type);
+									break;
+							}
+						}
+					}
+					info_str += (i + 1 < count ? ", " : " ");
 				}
-				info_str += (i + 1 < count ? ", " : " ");
+				info_str = core::trim(info_str);
+				string func_type_name;
+				switch (info.type) {
+					case llvm_toolchain::FUNCTION_TYPE::KERNEL:
+						func_type_name = "function";
+						break;
+					case llvm_toolchain::FUNCTION_TYPE::VERTEX:
+					case llvm_toolchain::FUNCTION_TYPE::FRAGMENT:
+					case llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL:
+					case llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION:
+						func_type_name = "shader";
+						break;
+					case llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT:
+						func_type_name = "struct";
+						break;
+					case llvm_toolchain::FUNCTION_TYPE::NONE:
+						break;
+				}
+				log_msg("$'$ $: $ ($)",
+						info_prefix,
+						info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
+						info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
+						info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
+						info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL ? "tessellation-control" :
+						info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION ? "tessellation-evaluation" :
+						info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
+						func_type_name, info.name, info_str);
+			};
+			
+			// dump the function itself first
+			dump_function_info(info_, "");
+			
+			// then dump any argument buffer info
+			for (const auto& arg_buf_info : arg_buffers_info) {
+				dump_function_info(*arg_buf_info.first, "-> @" + to_string(arg_buf_info.second) + " ");
 			}
-			info_str = core::trim(info_str);
-			log_msg("compiled $ function: $ ($)",
-					info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
-					info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
-					info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
-					info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL ? "tessellation-control" :
-					info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION ? "tessellation-evaluation" :
-					info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
-					info.name, info_str);
 		}
 		
 		// output
