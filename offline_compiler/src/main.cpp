@@ -759,6 +759,12 @@ static int run_normal_build(option_context& option_ctx) {
 						case llvm_toolchain::SPECIAL_TYPE::SSBO:
 							info_str += "ssbo ";
 							break;
+						case llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY:
+							// implicitly SSBO
+							if (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN) {
+								info_str += "ssbo-";
+							}
+							[[fallthrough]];
 						case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
 							info_str += "array [" + to_string(info.args[i].size) + "] ";
 							break;
@@ -779,8 +785,11 @@ static int run_normal_build(option_context& option_ctx) {
 						}
 					}
 					
-					if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
+					if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE &&
+						info.args[i].special_type != llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
 						info_str += to_string(info.args[i].size);
+					} else if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
+						// nop
 					} else {
 						switch (info.args[i].image_access) {
 							case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
