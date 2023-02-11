@@ -86,6 +86,20 @@ struct scene_gather_fragment_out {
 	float2 motion_depth;
 };
 
+struct model_data_t {
+	enum : uint32_t { POSITION, NORMAL, BINORMAL, TANGENT };
+	// [position, normal, binormal, tangent]
+	array<buffer<const float3>, 4> pnbt;
+	// textcure coordinates
+	buffer<const float2> tc;
+	// per-vertex material indices
+	buffer<const uint32_t> materials_data;
+	// indices
+	buffer<const uint3> indices;
+	// #triangles
+	const uint32_t triangle_count;
+};
+
 // props to:
 // * https://outerra.blogspot.com/2013/07/logarithmic-depth-buffer-optimizations.html
 // * https://outerra.blogspot.sk/2012/11/maximizing-depth-buffer-range-and.html
@@ -101,16 +115,17 @@ static float4 log_depth(float4 transformed_position) {
 	return transformed_position;
 }
 
-kernel void tess_update_factors(buffer<const float3> vertices,
-								buffer<const uint3> indices,
-								buffer<const uint32_t> materials_data,
+#if defined(WARP_USE_ARGUMENT_BUFFER) && FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
+kernel void tess_update_factors(arg_buffer<model_data_t> model_data,
 								buffer<triangle_tessellation_levels_t> factors,
-								param<uint32_t> triangle_count,
 								param<float3> cam_position,
 								param<float> max_tess_factor) {
-	if (global_id.x >= triangle_count) {
+	if (global_id.x >= model_data.triangle_count) {
 		return;
 	}
+	const auto& vertices = model_data.pnbt[model_data_t::POSITION];
+	const auto& indices = model_data.indices;
+	const auto& materials_data = model_data.materials_data;
 	
 	const auto idx = indices[global_id.x];
 	half factor = 1.0f;
@@ -135,6 +150,11 @@ kernel void tess_update_factors(buffer<const float3> vertices,
 		.inner = factor,
 	};
 }
+#else
+kernel void tess_update_factors(buffer<const uint32_t>) {
+	// nop
+}
+#endif
 
 struct __attribute__((packed)) control_point_t {
 	float3 position;
@@ -176,6 +196,7 @@ static void scene_vs(scene_base_in_out& out,
 	out.material_data = in_material_data;
 }
 
+#if !defined(WARP_USE_ARGUMENT_BUFFER)
 vertex auto scene_scatter_vs(buffer<const float3> in_position,
 							 buffer<const float2> in_tex_coord,
 							 buffer<const float3> in_normal,
@@ -194,6 +215,27 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 	
 	return out;
 }
+#else
+vertex auto scene_scatter_vs(arg_buffer<model_data_t> model_data,
+							 param<scene_scatter_uniforms_t> uniforms) {
+	scene_scatter_in_out out;
+	const auto vtx = model_data.pnbt[model_data_t::POSITION][vertex_id];
+	scene_vs(out, vtx,
+			 model_data.tc[vertex_id],
+			 model_data.pnbt[model_data_t::NORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
+			 model_data.materials_data[vertex_id],
+			 uniforms);
+	
+	float4 pos { vtx, 1.0f };
+	float4 prev_pos = pos * uniforms.prev_mvm;
+	float4 cur_pos = pos * uniforms.mvm;
+	out.motion = cur_pos.xyz - prev_pos.xyz;
+	
+	return out;
+}
+#endif
 
 #if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
 [[patch(triangle, 3)]]
@@ -240,6 +282,7 @@ tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
 #endif
 
 // also used for forward-only
+#if !defined(WARP_USE_ARGUMENT_BUFFER)
 vertex auto scene_gather_vs(buffer<const float3> in_position,
 							buffer<const float2> in_tex_coord,
 							buffer<const float3> in_normal,
@@ -258,6 +301,27 @@ vertex auto scene_gather_vs(buffer<const float3> in_position,
 	
 	return out;
 }
+#else
+vertex auto scene_gather_vs(arg_buffer<model_data_t> model_data,
+							param<scene_gather_uniforms_t> uniforms) {
+	scene_gather_in_out out;
+	const auto vtx = model_data.pnbt[model_data_t::POSITION][vertex_id];
+	scene_vs(out, vtx,
+			 model_data.tc[vertex_id],
+			 model_data.pnbt[model_data_t::NORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
+			 model_data.materials_data[vertex_id],
+			 uniforms);
+	
+	float4 pos { vtx, 1.0f };
+	out.motion_prev = pos * uniforms.prev_mvpm;
+	out.motion_now = pos * uniforms.mvpm;
+	out.motion_next = pos * uniforms.next_mvpm;
+	
+	return out;
+}
+#endif
 
 #if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
 [[patch(triangle, 3)]]
@@ -432,7 +496,7 @@ static float4 scene_fs(const scene_base_in_out& in,
 	return { color, 1.0f };
 }
 
-#if !defined(WARP_USE_MATERIAL_ARGUMENT_BUFFER)
+#if !defined(WARP_USE_ARGUMENT_BUFFER)
 // non-argument-buffer variant: specify all material textures as separate parameters
 // NOTE: since this requires 126 textures (texture locations), this only works on macOS Tier1+ (128 limit) and or iOS Tier2/A13+
 

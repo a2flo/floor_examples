@@ -753,10 +753,10 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	}
 	
 	// our draw info is static, so only create it once
-	static const vector<graphics_renderer::multi_draw_indexed_entry> scene_draw_info {{
+	static const graphics_renderer::multi_draw_indexed_entry scene_draw_info {
 		.index_buffer = model.indices_buffer.get(),
 		.index_count = model.index_count
-	}};
+	};
 	static const graphics_renderer::patch_draw_indexed_entry scene_draw_patch_info {
 		.control_point_buffers = {
 			model.vertices_buffer.get(),
@@ -778,18 +778,15 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 	
 	//////////////////////////////////////////
 	// update tessellation factors
-	{
+	if (warp_state.dev->tessellation_support) {
 		if (!tess_factors_buffer) {
 			const auto tess_factors_size = sizeof(triangle_tessellation_levels_t) * (model.index_count / 3u);
 			tess_factors_buffer = warp_state.ctx->create_buffer(*warp_state.dev_queue, tess_factors_size);
 		}
 		warp_state.dev_queue->execute(*shaders[TESS_UPDATE_FACTORS],
 									  uint1 { model.index_count / 3u }, uint1 { 1024u },
-									  model.vertices_buffer,
-									  model.indices_buffer,
-									  model.materials_data_buffer,
+									  model.model_data_arg_buffer,
 									  tess_factors_buffer,
-									  model.index_count / 3u,
 									  scene_uniforms.cam_pos,
 									  float(gather_pipeline->get_description(false).tessellation.max_factor));
 	}
@@ -805,7 +802,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->set_attachments(shadow_map.shadow_image);
 		renderer->begin();
 		
-		renderer->multi_draw_indexed(scene_draw_info, model.vertices_buffer, light_mvpm);
+		renderer->draw_indexed(scene_draw_info, model.vertices_buffer, light_mvpm);
 		
 		renderer->end();
 		renderer->commit();
@@ -838,7 +835,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->begin();
 		if (warp_state.dev->tessellation_support) {
 			renderer->set_tessellation_factors(*tess_factors_buffer);
-			if (!warp_state.use_material_argument_buffer) {
+			if (!warp_state.use_argument_buffer) {
 				renderer->draw_patches_indexed(scene_draw_patch_info,
 											   // vertex shader
 											   model.displacement_textures,
@@ -864,38 +861,33 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 											   shadow_map.shadow_image);
 			}
 		} else {
-			if (!warp_state.use_material_argument_buffer) {
-				renderer->multi_draw_indexed(scene_draw_info,
-											 // vertex shader
-											 model.vertices_buffer,
-											 model.tex_coords_buffer,
-											 model.normals_buffer,
-											 model.binormals_buffer,
-											 model.tangents_buffer,
-											 model.materials_data_buffer,
-											 scene_uniforms,
-											 // fragment shader
-											 warp_state.displacement_mode,
-											 model.diffuse_textures,
-											 model.specular_textures,
-											 model.normal_textures,
-											 model.mask_textures,
-											 model.displacement_textures,
-											 shadow_map.shadow_image);
+			if (!warp_state.use_argument_buffer) {
+				renderer->draw_indexed(scene_draw_info,
+									   // vertex shader
+									   model.vertices_buffer,
+									   model.tex_coords_buffer,
+									   model.normals_buffer,
+									   model.binormals_buffer,
+									   model.tangents_buffer,
+									   model.materials_data_buffer,
+									   scene_uniforms,
+									   // fragment shader
+									   warp_state.displacement_mode,
+									   model.diffuse_textures,
+									   model.specular_textures,
+									   model.normal_textures,
+									   model.mask_textures,
+									   model.displacement_textures,
+									   shadow_map.shadow_image);
 			} else {
-				renderer->multi_draw_indexed(scene_draw_info,
-											 // vertex shader
-											 model.vertices_buffer,
-											 model.tex_coords_buffer,
-											 model.normals_buffer,
-											 model.binormals_buffer,
-											 model.tangents_buffer,
-											 model.materials_data_buffer,
-											 scene_uniforms,
-											 // fragment shader
-											 warp_state.displacement_mode,
-											 model.materials_arg_buffer,
-											 shadow_map.shadow_image);
+				renderer->draw_indexed(scene_draw_info,
+									   // vertex shader
+									   model.model_data_arg_buffer,
+									   scene_uniforms,
+									   // fragment shader
+									   warp_state.displacement_mode,
+									   model.materials_arg_buffer,
+									   shadow_map.shadow_image);
 			}
 		}
 		renderer->end();
@@ -955,7 +947,7 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 													   " -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
 													   " -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
 													   (floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
-													   (warp_state.use_material_argument_buffer ? " -DWARP_USE_MATERIAL_ARGUMENT_BUFFER=1" : "")+
+													   (warp_state.use_argument_buffer ? " -DWARP_USE_ARGUMENT_BUFFER=1" : "")+
 													   add_cli_options);
 	
 	if (new_shader_prog == nullptr) {
@@ -1008,7 +1000,7 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	return true;
 }
 
-void unified_renderer::init_model_materials_arg_buffer(const compute_queue& dev_queue, floor_obj_model& model) {
+void unified_renderer::init_model_arg_buffers(const compute_queue& dev_queue, floor_obj_model& model) {
 	// NOTE: scene_scatter_fs/scene_gather_fs/scene_gather_fwd_fs have the same function signature -> doesn't matter which one we take
 	model.materials_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(dev_queue, 2);
 	if (!model.materials_arg_buffer) {
@@ -1020,4 +1012,16 @@ void unified_renderer::init_model_materials_arg_buffer(const compute_queue& dev_
 											  model.normal_textures,
 											  model.mask_textures,
 											  model.displacement_textures);
+	
+	// model arg buffer has the same signature everywhere -> doesn't matter which one we take (use scene_gather_vs)
+	model.model_data_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_VS]->create_argument_buffer(dev_queue, 0);
+	if (!model.model_data_arg_buffer) {
+		throw runtime_error("failed to create model data argument buffer");
+	}
+	model.model_data_arg_buffer->set_arguments(dev_queue,
+											   vector { model.vertices_buffer, model.normals_buffer, model.binormals_buffer, model.tangents_buffer },
+											   model.tex_coords_buffer,
+											   model.materials_data_buffer,
+											   model.indices_buffer,
+											   model.index_count / 3u);
 }

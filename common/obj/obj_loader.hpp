@@ -92,6 +92,8 @@ struct floor_obj_model : obj_model {
 	shared_ptr<argument_buffer> materials_arg_buffer;
 	
 	vector<shared_ptr<compute_image>> textures;
+	
+	shared_ptr<argument_buffer> model_data_arg_buffer;
 };
 
 class obj_loader {

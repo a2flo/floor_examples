@@ -391,9 +391,15 @@ int main(int, char* argv[]) {
 		warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
 		warp_state.dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
 		
-		// enable argument_buffer materials when argument buffers with images are supported by the device
+		// enable argument_buffer use when argument buffers with images are supported by the device
 		if (warp_state.unified_renderer) {
-			warp_state.use_material_argument_buffer = warp_state.dev->argument_buffer_image_support;
+			warp_state.use_argument_buffer = warp_state.dev->argument_buffer_image_support;
+		}
+		
+		// tessellation requires argument buffer support
+		if (warp_state.dev->tessellation_support && !warp_state.use_argument_buffer) {
+			log_error("argument buffer support is required when using tessellation");
+			return -1;
 		}
 		
 		// if vsync is enabled (or metal is being used, which is always using vsync), and the target frame rate isn't set,
@@ -443,8 +449,8 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 		
-		if (warp_state.use_material_argument_buffer) {
-			uni_renderer->init_model_materials_arg_buffer(*warp_state.dev_queue, *(floor_obj_model*)model.get());
+		if (warp_state.use_argument_buffer) {
+			uni_renderer->init_model_arg_buffers(*warp_state.dev_queue, *(floor_obj_model*)model.get());
 		}
 	
 		// init done, release context
