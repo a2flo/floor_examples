@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
 struct warp_state_struct {
 	shared_ptr<compute_context> ctx;
-	shared_ptr<compute_queue> dev_queue;
+	shared_ptr<compute_queue> main_dev_queue;
 	const compute_device* dev { nullptr };
 	
 	//
@@ -51,16 +51,24 @@ struct warp_state_struct {
 	bool is_fixup { false };
 	bool is_bidir_scatter { false };
 	bool is_zw_depth { false };
+	bool is_always_render { false };
 	
 	// 0 = off, 1 = parallax mapping, 2 = tessellation
 	uint32_t displacement_mode { 0u };
 	
+	// use tessellation for displacement?
+	bool use_tessellation { true };
+	
 	// use an argument buffers? (for all materials/textures, model data)
 	bool use_argument_buffer { false };
 	
+	// use indirect render/compute commands/pipelines?
+	bool use_indirect_commands { false };
+	
 	// when using gather based warping, this is the current flip flop fbo idx
 	// (the one which will be rendered to next)
-	uint32_t cur_fbo = 0;
+	// NOTE: this is only used in the legacy OpenGL renderer
+	uint32_t legacy_cur_fbo = 0;
 	
 	float gather_eps_1 { 0.0025f };
 	float gather_eps_2 { 2.0f };
@@ -77,9 +85,6 @@ struct warp_state_struct {
 	// target frame rate: if set (>0), this will use a constant time delta for each
 	//                    computed frame instead of a variable delta
 	uint32_t target_frame_count { 0 };
-	
-	//
-	shared_ptr<compute_buffer> scatter_depth_buffer;
 	
 };
 extern warp_state_struct warp_state;

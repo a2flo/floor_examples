@@ -551,6 +551,7 @@
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5C8FEF411AF22325001D47BF /* auto_cam.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = auto_cam.cpp; sourceTree = "<group>"; };
 		5C8FEF421AF22325001D47BF /* auto_cam.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = auto_cam.hpp; sourceTree = "<group>"; };
+		5C97EAD72999617300D4C680 /* warp_shaders.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp_shaders.hpp; sourceTree = "<group>"; };
 		5CA2ADD227A9E6470061D07E /* chain_texture_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = chain_texture_bump.png; path = ../data/sponza/textures/chain_texture_bump.png; sourceTree = "<group>"; };
 		5CA2ADD327A9E6470061D07E /* sponza_arch_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_arch_bump.png; path = ../data/sponza/textures/sponza_arch_bump.png; sourceTree = "<group>"; };
 		5CA2ADD427A9E6470061D07E /* vase_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_bump.png; path = ../data/sponza/textures/vase_bump.png; sourceTree = "<group>"; };
@@ -848,6 +849,7 @@
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5CD737F51B00123700D9815E /* warp_state.hpp */,
 				5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */,
+				5C97EAD72999617300D4C680 /* warp_shaders.hpp */,
 				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
 				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
 				5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */,

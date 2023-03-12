@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,9 +22,13 @@
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_context.hpp>
 #include <floor/compute/compute_kernel.hpp>
+#include <floor/compute/indirect_command.hpp>
 #include "obj_loader.hpp"
 #include "camera.hpp"
 #include "warp_state.hpp"
+#include "warp_shaders.hpp"
+
+class render_thread;
 
 // unified Metal/Vulkan renderer
 class unified_renderer {
@@ -33,8 +37,7 @@ public:
 	~unified_renderer();
 	
 	bool init();
-	void destroy();
-	void render(const floor_obj_model& model, const camera& cam);
+	void render();
 	
 	bool rebuild_renderer();
 	
@@ -84,21 +87,31 @@ public:
 		return (size_t)WARP_SHADER::__MAX_WARP_SHADER;
 	}
 	
-	//! initializes the model/materials argument buffers in the specified model
-	void init_model_arg_buffers(const compute_queue& dev_queue, floor_obj_model& model);
+	//! various post-initialization:
+	//!  * initializes the model/materials argument buffers in the specified model
+	//!  * creates tessellation factors buffer
+	//!  * encode indirect pipelines
+	void post_init(const compute_queue& dev_queue, floor_obj_model& model, const camera& cam);
+	
+	// FPS functions
+	uint32_t get_fps();
+	bool is_new_fps_count();
 	
 protected:
-	void create_textures(const COMPUTE_IMAGE_TYPE color_format);
-	void destroy_textures(bool is_resize);
+	friend render_thread;
+	
+	// global model and camera state (available in/after post_init())
+	floor_obj_model* model { nullptr };
+	const camera* cam { nullptr };
+	
+	void create_frame_buffer_images(const COMPUTE_IMAGE_TYPE color_format);
+	void destroy_frame_buffer_images(bool is_resize);
 	
 	void create_skybox();
 	void destroy_skybox();
 	
 	event::handler resize_handler_fnctr;
 	bool resize_handler(EVENT_TYPE type, shared_ptr<event_object>);
-	
-	void render_full_scene(const floor_obj_model& model, const camera& cam);
-	void render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num);
 	
 	//
 	unique_ptr<graphics_pass> scatter_passes[2];
@@ -108,7 +121,7 @@ protected:
 	unique_ptr<graphics_pass> blit_pass;
 	void create_passes();
 	
-	//
+	// direct rendering + pipeline state
 	unique_ptr<graphics_pipeline> scatter_pipeline;
 	unique_ptr<graphics_pipeline> skybox_scatter_pipeline;
 	unique_ptr<graphics_pipeline> gather_pipeline;
@@ -117,42 +130,111 @@ protected:
 	unique_ptr<graphics_pipeline> skybox_gather_fwd_pipeline;
 	unique_ptr<graphics_pipeline> shadow_pipeline;
 	unique_ptr<graphics_pipeline> blit_pipeline;
-	void create_pipelines();
+	bool create_pipelines();
 	
-	shared_ptr<compute_buffer> tess_factors_buffer;
+	// TODO: !!! check which ones we actually need !!!
+	//! current amount of in flight frames
+	atomic<uint32_t> in_flight_frames { 0u };
+	//! the index of the next frame that will be rendered
+	uint32_t next_frame_idx { 0u };
+	//! set to true to signal renderer halt
+	atomic<bool> halt_renderer { false };
+	//! 0: queued new frame, 1: ready for next frame
+	//! NOTE: this is used for throttling
+	atomic<uint32_t> frame_render_state { 1 };
+	
+	// we'll try to render multiple frames at once -> need separate objects to make that work
+	static constexpr const uint32_t max_frames_in_flight { 2u };
+	struct frame_object_t {
+		// per-frame queue
+		shared_ptr<compute_queue> dev_queue;
+		
+		// render thread for this frame
+		unique_ptr<render_thread> rthread;
+		
+		//! current camera state for this frame
+		camera::camera_state_t cam_state;
+		
+		// manual sync
+		unique_ptr<compute_fence> render_post_tess_update_fence;
+		unique_ptr<compute_fence> render_post_shadow_fence;
+		unique_ptr<compute_fence> render_post_scene_fence;
+		unique_ptr<compute_fence> render_post_skybox_fence;
+		unique_ptr<compute_fence> render_post_blit_fence;
+		
+		// indirect rendering (if supported)
+		unique_ptr<indirect_command_pipeline> indirect_shadow_pipeline;
+		unique_ptr<indirect_command_pipeline> indirect_scene_scatter_pipeline;
+		unique_ptr<indirect_command_pipeline> indirect_scene_gather_pipeline;
+		unique_ptr<indirect_command_pipeline> indirect_skybox_scatter_pipeline;
+		unique_ptr<indirect_command_pipeline> indirect_skybox_gather_pipeline;
+		unique_ptr<argument_buffer> indirect_scene_fs_data;
+		unique_ptr<argument_buffer> indirect_sky_fs_data;
+		
+		// other per-frame data
+		shared_ptr<compute_buffer> frame_uniforms_buffer;
+		shared_ptr<compute_buffer> tess_factors_buffer;
+		
+		//! signals that the frame has finished rendering and can now be blitted to the screen
+		atomic_bool render_done { false };
+		//! signals that the frame has been presented
+		atomic_bool present_done { true };
+		
+		// frame buffer images
+		struct {
+			shared_ptr<compute_image> color;
+			shared_ptr<compute_image> depth;
+			shared_ptr<compute_image> motion[2];
+			shared_ptr<compute_image> motion_depth;
+			shared_ptr<compute_image> compute_color;
+			
+			uint2 dim;
+			uint2 dim_multiple;
+		} scene_fbo;
+		
+		struct {
+			shared_ptr<compute_image> shadow_image;
+			uint2 dim {
+#if !defined(FLOOR_IOS)
+				8192u
+#else
+				2048u
+#endif
+			};
+		} shadow_map;
+		
+		//! storage of the current epoch
+		atomic<uint64_t> current_epoch { 0u };
+		
+		//! advance to the next epoch
+		uint64_t next_epoch() {
+			return ++current_epoch;
+		}
+		
+		//! returns the current epoch
+		uint64_t get_epoch() const {
+			return current_epoch.load();
+		}
+	};
+	frame_object_t frame_objects[max_frames_in_flight];
+	
+	void encode_indirect_pipelines(const uint32_t frame_idx);
+	
+	void render_full_scene(const uint32_t frame_idx, const float time_delta);
+	void render_kernels(const float& delta, const float& render_delta, const size_t& warp_frame_num,
+						const frame_object_t& cur_frame, const frame_object_t& prev_frame);
+	void update_uniforms(const uint32_t frame_idx, const float time_delta);
 	
 	//
-	struct {
-		shared_ptr<compute_image> color[2];
-		shared_ptr<compute_image> depth[2];
-		shared_ptr<compute_image> motion[4];
-		shared_ptr<compute_image> motion_depth[2];
-		shared_ptr<compute_image> compute_color;
-		
-		uint2 dim;
-		uint2 dim_multiple;
-	} scene_fbo;
-	struct {
-		shared_ptr<compute_image> shadow_image;
-		uint2 dim {
-#if !defined(FLOOR_IOS)
-			16384u
-#else
-			4096u
-#endif
-		};
-	} shadow_map;
 	shared_ptr<compute_image> skybox_tex;
 	static constexpr const double4 clear_color { 0.215, 0.412, 0.6, 0.0 };
 	bool first_frame { true };
-	bool blit_frame { false };
 	
 	// rendering + warp uniforms
 	float3 light_pos;
 	matrix4f pm, mvm, rmvm;
 	matrix4f prev_mvm, prev_prev_mvm;
 	matrix4f prev_rmvm, prev_prev_rmvm;
-	matrix4f light_bias_mvpm, light_mvpm;
 	
 	struct __attribute__((packed)) {
 		matrix4f mvpm;
@@ -169,6 +251,8 @@ protected:
 		matrix4f m1; // unused (scatter), prev_mvpm (gather)
 	} skybox_uniforms;
 	
+	warp_shaders::frame_uniforms_t frame_uniforms;
+	
 	// shader
 	shared_ptr<compute_program> shader_prog;
 	array<compute_kernel*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> shaders;
@@ -176,8 +260,17 @@ protected:
 	
 	bool compile_shaders(const string add_cli_options = "");
 	
-	// current metal (id <MTLCommandBuffer>) or vulkan command buffer used for rendering
-	//void* render_cmd_buffer;
+	// FPS counting
+	safe_mutex fps_state_lock;
+	atomic<uint32_t> cur_fps_count { 0u };
+	atomic_bool new_fps_count { false };
+	struct fps_state_t {
+		//! start point of the current "second"/epoch
+		chrono::steady_clock::time_point sec_start_point { chrono::steady_clock::now() };
+		//! number of rendered frames since "sec_start_point"
+		uint32_t fps_count { 0u };
+	} fps_state GUARDED_BY(fps_state_lock);
+	void finish_frame(const uint32_t rendered_frame_idx) REQUIRES(!fps_state_lock);
 	
 };
 

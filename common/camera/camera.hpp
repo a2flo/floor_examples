@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,27 +33,27 @@ public:
 
 	void run();
 
-	void set_position(const float& x, const float& y, const float& z);
-	void set_position(const float3& pos);
-	float3& get_position();
-	const float3& get_position() const;
-	const float3& get_prev_position() const;
+	void set_position(const double& x, const double& y, const double& z);
+	void set_position(const double3& pos);
+	double3& get_position();
+	const double3& get_position() const;
+	const double3& get_prev_position() const;
 	
-	void set_rotation(const float& x, const float& y);
-	void set_rotation(const float2& rot);
-	float2& get_rotation();
-	const float2& get_rotation() const;
+	void set_rotation(const double& x, const double& y);
+	void set_rotation(const double2& rot);
+	double2& get_rotation();
+	const double2& get_rotation() const;
 	void set_rotation_wrapping(const bool& state);
 	const bool& get_rotation_wrapping() const;
 	
 	void set_single_frame(const bool& state);
-	float3 get_single_frame_direction() const;
-	const quaternionf& get_single_frame_rotation() const;
+	double3 get_single_frame_direction() const;
+	const quaterniond& get_single_frame_rotation() const;
 
-	void set_rotation_speed(const float& speed);
-	float get_rotation_speed() const;
-	void set_cam_speed(const float& speed);
-	float get_cam_speed() const;
+	void set_rotation_speed(const double& speed);
+	double get_rotation_speed() const;
+	void set_cam_speed(const double& speed);
+	double get_cam_speed() const;
 
 	void set_keyboard_input(const bool& state);
 	bool get_keyboard_input() const;
@@ -62,23 +62,51 @@ public:
 	void set_wasd_input(const bool& state);
 	bool get_wasd_input() const;
 	
-	float3 get_direction() const;
-	static float3 get_direction(const float2 rotation);
+	double3 get_direction() const;
+	static double3 get_direction(const double2 rotation);
+	
+	//! returns the rotation matrix for the current rotation
+	template <typename fp_type> requires is_floating_point_v<fp_type>
+	auto get_rotation_matrix() const {
+		return (matrix4d::rotation_deg_named<'y'>(rotation.y) *
+				matrix4d::rotation_deg_named<'x'>(rotation.x)).cast<fp_type>();
+	}
+	
+	//! the full camera state
+	struct camera_state_t {
+		//! actual absolute position
+		double3 position;
+		double2 rotation;
+		matrix4f rotation_matrix;
+		//! normalized forward vector
+		float3 forward;
+	};
+	//! returns the current full camera state
+	camera_state_t get_current_state() const;
 
 protected:
 	event* evt;
 
-	float3 position, prev_position;
-	float2 rotation;
+	double3 position, prev_position;
+	double2 rotation;
+	
+	//! camera state can be retrieved concurrently
+	struct concurrent_camera_state_t {
+		mutable safe_mutex lock;
+		camera_state_t state GUARDED_BY(lock);
+	};
+	static constexpr const uint32_t camera_state_count { 3u };
+	atomic<uint32_t> current_camera_state;
+	concurrent_camera_state_t camera_states[camera_state_count];
 	
 	bool is_single_frame = false;
-	quaternionf single_frame_quat;
-	float2 single_frame_direction;
-	float single_frame_distance = 0.0f;
+	quaterniond single_frame_quat;
+	double2 single_frame_direction;
+	double single_frame_distance = 0.0;
 	
-	float up_down = 0.0f;
-	float rotation_speed = 150.0f;
-	float cam_speed = 75.0f;
+	double up_down = 0.0;
+	double rotation_speed = 150.0;
+	double cam_speed = 75.0;
 
 	bool keyboard_input = true;
 	bool mouse_input = false;

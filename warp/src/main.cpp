@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ struct warp_option_context {
 typedef option_handler<warp_option_context> warp_opt_handler;
 
 static unique_ptr<camera> cam;
-static const float3 cam_speeds { 75.0f /* default */, 150.0f /* faster */, 10.0f /* slower */ };
+static const double3 cam_speeds { 75.0 /* default */, 150.0 /* faster */, 10.0 /* slower */ };
 
 static shared_ptr<unified_renderer> uni_renderer;
 
@@ -52,7 +52,9 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
 		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
 		cout << "\t--depth-zw: write depth as z/w into a separate color fbo attachment (use this if OpenGL/OpenCL depth buffer sharing is not supported or broken)" << endl;
+		cout << "\t--always-render: always perform full scene rendering (warping is disabled), not that --frames/--target will be ignored if enabled" << endl;
 		cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << endl;
+		cout << "\t--no-tessellation: disables tessellation in the unified renderer" << endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
@@ -98,6 +100,10 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.is_zw_depth = true;
 		cout << "using separate z/w depth buffer" << endl;
 	}},
+	{ "--always-render", [](warp_option_context&, char**&) {
+		warp_state.is_always_render = true;
+		cout << "always rendering (warping fully disabled)" << endl;
+	}},
 	{ "--no-metal", [](warp_option_context&, char**&) {
 		warp_state.no_metal = true;
 		cout << "metal disabled" << endl;
@@ -109,6 +115,10 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 	{ "--no-unified", [](warp_option_context&, char**&) {
 		warp_state.unified_renderer = false;
 		cout << "unified renderer disabled" << endl;
+	}},
+	{ "--no-tessellation", [](warp_option_context&, char**&) {
+		warp_state.use_tessellation = false;
+		cout << "tessellation disabled" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -222,12 +232,12 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				log_debug("px fixup? $", warp_state.is_fixup);
 				break;
 			case SDLK_5:
-				warp_state.cur_fbo = 0;
+				warp_state.legacy_cur_fbo = 0;
 				warp_state.is_bidir_scatter ^= true;
 				log_debug("bidirectional scatter? $", warp_state.is_bidir_scatter);
 				break;
 			case SDLK_g:
-				warp_state.cur_fbo = 0;
+				warp_state.legacy_cur_fbo = 0;
 				warp_state.is_scatter ^= true;
 				log_debug("scatter/gather? $", (warp_state.is_scatter ? "scatter" : "gather"));
 				break;
@@ -252,7 +262,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				log_debug("split view? $", warp_state.is_split_view);
 				break;
 			case SDLK_0: {
-				static const uint32_t max_disp_mode = (warp_state.dev->tessellation_support ? 3u : 2u);
+				static const uint32_t max_disp_mode = (warp_state.use_tessellation ? 3u : 2u);
 				warp_state.displacement_mode = (warp_state.displacement_mode + 1u) % max_disp_mode;
 				break;
 			}
@@ -287,6 +297,15 @@ int main(int, char* argv[]) {
 #endif
 	
 	// init floor
+	const auto wanted_renderer = (// if neither opengl or vulkan is disabled, use the default
+								  // (this will choose vulkan if the config compute backend is vulkan)
+								  (!warp_state.no_opengl && !warp_state.no_vulkan && warp_state.unified_renderer) ? floor::RENDERER::DEFAULT :
+								  // else: choose a specific one
+								  !warp_state.no_vulkan && warp_state.unified_renderer ? floor::RENDERER::VULKAN :
+								  !warp_state.no_metal && warp_state.unified_renderer ? floor::RENDERER::METAL :
+								  !warp_state.no_opengl ? floor::RENDERER::OPENGL :
+								  // opengl/vulkan/metal are disabled
+								  floor::RENDERER::NONE);
 	if(!floor::init(floor::init_state {
 		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
@@ -295,15 +314,10 @@ int main(int, char* argv[]) {
 		.data_path = "data/",
 #endif
 		.app_name = "warp",
-		.renderer = (// if neither opengl or vulkan is disabled, use the default
-					 // (this will choose vulkan if the config compute backend is vulkan)
-					 (!warp_state.no_opengl && !warp_state.no_vulkan && warp_state.unified_renderer) ? floor::RENDERER::DEFAULT :
-					 // else: choose a specific one
-					 !warp_state.no_vulkan && warp_state.unified_renderer ? floor::RENDERER::VULKAN :
-					 !warp_state.no_metal && warp_state.unified_renderer ? floor::RENDERER::METAL :
-					 !warp_state.no_opengl ? floor::RENDERER::OPENGL :
-					 // opengl/vulkan/metal are disabled
-					 floor::RENDERER::NONE),
+		.renderer = wanted_renderer,
+		// disable resource tracking for Metal
+		.context_flags = (warp_state.unified_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
+						  COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE)
 	})) {
 		return -1;
 	}
@@ -380,24 +394,38 @@ int main(int, char* argv[]) {
 			cam->set_wasd_input(false);
 		}
 		
-		cam->set_position(-115.0f, 15.0f, 0.0f);
-		cam->set_rotation(0.0f, -90.0f);
+		cam->set_position(-115.0, 15.0, 0.0);
+		cam->set_rotation(0.0, -90.0);
 		last_cam_pos = cam->get_position();
 		
 		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
 		warp_state.ctx = floor::get_compute_context();
+		log_warn("ctx flags: $", warp_state.ctx->get_context_flags());
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
 		warp_state.dev = warp_state.ctx->get_device(compute_device::TYPE::FASTEST);
-		warp_state.dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
+		warp_state.main_dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
 		
 		// enable argument_buffer use when argument buffers with images are supported by the device
 		if (warp_state.unified_renderer) {
 			warp_state.use_argument_buffer = warp_state.dev->argument_buffer_image_support;
+#if 1
+			warp_state.use_tessellation &= warp_state.dev->tessellation_support;
+#endif
+			
+			// if there is full argument buffer support and there is full indirect command support, enable indirect command use
+			if (warp_state.use_argument_buffer &&
+				warp_state.dev->indirect_command_support &&
+				warp_state.dev->indirect_render_command_support &&
+				warp_state.dev->indirect_compute_command_support) {
+#if 1
+				warp_state.use_indirect_commands = true;
+#endif
+			}
 		}
 		
 		// tessellation requires argument buffer support
-		if (warp_state.dev->tessellation_support && !warp_state.use_argument_buffer) {
+		if (warp_state.use_tessellation && !warp_state.use_argument_buffer) {
 			log_error("argument buffer support is required when using tessellation");
 			return -1;
 		}
@@ -431,7 +459,7 @@ int main(int, char* argv[]) {
 			}
 			
 			// init displacement mode depending on tessellation support
-			warp_state.displacement_mode = (warp_state.dev->tessellation_support ? 2u : 1u);
+			warp_state.displacement_mode = (warp_state.use_tessellation ? 2u : 1u);
 		} else {
 			if(!warp_state.no_opengl) {
 				if(!gl_renderer::init()) {
@@ -444,24 +472,39 @@ int main(int, char* argv[]) {
 		//
 		bool model_success { false };
 		model = obj_loader::load(floor::data_path("sponza/sponza.obj"), model_success,
-								 *warp_state.ctx, *warp_state.dev_queue);
+								 *warp_state.ctx, *warp_state.main_dev_queue);
 		if(!model_success) {
 			return -1;
 		}
 		
-		if (warp_state.use_argument_buffer) {
-			uni_renderer->init_model_arg_buffers(*warp_state.dev_queue, *(floor_obj_model*)model.get());
-		}
+		uni_renderer->post_init(*warp_state.main_dev_queue, *(floor_obj_model*)model.get(), *cam);
 	
 		// init done, release context
 	}
 	
 	// main loop
 	log_debug("first frame");
-	while(!warp_state.done) {
+	while (!warp_state.done) {
+		if (uni_renderer) {
+			// throttle main loop when rendering and render queueing is off-loaded
+			this_thread::sleep_for(500us);
+			{
+				static auto last_sec_frame = chrono::steady_clock::now();
+				//static uint32_t event_loop_fps_counter = 0u;
+				const auto cur_time = chrono::steady_clock::now();
+				if (cur_time - last_sec_frame > 1s) {
+					// update stats
+					//log_msg("event loop FPS: $", event_loop_fps_counter);
+					last_sec_frame = cur_time;
+					//event_loop_fps_counter = 0;
+				}
+				//++event_loop_fps_counter;
+			}
+		}
+		
 		floor::get_event()->handle_events();
 		
-#if !defined(FLOOR_IOS)
+#if !defined(FLOOR_IOS) && 0
 		// stop drawing if window is inactive
 		if(!(SDL_GetWindowFlags(floor::get_window()) & SDL_WINDOW_INPUT_FOCUS)) {
 			SDL_Delay(20);
@@ -469,15 +512,24 @@ int main(int, char* argv[]) {
 		}
 #endif
 		
-		if(!warp_state.is_frame_repeat) {
+		if (!warp_state.is_frame_repeat) {
 			if(!warp_state.is_auto_cam) cam->run();
 			else auto_cam::run(*cam);
 		}
 		
-		if(floor::is_new_fps_count()) {
-			floor::set_caption("warp | FPS: " + to_string(floor::get_fps()) +
-							   " | Pos: " + cam->get_position().to_string() +
-							   " | Rot: " + cam->get_rotation().to_string());
+		if (uni_renderer) {
+			if (uni_renderer->is_new_fps_count()) {
+				const auto& cam_state = cam->get_current_state();
+				floor::set_caption("warp | FPS: " + to_string(uni_renderer->get_fps()) +
+								   " | Pos: " + cam_state.position.to_string() +
+								   " | Rot: " + cam_state.rotation.to_string());
+			}
+		} else {
+			if (floor::is_new_fps_count()) {
+				floor::set_caption("warp | FPS: " + to_string(floor::get_fps()) +
+								   " | Pos: " + cam->get_position().to_string() +
+								   " | Rot: " + cam->get_rotation().to_string());
+			}
 		}
 		
 		// s/w rendering
@@ -485,14 +537,14 @@ int main(int, char* argv[]) {
 			// nope
 		}
 		// opengl/metal/vulkan rendering
-		else if((!warp_state.no_opengl || !warp_state.no_metal || !warp_state.no_vulkan) && !warp_state.stop) {
-			floor::start_frame();
+		else if((!warp_state.no_opengl || !warp_state.no_metal || !warp_state.no_vulkan) && !warp_state.stop) { // TODO: !!! cleanup !!!
 			if (uni_renderer) {
-				uni_renderer->render((const floor_obj_model&)*model.get(), *cam.get());
+				uni_renderer->render();
 			} else if (!warp_state.no_opengl) {
+				floor::start_frame();
 				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
+				floor::end_frame();
 			}
-			floor::end_frame();
 		}
 	}
 	log_msg("done!");
