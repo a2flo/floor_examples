@@ -70,6 +70,7 @@ struct nbody_state_struct {
 	bool benchmark { false };
 	bool unified_renderer { true };
 	bool msaa { false };
+	bool no_indirect { false };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)

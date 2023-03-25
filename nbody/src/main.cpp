@@ -23,6 +23,7 @@
 #include <floor/compute/metal/metal_compute.hpp>
 #include <floor/compute/vulkan/vulkan_compute.hpp>
 #include <floor/compute/host/host_compute.hpp>
+#include <floor/compute/indirect_command.hpp>
 #include <floor/vr/vr_context.hpp>
 #include "gl_renderer.hpp"
 #include "metal_renderer.hpp"
@@ -74,6 +75,10 @@ static size_t iteration { 0 };
 static double sim_time_sum { 0.0 };
 // initializes (or resets) the current nbody system
 static void init_system();
+// the amount of nbody compute iterations that will be performed for the benchmark
+static constexpr const uint32_t benchmark_iterations { 100 };
+// when using indirect command pipelines: this contains the full 100 iterations of the nbody benchmark
+static unique_ptr<indirect_command_pipeline> indirect_benchmark_pipeline;
 
 //! option -> function map
 template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_handler::options {
@@ -96,6 +101,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
 		cout << "\t--msaa: enable 4xMSAA rendering" << endl;
+		cout << "\t--no-indirect: disables indirect command pipeline usage" << endl;
 		for(const auto& desc : nbody_setup_desc) {
 			cout << "\t\t" << desc << endl;
 		}
@@ -283,6 +289,10 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 	{ "--msaa", [](nbody_option_context&, char**&) {
 		nbody_state.msaa = true;
 		cout << "MSAA rendering enabled" << endl;
+	}},
+	{ "--no-indirect", [](nbody_option_context&, char**&) {
+		nbody_state.no_indirect = true;
+		cout << "indirect command pipelines disabled" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
@@ -594,6 +604,7 @@ int main(int, char* argv[]) {
 					 !nbody_state.no_opengl ? floor::RENDERER::OPENGL :
 					 // opengl/vulkan/metal are disabled
 					 floor::RENDERER::NONE),
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING,
 	})) {
 		return -1;
 	}
@@ -656,6 +667,7 @@ int main(int, char* argv[]) {
 	shared_ptr<compute_program> nbody_prog;
 	shared_ptr<compute_program> nbody_render_prog;
 	shared_ptr<compute_kernel> nbody_compute;
+	shared_ptr<compute_kernel> nbody_compute_fixed_delta;
 	shared_ptr<compute_kernel> nbody_raster;
 	
 	const uint2 img_size { floor::get_physical_screen_size() };
@@ -731,8 +743,9 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 		nbody_compute = nbody_prog->get_kernel("nbody_compute");
+		nbody_compute_fixed_delta = nbody_prog->get_kernel("nbody_compute_fixed_delta");
 		nbody_raster = nbody_prog->get_kernel("nbody_raster");
-		if(nbody_compute == nullptr || nbody_raster == nullptr) {
+		if (nbody_compute == nullptr || nbody_compute_fixed_delta == nullptr || nbody_raster == nullptr) {
 			log_error("failed to retrieve kernel(s) from program");
 			return -1;
 		}
@@ -825,6 +838,42 @@ int main(int, char* argv[]) {
 		// init nbody system
 		init_system();
 		
+		// create the indirect command pipeline for benchmarking
+		if (nbody_state.benchmark && !nbody_state.no_indirect &&
+			compute_dev->indirect_command_support && compute_dev->indirect_compute_command_support) {
+			do {
+				indirect_command_description desc {
+					.command_type = indirect_command_description::COMMAND_TYPE::COMPUTE,
+					.max_command_count = benchmark_iterations,
+					.debug_label = "indirect_benchmark_pipeline"
+				};
+				desc.compute_buffer_counts_from_functions(*compute_dev, {
+					nbody_compute_fixed_delta.get()
+				});
+				indirect_benchmark_pipeline = compute_ctx->create_indirect_command_pipeline(desc);
+				if (!indirect_benchmark_pipeline->is_valid()) {
+					log_error("failed to create indirect_benchmark_pipeline");
+					// -> fall back to not using an indirect command pipeline
+					nbody_state.no_indirect = true;
+					indirect_benchmark_pipeline = nullptr;
+					break;
+				}
+				
+				// encode indirect pipeline
+				static_assert(pos_buffer_count >= 2, "need at least 2 position buffers");
+				for (uint32_t i = 0; i < benchmark_iterations; ++i) {
+					// will only flip/flop between two position buffers here
+					indirect_benchmark_pipeline->add_compute_command(*dev_queue, *nbody_compute_fixed_delta)
+						.set_arguments(position_buffers[i % 2u],
+									   position_buffers[(i + 1u) % 2u],
+									   velocity_buffer)
+						.execute(nbody_state.body_count, nbody_state.tile_size)
+						.barrier();
+				}
+				indirect_benchmark_pipeline->complete();
+			} while (false);
+		}
+		
 		// add event handlers
 		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
 													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
@@ -843,18 +892,8 @@ int main(int, char* argv[]) {
 	// is there a price for the most nested namespace/typedef?
 	static const double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
 	// main loop
-	while(!nbody_state.done) {
+	while (!nbody_state.done) {
 		floor::get_event()->handle_events();
-		
-		// when benchmarking, we need to make sure computation is actually finished (all 100 iterations were computed)
-		if(nbody_state.benchmark && iteration == 99) {
-			dev_queue->finish();
-		}
-		
-		// time keeping
-		auto now = chrono::high_resolution_clock::now();
-		auto delta = now - time_keeper;
-		time_keeper = now;
 		
 		// simple iteration time -> gflops mapping function (note that flops per interaction is a fixed number)
 		const auto compute_gflops = [](const double& iter_time_in_ms, const bool use_fma) {
@@ -878,47 +917,65 @@ int main(int, char* argv[]) {
 		// flip/flop buffer indices
 		const size_t cur_buffer = buffer_flip_flop;
 		const size_t next_buffer = (buffer_flip_flop + 1) % pos_buffer_count;
-		if(!nbody_state.stop) {
+		if (!nbody_state.stop) {
 			//log_debug("delta: $ms /// $ gflops", 1000.0f * float(((double)delta.count()) / time_den),
 			//		  compute_gflops(1000.0 * (((double)delta.count()) / time_den), false));
+			
+			if (nbody_state.benchmark && indirect_benchmark_pipeline) {
+				// if we using an indirect command pipeline: run it here once and complete the benchmark
+				iteration = benchmark_iterations - 1u; // -> signal as complete
+				
+				// ensure any previous work is complete, then start the timing
+				dev_queue->finish();
+				time_keeper = chrono::high_resolution_clock::now();
+				
+				const compute_queue::indirect_execution_parameters_t exec_params {
+					.debug_label = "nbody_benchmark",
+				};
+				dev_queue->execute_indirect(*indirect_benchmark_pipeline, exec_params);
+			} else {
+				// direct, one kernel execution per iteration:
+				dev_queue->execute(*nbody_compute,
+								   // total amount of work:
+								   uint1 { nbody_state.body_count },
+								   // work per work-group:
+								   uint1 { nbody_state.tile_size },
+								   // kernel arguments:
+								   /* in_positions: */		position_buffers[cur_buffer],
+								   /* out_positions: */		position_buffers[next_buffer],
+								   /* velocities: */		velocity_buffer,
+								   /* delta: */				/*float(((double)delta.count()) / time_den)*/
+															// NOTE: could use a time-step scaler instead, but fixed size seems more reasonable
+															nbody_state.time_step);
+				buffer_flip_flop = next_buffer;
+			}
+			dev_queue->finish(); // ensure all is complete
+			
+			// time keeping
+			auto now = chrono::high_resolution_clock::now();
+			auto delta = now - time_keeper;
+			time_keeper = now;
 			
 			// in ms
 			sim_time_sum += ((double)delta.count()) / (time_den / 1000.0);
 			
-			if(iteration == 99) {
-				log_debug("avg of 100 iterations: $ms ### $ gflops",
-						  sim_time_sum / 100.0, compute_gflops(sim_time_sum / 100.0, false));
+			if (iteration == benchmark_iterations - 1u) {
+				log_debug("avg of $ iterations: $ms ### $ gflops",
+						  benchmark_iterations, sim_time_sum / double(benchmark_iterations),
+						  compute_gflops(sim_time_sum / double(benchmark_iterations), false));
 				floor::set_caption("nbody / " + to_string(nbody_state.body_count) + " bodies / " +
-								   to_string(compute_gflops(sim_time_sum / 100.0, false)) + " gflops");
+								   to_string(compute_gflops(sim_time_sum / double(benchmark_iterations), false)) + " gflops");
 				iteration = 0;
 				sim_time_sum = 0.0L;
 				
 				// benchmark is done after 100 iterations
-				if(nbody_state.benchmark) {
+				if (nbody_state.benchmark) {
 					nbody_state.done = true;
 				}
-			}
-			else {
+			} else {
 				++iteration;
 			}
-			
-			dev_queue->execute(*nbody_compute,
-							   // total amount of work:
-							   uint1 { nbody_state.body_count },
-							   // work per work-group:
-							   uint1 { nbody_state.tile_size },
-							   // kernel arguments:
-							   /* in_positions: */		position_buffers[cur_buffer],
-							   /* out_positions: */		position_buffers[next_buffer],
-							   /* velocities: */		velocity_buffer,
-							   /* delta: */				/*float(((double)delta.count()) / time_den)*/
-							   							// NOTE: could use a time-step scaler instead, but fixed size seems more reasonable
-							   							nbody_state.time_step);
-			buffer_flip_flop = next_buffer;
 		}
-		
-		// there is no proper dependency tracking yet, so always need to manually finish right now
-		if(is_vulkan || is_metal) dev_queue->finish();
 		
 		// s/w rendering
 		if(nbody_state.no_opengl && nbody_state.no_metal && nbody_state.no_vulkan && !nbody_state.benchmark) {
@@ -1001,6 +1058,7 @@ int main(int, char* argv[]) {
 	
 	// cleanup
 	floor::acquire_context();
+	dev_queue->finish();
 	for(size_t i = 0; i < pos_buffer_count; ++i) {
 		position_buffers[i] = nullptr;
 	}

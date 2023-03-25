@@ -293,6 +293,6 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		
 		blitter->end();
 		blitter->present();
-		blitter->commit();
+		blitter->commit(true);
 	}
 }

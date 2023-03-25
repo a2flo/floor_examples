@@ -57,11 +57,10 @@ static void compute_body_interaction(const float4& shared_body,
 #endif
 }
 
-kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
-void nbody_compute(buffer<const float4> in_positions,
-				   buffer<float4> out_positions,
-				   buffer<float3> velocities,
-				   param<float> delta) {
+static void nbody_compute_impl(buffer<const float4>& in_positions,
+							   buffer<float4>& out_positions,
+							   buffer<float3>& velocities,
+							   const float delta) {
 	const auto idx = global_id.x;
 	const auto body_count = global_size.x;
 	
@@ -105,6 +104,21 @@ void nbody_compute(buffer<const float4> in_positions,
 	
 	out_positions[idx] = position;
 	velocities[idx] = velocity;
+}
+
+kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
+void nbody_compute(buffer<const float4> in_positions,
+				   buffer<float4> out_positions,
+				   buffer<float3> velocities,
+				   param<float> delta) {
+	nbody_compute_impl(in_positions, out_positions, velocities, delta);
+}
+
+kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
+void nbody_compute_fixed_delta(buffer<const float4> in_positions,
+							   buffer<float4> out_positions,
+							   buffer<float3> velocities) {
+	nbody_compute_impl(in_positions, out_positions, velocities, 20.0f / 1000.0f /* 20ms*/);
 }
 
 static float3 compute_gradient(const float& interpolator) {
