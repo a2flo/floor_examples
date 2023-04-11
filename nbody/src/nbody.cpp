@@ -231,7 +231,7 @@ vertex blit_in_out blit_vs() {
 	}
 }
 
-fragment float4 blit_fs(const blit_in_out in [[stage_input]],
+fragment float4 blit_fs(const blit_in_out in [[stage_input]] [[maybe_unused]],
 						const_image_2d<float> img,
 						param<float> scaler) {
 #if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
@@ -243,7 +243,7 @@ fragment float4 blit_fs(const blit_in_out in [[stage_input]],
 	return color;
 }
 
-fragment float4 blit_fs_layered(const blit_in_out in [[stage_input]],
+fragment float4 blit_fs_layered(const blit_in_out in [[stage_input]] [[maybe_unused]],
 								const_image_2d_array<float> img,
 								param<float> scaler) {
 #if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan

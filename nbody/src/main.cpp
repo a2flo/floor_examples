@@ -1059,6 +1059,9 @@ int main(int, char* argv[]) {
 	// cleanup
 	floor::acquire_context();
 	dev_queue->finish();
+	if (indirect_benchmark_pipeline) {
+		indirect_benchmark_pipeline = nullptr;
+	}
 	for(size_t i = 0; i < pos_buffer_count; ++i) {
 		position_buffers[i] = nullptr;
 	}
