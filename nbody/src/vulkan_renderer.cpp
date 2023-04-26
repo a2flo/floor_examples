@@ -88,11 +88,11 @@ static void create_textures(const compute_queue& dev_queue) {
 																			   COMPUTE_MEMORY_FLAG::READ |
 																			   COMPUTE_MEMORY_FLAG::HOST_WRITE /*|
 																			   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS*/));
-		body_textures[i]->transition_read(dev_queue, cmd.cmd_buffer);
+		body_textures[i]->transition_read(&dev_queue, cmd.cmd_buffer);
 	}
 
 	VK_CALL_RET(vkEndCommandBuffer(cmd.cmd_buffer), "failed to end command buffer")
-	vk_queue.submit_command_buffer(cmd);
+	vk_queue.submit_command_buffer(cmd, {}, {}, {});
 }
 
 bool vulkan_renderer::init(shared_ptr<compute_context> ctx,
@@ -456,7 +456,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	vkCmdEndRenderPass(cmd_buffer.cmd_buffer);
 	
 	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
-	vk_queue.submit_command_buffer(cmd_buffer, true); // TODO: don't block
+	vk_queue.submit_command_buffer(cmd_buffer, {}, {}, {}, true); // TODO: don't block
 	
 	vk_ctx->present_image(drawable);
 }
