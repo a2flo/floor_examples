@@ -55,8 +55,7 @@
 		"basic_32_bit_float_atomics_support": false,
 		"primitive_id_support": false,
 		"barycentric_coord_support": false,
-		"tessellation_support": false,
-		"descriptor_buffer_support": true
+		"tessellation_support": false
 	},
 	{
 		"type": "Host",
