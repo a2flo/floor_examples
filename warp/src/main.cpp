@@ -554,6 +554,9 @@ int main(int, char* argv[]) {
 	gl_renderer::destroy();
 	uni_renderer = nullptr;
 	cam = nullptr;
+	model = nullptr;
+	warp_state.main_dev_queue = nullptr;
+	warp_state.ctx = nullptr;
 	
 	// kthxbye
 	floor::destroy();

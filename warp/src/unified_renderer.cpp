@@ -25,6 +25,7 @@
 #include <floor/graphics/graphics_pass.hpp>
 #include <floor/compute/device/common.hpp>
 #include <libwarp/libwarp.h>
+#include <condition_variable>
 
 //! render thread implementation:
 //! this performs the rendering and screen-blitting/present of a single frame
@@ -791,7 +792,7 @@ void unified_renderer::encode_indirect_pipelines(const uint32_t frame_idx) {
 						   // fs
 						   frame.frame_uniforms_buffer,
 						   model->materials_arg_buffer,
-						   frame. indirect_scene_fs_data)
+						   frame.indirect_scene_fs_data)
 			.draw_indexed(*model->indices_buffer, model->index_count);
 	}
 	
@@ -1249,7 +1250,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		} else {
 			shadow_map_renderer->execute_indirect(*frame.indirect_shadow_pipeline);
 		}
-		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, graphics_renderer::RENDER_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
+		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, compute_fence::SYNC_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
 		
 		shadow_map_renderer->end();
 	}
@@ -1343,15 +1344,17 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 			// -> indirect rendering
 			scene_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_scene_scatter_pipeline : *frame.indirect_scene_gather_pipeline);
 		}
-		scene_renderer->signal_fence(*frame.render_post_scene_fence, graphics_renderer::RENDER_STAGE::FRAGMENT);
+		scene_renderer->signal_fence(*frame.render_post_scene_fence, compute_fence::SYNC_STAGE::FRAGMENT);
 		scene_renderer->end();
 	}
 	
 	// sky box
 	{
 		sky_box_renderer = warp_state.ctx->create_graphics_renderer(*frame.dev_queue,
-																	(warp_state.is_scatter ? *scatter_passes[1] : (warp_state.is_gather_forward ? *gather_fwd_passes[1] : *gather_passes[1])),
-																	(warp_state.is_scatter ? *skybox_scatter_pipeline : (warp_state.is_gather_forward ? *skybox_gather_fwd_pipeline : *skybox_gather_pipeline)));
+																	(warp_state.is_scatter ? *scatter_passes[1] :
+																	 (warp_state.is_gather_forward ? *gather_fwd_passes[1] : *gather_passes[1])),
+																	(warp_state.is_scatter ? *skybox_scatter_pipeline :
+																	 (warp_state.is_gather_forward ? *skybox_gather_fwd_pipeline : *skybox_gather_pipeline)));
 		if (!sky_box_renderer->is_valid()) {
 			return;
 		}
@@ -1375,7 +1378,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		} else {
 			sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline : *frame.indirect_skybox_gather_pipeline);
 		}
-		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence,  graphics_renderer::RENDER_STAGE::FRAGMENT);
+		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence, compute_fence::SYNC_STAGE::FRAGMENT);
 		sky_box_renderer->end();
 	}
 	
