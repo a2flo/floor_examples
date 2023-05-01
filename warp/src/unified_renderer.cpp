@@ -252,7 +252,9 @@ bool unified_renderer::init() {
 		frame.dev_queue = warp_state.ctx->create_queue(*warp_state.dev);
 		frame.rthread = make_unique<render_thread>("render_thrd#" + frame_idx_str, *this, frame_counter);
 		frame.frame_uniforms_buffer = warp_state.ctx->create_buffer(*frame.dev_queue, sizeof(warp_shaders::frame_uniforms_t),
-																	COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
+																	COMPUTE_MEMORY_FLAG::READ |
+																	COMPUTE_MEMORY_FLAG::HOST_WRITE |
+																	COMPUTE_MEMORY_FLAG::VULKAN_HOST_COHERENT);
 		frame.frame_uniforms_buffer->set_debug_label("frame_uniforms#" + frame_idx_str);
 		++frame_counter;
 	}
