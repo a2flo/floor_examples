@@ -267,7 +267,7 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 							 // fs args
 							 body_textures[0]);
 		renderer->end();
-		renderer->commit();
+		renderer->commit_and_finish();
 	}
 
 	// blit to screen
@@ -293,6 +293,6 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		
 		blitter->end();
 		blitter->present();
-		blitter->commit(true);
+		blitter->commit_and_finish();
 	}
 }

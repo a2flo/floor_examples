@@ -605,7 +605,7 @@ int main(int, char* argv[]) {
 					 !nbody_state.no_opengl ? floor::RENDERER::OPENGL :
 					 // opengl/vulkan/metal are disabled
 					 floor::RENDERER::NONE),
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING,
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}

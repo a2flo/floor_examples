@@ -598,9 +598,7 @@ void unified_renderer::render(const floor_obj_model& model, const camera& cam) {
 		
 		renderer->end();
 		renderer->present();
-		renderer->commit([retained_renderer = move(renderer)] {
-			// must retain renderer object until completion -> auto-destruct via shared_ptr
-			
+		renderer->commit_and_release(std::move(renderer), []{
 			// signal that this frame is done -> may destruct the whole renderer (if 0)
 			--active_render;
 		});
