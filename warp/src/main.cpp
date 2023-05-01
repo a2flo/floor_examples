@@ -316,8 +316,9 @@ int main(int, char* argv[]) {
 		.app_name = "warp",
 		.renderer = wanted_renderer,
 		// disable resource tracking for Metal
-		.context_flags = (warp_state.unified_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
-						  COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE)
+		.context_flags = ((warp_state.unified_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
+						   COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE) |
+						  COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING)
 	})) {
 		return -1;
 	}

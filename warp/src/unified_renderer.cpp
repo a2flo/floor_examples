@@ -27,6 +27,12 @@
 #include <libwarp/libwarp.h>
 #include <condition_variable>
 
+#if 0
+#define warp_log_wip(...) log_warn(__VA_ARGS__)
+#else
+#define warp_log_wip(...)
+#endif
+
 //! render thread implementation:
 //! this performs the rendering and screen-blitting/present of a single frame
 class render_thread final : public thread_base {
@@ -945,20 +951,18 @@ void render_thread::run() {
 			present_renderer->present();
 #if 0
 			// NOTE: must (and can) block this thread, now that rendering is fully async
-			log_warn("-> blit (fr $, ep $)", frame_idx, frame.get_epoch());
+			warp_log_wip("-> blit (fr $, ep $)", frame_idx, frame.get_epoch());
 			present_renderer->commit(true);
-			log_warn("<- blit (fr $, ep $)", frame_idx, frame.get_epoch());
+			warp_log_wip("<- blit (fr $, ep $)", frame_idx, frame.get_epoch());
 			renderer.finish_frame(frame_idx);
 #else
-			present_renderer->commit([this, retained_renderer = std::move(present_renderer)] {
-				/*// must retain renderer object until completion -> auto-destruct via shared_ptr
-				
-				// signal that this frame is done -> may destruct the whole renderer (if 0)
+			present_renderer->commit_and_release(std::move(present_renderer), [this] {
+				/*// signal that this frame is done -> may destruct the whole renderer (if 0)
 				--active_render;
 				
 				frame_ptr->rendering_active = false;*/
 				
-				log_warn("blit done ($)", frame_idx);
+				warp_log_wip("blit done ($)", frame_idx);
 				renderer.finish_frame(frame_idx);
 			});
 #endif
@@ -1085,7 +1089,7 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 	// update camera state
 	frame.cam_state = cam->get_current_state();
 	
-	log_warn("update uniforms: $", frame_idx);
+	warp_log_wip("update uniforms: $", frame_idx);
 	
 	// light handling (TODO: proper light)
 	{
@@ -1195,7 +1199,7 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 void unified_renderer::render_full_scene(const uint32_t frame_idx, const float time_delta) {
 	// frame object that is used to render this frame
 	auto& frame = frame_objects[frame_idx];
-	log_warn("render (fr $, ep $; delta: $ / $ms)", frame_idx, frame.get_epoch(), time_delta, time_delta * 1000.0f);
+	warp_log_wip("render (fr $, ep $; delta: $ / $ms)", frame_idx, frame.get_epoch(), time_delta, time_delta * 1000.0f);
 	
 	// when using direct rendering (-> uploading uniforms in each draw call), we must already update all uniforms here
 	if (!warp_state.use_indirect_commands) {
@@ -1243,7 +1247,6 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		shadow_map_renderer->set_attachments(frame.shadow_map.shadow_image);
 		shadow_map_renderer->begin();
 		
-		//shadow_map_renderer->wait_for_fence(*frame.render_post_blit_fence /* from previous frame */); // TODO: needed?
 		shadow_map_renderer->wait_for_fence(*frame.render_post_tess_update_fence);
 		if (!warp_state.use_indirect_commands) {
 			shadow_map_renderer->draw_indexed(scene_draw_info, model->vertices_buffer, frame_uniforms.light_mvpm);
@@ -1409,22 +1412,22 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 	
 	//////////////////////////////////////////
 	// commit & run renderers
-	shadow_map_renderer->commit();
+	shadow_map_renderer->commit_and_release(std::move(shadow_map_renderer));
 #if 1
-	scene_renderer->commit();
+	scene_renderer->commit_and_release(std::move(scene_renderer));
 #else // -> "bandwidth"
 	scene_renderer->commit([this, frame_idx]() {
 		// only start new frame once this is done
-		log_warn("> allow render (from $)", frame_idx);
+		warp_log_wip("> allow render (from $)", frame_idx);
 		frame_render_state.store(1u);
 	});
 #endif
 #if 0
 	sky_box_renderer->commit();
 #else // -> "latency"
-	sky_box_renderer->commit([this, frame_idx]() {
+	sky_box_renderer->commit_and_release(std::move(sky_box_renderer), [this, frame_idx]() {
 		// only start new frame once this is done
-		log_warn("> allow render (from $)", frame_idx);
+		warp_log_wip("> allow render (from $)", frame_idx);
 		frame_render_state.store(1u);
 	});
 #endif
