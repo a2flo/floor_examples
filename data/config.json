@@ -184,6 +184,8 @@
 		
 		// vulkan backend settings
 		"vulkan": {
+			// debug-mode only: if true, enables Vulkan validation layers/handling
+			"validation": true,
 			// run the spirv-validator after compiling a spir-v binary
 			"validate_spirv": false,
 			// if true, enables software printf in functions

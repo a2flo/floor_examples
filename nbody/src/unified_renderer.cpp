@@ -67,7 +67,7 @@ static void create_textures(const compute_context& ctx, const compute_queue& dev
 										 COMPUTE_IMAGE_TYPE::RGBA16F |
 										 COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
 										 COMPUTE_IMAGE_TYPE::READ),
-										&pixel_data[0],
+										{ (uint8_t*)pixel_data.data(), pixel_data.size() * sizeof(ushort4) },
 										(COMPUTE_MEMORY_FLAG::READ |
 										 COMPUTE_MEMORY_FLAG::HOST_WRITE |
 										 COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS));
