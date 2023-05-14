@@ -864,7 +864,7 @@ int main(int, char* argv[]) {
 				static_assert(pos_buffer_count >= 2, "need at least 2 position buffers");
 				for (uint32_t i = 0; i < benchmark_iterations; ++i) {
 					// will only flip/flop between two position buffers here
-					indirect_benchmark_pipeline->add_compute_command(*dev_queue, *nbody_compute_fixed_delta)
+					indirect_benchmark_pipeline->add_compute_command(*compute_dev, *nbody_compute_fixed_delta)
 						.set_arguments(position_buffers[i % 2u],
 									   position_buffers[(i + 1u) % 2u],
 									   velocity_buffer)
