@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,6 +22,18 @@
 #endif
 
 #if defined(FLOOR_COMPUTE)
+
+// POT sizes from 32 - 1024
+#define POT_TILE_SIZES(F) \
+F(32) \
+F(64) \
+F(128) \
+F(256) \
+F(512) \
+F(1024)
+
+///////////////////////////////////////////////////////////////////////////////
+/// reduction
 
 template <uint32_t tile_size, typename data_type>
 floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_type> sum, const uint32_t count) {
@@ -62,7 +74,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 			
 			if(sub_group_id_1d == 0) {
 				// sub-group #0 does the final reduction
-				const auto sg_val = (sub_group_local_id < tile_count ? lmem[sub_group_local_id] : data_type(0));
+				const auto sg_val = (uint32_t(sub_group_local_id) < tile_count ? lmem[sub_group_local_id] : data_type(0));
 				red_val = compute_algorithm::sub_group_reduce_add(sg_val);
 			}
 		}
@@ -186,15 +198,6 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 	}
 }
 
-// POT sizes from 32 - 1024
-#define REDUCTION_TILE_SIZE(F) \
-F(32) \
-F(64) \
-F(128) \
-F(256) \
-F(512) \
-F(1024)
-
 // float/uint 32-bit and 64-bit reduction add kernels
 #if defined(FLOOR_COMPUTE_INFO_HAS_64_BIT_ATOMICS_0)
 #define REDUCTION_KERNELS(tile_size) \
@@ -243,6 +246,116 @@ kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u64_##tile_size(buffer
 #endif
 
 // instantiate kernels
-REDUCTION_TILE_SIZE(REDUCTION_KERNELS)
+POT_TILE_SIZES(REDUCTION_KERNELS)
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// inclusive/exclusive scan:
+///  * first pass: perform scan in each work-group
+///  * second pass: adjust values of each group based on the last value of the previous group
+///
+/// in : [4 1 5 3 4 2 7 9 1 2 3 4]
+///
+/// inclusive:
+/// 1st: [4 5 10 13] [4 6 13 22] [1 3 6 10] (group size 4)
+/// 2nd: [4 5 10 13 17 19 26 35 36 38 41 45]
+///
+/// exclusive:
+/// 1st: [0 4 5 10 13] [4 6 13 22] [1 3 6] (group size 4)
+/// 2nd: [0 4 5 10 13 17 19 26 35 36 38 41]
+///
+/// NOTE: this could be done more efficiently, but the point of this is to test the inclusive_scan/exclusive_scan themselves
+
+template <uint32_t tile_size, bool is_inclusive>
+floor_inline_always void scan_local(buffer<const uint32_t>& in, buffer<uint32_t>& out, const uint32_t count) {
+	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<tile_size>()> lmem;
+	
+	auto value = (global_id.x < count ? in[global_id.x] : 0u);
+	if constexpr (is_inclusive) {
+		value = compute_algorithm::inclusive_scan<tile_size>(value, plus<> {}, lmem);
+		
+		// can directly write to output
+		if (global_id.x < count) {
+			out[global_id.x] = value;
+		}
+	} else {
+		const auto scan_value = compute_algorithm::exclusive_scan<tile_size>(value, plus<> {}, lmem);
+		
+		// first group: write full range
+		// second+ group: never write item #0, but write item #N into the next group block
+		if (group_id.x == 0 || (local_id.x > 0 && global_id.x < count)) {
+			out[global_id.x] = scan_value;
+		}
+		if (local_id.x == tile_size - 1u && (global_id.x + 1u) < count) {
+			out[global_id.x + 1u] = scan_value + value;
+		}
+	}
+}
+
+template <uint32_t tile_size, bool is_inclusive>
+floor_inline_always void scan_global(buffer<const uint32_t>& in, buffer<uint32_t>& out, const uint32_t count) {
+	if (group_id.x == 0) {
+		out[global_id.x] = in[global_id.x];
+		if constexpr (!is_inclusive) {
+			if (local_id.x == tile_size - 1u) {
+				out[global_id.x + 1u] = in[global_id.x + 1u];
+			}
+		}
+		return;
+	}
+	
+	// need to offset each value in each group (past group #0) with:
+	//  * inclusive: the sum of the last values in each previous group block
+	//  * exclusive: the sum of the first values in each previous group block (excluding group #0)
+	const auto per_item_count = max((group_id.x + (tile_size - 1u)) / tile_size, 1u);
+	const auto offset = per_item_count * tile_size * local_id.x;
+	uint32_t idx = offset;
+	if constexpr (is_inclusive) {
+		idx += tile_size - 1u; // -> last value in each group
+	} else {
+		idx += tile_size; // -> first value in each group (past group #0)
+	}
+	
+	auto item_sum = 0u;
+	const auto first_idx_in_group = min(tile_size * group_id.x + (is_inclusive ? 0u : 1u), count);
+	for (uint32_t i = 0; i < per_item_count; ++i, idx += tile_size) {
+		if (idx < first_idx_in_group) {
+			item_sum += in[idx];
+		}
+	}
+
+	local_buffer<uint32_t, 1u> scan_value_offset;
+	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<tile_size>()> lmem;
+	const auto red_sum = compute_algorithm::reduce<tile_size>(item_sum, lmem, plus<uint32_t> {});
+	if (local_id.x == 0u) {
+		scan_value_offset[0] = red_sum;
+	}
+	local_barrier();
+	
+	if constexpr (is_inclusive) {
+		out[global_id.x] = in[global_id.x] + scan_value_offset[0];
+	} else {
+		if ((global_id.x + 1u) < count) {
+			out[global_id.x + 1u] = in[global_id.x + 1u] + scan_value_offset[0];
+		}
+	}
+}
+
+#define SCAN_KERNELS(tile_size) \
+kernel kernel_local_size(tile_size, 1, 1) void incl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+	scan_local<tile_size, true>(in, out, count); \
+} \
+kernel kernel_local_size(tile_size, 1, 1) void excl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+	scan_local<tile_size, false>(in, out, count); \
+} \
+kernel kernel_local_size(tile_size, 1, 1) void incl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+	scan_global<tile_size, true>(in, out, count); \
+} \
+kernel kernel_local_size(tile_size, 1, 1) void excl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+	scan_global<tile_size, false>(in, out, count); \
+}
+
+// instantiate kernels
+POT_TILE_SIZES(SCAN_KERNELS)
 
 #endif

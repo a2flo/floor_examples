@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/compute/compute_kernel.hpp>
+#include <floor/core/aligned_ptr.hpp>
 #include "reduction_state.hpp"
 reduction_state_struct reduction_state;
 
@@ -37,7 +38,7 @@ static const compute_device* fastest_device { nullptr };
 //
 static shared_ptr<compute_program> reduction_prog;
 // POT sizes from 32 - 1024
-#define REDUCTION_TILE_SIZE(F) \
+#define POT_TILE_SIZES(F) \
 F(32) \
 F(64) \
 F(128) \
@@ -50,32 +51,47 @@ F(1024)
 	REDUCTION_ADD_U32_##tile_size, \
 	REDUCTION_ADD_F64_##tile_size, \
 	REDUCTION_ADD_U64_##tile_size,
+#define SCAN_KERNEL_ENUMS(tile_size) \
+	INCL_SCAN_LOCAL_U32_##tile_size, \
+	EXCL_SCAN_LOCAL_U32_##tile_size, \
+	INCL_SCAN_GLOBAL_U32_##tile_size, \
+	EXCL_SCAN_GLOBAL_U32_##tile_size,
 //
 #define REDUCTION_KERNEL_NAMES(tile_size) \
 	"reduce_add_f32_" #tile_size, \
 	"reduce_add_u32_" #tile_size, \
 	"reduce_add_f64_" #tile_size, \
 	"reduce_add_u64_" #tile_size,
+#define SCAN_KERNEL_NAMES(tile_size) \
+	"incl_scan_local_u32_" #tile_size, \
+	"excl_scan_local_u32_" #tile_size, \
+	"incl_scan_global_u32_" #tile_size, \
+	"excl_scan_global_u32_" #tile_size,
 //
-enum REDUCTION_KERNEL : uint32_t {
-	REDUCTION_TILE_SIZE(REDUCTION_KERNEL_ENUMS)
-	__MAX_REDUCTION_KERNEL
+enum ALGO_KERNEL_TYPE : uint32_t {
+	POT_TILE_SIZES(REDUCTION_KERNEL_ENUMS)
+	POT_TILE_SIZES(SCAN_KERNEL_ENUMS)
+	__MAX_ALGO_KERNEL_TYPE
 };
 //
-static const array<const char*, __MAX_REDUCTION_KERNEL> reduction_kernel_names {{
-	REDUCTION_TILE_SIZE(REDUCTION_KERNEL_NAMES)
+static const array<const char*, __MAX_ALGO_KERNEL_TYPE> algo_kernel_names {{
+	POT_TILE_SIZES(REDUCTION_KERNEL_NAMES)
+	POT_TILE_SIZES(SCAN_KERNEL_NAMES)
 }};
 //
-static array<shared_ptr<compute_kernel>, __MAX_REDUCTION_KERNEL> reduction_kernels;
+static array<shared_ptr<compute_kernel>, __MAX_ALGO_KERNEL_TYPE> algo_kernels;
 //
-static array<uint1, __MAX_REDUCTION_KERNEL> reduction_max_local_sizes;
+static array<uint1, __MAX_ALGO_KERNEL_TYPE> algo_max_local_sizes;
 // flag each kernel as usable/unusable (based on local size and 64-bit capabilities)
-static array<bool, __MAX_REDUCTION_KERNEL> reduction_kernel_usable;
+static array<bool, __MAX_ALGO_KERNEL_TYPE> algo_kernel_usable;
 //
 #define REDUCTION_KERNEL_SIZES_ARRAY(tile_size) \
 	tile_size, tile_size, tile_size, tile_size, /* 4 kernels each */
-static const array<uint32_t, __MAX_REDUCTION_KERNEL> reduction_kernel_sizes {{
-	REDUCTION_TILE_SIZE(REDUCTION_KERNEL_SIZES_ARRAY)
+#define SCAN_KERNEL_SIZES_ARRAY(tile_size) \
+	tile_size, tile_size, tile_size, tile_size, /* 4 kernels each */
+static const array<uint32_t, __MAX_ALGO_KERNEL_TYPE> algo_kernel_sizes {{
+	POT_TILE_SIZES(REDUCTION_KERNEL_SIZES_ARRAY)
+	POT_TILE_SIZES(SCAN_KERNEL_SIZES_ARRAY)
 }};
 
 //! option -> function map
@@ -83,7 +99,11 @@ template<> vector<pair<string, reduction_opt_handler::option_function>> reductio
 	{ "--help", [](reduction_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--size <count>: TODO" << endl;
-		cout << "\t--benchmark: runs the reduction in benchmark mode" << endl;
+		cout << "\t--benchmark: runs in benchmark mode (fixed 20 iterations)" << endl;
+		cout << "\t--iterations: when not running in benchmark mode, set the amount of iterations (default: 3)" << endl;
+		cout << "\t--reduction: performs a reduction (default)" << endl;
+		cout << "\t--incl-scan: performs an inclusive scan" << endl;
+		cout << "\t--excl-scan: performs an exclusive scan" << endl;
 		reduction_state.done = true;
 	}},
 	{ "--size", [](reduction_option_context&, char**& arg_ptr) {
@@ -100,6 +120,28 @@ template<> vector<pair<string, reduction_opt_handler::option_function>> reductio
 	{ "--benchmark", [](reduction_option_context&, char**&) {
 		reduction_state.benchmark = true;
 		cout << "benchmark mode enabled" << endl;
+	}},
+	{ "--iterations", [](reduction_option_context&, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr || **arg_ptr == '-') {
+			cerr << "invalid argument after --iterations!" << endl;
+			reduction_state.done = true;
+			return;
+		}
+		reduction_state.max_iterations = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		cout << "iterations set: " << reduction_state.max_iterations << endl;
+	}},
+	{ "--reduction", [](reduction_option_context&, char**&) {
+		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::REDUCTION;
+		cout << "running reduction" << endl;
+	}},
+	{ "--incl-scan", [](reduction_option_context&, char**&) {
+		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN;
+		cout << "running inclusive scan" << endl;
+	}},
+	{ "--excl-scan", [](reduction_option_context&, char**&) {
+		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN;
+		cout << "running exclusive scan" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](reduction_option_context&, char**&) {} },
@@ -120,34 +162,33 @@ static bool compile_kernels() {
 		return false;
 	}
 	
-	decltype(reduction_kernels) new_reduction_kernels;
-	decltype(reduction_max_local_sizes) new_reduction_max_local_sizes;
-	decltype(reduction_kernel_usable) new_reduction_kernel_usable;
-	for(uint32_t i = 0; i < REDUCTION_KERNEL::__MAX_REDUCTION_KERNEL; ++i) {
-		new_reduction_kernels[i] = new_reduction_prog->get_kernel(reduction_kernel_names[i]);
-		if(new_reduction_kernels[i] == nullptr) {
-			log_error("failed to retrieve kernel $ from program", reduction_kernel_names[i]);
+	decltype(algo_kernels) new_algo_kernels;
+	decltype(algo_max_local_sizes) new_algo_max_local_sizes;
+	decltype(algo_kernel_usable) new_algo_kernel_usable;
+	for (uint32_t i = 0; i < ALGO_KERNEL_TYPE::__MAX_ALGO_KERNEL_TYPE; ++i) {
+		new_algo_kernels[i] = new_reduction_prog->get_kernel(algo_kernel_names[i]);
+		if (new_algo_kernels[i] == nullptr) {
+			log_error("failed to retrieve kernel $ from program", algo_kernel_names[i]);
 			return false;
 		}
-		new_reduction_max_local_sizes[i] = new_reduction_kernels[i]->get_kernel_entry(*fastest_device)->max_total_local_size;
-		if(fastest_device->context->get_compute_type() != COMPUTE_TYPE::HOST) {
+		new_algo_max_local_sizes[i] = new_algo_kernels[i]->get_kernel_entry(*fastest_device)->max_total_local_size;
+		if (fastest_device->context->get_compute_type() != COMPUTE_TYPE::HOST) {
 			// usable if max local size >= required tile size, and if #args != 0 (i.e. kernel isn't disabled for other reasons)
-			new_reduction_kernel_usable[i] = ((reduction_kernel_sizes[i] <= new_reduction_max_local_sizes[i].x) &&
-											  !new_reduction_kernels[i]->get_kernel_entry(*fastest_device)->info->args.empty());
-		}
-		else {
+			new_algo_kernel_usable[i] = ((algo_kernel_sizes[i] <= new_algo_max_local_sizes[i].x) &&
+										 !new_algo_kernels[i]->get_kernel_entry(*fastest_device)->info->args.empty());
+		} else {
 			// always usable with host-compute
-			new_reduction_kernel_usable[i] = true;
+			new_algo_kernel_usable[i] = true;
 		}
-		log_debug("$: local size: $, usable: $", reduction_kernel_names[i], new_reduction_max_local_sizes[i],
-				  new_reduction_kernel_usable[i]);
+		log_debug("$: local size: $, usable: $", algo_kernel_names[i], new_algo_max_local_sizes[i],
+				  new_algo_kernel_usable[i]);
 	}
 	
 	// everything was successful, exchange objects
 	reduction_prog = new_reduction_prog;
-	reduction_kernels = new_reduction_kernels;
-	reduction_max_local_sizes = new_reduction_max_local_sizes;
-	reduction_kernel_usable = new_reduction_kernel_usable;
+	algo_kernels = new_algo_kernels;
+	algo_max_local_sizes = new_algo_max_local_sizes;
+	algo_kernel_usable = new_algo_kernel_usable;
 	return true;
 }
 
@@ -219,22 +260,32 @@ int main(int, char* argv[]) {
 	// compile the program and get the kernel functions
 	if(!compile_kernels()) return -1;
 	
-	// reduction buffers
-	static constexpr const uint32_t reduction_elem_count {
+	// reduction/scan buffers
+	uint32_t elem_count = 0;
+	if (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION) {
 #if !defined(FLOOR_IOS)
-		1024 * 1024 * 256 // == 1024 MiB (32-bit), 2048 MiB (64-bit)
+		elem_count = 1024 * 1024 * 256; // == 1024 MiB (32-bit), 2048 MiB (64-bit)
 #else
-		1024 * 1024 * 64 // == 256 MiB (32-bit), 512 MiB (64-bit)
+		elem_count = 1024 * 1024 * 64; // == 256 MiB (32-bit), 512 MiB (64-bit)
 #endif
-	};
-	//auto red_data_sum = compute_ctx->create_buffer(fastest_device, sizeof(uint64_t) /* 64-bit */);
-	//auto red_data = compute_ctx->create_buffer(fastest_device, reduction_elem_count * sizeof(uint64_t) /* 64-bit */);
+	} else {
+		// must use fewer elements for inclusive/exclusive scan, because we're limited to a 32-bit value range
+		elem_count = 1024 * 1024 * 32;
+	}
 	auto red_data_sum = compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) /* 32-bit */,
 												   COMPUTE_MEMORY_FLAG::READ_WRITE |
 												   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
-	auto red_data = compute_ctx->create_buffer(*dev_queue, reduction_elem_count * sizeof(uint32_t) /* 32-bit */,
-											   COMPUTE_MEMORY_FLAG::READ_WRITE |
-											   COMPUTE_MEMORY_FLAG::HOST_WRITE);
+	auto compute_data = compute_ctx->create_buffer(*dev_queue, elem_count * sizeof(uint32_t) /* 32-bit */,
+												   COMPUTE_MEMORY_FLAG::READ_WRITE |
+												   COMPUTE_MEMORY_FLAG::HOST_WRITE);
+	shared_ptr<compute_buffer> compute_output_data;
+	if (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN ||
+		reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN) {
+		compute_output_data = compute_ctx->create_buffer(*dev_queue, elem_count * sizeof(uint32_t) /* 32-bit */,
+														 COMPUTE_MEMORY_FLAG::READ_WRITE |
+														 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+	}
+	auto cpu_data = make_aligned_ptr<uint32_t>(elem_count);
 	
 	// compute the ideal global size (#units * local size), if the unit count is unknown, assume 16, so that we still get good throughput
 	static constexpr const uint32_t unit_count_fallback { 12u };
@@ -247,78 +298,207 @@ int main(int, char* argv[]) {
 	// init done, release context
 	floor::release_context();
 	
+	// inclusive/exclusive scan execution parameters
+	const compute_queue::execution_parameters_t exec_params_scan_local {
+		.execution_dim = 1u,
+		.global_work_size = { elem_count, 1u, 1u },
+		.local_work_size = { 1024u, 1u, 1u },
+		.args = { compute_output_data, compute_data, elem_count },
+		.wait_until_completion = true, // must always wait
+		.debug_label = (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN ?
+						"incl_scan_local" : "excl_scan_local"),
+	};
+	const compute_queue::execution_parameters_t exec_params_scan_global {
+		.execution_dim = 1u,
+		.global_work_size = { elem_count, 1u, 1u },
+		.local_work_size = { 1024u, 1u, 1u },
+		.args = { compute_data, compute_output_data, elem_count },
+		.wait_until_completion = true, // must always wait
+		.debug_label = (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN ?
+						"incl_scan_global" : "excl_scan_global"),
+	};
+	
 	//
 	random_device rd;
 	mt19937 gen(rd());
-	uniform_real_distribution<float> f32_dist { 0.0f, 0.025f };
-	uniform_real_distribution<double> f64_dist { 0.0, 0.05 };
-	uniform_int_distribution<uint32_t> u32_dist { 0, 16 };
-	uniform_int_distribution<uint64_t> u64_dist { 0, 16 };
 	// main loop
 	uint32_t iteration = 0;
-	while(!reduction_state.done) {
+	while (!reduction_state.done) {
 		floor::get_event()->handle_events();
 		
 		// init data
-		// for expected sum on the CPU use: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-		auto mrdata = (float*)red_data->map(*dev_queue,
-											COMPUTE_MEMORY_MAP_FLAG::WRITE |
-											COMPUTE_MEMORY_MAP_FLAG::BLOCK);
-		auto rdata = mrdata;
-		double expected_sum = 0.0, kahan_c = 0.0;
+		{
+			// reduction: actually init "compute_data" directly, scan: we to flip/flop these, so init "compute_output_data"
+			auto compute_init_buffer = (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION ?
+										compute_data.get() : compute_output_data.get());
+			auto mrdata = compute_init_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			const auto init_data = [&mrdata, &cpu_data, &gen, &elem_count]<bool is_float>() {
+				uniform_real_distribution<float> f32_dist { 0.0f, 0.025f };
+				uniform_int_distribution<uint32_t> u32_dist { 0, 16 };
+				
+				auto rdata_f32 = (float*)mrdata;
+				auto rdata_u32 = (uint32_t*)mrdata;
+				auto cpu_data_f32 = (float*)cpu_data.get();
+				auto cpu_data_u32 = (uint32_t*)cpu_data.get();
+				for (uint32_t i = 0; i < elem_count; ++i) {
+					if constexpr (is_float) {
+						auto val = f32_dist(gen);
+						*rdata_f32++ = val;
+						*cpu_data_f32++ = val;
+					} else {
+						auto val = u32_dist(gen);
+						*rdata_u32++ = val;
+						*cpu_data_u32++ = val;
+					}
+				}
+			};
+			switch (reduction_state.exec_mode) {
+				case reduction_state_struct::EXEC_MODE::REDUCTION:
+					init_data.operator()<true>();
+					break;
+				case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN:
+				case reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN:
+					init_data.operator()<false>();
+					break;
+			}
+			compute_init_buffer->unmap(*dev_queue, mrdata);
+		}
+		
 		long double expected_sum_ld = 0.0L;
 		float expected_sum_f = 0.0f;
+		double expected_sum = 0.0;
+		switch (reduction_state.exec_mode) {
+			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+				// for expected sum on the CPU use: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+				double kahan_c = 0.0;
+				auto cpu_data_f32 = (float*)cpu_data.get();
 #pragma clang loop vectorize(enable)
-		for(uint32_t i = 0; i < reduction_elem_count; ++i) {
-			const auto rnd_val = f32_dist(gen);
-			const auto kahan_y = double(rnd_val) - kahan_c;
-			const auto kahan_t = expected_sum + kahan_y;
-			kahan_c = (kahan_t - expected_sum) - kahan_y;
-			expected_sum = kahan_t;
-			expected_sum_ld += (long double)rnd_val;
-			expected_sum_f += rnd_val;
-			*rdata++ = rnd_val;
+				for (uint32_t i = 0; i < elem_count; ++i) {
+					const auto rnd_val = cpu_data_f32[i];
+					const auto kahan_y = double(rnd_val) - kahan_c;
+					const auto kahan_t = expected_sum + kahan_y;
+					kahan_c = (kahan_t - expected_sum) - kahan_y;
+					expected_sum = kahan_t;
+					expected_sum_ld += (long double)rnd_val;
+					expected_sum_f += rnd_val;
+				}
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN: {
+				auto cpu_data_u32 = (uint32_t*)cpu_data.get();
+				for (uint32_t i = 1; i < elem_count; ++i) {
+					cpu_data_u32[i] += cpu_data_u32[i - 1u];
+				}
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN: {
+				auto cpu_data_u32 = (uint32_t*)cpu_data.get();
+				uint32_t prev_sum = 0u, sum = 0u;
+				for (uint32_t i = 0; i < elem_count; ++i) {
+					sum += cpu_data_u32[i];
+					cpu_data_u32[i] = prev_sum;
+					prev_sum = sum;
+				}
+				break;
+			}
 		}
-		red_data->unmap(*dev_queue, mrdata);
 		
 		//
 		red_data_sum->zero(*dev_queue);
 		dev_queue->finish();
 		dev_queue->start_profiling();
-		if(fastest_device->cooperative_kernel_support) {
-			dev_queue->execute_cooperative(*reduction_kernels[REDUCTION_ADD_F32_1024],
-										   uint1 { fastest_device->max_coop_total_local_size /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
-										   uint1 { 1024 },
-										   red_data, red_data_sum, reduction_elem_count);
-		}
-		else {
-			dev_queue->execute(*reduction_kernels[REDUCTION_ADD_F32_1024],
-							   uint1 { reduction_global_size },
-							   uint1 { 1024 },
-							   red_data, red_data_sum, reduction_elem_count);
+		switch (reduction_state.exec_mode) {
+			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+				if (fastest_device->cooperative_kernel_support) {
+					dev_queue->execute_cooperative(*algo_kernels[REDUCTION_ADD_F32_512],
+												   uint1 { fastest_device->max_coop_total_local_size /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
+												   uint1 { 512u },
+												   compute_data, red_data_sum, elem_count);
+				} else {
+					dev_queue->execute(*algo_kernels[REDUCTION_ADD_F32_1024],
+									   uint1 { reduction_global_size },
+									   uint1 { 1024 },
+									   compute_data, red_data_sum, elem_count);
+				}
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN: {
+				dev_queue->execute_with_parameters(*algo_kernels[INCL_SCAN_LOCAL_U32_1024], exec_params_scan_local);
+				dev_queue->execute_with_parameters(*algo_kernels[INCL_SCAN_GLOBAL_U32_1024], exec_params_scan_global);
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN: {
+				dev_queue->execute_with_parameters(*algo_kernels[EXCL_SCAN_LOCAL_U32_1024], exec_params_scan_local);
+				dev_queue->execute_with_parameters(*algo_kernels[EXCL_SCAN_GLOBAL_U32_1024], exec_params_scan_global);
+				break;
+			}
 		}
 		const auto prof_time = dev_queue->stop_profiling();
 		dev_queue->finish();
 		
-		const auto compute_bandwidth = [](const uint64_t& microseconds) {
+		const auto compute_bandwidth = [&elem_count](const uint64_t& microseconds) {
 			static constexpr const size_t elem_size { sizeof(float) };
-			const auto red_size = elem_size * reduction_elem_count;
+			const auto red_size = elem_size * elem_count;
 			const auto size_per_second = (double(red_size) / 1000000000.0) / (double(microseconds) / 1000000.0);
 			return size_per_second;
 		};
-		log_debug("reduction computed in $ms -> $ GB/s", double(prof_time) / 1000.0, compute_bandwidth(prof_time));
+		log_debug("$ computed in $ms -> $ GB/s",
+				  (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION ? "reduction" :
+				   (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN ? "inclusive-scan" : "exclusive-scan")),
+				  double(prof_time) / 1000.0, compute_bandwidth(prof_time));
 		
-		float sum = 0.0f;
-		red_data_sum->read_to(sum, *dev_queue);
-		const auto abs_diff = abs(double(sum) - expected_sum);
-		log_debug("sum: $, expected: kahan: $, linear: $, $ -> diff: $ (sp: $)",
-				  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));
+		switch (reduction_state.exec_mode) {
+			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+				float sum = 0.0f;
+				red_data_sum->read_to(sum, *dev_queue);
+				const auto abs_diff = abs(double(sum) - expected_sum);
+				log_debug("sum: $, expected: kahan: $, linear: $, $ -> diff: $ (sp: $)",
+						  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN:
+			case reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN: {
+				// need to perform an element-wise compare of the CPU and GPU data to validate that everything is correct
+				auto compute_output = compute_output_data->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+				auto cpu_data_u32 = (uint32_t*)cpu_data.get();
+				auto compute_data_u32 = (uint32_t*)compute_output;
+				bool correct = true;
+				
+				for (uint32_t i = 0; i < elem_count; ++i) {
+					if (cpu_data_u32[i] != compute_data_u32[i]) {
+						correct = false;
+						log_error("scan output mismatch @$: CPU result: $ != compute device result: $",
+								  i, cpu_data_u32[i], compute_data_u32[i]);
+						break;
+					}
+				}
+				if (correct) {
+					log_debug("scan successful (CPU and compute device results match)");
+				}
+#if 0
+				else {
+					stringstream cpu_dump, gpu_dump;
+					cpu_dump << "CPU: ";
+					gpu_dump << "GPU: ";
+					for (uint32_t i = 1024; i < 1024 + 32; ++i) {
+						cpu_dump << cpu_data_u32[i] << ", ";
+						gpu_dump << compute_data_u32[i] << ", ";
+					}
+					log_warn("$", cpu_dump.str());
+					log_warn("$", gpu_dump.str());
+				}
+#endif
+				compute_output_data->unmap(*dev_queue, compute_output);
+				break;
+			}
+		}
 		
 		// next
 		++iteration;
 		
 		// when benchmarking, we need to make sure computation is actually finished (all 20 iterations were computed)
-		if(reduction_state.benchmark && iteration == 20) {
+		if ((reduction_state.benchmark && iteration == 20) ||
+			(!reduction_state.benchmark && iteration >= reduction_state.max_iterations)) {
 			dev_queue->finish();
 			break;
 		}
@@ -330,7 +510,8 @@ int main(int, char* argv[]) {
 	
 	// cleanup
 	floor::acquire_context();
-	red_data = nullptr;
+	compute_output_data = nullptr;
+	compute_data = nullptr;
 	red_data_sum = nullptr;
 	floor::release_context();
 	

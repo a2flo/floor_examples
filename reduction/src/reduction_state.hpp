@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,18 @@ struct reduction_state_struct {
 	bool done { false };
 	
 	//
-	bool benchmark { true };
+	bool benchmark { false };
+	
+	//
+	uint32_t max_iterations { 3u };
+	
+	//
+	enum class EXEC_MODE {
+		REDUCTION,
+		INCLUSIVE_SCAN,
+		EXCLUSIVE_SCAN,
+	};
+	EXEC_MODE exec_mode { EXEC_MODE::REDUCTION };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)

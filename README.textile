@@ -38,6 +38,7 @@
 
 *reduction:*
 * simple (WIP) reduction example that showcases 3 different reduce implementations: local/shared memory reduce, shuffle reduce and CUDA coop kernel + shuffle reduce
+* inclusive/exclusive scan test
 
 *img:*
 * small program to demonstrate image functionality by doing a gaussian blur (implemented with manual local memory caching as well as a "dumb" version, running the same code as the also provided GLSL implementation)
