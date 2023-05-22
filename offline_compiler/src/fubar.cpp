@@ -160,6 +160,7 @@ namespace fubar {
 				.tessellation_support = target_obj.at("tessellation_support").get_or_throw<bool>(),
 				.tessellation_max_factor_tier = target_obj.at("tessellation_max_factor_tier").get_or_throw<uint32_t>(),
 				.basic_32_bit_float_atomics_support = target_obj.at("basic_32_bit_float_atomics_support").get_or_throw<bool>(),
+				.simd_reduction = target_obj.at("simd_reduction").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -242,6 +243,8 @@ namespace fubar {
 			spirv_arr[1].get_or_throw<uint32_t>(),
 		};
 		
+		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
+		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
 		decltype(universal_binary::target_v2::vulkan)::DEVICE_TARGET target {};
 		if (target_str == "generic") {
@@ -250,6 +253,9 @@ namespace fubar {
 			target = decltype(universal_binary::target_v2::vulkan)::NVIDIA;
 		} else if (target_str == "amd") {
 			target = decltype(universal_binary::target_v2::vulkan)::AMD;
+			if (simd_width == 0) {
+				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
+			}
 		} else if (target_str == "intel") {
 			target = decltype(universal_binary::target_v2::vulkan)::INTEL;
 		} else {
@@ -274,6 +280,7 @@ namespace fubar {
 				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
 				.tessellation_support = target_obj.at("tessellation_support").get_or_throw<bool>(),
 				.descriptor_buffer_support = true, // always true now
+				.simd_width = simd_width,
 				._unused = 0,
 			}
 		};
@@ -512,6 +519,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -530,6 +538,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -548,6 +557,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -566,6 +576,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -584,6 +595,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -602,6 +614,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -620,6 +633,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -638,6 +652,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -656,6 +671,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -674,6 +690,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 1,
+					.simd_reduction = 1,
 					._unused = 0,
 				}
 			},
@@ -692,6 +709,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -761,6 +779,7 @@ namespace fubar {
 					.barycentric_coord_support = 0,
 					.tessellation_support = 1,
 					.descriptor_buffer_support = 1,
+					.simd_width = 0,
 					._unused = 0,
 				}
 			},
@@ -868,6 +887,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -886,6 +906,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -904,6 +925,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -922,6 +944,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -940,6 +963,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -958,6 +982,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -976,6 +1001,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -994,6 +1020,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -1012,6 +1039,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 0,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -1030,6 +1058,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 1,
+					.simd_reduction = 1,
 					._unused = 0,
 				}
 			},
@@ -1048,6 +1077,7 @@ namespace fubar {
 					.tessellation_support = 1,
 					.tessellation_max_factor_tier = 1,
 					.basic_32_bit_float_atomics_support = 0,
+					.simd_reduction = 0,
 					._unused = 0,
 				}
 			},
@@ -1072,6 +1102,7 @@ namespace fubar {
 					.barycentric_coord_support = 0,
 					.tessellation_support = 1,
 					.descriptor_buffer_support = 1,
+					.simd_width = 0,
 					._unused = 0,
 				}
 			},

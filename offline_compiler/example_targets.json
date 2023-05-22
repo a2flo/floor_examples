@@ -40,7 +40,8 @@
 		"tessellation_support": false,
 		// 0: 16, 1: 64
 		"tessellation_max_factor_tier": 0,
-		"basic_32_bit_float_atomics_support": false
+		"basic_32_bit_float_atomics_support": false,
+		"simd_reduction": false
 	},
 	{
 		"type": "Vulkan",
@@ -55,7 +56,8 @@
 		"basic_32_bit_float_atomics_support": false,
 		"primitive_id_support": false,
 		"barycentric_coord_support": false,
-		"tessellation_support": false
+		"tessellation_support": false,
+		"simd_width": 0
 	},
 	{
 		"type": "Host",

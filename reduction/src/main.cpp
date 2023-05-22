@@ -101,7 +101,8 @@ template<> vector<pair<string, reduction_opt_handler::option_function>> reductio
 		cout << "\t--size <count>: TODO" << endl;
 		cout << "\t--benchmark: runs in benchmark mode (fixed 20 iterations)" << endl;
 		cout << "\t--iterations: when not running in benchmark mode, set the amount of iterations (default: 3)" << endl;
-		cout << "\t--reduction: performs a reduction (default)" << endl;
+		cout << "\t--reduction: performs a float reduction (default)" << endl;
+		cout << "\t--reduction-uint: performs a uint32_t reduction" << endl;
 		cout << "\t--incl-scan: performs an inclusive scan" << endl;
 		cout << "\t--excl-scan: performs an exclusive scan" << endl;
 		reduction_state.done = true;
@@ -132,8 +133,12 @@ template<> vector<pair<string, reduction_opt_handler::option_function>> reductio
 		cout << "iterations set: " << reduction_state.max_iterations << endl;
 	}},
 	{ "--reduction", [](reduction_option_context&, char**&) {
-		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::REDUCTION;
-		cout << "running reduction" << endl;
+		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::REDUCTION_F32;
+		cout << "running reduction (float)" << endl;
+	}},
+	{ "--reduction-uint", [](reduction_option_context&, char**&) {
+		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::REDUCTION_U32;
+		cout << "running reduction (uint32_t)" << endl;
 	}},
 	{ "--incl-scan", [](reduction_option_context&, char**&) {
 		reduction_state.exec_mode = reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN;
@@ -262,11 +267,18 @@ int main(int, char* argv[]) {
 	
 	// reduction/scan buffers
 	uint32_t elem_count = 0;
-	if (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION) {
+	if (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_F32) {
 #if !defined(FLOOR_IOS)
 		elem_count = 1024 * 1024 * 256; // == 1024 MiB (32-bit), 2048 MiB (64-bit)
 #else
 		elem_count = 1024 * 1024 * 64; // == 256 MiB (32-bit), 512 MiB (64-bit)
+#endif
+	} else if (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_U32) {
+		// must use fewer elements for uint reduction, because we're limited to a 32-bit value range
+#if !defined(FLOOR_IOS)
+		elem_count = 1024 * 1024 * 128; // == 512 MiB (32-bit)
+#else
+		elem_count = 1024 * 1024 * 64; // == 256 MiB (32-bit)
 #endif
 	} else {
 		// must use fewer elements for inclusive/exclusive scan, because we're limited to a 32-bit value range
@@ -329,7 +341,8 @@ int main(int, char* argv[]) {
 		// init data
 		{
 			// reduction: actually init "compute_data" directly, scan: we to flip/flop these, so init "compute_output_data"
-			auto compute_init_buffer = (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION ?
+			auto compute_init_buffer = (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_F32 ||
+										reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_U32 ?
 										compute_data.get() : compute_output_data.get());
 			auto mrdata = compute_init_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			const auto init_data = [&mrdata, &cpu_data, &gen, &elem_count]<bool is_float>() {
@@ -353,9 +366,10 @@ int main(int, char* argv[]) {
 				}
 			};
 			switch (reduction_state.exec_mode) {
-				case reduction_state_struct::EXEC_MODE::REDUCTION:
+				case reduction_state_struct::EXEC_MODE::REDUCTION_F32:
 					init_data.operator()<true>();
 					break;
+				case reduction_state_struct::EXEC_MODE::REDUCTION_U32:
 				case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN:
 				case reduction_state_struct::EXEC_MODE::EXCLUSIVE_SCAN:
 					init_data.operator()<false>();
@@ -367,8 +381,9 @@ int main(int, char* argv[]) {
 		long double expected_sum_ld = 0.0L;
 		float expected_sum_f = 0.0f;
 		double expected_sum = 0.0;
+		uint32_t expected_sum_u32 = 0;
 		switch (reduction_state.exec_mode) {
-			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+			case reduction_state_struct::EXEC_MODE::REDUCTION_F32: {
 				// for expected sum on the CPU use: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 				double kahan_c = 0.0;
 				auto cpu_data_f32 = (float*)cpu_data.get();
@@ -381,6 +396,14 @@ int main(int, char* argv[]) {
 					expected_sum = kahan_t;
 					expected_sum_ld += (long double)rnd_val;
 					expected_sum_f += rnd_val;
+				}
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::REDUCTION_U32: {
+				auto cpu_data_u32 = (uint32_t*)cpu_data.get();
+#pragma clang loop vectorize(enable)
+				for (uint32_t i = 0; i < elem_count; ++i) {
+					expected_sum_u32 += cpu_data_u32[i];
 				}
 				break;
 			}
@@ -408,14 +431,17 @@ int main(int, char* argv[]) {
 		dev_queue->finish();
 		dev_queue->start_profiling();
 		switch (reduction_state.exec_mode) {
-			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+			case reduction_state_struct::EXEC_MODE::REDUCTION_F32:
+			case reduction_state_struct::EXEC_MODE::REDUCTION_U32: {
 				if (fastest_device->cooperative_kernel_support) {
-					dev_queue->execute_cooperative(*algo_kernels[REDUCTION_ADD_F32_512],
+					dev_queue->execute_cooperative(*algo_kernels[reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_F32 ?
+																 REDUCTION_ADD_F32_512 : REDUCTION_ADD_U32_512],
 												   uint1 { fastest_device->max_coop_total_local_size /* max concurrent threads */ * fastest_device->units /* #multiprocessors */ },
 												   uint1 { 512u },
 												   compute_data, red_data_sum, elem_count);
 				} else {
-					dev_queue->execute(*algo_kernels[REDUCTION_ADD_F32_1024],
+					dev_queue->execute(*algo_kernels[reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_F32 ?
+													 REDUCTION_ADD_F32_1024 : REDUCTION_ADD_U32_1024],
 									   uint1 { reduction_global_size },
 									   uint1 { 1024 },
 									   compute_data, red_data_sum, elem_count);
@@ -443,17 +469,26 @@ int main(int, char* argv[]) {
 			return size_per_second;
 		};
 		log_debug("$ computed in $ms -> $ GB/s",
-				  (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION ? "reduction" :
+				  ((reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_F32 ||
+					reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::REDUCTION_U32) ? "reduction" :
 				   (reduction_state.exec_mode == reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN ? "inclusive-scan" : "exclusive-scan")),
 				  double(prof_time) / 1000.0, compute_bandwidth(prof_time));
 		
 		switch (reduction_state.exec_mode) {
-			case reduction_state_struct::EXEC_MODE::REDUCTION: {
+			case reduction_state_struct::EXEC_MODE::REDUCTION_F32: {
 				float sum = 0.0f;
 				red_data_sum->read_to(sum, *dev_queue);
 				const auto abs_diff = abs(double(sum) - expected_sum);
 				log_debug("sum: $, expected: kahan: $, linear: $, $ -> diff: $ (sp: $)",
 						  sum, expected_sum, expected_sum_ld, expected_sum_f, abs_diff, abs(sum - expected_sum_f));
+				break;
+			}
+			case reduction_state_struct::EXEC_MODE::REDUCTION_U32: {
+				uint32_t sum = 0u;
+				red_data_sum->read_to(sum, *dev_queue);
+				const auto abs_diff = abs(int64_t(sum) - int64_t(expected_sum_u32));
+				log_debug("sum: $, expected: $ -> diff: $",
+						  sum, expected_sum_u32, abs_diff);
 				break;
 			}
 			case reduction_state_struct::EXEC_MODE::INCLUSIVE_SCAN:
@@ -480,7 +515,7 @@ int main(int, char* argv[]) {
 					stringstream cpu_dump, gpu_dump;
 					cpu_dump << "CPU: ";
 					gpu_dump << "GPU: ";
-					for (uint32_t i = 1024; i < 1024 + 32; ++i) {
+					for (uint32_t i = 0; i < 1024 + 32; ++i) {
 						cpu_dump << cpu_data_u32[i] << ", ";
 						gpu_dump << compute_data_u32[i] << ", ";
 					}

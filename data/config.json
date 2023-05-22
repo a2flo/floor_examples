@@ -195,6 +195,14 @@
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": [],
 			
+			// if toolchain.log_binaries is true and this is non-empty, then only functions whose name matches any of the filter strings will be dumped
+			// e.g. [ "foo", "bar" ] will only dump functions whose name contains "foo" or "bar"
+			"log_binary_filter": [],
+			
+			// fully enables Aftermath and VK_NV_device_diagnostics_config/VK_NV_device_diagnostic_checkpoints if supported
+			// NOTE: this adds overhead, use for debugging purposes only!
+			"nvidia_device_diagnostics": false,
+			
 			// the toolchain spir-v encoder binary name
 			"spirv-encoder": "llvm-spirv",
 			// the toolchain spir-v assembler binary name

@@ -66,6 +66,7 @@ struct option_context {
 	bool basic_32_bit_float_atomics { false };
 	bool sub_groups { false };
 	uint32_t simd_width { 0 };
+	bool simd_reduction { false };
 	bool sw_depth_compare { true };
 	uint32_t image_rw_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool test { false };
@@ -128,6 +129,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (Metal and Vulkan/SPIR-V, always enabled on PTX)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
+				 "\t--simd-reduction: enables SIMD reduction operations support (Metal only)\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
@@ -322,6 +324,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.simd_width = stou(*arg_ptr);
+	}},
+	{ "--simd-reduction", [](option_context& ctx, char**&) {
+		ctx.simd_reduction = true;
 	}},
 	{ "--depth-compare", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -591,6 +596,9 @@ static int run_normal_build(option_context& option_ctx) {
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
 				}
+				if (option_ctx.simd_reduction) {
+					dev->simd_reduction = true;
+				}
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
 				break;
@@ -631,12 +639,16 @@ static int run_normal_build(option_context& option_ctx) {
 				}
 				
 				// not supported right now
-				//if(option_ctx.sub_groups) device->sub_group_support = true;
 				//device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
-				//if (option_ctx.simd_width > 0) {
-				//	device->simd_width = option_ctx.simd_width;
-				//	device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
-				//}
+				
+				if (option_ctx.simd_width > 0) {
+					device->simd_width = option_ctx.simd_width;
+					device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
+				} else {
+					// if not specified, use a sane default
+					device->simd_width = 32u;
+					device->simd_range = { 32u, 32u };
+				}
 				
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;

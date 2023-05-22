@@ -54,7 +54,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 		// accumulate locally
 		data_type value = data_type(0);
 		// TODO: different/linear stride?
-		for(uint32_t i = 0; i < block_count; ++i, idx += item_count) {
+		for (uint32_t i = 0; i < block_count; ++i, idx += item_count) {
 			if(idx < count) {
 				value += data[idx];
 			}
@@ -72,7 +72,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 			}
 			local_barrier();
 			
-			if(sub_group_id_1d == 0) {
+			if (sub_group_id_1d == 0) {
 				// sub-group #0 does the final reduction
 				const auto sg_val = (uint32_t(sub_group_local_id) < tile_count ? lmem[sub_group_local_id] : data_type(0));
 				red_val = compute_algorithm::sub_group_reduce_add(sg_val);
@@ -188,7 +188,7 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 			
 			// local reduction to work-item #0
 			local_buffer<data_type, compute_algorithm::reduce_local_memory_elements<tile_size>()> lmem;
-			const auto red_sum = compute_algorithm::reduce<tile_size>(item_sum, lmem, plus<> {});
+			const auto red_sum = compute_algorithm::reduce_add<tile_size>(item_sum, lmem);
 			
 			// only work-item #0 knows the reduced sum and will thus write to the total sum
 			if(local_id.x == 0) {
@@ -272,14 +272,14 @@ floor_inline_always void scan_local(buffer<const uint32_t>& in, buffer<uint32_t>
 	
 	auto value = (global_id.x < count ? in[global_id.x] : 0u);
 	if constexpr (is_inclusive) {
-		value = compute_algorithm::inclusive_scan<tile_size>(value, plus<> {}, lmem);
+		value = compute_algorithm::inclusive_scan_add<tile_size>(value, lmem);
 		
 		// can directly write to output
 		if (global_id.x < count) {
 			out[global_id.x] = value;
 		}
 	} else {
-		const auto scan_value = compute_algorithm::exclusive_scan<tile_size>(value, plus<> {}, lmem);
+		const auto scan_value = compute_algorithm::exclusive_scan_add<tile_size>(value, lmem);
 		
 		// first group: write full range
 		// second+ group: never write item #0, but write item #N into the next group block
@@ -326,7 +326,7 @@ floor_inline_always void scan_global(buffer<const uint32_t>& in, buffer<uint32_t
 
 	local_buffer<uint32_t, 1u> scan_value_offset;
 	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<tile_size>()> lmem;
-	const auto red_sum = compute_algorithm::reduce<tile_size>(item_sum, lmem, plus<uint32_t> {});
+	const auto red_sum = compute_algorithm::reduce_add<tile_size>(item_sum, lmem);
 	if (local_id.x == 0u) {
 		scan_value_offset[0] = red_sum;
 	}

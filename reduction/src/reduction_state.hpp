@@ -31,11 +31,12 @@ struct reduction_state_struct {
 	
 	//
 	enum class EXEC_MODE {
-		REDUCTION,
+		REDUCTION_F32,
+		REDUCTION_U32,
 		INCLUSIVE_SCAN,
 		EXCLUSIVE_SCAN,
 	};
-	EXEC_MODE exec_mode { EXEC_MODE::REDUCTION };
+	EXEC_MODE exec_mode { EXEC_MODE::REDUCTION_F32 };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
