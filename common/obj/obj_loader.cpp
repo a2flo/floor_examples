@@ -450,7 +450,7 @@ struct mtl_grammar {
 		newmtl.on_match([this](auto& matches) -> parser_context::match_list {
 			const auto name = matches[1].token->second.to_string();
 			auto mtl = make_unique<obj_material>();
-			materials.emplace(name, move(mtl));
+			materials.emplace(name, std::move(mtl));
 			cur_mtl = materials[name].get();
 			return {};
 		});
@@ -514,7 +514,7 @@ struct mtl_grammar {
 		
 		// done
 		success = true;
-		return move(materials);
+		return std::move(materials);
 	}
 };
 
@@ -908,7 +908,7 @@ struct obj_grammar {
 			return stou(match.token->second.to_string());
 		};
 		static const auto push_to_parent = [](parser_context::match_list& matches) -> parser_context::match_list {
-			return move(matches);
+			return std::move(matches);
 		};
 		
 		vertex.on_match([this](auto& matches) -> parser_context::match_list {
@@ -1053,7 +1053,7 @@ struct obj_grammar {
 		index_triplet3.on_match(push_to_parent);
 		sub_group.on_match([this](auto& matches) -> parser_context::match_list {
 			auto obj = make_unique<obj_sub_object>(obj_sub_object { .name = matches[1].token->second.to_string() });
-			sub_objects.emplace_back(move(obj));
+			sub_objects.emplace_back(std::move(obj));
 			cur_obj = sub_objects.back().get();
 			return {};
 		});
@@ -1072,7 +1072,7 @@ struct obj_grammar {
 			// if a material has already been assigned, a new sub-object must be created
 			if(cur_obj->mat != "") {
 				auto obj = make_unique<obj_sub_object>(obj_sub_object { .name = cur_obj->name + "#" });
-				sub_objects.emplace_back(move(obj));
+				sub_objects.emplace_back(std::move(obj));
 				cur_obj = sub_objects.back().get();
 			}
 			cur_obj->mat = matches[1].token->second.to_string();
@@ -1216,7 +1216,7 @@ struct obj_grammar {
 				}
 			}
 			
-			model->objects.emplace_back(move(sobj));
+			model->objects.emplace_back(std::move(sobj));
 		}
 #if defined(FLOOR_DEBUG)
 		log_debug("objects done");
@@ -1650,7 +1650,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 				obj->indices.emplace_back(idx);
 			}
 			
-			model->objects.emplace_back(move(obj));
+			model->objects.emplace_back(std::move(obj));
 		}
 #if defined(FLOOR_DEBUG)
 		log_debug("loaded sub-objects");

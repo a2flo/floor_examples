@@ -126,13 +126,13 @@ static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 // computes all interpolated triangles for this frame, stores these in a global buffer
 // and continues to build the root aabb of the mesh (which will be needed later on)
 // TODO: directly combine with build_bvh_aabbs_leaves?
-kernel void build_aabbs(buffer<const float3> triangles_cur,
-						buffer<const float3> triangles_next,
-						param<uint32_t> triangle_count,
-						param<uint32_t> mesh_idx,
-						param<float> interp,
-						buffer<float> aabbs,
-						buffer<float3> triangles) {
+kernel_1d() void build_aabbs(buffer<const float3> triangles_cur,
+							 buffer<const float3> triangles_next,
+							 param<uint32_t> triangle_count,
+							 param<uint32_t> mesh_idx,
+							 param<float> interp,
+							 buffer<float> aabbs,
+							 buffer<float3> triangles) {
 	const auto id = global_id.x;
 	float3 aabb_min, aabb_max;
 	if(id < triangle_count) {
@@ -166,13 +166,13 @@ kernel void build_aabbs(buffer<const float3> triangles_cur,
 	}
 }
 
-kernel void compute_morton_codes(buffer<const float3> aabbs,
-								 buffer<const float3> centroids_cur,
-								 buffer<const float3> centroids_next,
-								 param<uint32_t> triangle_count,
-								 param<uint32_t> mesh_idx,
-								 param<float> interp,
-								 buffer<uint2> morton_codes) {
+kernel_1d() void compute_morton_codes(buffer<const float3> aabbs,
+									  buffer<const float3> centroids_cur,
+									  buffer<const float3> centroids_next,
+									  param<uint32_t> triangle_count,
+									  param<uint32_t> mesh_idx,
+									  param<float> interp,
+									  buffer<uint2> morton_codes) {
 	const auto id = global_id.x;
 	if(id >= triangle_count) {
 		// mark as unused
@@ -229,10 +229,10 @@ static int32_t prefix_unchecked(const uint32_t& mc_i, const uint32_t& mc_j) {
 	return math::clz(mc_i ^ mc_j);
 }
 
-kernel void build_bvh(buffer<const uint2> morton_codes,
-					  buffer<uint3> bvh_internal,
-					  buffer<uint32_t> bvh_leaves,
-					  param<uint32_t> internal_node_count) {
+kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
+						   buffer<uint3> bvh_internal,
+						   buffer<uint32_t> bvh_leaves,
+						   param<uint32_t> internal_node_count) {
 	const auto idx = global_id.x;
 	if(global_id.x >= internal_node_count) {
 		return;
@@ -339,10 +339,10 @@ kernel void build_bvh(buffer<const uint2> morton_codes,
 	}
 }
 
-kernel void build_bvh_aabbs_leaves(buffer<const uint2> morton_codes,
-								   param<uint32_t> leaf_count,
-								   buffer<const float3> triangles,
-								   buffer<float3> bvh_aabbs_leaves) {
+kernel_1d() void build_bvh_aabbs_leaves(buffer<const uint2> morton_codes,
+										param<uint32_t> leaf_count,
+										buffer<const float3> triangles,
+										buffer<float3> bvh_aabbs_leaves) {
 	const auto idx = global_id.x;
 	if(idx >= leaf_count) {
 		return;
@@ -359,15 +359,15 @@ kernel void build_bvh_aabbs_leaves(buffer<const uint2> morton_codes,
 	bvh_aabbs_leaves[idx * 2 + 1] = v0.maxed(v1).maxed(v2);
 }
 
-kernel void build_bvh_aabbs(buffer<const uint2> morton_codes floor_unused,
-							buffer<const uint3> bvh_internal,
-							buffer<const uint32_t> bvh_leaves,
-							param<uint32_t> internal_node_count floor_unused,
-							param<uint32_t> leaf_count,
-							buffer<const float3> triangles floor_unused,
-							buffer<float3> bvh_aabbs,
-							buffer<float3> bvh_aabbs_leaves,
-							buffer<uint32_t> counters) {
+kernel_1d() void build_bvh_aabbs(buffer<const uint2> morton_codes floor_unused,
+								 buffer<const uint3> bvh_internal,
+								 buffer<const uint32_t> bvh_leaves,
+								 param<uint32_t> internal_node_count floor_unused,
+								 param<uint32_t> leaf_count,
+								 buffer<const float3> triangles floor_unused,
+								 buffer<float3> bvh_aabbs,
+								 buffer<float3> bvh_aabbs_leaves,
+								 buffer<uint32_t> counters) {
 	const auto idx = global_id.x;
 	if(idx >= leaf_count) {
 		return;
@@ -546,48 +546,48 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	} while(node != 0);
 }
 
-kernel void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
-									buffer<const float3> bvh_aabbs_leaves_a,
-									buffer<const float3> triangles_a,
-									buffer<const uint2> morton_codes_a,
-									param<uint32_t> internal_node_count_b,
-									buffer<const uint3> bvh_internal_b,
-									buffer<const float3> bvh_aabbs_b,
-									buffer<const float3> bvh_aabbs_leaves_b,
-									buffer<const float3> triangles_b,
-									buffer<const uint2> morton_codes_b,
-									param<uint32_t> mesh_idx_a,
-									param<uint32_t> mesh_idx_b,
-									buffer<uint32_t> collision_flags) {
+kernel_1d() void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
+										 buffer<const float3> bvh_aabbs_leaves_a,
+										 buffer<const float3> triangles_a,
+										 buffer<const uint2> morton_codes_a,
+										 param<uint32_t> internal_node_count_b,
+										 buffer<const uint3> bvh_internal_b,
+										 buffer<const float3> bvh_aabbs_b,
+										 buffer<const float3> bvh_aabbs_leaves_b,
+										 buffer<const float3> triangles_b,
+										 buffer<const uint2> morton_codes_b,
+										 param<uint32_t> mesh_idx_a,
+										 param<uint32_t> mesh_idx_b,
+										 buffer<uint32_t> collision_flags) {
 	collide_bvhs<false>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
 						internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
 						mesh_idx_a, mesh_idx_b, collision_flags, nullptr, nullptr);
 }
 
-kernel void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
-								 buffer<const float3> bvh_aabbs_leaves_a,
-								 buffer<const float3> triangles_a,
-								 buffer<const uint2> morton_codes_a,
-								 param<uint32_t> internal_node_count_b,
-								 buffer<const uint3> bvh_internal_b,
-								 buffer<const float3> bvh_aabbs_b,
-								 buffer<const float3> bvh_aabbs_leaves_b,
-								 buffer<const float3> triangles_b,
-								 buffer<const uint2> morton_codes_b,
-								 param<uint32_t> mesh_idx_a,
-								 param<uint32_t> mesh_idx_b,
-								 buffer<uint32_t> collision_flags,
-								 buffer<uint32_t> colliding_triangles_a,
-								 buffer<uint32_t> colliding_triangles_b) {
+kernel_1d() void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
+									  buffer<const float3> bvh_aabbs_leaves_a,
+									  buffer<const float3> triangles_a,
+									  buffer<const uint2> morton_codes_a,
+									  param<uint32_t> internal_node_count_b,
+									  buffer<const uint3> bvh_internal_b,
+									  buffer<const float3> bvh_aabbs_b,
+									  buffer<const float3> bvh_aabbs_leaves_b,
+									  buffer<const float3> triangles_b,
+									  buffer<const uint2> morton_codes_b,
+									  param<uint32_t> mesh_idx_a,
+									  param<uint32_t> mesh_idx_b,
+									  buffer<uint32_t> collision_flags,
+									  buffer<uint32_t> colliding_triangles_a,
+									  buffer<uint32_t> colliding_triangles_b) {
 	collide_bvhs<true>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
 					   internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
 					   mesh_idx_a, mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
 }
 
-kernel void collide_root_aabbs(buffer<const float3> aabbs,
-							   param<uint32_t> total_aabb_checks,
-							   param<uint32_t> mesh_count,
-							   buffer<uint32_t> aabb_collision_flags) {
+kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,
+									param<uint32_t> total_aabb_checks,
+									param<uint32_t> mesh_count,
+									buffer<uint32_t> aabb_collision_flags) {
 	const auto id = global_id.x;
 	if(id >= total_aabb_checks) return;
 	
@@ -607,10 +607,10 @@ kernel void collide_root_aabbs(buffer<const float3> aabbs,
 	}
 }
 
-kernel void map_collided_triangles(buffer<const uint32_t> colliding_triangles,
-								   buffer<const uint3> indices,
-								   buffer<uint32_t> colliding_vertices,
-								   param<uint32_t> triangle_count) {
+kernel_1d() void map_collided_triangles(buffer<const uint32_t> colliding_triangles,
+										buffer<const uint3> indices,
+										buffer<uint32_t> colliding_vertices,
+										param<uint32_t> triangle_count) {
 	const auto idx = global_id.x;
 	if(idx >= triangle_count) return;
 	
@@ -626,11 +626,11 @@ kernel void map_collided_triangles(buffer<const uint32_t> colliding_triangles,
 //////////////////////////////////////////
 // radix sort
 
-kernel void radix_sort_count(buffer<const uint2> data,
-							 param<uint32_t> size,
-							 param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
-							 param<uint32_t> mask_op_bit,
-							 buffer<uint32_t> valid_counts) {
+kernel_1d() void radix_sort_count(buffer<const uint2> data,
+								  param<uint32_t> size,
+								  param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+								  param<uint32_t> mask_op_bit,
+								  buffer<uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	
@@ -651,8 +651,8 @@ kernel void radix_sort_count(buffer<const uint2> data,
 	}
 }
 
-kernel void radix_sort_prefix_sum(buffer<uint32_t> in_out,
-								  param<uint32_t> size) {
+kernel_1d() void radix_sort_prefix_sum(buffer<uint32_t> in_out,
+									   param<uint32_t> size) {
 	const auto idx = global_id.x;
 	uint32_t val = (idx < size ? in_out[idx] : 0);
 	
@@ -665,12 +665,12 @@ kernel void radix_sort_prefix_sum(buffer<uint32_t> in_out,
 	}
 }
 
-kernel void radix_sort_stream_split(buffer<const uint2> data,
-									buffer<uint2> out,
-									param<uint32_t> size,
-									param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
-									param<uint32_t> mask_op_bit,
-									buffer<const uint32_t> valid_counts) {
+kernel_1d() void radix_sort_stream_split(buffer<const uint2> data,
+										 buffer<uint2> out,
+										 param<uint32_t> size,
+										 param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+										 param<uint32_t> mask_op_bit,
+										 buffer<const uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	auto valid_elem_offset = (gid == 0 ? 0 : valid_counts[gid - 1]);

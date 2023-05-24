@@ -126,7 +126,7 @@ static shared_ptr<compute_image> load_test_image(const string& file_name) {
 	return dnn_state.ctx->create_image(*dnn_state.dev_queue,
 									   dim,
 									   image_type,
-									   pixels.get(),
+									   span<uint8_t> { pixels.get(), img_size },
 									   COMPUTE_MEMORY_FLAG::READ |
 									   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 }

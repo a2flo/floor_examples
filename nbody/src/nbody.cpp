@@ -106,18 +106,16 @@ static void nbody_compute_impl(buffer<const float4>& in_positions,
 	velocities[idx] = velocity;
 }
 
-kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
-void nbody_compute(buffer<const float4> in_positions,
-				   buffer<float4> out_positions,
-				   buffer<float3> velocities,
-				   param<float> delta) {
+kernel_1d(NBODY_TILE_SIZE) void nbody_compute(buffer<const float4> in_positions,
+											  buffer<float4> out_positions,
+											  buffer<float3> velocities,
+											  param<float> delta) {
 	nbody_compute_impl(in_positions, out_positions, velocities, delta);
 }
 
-kernel kernel_local_size(NBODY_TILE_SIZE, 1, 1)
-void nbody_compute_fixed_delta(buffer<const float4> in_positions,
-							   buffer<float4> out_positions,
-							   buffer<float3> velocities) {
+kernel_1d(NBODY_TILE_SIZE) void nbody_compute_fixed_delta(buffer<const float4> in_positions,
+														  buffer<float4> out_positions,
+														  buffer<float3> velocities) {
 	nbody_compute_impl(in_positions, out_positions, velocities, 20.0f / 1000.0f /* 20ms*/);
 }
 
@@ -146,10 +144,10 @@ struct raster_params {
 	const uint32_t body_count;
 };
 
-kernel void nbody_raster(buffer<const float4> positions,
-						 buffer<uint32_t> img,
-						 buffer<uint32_t> img_old,
-						 param<raster_params> params) {
+kernel_1d(/* can by empty */) void nbody_raster(buffer<const float4> positions,
+												buffer<uint32_t> img,
+												buffer<uint32_t> img_old,
+												param<raster_params> params) {
 	const auto idx = global_id.x;
 	img_old[idx] = 0;
 	

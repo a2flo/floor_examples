@@ -76,7 +76,7 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-kernel void image_blur_single_stage(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+kernel_2d() void image_blur_single_stage(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	const int2 gid { global_id.xy };
 	const int2 lid { local_id.xy };
 	
@@ -250,11 +250,11 @@ floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, im
 	out_img.write(img_coord, color);
 }
 
-kernel void image_blur_dumb_horizontal(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+kernel_2d() void image_blur_dumb_horizontal(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	image_blur_dumb<0>(in_img, out_img);
 }
 
-kernel void image_blur_dumb_vertical(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+kernel_2d() void image_blur_dumb_vertical(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
 	image_blur_dumb<1>(in_img, out_img);
 }
 

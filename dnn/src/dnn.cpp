@@ -91,11 +91,11 @@ floor_inline_always static void convolution_vgg_rgb_f32(const_image_2d<float4> i
 	}
 }
 
-kernel void convolution_vgg_rgb_3x3_relu_f32(const_image_2d<float4> in_img,
-											 buffer<float> out_img,
-											 buffer<const float> filters,
-											 buffer<const float> biases,
-											 param<uint32_t> out_channel_count) {
+kernel_2d() void convolution_vgg_rgb_3x3_relu_f32(const_image_2d<float4> in_img,
+												  buffer<float> out_img,
+												  buffer<const float> filters,
+												  buffer<const float> biases,
+												  param<uint32_t> out_channel_count) {
 	convolution_vgg_rgb_f32<3, 3, true>(in_img, out_img, filters, biases, out_channel_count);
 }
 
@@ -162,7 +162,7 @@ floor_inline_always static void convolution_f32(buffer<const float> in_data,
 
 // TODO: specialize for out_channel_count as well?
 #define CONV_KERNELS(in_channel_count) \
-kernel /*kernel_local_size(in_channel_count, 1, 1)*/ /* TODO: should be out_channel_count */ \
+kernel_2d() /*kernel_local_size(in_channel_count, 1, 1)*/ /* TODO: should be out_channel_count */ \
 void convolution_3x3_ ## in_channel_count ## _relu_f32(buffer<const float> in_data, \
 													   buffer<float> out_data, \
 													   buffer<const float> filters, \
@@ -180,10 +180,10 @@ CONV_KERNELS(512)
 // global_size.x: (width / 2) * (height / 2) * #layers
 // run with 1D-linearized output shape
 // NOTE: expecting WHC-ordered data and width == height
-kernel void max_pooling(buffer<const float> in_data,
-						buffer<float> out_data,
-						// input (width, height, channels) -> output (width / 2, height / 2, channels)
-						param<uint3> in_shape) {
+kernel_1d() void max_pooling(buffer<const float> in_data,
+							 buffer<float> out_data,
+							 // input (width, height, channels) -> output (width / 2, height / 2, channels)
+							 param<uint3> in_shape) {
 	const uint2 out_xy_shape { in_shape.x >> 1u, in_shape.y >> 1u };
 	
 	// WHC coord
@@ -335,40 +335,40 @@ floor_inline_always static void fc_matrix_mul_total(buffer<const data_type> C_pa
 	C[global_id.x] = data_type(with_relu ? max(total_sum, 0.0f) : total_sum);
 }
 
-kernel void fc_matrix_mul_total_f32(buffer<const float> C_partials,
-									buffer<float> C,
-									buffer<const float> biases,
-									param<uint32_t> partial_count,
-									param<uint32_t> B_width,
-									param<uint32_t> with_relu) {
+kernel_1d() void fc_matrix_mul_total_f32(buffer<const float> C_partials,
+										 buffer<float> C,
+										 buffer<const float> biases,
+										 param<uint32_t> partial_count,
+										 param<uint32_t> B_width,
+										 param<uint32_t> with_relu) {
 	fc_matrix_mul_total<float>(C_partials, C, biases, partial_count, B_width, with_relu);
 }
 
-kernel void fc_matrix_mul_total_f16(buffer<const half> C_partials,
-									buffer<half> C,
-									buffer<const half> biases,
-									param<uint32_t> partial_count,
-									param<uint32_t> B_width,
-									param<uint32_t> with_relu) {
+kernel_1d() void fc_matrix_mul_total_f16(buffer<const half> C_partials,
+										 buffer<half> C,
+										 buffer<const half> biases,
+										 param<uint32_t> partial_count,
+										 param<uint32_t> B_width,
+										 param<uint32_t> with_relu) {
 	fc_matrix_mul_total<half>(C_partials, C, biases, partial_count, B_width, with_relu);
 }
 
 // instantiate for different tile sizes
 #define FC_MATRIX_MUL_KERNEL(tile_size, in_data_type, in_data_type_name, out_data_type, out_data_type_name) \
-kernel kernel_local_size(tile_size, 1, 1) void fc_matrix_mul_partial_checked_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> A, \
-																																				 buffer<const out_data_type> B, \
-																																				 buffer<out_data_type> C_partials, \
-																																				 param<uint32_t> A_width, \
-																																				 param<uint32_t> B_width, \
-																																				 param<uint32_t> partial_count) { \
+kernel_1d(tile_size) void fc_matrix_mul_partial_checked_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> A, \
+																															buffer<const out_data_type> B, \
+																															buffer<out_data_type> C_partials, \
+																															param<uint32_t> A_width, \
+																															param<uint32_t> B_width, \
+																															param<uint32_t> partial_count) { \
 	fc_matrix_mul_partial<in_data_type, out_data_type, tile_size, false>(A, B, C_partials, A_width, B_width, partial_count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void fc_matrix_mul_partial_unchecked_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> A, \
-																																				   buffer<const out_data_type> B, \
-																																				   buffer<out_data_type> C_partials, \
-																																				   param<uint32_t> A_width, \
-																																				   param<uint32_t> B_width, \
-																																				   param<uint32_t> partial_count) { \
+kernel_1d(tile_size) void fc_matrix_mul_partial_unchecked_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> A, \
+																															  buffer<const out_data_type> B, \
+																															  buffer<out_data_type> C_partials, \
+																															  param<uint32_t> A_width, \
+																															  param<uint32_t> B_width, \
+																															  param<uint32_t> partial_count) { \
 	fc_matrix_mul_partial<in_data_type, out_data_type, tile_size, true>(A, B, C_partials, A_width, B_width, partial_count); \
 }
 
@@ -430,9 +430,9 @@ floor_inline_always static void softmax_inplace(buffer<const in_data_type> in_da
 }
 
 #define SOFTMAX_INPLACE_KERNEL(tile_size, in_data_type, in_data_type_name, out_data_type, out_data_type_name) \
-kernel kernel_local_size(tile_size, 1, 1) void softmax_inplace_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> in_data, \
-																																   buffer<out_data_type> out_data, \
-																																   param<uint32_t> count) { \
+kernel_1d(tile_size) void softmax_inplace_ ## tile_size ## _ ## in_data_type_name ## _ ## out_data_type_name (buffer<const in_data_type> in_data, \
+																											  buffer<out_data_type> out_data, \
+																											  param<uint32_t> count) { \
 	softmax_inplace<in_data_type, out_data_type, tile_size>(in_data, out_data, count); \
 }
 
@@ -451,7 +451,7 @@ SOFTMAX_INPLACE_KERNEL(1024, half, f16, float, f32)
 
 // multi-pass softmax:
 // 1st: compute exp(item_i)
-kernel void exp_inplace(buffer<float> data) {
+kernel_1d() void exp_inplace(buffer<float> data) {
 	data[global_id.x] = exp(data[global_id.x]);
 }
 
@@ -460,12 +460,12 @@ kernel void exp_inplace(buffer<float> data) {
 // TODO: implement this
 
 // 3rd: read back sum on cpu -> inv_sum = 1 / sum -> do the final softmax computation
-kernel void softmax(buffer<float> data, param<float> inv_sum) {
+kernel_1d() void softmax(buffer<float> data, param<float> inv_sum) {
 	data[global_id.x] = data[global_id.x] * inv_sum;
 }
 
 // resamples a larger image to (224, 224)
-kernel void resample_image_224(const_image_2d<float4> in_img, image_2d<float4, true> out_img, param<uint2> in_dim) {
+kernel_2d() void resample_image_224(const_image_2d<float4> in_img, image_2d<float4, true> out_img, param<uint2> in_dim) {
 	static constexpr const uint2 out_dim { 224, 224 };
 	if (global_id.x >= out_dim.x || global_id.y >= out_dim.y) return;
 	

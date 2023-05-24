@@ -201,46 +201,46 @@ floor_inline_always void reduce_add(buffer<const data_type> data, buffer<data_ty
 // float/uint 32-bit and 64-bit reduction add kernels
 #if defined(FLOOR_COMPUTE_INFO_HAS_64_BIT_ATOMICS_0)
 #define REDUCTION_KERNELS(tile_size) \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f64_##tile_size() { \
+kernel_1d(tile_size) void reduce_add_f64_##tile_size() { \
 	/* nop */ \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u64_##tile_size() { \
+kernel_1d(tile_size) void reduce_add_u64_##tile_size() { \
 	/* nop */ \
 }
 
 #elif defined(FLOOR_NO_DOUBLE)
 #define REDUCTION_KERNELS(tile_size) \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f64_##tile_size() { \
+kernel_1d(tile_size) void reduce_add_f64_##tile_size() { \
 	/* nop */ \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u64_##tile_size(buffer<const uint64_t> data, buffer<uint64_t> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_u64_##tile_size(buffer<const uint64_t> data, buffer<uint64_t> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 }
 
 #else
 #define REDUCTION_KERNELS(tile_size) \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_f32_##tile_size(buffer<const float> data, buffer<float> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_u32_##tile_size(buffer<const uint32_t> data, buffer<uint32_t> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_f64_##tile_size(buffer<const double> data, buffer<double> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_f64_##tile_size(buffer<const double> data, buffer<double> sum, param<uint32_t> count) { \
 reduce_add<tile_size>(data, sum, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void reduce_add_u64_##tile_size(buffer<const uint64_t> data, buffer<uint64_t> sum, param<uint32_t> count) { \
+kernel_1d(tile_size) void reduce_add_u64_##tile_size(buffer<const uint64_t> data, buffer<uint64_t> sum, param<uint32_t> count) { \
 	reduce_add<tile_size>(data, sum, count); \
 }
 #endif
@@ -342,16 +342,16 @@ floor_inline_always void scan_global(buffer<const uint32_t>& in, buffer<uint32_t
 }
 
 #define SCAN_KERNELS(tile_size) \
-kernel kernel_local_size(tile_size, 1, 1) void incl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+kernel_1d(tile_size) void incl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
 	scan_local<tile_size, true>(in, out, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void excl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+kernel_1d(tile_size) void excl_scan_local_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
 	scan_local<tile_size, false>(in, out, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void incl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+kernel_1d(tile_size) void incl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
 	scan_global<tile_size, true>(in, out, count); \
 } \
-kernel kernel_local_size(tile_size, 1, 1) void excl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
+kernel_1d(tile_size) void excl_scan_global_u32_##tile_size(buffer<const uint32_t> in, buffer<uint32_t> out, param<uint32_t> count) { \
 	scan_global<tile_size, false>(in, out, count); \
 }
 

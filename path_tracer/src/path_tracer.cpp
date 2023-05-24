@@ -355,9 +355,9 @@ namespace camera {
 	static constexpr const float3 screen_origin { forward - row_vector * 0.5f - up_vector * 0.5f };
 };
 
-kernel void path_trace(buffer<float4> img,
-					   param<uint32_t> iteration,
-					   param<uint32_t> seed) {
+kernel_1d() void path_trace(buffer<float4> img,
+							param<uint32_t> iteration,
+							param<uint32_t> seed) {
 	const auto idx = global_id.x;
 	const uint2 pixel { idx % SCREEN_WIDTH, idx / SCREEN_HEIGHT };
 	if(pixel.y >= SCREEN_HEIGHT) return;
