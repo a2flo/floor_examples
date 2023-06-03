@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 ## build options
 set(WITH_ASAN false CACHE BOOL "build with address sanitizer")
+set(WITH_LIBCXX false CACHE BOOL "build with libc++")
 
 ## build output
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)

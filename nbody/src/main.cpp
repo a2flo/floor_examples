@@ -616,7 +616,8 @@ int main(int, char* argv[]) {
 							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
 	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA) &&
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (is_metal) {
@@ -802,9 +803,8 @@ int main(int, char* argv[]) {
 			// compute context (CUDA/Host/OpenCL) differs from the rendering context and ...
 			if (!nbody_state.no_vulkan) {
 				// ... we're using a Vulkan renderer
-				// -> enable Vulkan buffer sharing
-				// NOTE/TODO: Host/OpenCL <-> Vulkan sharing is not implemented yet
-				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+				// -> enable Vulkan buffer sharing and automatic synchronization of the shared Vulkan buffer
+				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING | COMPUTE_MEMORY_FLAG::VULKAN_SHARING_SYNC_SHARED;
 			} else if (!nbody_state.no_metal) {
 				// ... we're using a Metal renderer
 				// -> enable Metal buffer sharing and automatic synchronization of the shared Metal buffer
@@ -1078,6 +1078,12 @@ int main(int, char* argv[]) {
 		vulkan_renderer::destroy(render_ctx, *render_dev);
 	}
 #endif
+	nbody_prog = nullptr;
+	nbody_render_prog = nullptr;
+	nbody_compute = nullptr;
+	nbody_compute_fixed_delta = nullptr;
+	nbody_raster = nullptr;
+	img_buffers = {};
 	dev_queue = nullptr;
 	render_dev_queue = nullptr;
 	compute_ctx = nullptr;
