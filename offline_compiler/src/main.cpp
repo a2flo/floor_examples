@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2021 Florian Ziesche
+ *  Copyright (C) 2004 - 2023 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -117,7 +117,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
+				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0|3.1>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
 				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78|80|81>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -259,6 +259,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		else if(mtl_version_str == "2.3") { ctx.metal_std = METAL_VERSION::METAL_2_3; }
 		else if(mtl_version_str == "2.4") { ctx.metal_std = METAL_VERSION::METAL_2_4; }
 		else if(mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
+		else if(mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
