@@ -23,6 +23,8 @@
 		"vr": {
 			// if enabled, performs rendering on the VR HMD
 			"enabled": false,
+			// any of: openvr, openxr
+			"backend": "openxr",
 			// if enabled, also renders on the companion window (monitor)
 			"companion": true,
 			// physical X render resolution (for each eye)

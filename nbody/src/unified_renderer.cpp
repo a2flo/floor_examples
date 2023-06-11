@@ -245,15 +245,13 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 			uniforms.mvpms[0] = mview_scene * mproj;
 			uniforms.mvms[0] = mview_scene;
 		} else {
-#if !defined(FLOOR_NO_VR)
 			const auto vr_ctx = ctx.get_renderer_vr_context();
-			const auto [mv_left, mv_right, pm_left, pm_right] =
-				vr_ctx->get_frame_matrices(0.25f, nbody_state.max_distance, false /* MV w/o position*/);
-			uniforms.mvms[0] = mview_scene * mv_left;
-			uniforms.mvms[1] = mview_scene * mv_right;
+			const auto [hmd_pos, eye_distance, mv_left, mv_right, pm_left, pm_right] =
+				vr_ctx->get_frame_view_state(0.25f, nbody_state.max_distance, false /* MV w/o position*/);
+			uniforms.mvms[0] = mview_scene * matrix4f::translation(hmd_pos) * mv_left;
+			uniforms.mvms[1] = mview_scene * matrix4f::translation(hmd_pos) * mv_right;
 			uniforms.mvpms[0] = uniforms.mvms[0] * pm_left;
 			uniforms.mvpms[1] = uniforms.mvms[1] * pm_right;
-#endif
 		}
 		
 		// draw
