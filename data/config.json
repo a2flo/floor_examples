@@ -25,6 +25,12 @@
 			"enabled": false,
 			// any of: openvr, openxr
 			"backend": "openxr",
+			// if enabled, performs backend specific validation (in debug mode)
+			"validation": false,
+			// if enabled, enables tracker support
+			"trackers": true,
+			// if enabled, enables hand-tracking support
+			"hand_tracking": true,
 			// if enabled, also renders on the companion window (monitor)
 			"companion": true,
 			// physical X render resolution (for each eye)

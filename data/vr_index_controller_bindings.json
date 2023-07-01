@@ -1,0 +1,317 @@
+{
+	"action_manifest_version": 0,
+	"alias_info" : {},
+	"app_key": "libfloor",
+	"bindings": {
+		"/actions/main": {
+			"poses": [
+				{
+					"output": "/actions/main/in/left_pose",
+					"path": "/user/hand/left/pose/base"
+				},
+				{
+					"output": "/actions/main/in/right_pose",
+					"path": "/user/hand/right/pose/base"
+				},
+				{
+					"output": "/actions/main/in/left_pose_aim",
+					"path": "/user/hand/left/pose/tip"
+				},
+				{
+					"output": "/actions/main/in/right_pose_aim",
+					"path": "/user/hand/right/pose/tip"
+				}
+			],
+			"haptics": [
+				{
+					"output": "/actions/main/out/left_haptic",
+					"path": "/user/hand/left/output/haptic"
+				},
+				{
+					"output": "/actions/main/out/right_haptic",
+					"path": "/user/hand/right/output/haptic"
+				}
+			],
+			"sources": [
+				{
+					"path": "/user/hand/left/input/system",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_system_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_system_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/trigger",
+					"mode": "trigger",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_trigger_press"
+						},
+						"pull": {
+							"output": "/actions/main/in/left_trigger_pull"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_trigger_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/system",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_system_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_system_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/a",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_main_button_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_main_button_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/a",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_main_button_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_main_button_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/b",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_applicationmenu_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_applicationmenu_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/b",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_applicationmenu_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_applicationmenu_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/trackpad",
+					"mode": "trackpad",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_trackpad_press"
+						},
+						"position": {
+							"output": "/actions/main/in/left_trackpad_value"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_trackpad_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/trackpad",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_trackpad_press"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/trackpad",
+					"mode": "trackpad",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_trackpad_press"
+						},
+						"position": {
+							"output": "/actions/main/in/right_trackpad_value"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_trackpad_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/trackpad",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_trackpad_press"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/trigger",
+					"mode": "trigger",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_trigger_press"
+						},
+						"pull": {
+							"output": "/actions/main/in/right_trigger_pull"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_trigger_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/thumbstick",
+					"mode": "joystick",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_thumbstick_press"
+						},
+						"position": {
+							"output": "/actions/main/in/left_thumbstick_value"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_thumbstick_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/thumbstick",
+					"mode": "joystick",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_thumbstick_press"
+						},
+						"position": {
+							"output": "/actions/main/in/right_thumbstick_value"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_thumbstick_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/grip",
+					"mode": "trigger",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_grip_press"
+						},
+						"pull": {
+							"output": "/actions/main/in/left_grip_pull"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/skeleton/right",
+					"mode": "none",
+					"inputs": {
+					}
+				},
+				{
+					"path": "/user/hand/left/input/grip",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/left_grip_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/left_grip_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/skeleton/left",
+					"mode": "none",
+					"inputs": {
+					}
+				},
+				{
+					"path": "/user/hand/right/input/grip",
+					"mode": "trigger",
+					"inputs": {
+						"pull": {
+							"output": "/actions/main/in/right_grip_pull"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/grip",
+					"mode": "button",
+					"inputs": {
+						"click": {
+							"output": "/actions/main/in/right_grip_press"
+						},
+						"touch": {
+							"output": "/actions/main/in/right_grip_touch"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/trackpad",
+					"mode": "force_sensor",
+					"inputs": {
+						"force": {
+							"output": "/actions/main/in/left_trackpad_force"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/trackpad",
+					"mode": "force_sensor",
+					"inputs": {
+						"force": {
+							"output": "/actions/main/in/right_trackpad_force"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/left/input/grip",
+					"mode": "force_sensor",
+					"inputs": {
+						"force": {
+							"output": "/actions/main/in/left_grip_force"
+						}
+					}
+				},
+				{
+					"path": "/user/hand/right/input/grip",
+					"mode": "force_sensor",
+					"inputs": {
+						"force": {
+							"output": "/actions/main/in/right_grip_force"
+						}
+					}
+				}
+			]
+		}
+	},
+	"controller_type": "knuckles",
+	"description": "libfloor Index Controller default bindings",
+	"name": "libfloor Index Controller default bindings",
+	"options": {},
+	"simulated_actions": []
+}

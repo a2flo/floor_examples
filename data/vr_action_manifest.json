@@ -1,0 +1,247 @@
+{
+	"default_bindings": [
+		{
+			"controller_type": "knuckles",
+			"binding_url": "vr_index_controller_bindings.json"
+		}
+	],
+	"action_sets": [
+		{
+		  "name": "/actions/main",
+		  "usage": "leftright"
+		}
+	],
+	"actions": [
+		{
+		  "name": "/actions/main/in/left_applicationmenu_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_applicationmenu_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_main_button_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_main_button_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_system_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_system_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_trackpad_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_trackpad_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_trackpad_value",
+		  "requirement": "optional",
+		  "type": "vector2"
+		},
+		{
+		  "name": "/actions/main/in/left_trackpad_force",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/left_trigger_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_trigger_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_trigger_pull",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/left_thumbstick_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_thumbstick_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_thumbstick_value",
+		  "requirement": "optional",
+		  "type": "vector2"
+		},
+		{
+		  "name": "/actions/main/in/left_grip_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_grip_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/left_grip_force",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/left_grip_pull",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/left_pose",
+		  "requirement": "optional",
+		  "type": "pose"
+		},
+		{
+		  "name": "/actions/main/in/left_pose_aim",
+		  "requirement": "optional",
+		  "type": "pose"
+		},
+		{
+		  "name": "/actions/main/out/left_haptic",
+		  "requirement": "vibration",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_applicationmenu_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_applicationmenu_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_main_button_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_main_button_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_system_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_system_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_trackpad_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_trackpad_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_trackpad_value",
+		  "requirement": "optional",
+		  "type": "vector2"
+		},
+		{
+		  "name": "/actions/main/in/right_trackpad_force",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/right_trigger_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_trigger_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_trigger_pull",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/right_thumbstick_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_thumbstick_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_thumbstick_value",
+		  "requirement": "optional",
+		  "type": "vector2"
+		},
+		{
+		  "name": "/actions/main/in/right_grip_press",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_grip_touch",
+		  "requirement": "optional",
+		  "type": "boolean"
+		},
+		{
+		  "name": "/actions/main/in/right_grip_force",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/right_grip_pull",
+		  "requirement": "optional",
+		  "type": "vector1"
+		},
+		{
+		  "name": "/actions/main/in/right_pose",
+		  "requirement": "optional",
+		  "type": "pose"
+		},
+		{
+		  "name": "/actions/main/in/right_pose_aim",
+		  "requirement": "optional",
+		  "type": "pose"
+		},
+		{
+		  "name": "/actions/main/out/right_haptic",
+		  "requirement": "vibration",
+		  "type": "boolean"
+		}
+	],
+	"version": 0
+}
