@@ -118,7 +118,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0|3.1>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
-				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78|80|81>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
+				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78|80|81|82>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -276,7 +276,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		   ctx.ptx_version != 64 && ctx.ptx_version != 65 &&
 		   ctx.ptx_version != 70 && ctx.ptx_version != 71 && ctx.ptx_version != 72 && ctx.ptx_version != 73 &&
 		   ctx.ptx_version != 74 && ctx.ptx_version != 75 && ctx.ptx_version != 76 && ctx.ptx_version != 77 &&
-		   ctx.ptx_version != 78 && ctx.ptx_version != 80 && ctx.ptx_version != 81) {
+		   ctx.ptx_version != 78 && ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
