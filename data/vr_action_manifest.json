@@ -13,6 +13,18 @@
 	],
 	"actions": [
 		{
+		  "name": "/actions/main/in/left_hand_skeleton",
+		  "requirement": "optional",
+		  "type": "skeleton",
+		  "skeleton": "/skeleton/hand/left"
+		},
+		{
+		  "name": "/actions/main/in/right_hand_skeleton",
+		  "requirement": "optional",
+		  "type": "skeleton",
+		  "skeleton": "/skeleton/hand/right"
+		},
+		{
 		  "name": "/actions/main/in/left_applicationmenu_press",
 		  "requirement": "optional",
 		  "type": "boolean"
