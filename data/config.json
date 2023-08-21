@@ -194,6 +194,9 @@
 		"vulkan": {
 			// debug-mode only: if true, enables Vulkan validation layers/handling
 			"validation": true,
+			// debug-mode only: if true, sets debug labels on various/most Vulkan objects
+			// NOTE: setting validation to true also enables this, but this adds the option to do so w/o having validation turned on
+			"debug_labels": false,
 			// run the spirv-validator after compiling a spir-v binary
 			"validate_spirv": false,
 			// if true, enables software printf in functions
@@ -202,6 +205,8 @@
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": [],
+			// if true, uses vkGetFenceStatus spin-loop waiting/polling instead of vkWaitForFences
+			"fence_wait_polling": true,
 			
 			// if toolchain.log_binaries is true and this is non-empty, then only functions whose name matches any of the filter strings will be dumped
 			// e.g. [ "foo", "bar" ] will only dump functions whose name contains "foo" or "bar"
