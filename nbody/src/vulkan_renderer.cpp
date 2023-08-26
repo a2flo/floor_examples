@@ -370,7 +370,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	const auto& vk_queue = (const vulkan_queue&)dev_queue;
 	
 	//
-	auto drawable_ret = vk_ctx->acquire_next_image();
+	auto drawable_ret = vk_ctx->acquire_next_image(dev_queue);
 	if(!drawable_ret.first) {
 		return;
 	}
@@ -458,7 +458,7 @@ void vulkan_renderer::render(shared_ptr<compute_context> ctx,
 	VK_CALL_RET(vkEndCommandBuffer(cmd_buffer.cmd_buffer), "failed to end command buffer")
 	vk_queue.submit_command_buffer(std::move(cmd_buffer), {}, {}, {}, true); // TODO: don't block
 	
-	vk_ctx->present_image(drawable);
+	vk_ctx->present_image(dev_queue, drawable);
 }
 
 #endif
