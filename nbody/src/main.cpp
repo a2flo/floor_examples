@@ -139,6 +139,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\tR9 285:       ~ 1865 gflops (--count 131072 --tile-size 64)" << endl;
 		cout << "\tGTX 1050 Ti:  ~ 1690 gflops (--count 262144 --tile-size 256)" << endl;
 		cout << "\tRyzen 7950X3D:~ 1210 gflops (--count 65536 --tile-size 512)" << endl;
+		cout << "\tA17 Pro:      ~ 1100 gflops (--count 131072 --tile-size 256)" << endl;
 		cout << "\ti9-7980XE:    ~ 1060 gflops (--count 73728 --tile-size 64)" << endl;
 		cout << "\tVan Gogh GPU: ~ 1000 gflops (--count 262144 --tile-size 256)" << endl;
 		cout << "\tGTX 750:      ~  840 gflops (--count 65536 --tile-size 256)" << endl;
@@ -432,6 +433,17 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			init_system();
 		}
 		return true;
+	} else if (type == EVENT_TYPE::VR_GRIP_FORCE) {
+		// reset
+		const auto& grip_force_evt = (shared_ptr<vr_grip_force_event>&)obj;
+		if (grip_force_evt->force > 0.98f) {
+			init_system();
+		}
+		return true;
+	} else if (type == EVENT_TYPE::VR_GRIP_PULL) {
+		// nop
+		[[maybe_unused]] const auto& grip_pull_evt = (shared_ptr<vr_grip_pull_event>&)obj;
+		return true;
 	} else if (type == EVENT_TYPE::VR_THUMBSTICK_PRESS) {
 		// quit if both thumbstick buttons are pressed
 		const auto& press_evt = (shared_ptr<vr_grip_press_event>&)obj;
@@ -460,11 +472,21 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		nbody_state.cam_rotation *= (quaternionf::rotation_deg(move_evt->position.x * rot_speed, float3 { 0.0f, 1.0f, 0.0f }) *
 									 quaternionf::rotation_deg(-move_evt->position.y * rot_speed, float3 { 1.0f, 0.0f, 0.0f }));
 		return true;
+	} else if (type == EVENT_TYPE::VR_TRACKPAD_FORCE) {
+		// reset
+		[[maybe_unused]] const auto& trackpad_force_evt = (shared_ptr<vr_trackpad_force_event>&)obj;
+		return true;
 	} else if (type == EVENT_TYPE::VR_TRACKPAD_MOVE) {
 		// move cam
 		const auto& move_evt = (shared_ptr<vr_trackpad_move_event>&)obj;
 		static constexpr const float move_speed { 2.0f };
 		nbody_state.distance = const_math::clamp(nbody_state.distance - move_evt->position.y * move_speed, 1.0f, nbody_state.max_distance);
+		return true;
+	} else if (type == EVENT_TYPE::VR_TRACKPAD_PRESS) {
+		[[maybe_unused]] const auto& press_evt = (shared_ptr<vr_trackpad_press_event>&)obj;
+		return true;
+	} else if (type == EVENT_TYPE::VR_GRIP_TOUCH) {
+		[[maybe_unused]] const auto& touch_evt = (shared_ptr<vr_grip_touch_event>&)obj;
 		return true;
 	}
 	return false;
@@ -881,9 +903,11 @@ int main(int, char* argv[]) {
 													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
 													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
 													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
-													   EVENT_TYPE::VR_THUMBSTICK_MOVE, EVENT_TYPE::VR_TRACKPAD_MOVE,
+													   EVENT_TYPE::VR_THUMBSTICK_MOVE,
+													   EVENT_TYPE::VR_TRACKPAD_MOVE, EVENT_TYPE::VR_TRACKPAD_FORCE, EVENT_TYPE::VR_TRACKPAD_PRESS,
 													   EVENT_TYPE::VR_APP_MENU_PRESS, EVENT_TYPE::VR_MAIN_PRESS,
-													   EVENT_TYPE::VR_GRIP_PRESS, EVENT_TYPE::VR_TRIGGER_PULL, EVENT_TYPE::VR_THUMBSTICK_PRESS);
+													   EVENT_TYPE::VR_GRIP_PRESS, EVENT_TYPE::VR_GRIP_FORCE, EVENT_TYPE::VR_GRIP_PULL, EVENT_TYPE::VR_GRIP_TOUCH,
+													   EVENT_TYPE::VR_TRIGGER_PULL, EVENT_TYPE::VR_THUMBSTICK_PRESS);
 		
 		// init done, release context
 	}

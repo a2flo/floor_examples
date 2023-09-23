@@ -29,9 +29,13 @@
 		5C131E1E1E32C677003A5688 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1D1E32C677003A5688 /* GameController.framework */; };
 		5C131E201E32C691003A5688 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C131E1F1E32C691003A5688 /* AVFoundation.framework */; };
 		5C180F771D8063A500AF91E7 /* vulkan_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */; };
+		5C3928862ABDA0F400B3E57D /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928852ABDA0F400B3E57D /* AVFAudio.framework */; };
+		5C3928882ABDA11100B3E57D /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928872ABDA11100B3E57D /* CoreHaptics.framework */; };
+		5C39288A2ABDA12700B3E57D /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928892ABDA12700B3E57D /* GameController.framework */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
+		5C8416AF2ABE08FA000920A1 /* nbody.fubar in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5CC3688521611CAF001DE77E /* nbody.fubar */; };
 		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5C8646291C19B2A4000518C7 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
@@ -69,6 +73,7 @@
 			files = (
 				5C5487801B608DE40088272A /* config.json in CopyFiles */,
 				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
+				5C8416AF2ABE08FA000920A1 /* nbody.fubar in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +115,9 @@
 		5C131E821E33D32E003A5688 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/ios/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5C180F751D8063A500AF91E7 /* vulkan_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = vulkan_renderer.cpp; sourceTree = "<group>"; };
 		5C180F761D8063A500AF91E7 /* vulkan_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = vulkan_renderer.hpp; sourceTree = "<group>"; };
+		5C3928852ABDA0F400B3E57D /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/AVFAudio.framework; sourceTree = DEVELOPER_DIR; };
+		5C3928872ABDA11100B3E57D /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/CoreHaptics.framework; sourceTree = DEVELOPER_DIR; };
+		5C3928892ABDA12700B3E57D /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* nbody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = nbody.cpp; sourceTree = "<group>"; };
@@ -134,6 +142,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5C39288A2ABDA12700B3E57D /* GameController.framework in Frameworks */,
+				5C3928882ABDA11100B3E57D /* CoreHaptics.framework in Frameworks */,
+				5C3928862ABDA0F400B3E57D /* AVFAudio.framework in Frameworks */,
 				5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */,
 				5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */,
 				5C0071CA1A91FFA600F4711D /* CoreGraphics.framework in Frameworks */,
@@ -216,6 +227,9 @@
 		5C131E1C1E32C676003A5688 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				5C3928892ABDA12700B3E57D /* GameController.framework */,
+				5C3928872ABDA11100B3E57D /* CoreHaptics.framework */,
+				5C3928852ABDA0F400B3E57D /* AVFAudio.framework */,
 				5C131E1F1E32C691003A5688 /* AVFoundation.framework */,
 				5C131E1D1E32C677003A5688 /* GameController.framework */,
 			);
@@ -294,7 +308,6 @@
 				5C00718D1A91EF7E00F4711D /* Sources */,
 				5C00718E1A91EF7E00F4711D /* Frameworks */,
 				5C00718F1A91EF7E00F4711D /* Resources */,
-				5C0071C01A91F1EF00F4711D /* ShellScript */,
 				5C0071DB1A9200B200F4711D /* CopyFiles */,
 			);
 			buildRules = (
@@ -420,19 +433,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		5C0071C01A91F1EF00F4711D /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# create entitlements file on the fly\nENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"\nENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"\n\n# need to create the necessary xml file with the correct application-identifier\n# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)\nprintf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}\nprintf \"${PRODUCT_BUNDLE_IDENTIFIER}\" >> ${ENTITLEMENTS_TMP}\nprintf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}\n# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)\nSIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")\n\n# write the 4-byte header + 4-byte size of this complete file\nprintf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}\n# dump the previously created xml file in the new one and remove the appended 8 bytes\ncat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}\n# cleanup\nrm ${ENTITLEMENTS_TMP}\n\n# code sign with entitlements\ncodesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"\n";
-		};
 		5C30CAA61AA7058D008986B1 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -445,7 +445,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src nbody.cpp --target air --sub-target ios9 --out nbody_unopt.air --no-double -vv --config ../../../data/ -- -DNBODY_TILE_SIZE=512 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-opt nbody_unopt.air -o nbody.air\n${PLATFORM_DIR}/usr/bin/metal-ar r nbody.a nbody.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/nbody.metallib nbody.a\n";
+			shellScript = "cd src\nocc --src nbody.cpp --fubar minimal --out ../../data/nbody.fubar --no-double -vv --config ../../data/ -- -DNBODY_TILE_SIZE=256 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n";
 		};
 		5C8646241C19B2A4000518C7 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -518,9 +518,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -547,6 +549,7 @@
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -556,20 +559,7 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -587,7 +577,7 @@
 				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
+				VALID_ARCHS = arm64;
 			};
 			name = Debug;
 		};
@@ -596,9 +586,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = NO;
 				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -621,6 +613,7 @@
 					PLATFORM_X32,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -630,20 +623,7 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -662,7 +642,7 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
+				VALID_ARCHS = arm64;
 			};
 			name = Release;
 		};
@@ -1053,7 +1033,7 @@
 					"$(inherited)",
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1165,7 +1145,7 @@
 					"$(inherited)",
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
