@@ -956,6 +956,7 @@ int main(int, char* argv[]) {
 				
 				const compute_queue::indirect_execution_parameters_t exec_params {
 					.debug_label = "nbody_benchmark",
+					.wait_until_completion = true,
 				};
 				dev_queue->execute_indirect(*indirect_benchmark_pipeline, exec_params);
 			} else {
@@ -973,8 +974,8 @@ int main(int, char* argv[]) {
 															// NOTE: could use a time-step scaler instead, but fixed size seems more reasonable
 															nbody_state.time_step);
 				buffer_flip_flop = next_buffer;
+				dev_queue->finish(); // ensure all is complete
 			}
-			dev_queue->finish(); // ensure all is complete
 			
 			// time keeping
 			auto now = chrono::high_resolution_clock::now();
