@@ -146,8 +146,8 @@ void camera::run() {
 				single_frame_direction += delta * 0.1f;
 				
 				// multiply existing rotation by newly computed rotation around the x and y axis
-				single_frame_quat *= (quaternionf::rotation_deg(float(cursor_delta.x), float3 { 0.0f, 1.0f, 0.0f }) *
-									  quaternionf::rotation_deg(float(cursor_delta.y), float3 { 1.0f, 0.0f, 0.0f }));
+				single_frame_quat = (quaternionf::rotation_deg(float(cursor_delta.x), float3 { 0.0f, 1.0f, 0.0f }) *
+									 quaternionf::rotation_deg(float(cursor_delta.y), float3 { 1.0f, 0.0f, 0.0f })) * single_frame_quat;
 			}
 			else ignore_next_rotation--;
 			
