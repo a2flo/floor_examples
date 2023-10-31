@@ -402,8 +402,8 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			delta *= rot_speed;
 			
 			// multiply existing rotation by newly computed rotation around the x and y axis
-			nbody_state.cam_rotation *= (quaternionf::rotation_deg(delta.x, float3 { 0.0f, 1.0f, 0.0f }) *
-										 quaternionf::rotation_deg(delta.y, float3 { 1.0f, 0.0f, 0.0f }));
+			nbody_state.cam_rotation = (quaternionf::rotation_deg(delta.x, float3 { 0.0f, 1.0f, 0.0f }) *
+										quaternionf::rotation_deg(delta.y, float3 { 1.0f, 0.0f, 0.0f })) * nbody_state.cam_rotation;
 		} else {
 			// multiply by desired move speed
 			static constexpr const float move_speed { 250.0f };
@@ -955,8 +955,8 @@ int main(int, char* argv[]) {
 				time_keeper = chrono::high_resolution_clock::now();
 				
 				const compute_queue::indirect_execution_parameters_t exec_params {
-					.debug_label = "nbody_benchmark",
 					.wait_until_completion = true,
+					.debug_label = "nbody_benchmark",
 				};
 				dev_queue->execute_indirect(*indirect_benchmark_pipeline, exec_params);
 			} else {
