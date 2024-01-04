@@ -749,19 +749,11 @@ vertex blit_in_out blit_vs() {
 
 fragment float4 blit_fs(const blit_in_out in [[stage_input]],
 						const_image_2d<float> img) {
-#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
 	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) });
-#else
-	return img.read(frag_coord.xy.cast<uint32_t>());
-#endif
 }
 fragment float4 blit_swizzle_fs(const blit_in_out in [[stage_input]],
 								const_image_2d<float> img) {
-#if !defined(FLOOR_COMPUTE_VULKAN) // TODO/NOTE: position read in fs not yet supported in vulkan
 	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) }).swizzle<2, 1, 0, 3>();
-#else
-	return img.read(frag_coord.xy.cast<uint32_t>()).swizzle<2, 1, 0, 3>();
-#endif
 }
 
 #endif
