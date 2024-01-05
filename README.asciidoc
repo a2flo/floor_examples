@@ -1,0 +1,52 @@
+
+= floor examples =
+
+== dnn ==
+* demonstrates inference on a VGG16 deep neural network (implements convolution, max-pooling, fully-connected and softmax layers)
+* build with `./build.sh` inside the folder
+* `cd data/nets/vgg16 && ./get_vgg16.sh` to download the necessary VGG16 layers/net
+* desktop/cli: run with `--image <path/to/image.png>`  (image must be 224*224px 32-bit RGBA for now)
+* iOS: press cheese and take a photo
+image:https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_cli_example.png["iOS: Lake in the Alps; cli: Tiger, licensed under CC BY 2.0 by Tony Hisgett"]
+
+== warp ==
+* image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
+* also demos tessellation/displacement
+* build with `./build.sh` inside the folder
+* gather-based warping ref: link:https://www.cse.ust.hk/~psander/docs/bireproj.pdf[Image-Based Bidirectional Scene Reprojection] (link:https://web.archive.org/web/20170611112307/http://www.cs.virginia.edu:80/~gfx/pmwiki/index.php?n=Pubs.Yang2011IBB[original])
+* NOTE: in addition to floor + dependencies, this requires SDL2_image with libpng, as well as link:https://github.com/a2flo/libwarp[libwarp]
+* video: +
+image:http://img.youtube.com/vi/PmfJ2kzC49A/0.jpg[link=https://www.youtube.com/watch?v=PmfJ2kzC49A]
+
+== nbody ==
+* N-body simulation to demonstrate local/shared memory buffers, local memory barriers, OpenGL and Metal buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
+* build with `./build.sh` inside the folder
+* ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
+* video: +
+image:http://img.youtube.com/vi/DoLe1c-eokI/0.jpg[link=https://www.youtube.com/watch?v=DoLe1c-eokI]
+
+== hlbvh ==
+* triangle/triangle collision detection of animated meshes using HLBVH (constructed per-step/frame)
+* build with `./build.sh` inside the folder
+* ref: https://research.nvidia.com/sites/default/files/publications/karras2012hpg_paper.pdf
+image:https://raw.githubusercontent.com/a2flo/floor_examples/master/hlbvh/hlbvh.gif["sinbad tries slicing golems back, but faceplants into golems back instead, 'cause golem don't giv' no f's"]
+
+== path_tracer ==
+* a simple path tracer to demonstrate compute code compilation and execution, as well as some mildly complex C++14 code
+* build with `./build.sh` inside the folder +
+image:https://raw.githubusercontent.com/a2flo/floor_examples/b3eb816a5c80f079aad4d63aeec2786afe5523d9/poc_spir_ptx/example_rendering.png["noise and streaks courtesy of the horrible random function that I'm using"]
+
+== reduction ==
+* simple (WIP) reduction example that showcases 3 different reduce implementations: local/shared memory reduce, shuffle reduce and CUDA coop kernel + shuffle reduce
+* inclusive/exclusive scan test
+
+== img ==
+* small program to demonstrate image functionality by doing a gaussian blur (implemented with manual local memory caching as well as a "dumb" version, running the same code as the also provided GLSL implementation)
+* build with `./build.sh` inside the folder
+
+== occ ==
+* offline-compute-compiler, compiles compute/graphics C++ code to CUDA/PTX, Metal/AIR, OpenCL/SPIR/SPIR-V, Vulkan/SPIR-V code/binaries (see link:https://github.com/a2flo/floor_examples/blob/master/offline_compiler/src/main.cpp#L82[--help] for all options)
+* build with `./build.sh` inside the folder
+
+== libfloor and toolchain ==
+* https://github.com/a2flo/floor
