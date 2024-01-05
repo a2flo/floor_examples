@@ -115,6 +115,97 @@ alignas(16) static constant constexpr const float4 cornell_vertices[] {
 	{ 42.30f, 0.0f, 24.70f, 1.0f }, // 63
 };
 
+static constexpr const float tex_scaler { 8.0f };
+alignas(16) static constant constexpr const float2 cornell_tex_coords[size(cornell_vertices)] {
+	// floor / 0
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// light / 4
+	{ 2.0f, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, 2.0f },
+	{ 2.0f, 2.0f },
+	
+	// ceiling / 8
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// back wall / 12
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// right wall / 16
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// left wall / 20
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// short block / 24
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	// tall block / 44
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler },
+	
+	{ tex_scaler, 0.0f },
+	{ 0.0f, 0.0f },
+	{ 0.0f, tex_scaler },
+	{ tex_scaler, tex_scaler }, // 63
+};
+
 alignas(16) static constant constexpr const uint4 cornell_indices[size(cornell_vertices) / 2] {
 	// floor
 	{ 0, 1, 2, 0 },
@@ -223,6 +314,12 @@ struct material {
 		specular.z * ((specular.w + 2.0f) * const_math::_1_DIV_2PI<float>),
 		0.0f
 	};
+	// 0 = white
+	// 1 = cross
+	// 2 = circle
+	// 3 = inv_cross
+	// 4 = stripe
+	const uint32_t texture_index { 0u };
 };
 alignas(16) static constant constexpr const material cornell_materials[(size_t)CORNELL_OBJECT::__OBJECT_COUNT] {
 	// floor
@@ -230,13 +327,15 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.407843f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 3u,
 	},
 	
 	// light
 	material {
 		.diffuse = { 0.2f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
-		.emission = { 15.0f },
+		.emission = { 25.0f },
+		.texture_index = 2u,
 	},
 	
 	// ceiling
@@ -244,6 +343,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.407843f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 3u,
 	},
 	
 	// back wall
@@ -251,6 +351,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.407843f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 2u,
 	},
 	
 	// right wall
@@ -258,6 +359,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.0f, 0.407843f, 0.0f, 0.0f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 1u,
 	},
 	
 	// left wall
@@ -265,6 +367,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.407843f, 0.0f, 0.0f, 0.0f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 1u,
 	},
 	
 	// short block
@@ -272,6 +375,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.407843f },
 		.specular = { 0.0f, 0.0f, 0.0f, 10.0f },
 		.emission = { 0.0f },
+		.texture_index = 4u,
 	},
 	
 	// tall block
@@ -279,6 +383,7 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.diffuse = { 0.1f },
 		.specular = { 0.9f, 0.9f, 0.9f, 100.0f },
 		.emission = { 0.0f },
+		.texture_index = 4u,
 	},
 };
 

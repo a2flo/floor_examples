@@ -381,7 +381,7 @@ if [ $BUILD_OS != "osx" -a $BUILD_OS != "ios" ]; then
 	COMMON_FLAGS="${COMMON_FLAGS} -fno-pic -fno-pie -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
-	PACKAGES="sdl2"
+	PACKAGES="sdl2 SDL2_image"
 	PACKAGES_OPT=""
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		PACKAGES_OPT="${PACKAGES_OPT} libcrypto libssl"
@@ -527,7 +527,7 @@ else
 	
 	# frameworks and libs
 	LDFLAGS="${LDFLAGS} -F/Library/Frameworks"
-	LDFLAGS="${LDFLAGS} -framework SDL2"
+	LDFLAGS="${LDFLAGS} -framework SDL2 -framework SDL2_image"
 	if [ ${BUILD_CONF_NET} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
 		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openssl/lib"

@@ -29,7 +29,7 @@ struct ray {
 };
 
 // need a larger epsilon in some cases (than the one defined by const_math::EPSILON<float>)
-#define INTERSECTION_EPS 0.0001f
+static constexpr const float intersection_epsilon { 0.0001f };
 
 class simple_intersector {
 public:
@@ -38,6 +38,7 @@ public:
 		const float3 normal;
 		const float distance;
 		const CORNELL_OBJECT object;
+		const float2 tex_coord;
 	};
 	
 	// to keep things simple, do a simple O(n) intersection here (well, O(32), so constant ;))
@@ -47,17 +48,20 @@ public:
 		float3 normal;
 		float distance { numeric_limits<float>::infinity() };
 		CORNELL_OBJECT object { CORNELL_OBJECT::__OBJECT_INVALID };
+		float2 tex_coord;
 		
-		for(uint32_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
-			const auto& index = cornell_indices[triangle_idx];
-			const auto& v0 = cornell_vertices[index.x];
-			const auto& v1 = cornell_vertices[index.y];
-			const auto& v2 = cornell_vertices[index.z];
+		for (uint32_t triangle_idx = 0; triangle_idx < size(cornell_indices); ++triangle_idx) {
+			const auto index = cornell_indices[triangle_idx];
+			const auto v0 = cornell_vertices[index.x];
+			const auto v1 = cornell_vertices[index.y];
+			const auto v2 = cornell_vertices[index.z];
 	
 			const auto e1 = v0.xyz - v2.xyz, e2 = v1.xyz - v2.xyz;
 			const auto pvec = r.direction.crossed(e2);
 			const auto det = e1.dot(pvec);
-			if(fabs(det) <= const_math::EPSILON<float>) continue;
+			if (fabs(det) <= const_math::EPSILON<float>) {
+				continue;
+			}
 			
 			const auto inv_det = 1.0f / det;
 			const auto tvec = r.origin - v2.xyz;
@@ -68,13 +72,28 @@ public:
 			ip.y = r.direction.dot(qvec) * inv_det;
 			ip.z = 1.0f - ip.x - ip.y;
 			
-			if((ip < 0.0f).any()) continue;
+			if ((ip < 0.0f).any()) {
+				continue;
+			}
 			
 			const auto idist = e2.dot(qvec) * inv_det;
-			if(idist >= INTERSECTION_EPS && idist < distance) {
-				normal = e1.crossed(e2).normalized();
+			if (idist >= intersection_epsilon && idist < distance) {
+				normal = e1.crossed(e2); // don't normalize yet
 				distance = idist;
 				object = cornell_object_map[triangle_idx];
+				
+				// compute barycentric coord
+				const auto hit_point = r.origin + r.direction * idist;
+				const auto iv0 = v0.xyz - hit_point;
+				const auto iv1 = v1.xyz - hit_point;
+				const auto iv2 = v2.xyz - hit_point;
+				const auto bary_uv = float2 { iv1.crossed(iv2).length(), iv2.crossed(iv0).length() } * (1.0f / normal.length());
+				tex_coord = (cornell_tex_coords[index.x] * bary_uv.x +
+							 cornell_tex_coords[index.y] * bary_uv.y +
+							 cornell_tex_coords[index.z] * (1.0f - bary_uv.x - bary_uv.y));
+				tex_coord.y = tex_scaler - tex_coord.y;
+				
+				normal.normalize();
 			}
 		}
 		
@@ -83,51 +102,60 @@ public:
 			.normal = normal,
 			.distance = distance,
 			.object = object,
+			.tex_coord = tex_coord,
 		};
 	}
 	
 };
 
+template <bool with_textures, typename textures_type>
 class simple_path_tracer {
 public:
-	enum : uint32_t { max_recursion_depth = 3 };
+	static constexpr const uint32_t max_recursion_depth { 3u };
 	
 	simple_path_tracer(const uint32_t& random_seed) : seed(random_seed) {}
 	
-	// not the best random, but simple and good enough
-	// ref: http://iquilezles.org/www/articles/sfrand/sfrand.htm
+	//! not the best random, but simple and good enough
+	//! ref: http://iquilezles.org/www/articles/sfrand/sfrand.htm
+	//! ref: https://en.wikipedia.org/wiki/Lehmer_random_number_generator
 	//! returns a random value in [0, 1]
 	float rand_0_1() {
-		float res;
-		seed *= 16807u;
-		*((uint32_t*)&res) = (seed >> 9u) | 0x3F800000u;
-		return (res - 1.0f);
+		seed *= 48271u;
+		return (bit_cast<float>((seed >> 9u) | 0x3F800000u) - 1.0f);
 	}
 	
 	// if you can't do normal recursion, do some template recursion instead! (at the cost of code bloat)
 	// also: can do this inside a single function now with c++17
 	template <uint32_t depth = 0>
-	float3 compute_radiance(const ray& r, const bool sample_emission) {
-		if constexpr(depth >= max_recursion_depth) {
+	float3 compute_radiance(const ray& r, const bool sample_emission,
+							const textures_type& textures) {
+		if constexpr (depth >= max_recursion_depth) {
 			return {};
-		}
-		else {
+		} else {
 			// intersect
 			const auto p = simple_intersector::intersect(r);
-			if(p.object >= CORNELL_OBJECT::__OBJECT_INVALID) return {};
+			if (p.object >= CORNELL_OBJECT::__OBJECT_INVALID) {
+				return {};
+			}
 			
-			//
 			float3 radiance;
 			const auto& mat = cornell_materials[(size_t)p.object];
 			
+			float tex_value = 1.0f;
+			if constexpr (with_textures) {
+				tex_value = textures[mat.texture_index].read_linear_repeat(p.tex_coord);
+			}
+			
 			// emission (don't oversample for indirect illumination)
-			if(sample_emission) radiance += mat.emission.xyz;
+			if (sample_emission) {
+				radiance += tex_value * mat.emission.xyz;
+			}
 			
 			// compute direct illumination at given point
-			radiance += compute_direct_illumination(-r.direction, p, mat);
+			radiance += compute_direct_illumination(-r.direction, p, mat, textures);
 			
 			// indirect
-			radiance += compute_indirect_illumination<depth>(r, p, mat);
+			radiance += compute_indirect_illumination<depth>(r, p, mat, textures, tex_value);
 			
 			return radiance;
 		}
@@ -141,38 +169,39 @@ protected:
 	template <uint32_t depth>
 	float3 compute_indirect_illumination(const ray& r,
 										 const simple_intersector::intersection& p,
-										 const material& mat) {
+										 const material& mat,
+										 const textures_type& textures,
+										 const float tex_value) {
 		// get the normal (check if it has to be flipped - rarely happens, but it does)
 		const auto normal = (p.normal.dot(r.direction) > 0.0f ? -p.normal : p.normal);
 		
 		// albedo (pd, ps) (note that (albedo_diffuse + albedo_specular) will always be <= 1)
-		const auto albedo_diffuse = mat.diffuse.dot(float3 { 0.222f, 0.7067f, 0.0713f });
-		const auto albedo_specular = mat.specular.dot(float3 { 0.222f, 0.7067f, 0.0713f });
+		const auto albedo_diffuse = tex_value * mat.diffuse.dot(float3 { 0.222f, 0.7067f, 0.0713f });
+		const auto albedo_specular = tex_value * mat.specular.dot(float3 { 0.222f, 0.7067f, 0.0713f });
 		
 		float3 radiance;
 		// c++14 generic lambdas work as well ;)
-		const auto radiance_recurse = [this, &radiance](const auto& albedo,
-														const auto& dir_and_prob,
-														const auto& point) {
+		const auto radiance_recurse = [this, &radiance, &textures](const auto& albedo,
+																   const auto& dir_and_prob,
+																   const auto& point) {
 			// no need to recurse if the radiance is already 0
-			if(radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
-				radiance *= compute_radiance<depth + 1>(ray { point, dir_and_prob.dir }, false);
+			if (radiance.x > 0.0f || radiance.y > 0.0f || radiance.z > 0.0f) {
+				radiance *= compute_radiance<depth + 1>(ray { point, dir_and_prob.dir }, false, textures);
 				radiance /= (albedo * dir_and_prob.prob);
 			}
 		};
 		
 		// russian roulette with albedo and random value in [0, 1]
 		const auto rrr = rand_0_1();
-		if(rrr < albedo_diffuse) {
+		if (rrr < albedo_diffuse) {
 			const auto tb = get_local_system(normal);
 			const auto dir_and_prob = generate_cosine_weighted_direction(normal, tb.first, tb.second,
 																		 { rand_0_1(), rand_0_1() });
 			
-			radiance = mat.diffuse_reflectance.xyz;
+			radiance = tex_value * mat.diffuse_reflectance.xyz;
 			radiance *= max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_diffuse, dir_and_prob, p.hit_point);
-		}
-		else if(rrr < (albedo_diffuse + albedo_specular)) {
+		} else if (rrr < (albedo_diffuse + albedo_specular)) {
 			const auto rnormal = r.direction.reflected(normal).normalized();
 			const auto tb = get_local_system(rnormal);
 			const auto dir_and_prob = generate_power_cosine_weighted_direction(rnormal, tb.first, tb.second,
@@ -180,11 +209,11 @@ protected:
 																			   mat.specular.w);
 			
 			// "reject directions below the surface" (or in it)
-			if(normal.dot(dir_and_prob.dir) <= 0.0f) {
+			if (normal.dot(dir_and_prob.dir) <= 0.0f) {
 				return {};
 			}
 			
-			radiance = mat.specular_reflectance.xyz;
+			radiance = tex_value * mat.specular_reflectance.xyz;
 			radiance *= pow(max(rnormal.dot(dir_and_prob.dir), 0.0f), mat.specular.w);
 			radiance *= max(normal.dot(dir_and_prob.dir), 0.0f);
 			radiance_recurse(albedo_specular, dir_and_prob, p.hit_point);
@@ -197,7 +226,8 @@ protected:
 	
 	float3 compute_direct_illumination(const float3& eye_direction,
 									   const simple_intersector::intersection& p,
-									   const material& mat) {
+									   const material& mat,
+									   const textures_type& textures) {
 		float3 retval;
 		
 		const auto norm_surface = p.normal.normalized();
@@ -224,17 +254,17 @@ protected:
 			}
 		} light {};
 		{
-			// generate a random position on the lightsource
+			// generate a random position on the light source
 			const auto sample_point = light.get_point(float2 { rand_0_1(), rand_0_1() });
 			
 			// cast shadow ray towards the light
 			const auto dir = sample_point - p.hit_point;
-			const auto dist_sqr = max(dir.dot(dir), INTERSECTION_EPS);
+			const auto dist_sqr = max(dir.dot(dir), intersection_epsilon);
 			const ray r { p.hit_point, dir.normalized() };
 			const auto ret = simple_intersector::intersect(r);
-			if(ret.object >= CORNELL_OBJECT::__OBJECT_INVALID ||
-			   ret.distance >= sqrt(dist_sqr) - INTERSECTION_EPS ||
-			   ret.object == CORNELL_OBJECT::LIGHT) {
+			if (ret.object >= CORNELL_OBJECT::__OBJECT_INVALID ||
+				ret.distance >= sqrt(dist_sqr) - intersection_epsilon ||
+				ret.object == CORNELL_OBJECT::LIGHT) {
 				// didn't hit anything -> compute contribution
 				
 				// falloff formula: (.x falloff / dist^2) * intensity
@@ -244,11 +274,16 @@ protected:
 				
 				// diffuse
 				float3 illum = mat.diffuse_reflectance.xyz;
+				float light_tex_value = 1.0f;
+				if constexpr (with_textures) {
+					light_tex_value = textures[mat.texture_index].read_linear_repeat(ret.tex_coord);
+					illum *= light_tex_value;
+				}
 				
 				// specular (only do the computation if it actually has a spec coeff > 0)
-				if(!mat.specular.is_null()) {
+				if (!mat.specular.is_null()) {
 					const auto R = (-r.direction).reflect(norm_surface).normalize();
-					illum += (mat.specular_reflectance.xyz *
+					illum += (mat.specular_reflectance.xyz * light_tex_value *
 							  pow(max(R.dot(norm_eye_dir), 0.0f), mat.specular.w));
 				}
 				
@@ -322,11 +357,10 @@ protected:
 		const float inv_len = sig / (norm_c0 * norm_c0 + normal.z * normal.z);
 		
 		float3 tangent;
-		if(norm_x_greater_y) {
+		if (norm_x_greater_y) {
 			tangent.x = normal.z * inv_len;
 			tangent.y = 0.0f;
-		}
-		else {
+		} else {
 			tangent.x = 0.0f;
 			tangent.y = normal.z * inv_len;
 		}
@@ -339,7 +373,6 @@ protected:
 	
 };
 
-//
 namespace camera {
 	static constexpr const float3 point { 27.8f, 27.3f, -80.0f };
 	static constexpr const float rad_angle { const_math::deg_to_rad(35.0f) };
@@ -355,20 +388,22 @@ namespace camera {
 	static constexpr const float3 screen_origin { forward - row_vector * 0.5f - up_vector * 0.5f };
 };
 
-kernel_1d() void path_trace(buffer<float4> img,
-							param<uint32_t> iteration,
-							param<uint32_t> seed) {
+template <bool with_textures, typename textures_type>
+static void path_trace(buffer<float4>& img, const uint32_t iteration, const uint32_t seed,
+					   const textures_type& textures) {
 	const auto idx = global_id.x;
 	const uint2 pixel { idx % SCREEN_WIDTH, idx / SCREEN_HEIGHT };
-	if(pixel.y >= SCREEN_HEIGHT) return;
+	if (pixel.y >= SCREEN_HEIGHT) {
+		return;
+	}
 	
 	// this is hard ... totally random
 	uint32_t random_seed = seed;
 	random_seed += {
-		(random_seed ^ (idx << (random_seed & ((idx + iteration) & 0x1F)))) +
-		((idx + random_seed) * SCREEN_WIDTH * SCREEN_HEIGHT) ^ 0x52FBD9EC
+		(random_seed ^ (idx << (random_seed & ((idx + iteration) & 0x1Fu)))) +
+		((idx + random_seed) * (SCREEN_WIDTH - 1u) * (SCREEN_HEIGHT - 1u)) ^ 0x52FBD9ECu
 	};
-	simple_path_tracer pt(random_seed);
+	simple_path_tracer<with_textures, textures_type> pt(random_seed);
 	
 	//
 	const float2 pixel_sample { float2(pixel) + float2(pt.rand_0_1(), pt.rand_0_1()) };
@@ -378,14 +413,26 @@ kernel_1d() void path_trace(buffer<float4> img,
 		.origin = camera::point,
 		.direction = camera::screen_origin + pixel_sample.x * camera::step_x + pixel_sample.y * camera::step_y
 	};
-	float3 color = pt.compute_radiance(r, true);
+	float3 color = pt.compute_radiance(r, true, textures);
 
 	// red test strip, so that I know if the output is working at all
 	//if(idx % img_size->x == 0) color = { 1.0f, 0.0f, 0.0f };
 	
 	// merge with previous frames (re-weight)
-	if(iteration == 0) img[idx] = color;
-	else img[idx] = img[idx].interpolate(color, 1.0f / float(iteration + 1));
+	img[idx] = (iteration == 0 ? color : img[idx].interpolate(color, 1.0f / float(iteration + 1)));
+}
+
+kernel_1d() void path_trace(buffer<float4> img,
+							param<uint32_t> iteration,
+							param<uint32_t> seed) {
+	path_trace<false>(img, iteration, seed, 0u);
+}
+
+kernel_1d() void path_trace_textured(buffer<float4> img,
+									 param<uint32_t> iteration,
+									 param<uint32_t> seed,
+									 array<const_image_2d<float1>, 5u> textures) {
+	path_trace<true>(img, iteration, seed, textures);
 }
 
 #endif

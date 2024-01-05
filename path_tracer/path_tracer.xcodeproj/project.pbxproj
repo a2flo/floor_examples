@@ -214,7 +214,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1520;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -346,6 +346,7 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -367,6 +368,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
+					"-lSDL2_image",
 					"-lcrypto",
 					"-lssl",
 					"-lfreetype",
@@ -419,6 +421,7 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -440,6 +443,7 @@
 				);
 				OTHER_LDFLAGS = (
 					"-lSDL2",
+					"-lSDL2_image",
 					"-lcrypto",
 					"-lssl",
 					"-lfreetype",
@@ -498,6 +502,7 @@
 					"/opt/homebrew/opt/openssl@1.1/lib",
 					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -513,6 +518,8 @@
 					"-w",
 					"-framework",
 					SDL2,
+					"-framework",
+					SDL2_image,
 					"-lcrypto",
 					"-lssl",
 					"-lfloord",
@@ -559,6 +566,7 @@
 					"/opt/homebrew/opt/openssl@1.1/lib",
 					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -574,6 +582,8 @@
 					"-w",
 					"-framework",
 					SDL2,
+					"-framework",
+					SDL2_image,
 					"-lcrypto",
 					"-lssl",
 					"-lfloor",
@@ -616,6 +626,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_FAST_MATH = YES;
@@ -639,7 +650,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -732,6 +743,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -749,7 +761,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
