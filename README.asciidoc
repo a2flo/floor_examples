@@ -37,7 +37,7 @@ image:https://raw.githubusercontent.com/a2flo/floor_examples/master/hlbvh/hlbvh.
 * default output: +
 image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/path_tracer_default.png["noise and streaks courtesy of the horrible random function that I'm using"]
 * output with `--with-textures`: +
-image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/path_tracer_with_textures.png["with simple textures",scaledwidth=67%]
+image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/path_tracer_with_textures.png["with simple textures",width=67%]
 
 == reduction ==
 * simple (WIP) reduction example that showcases 3 different reduce implementations: local/shared memory reduce, shuffle reduce and CUDA coop kernel + shuffle reduce
