@@ -431,7 +431,7 @@ kernel_1d() void path_trace(buffer<float4> img,
 kernel_1d() void path_trace_textured(buffer<float4> img,
 									 param<uint32_t> iteration,
 									 param<uint32_t> seed,
-									 array<const_image_2d<float1>, 5u> textures) {
+									 array_param<const_image_2d<float1>, 5u> textures) {
 	path_trace<true>(img, iteration, seed, textures);
 }
 
