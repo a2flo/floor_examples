@@ -63,7 +63,7 @@
 		"type": "Host",
 		// one of: "x86", "ARM"
 		"arch": "x86",
-		// x86: 1 - 4, ARM: 1 - 6
+		// x86: 1 - 5, ARM: 1 - 7
 		"tier": 1
 	}
 ]

@@ -74,6 +74,9 @@ namespace fubar {
 				case 4:
 					cpu_tier = HOST_CPU_TIER::X86_TIER_4;
 					break;
+				case 5:
+					cpu_tier = HOST_CPU_TIER::X86_TIER_5;
+					break;
 				default:
 					throw runtime_error("invalid x86 Tier: " + to_string(tier));
 			}
@@ -96,6 +99,9 @@ namespace fubar {
 					break;
 				case 6:
 					cpu_tier = HOST_CPU_TIER::ARM_TIER_6;
+					break;
+				case 7:
+					cpu_tier = HOST_CPU_TIER::ARM_TIER_7;
 					break;
 				default:
 					throw runtime_error("invalid ARM Tier: " + to_string(tier));
@@ -860,6 +866,14 @@ namespace fubar {
 				.host = {
 					.version = universal_binary::target_format_version,
 					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::X86_TIER_5,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_1,
 					._unused = 0,
 				}
@@ -901,6 +915,14 @@ namespace fubar {
 					.version = universal_binary::target_format_version,
 					.type = COMPUTE_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_6,
+					._unused = 0,
+				}
+			},
+			{
+				.host = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::HOST,
+					.cpu_tier = HOST_CPU_TIER::ARM_TIER_7,
 					._unused = 0,
 				}
 			},
