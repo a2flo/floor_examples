@@ -189,9 +189,7 @@
 			// run on host CPU device if supported?
 			"device": true,
 			// max number of logical CPU cores (#hw-threads) that may execute a function (0 = use all available)
-			"max_core_count": 0,
-			// single (single-threaded), mt-item (multi-threaded, 1 cpu : 1 work-item), mt-group (multi-threaded, 1 cpu : 1 group)
-			"exec_model": "mt-group"
+			"max_core_count": 0
 		},
 		
 		// vulkan backend settings

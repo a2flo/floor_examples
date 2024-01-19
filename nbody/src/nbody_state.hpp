@@ -30,12 +30,7 @@
 #endif
 
 #if !defined(NBODY_TILE_SIZE)
-#if (defined(__WINDOWS__) && defined(FLOOR_COMPUTE_HOST))
-// windows host compute can only handle 64
-#define NBODY_TILE_SIZE 64u
-#else
 #define NBODY_TILE_SIZE 512u
-#endif
 #endif
 
 struct nbody_state_struct {
