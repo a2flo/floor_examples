@@ -90,7 +90,6 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 					mdl_indices->reserve(triangle_count);
 				}
 				
-				size_t idx_count = 0;
 				for(const auto& sub_obj : model->objects) {
 					for(const auto& idx : sub_obj->indices) {
 						const float3 tri[] {
@@ -106,7 +105,6 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 							mdl_indices->emplace_back(idx);
 						}
 					}
-					idx_count += sub_obj->indices.size();
 				}
 				frames_triangles[frame_id] = mdl_triangles;
 				frames_centroids[frame_id] = mdl_centroids;

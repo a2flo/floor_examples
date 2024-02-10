@@ -169,9 +169,9 @@ struct conv_layer_t {
 	}
 	
 	compute_conv_layer_t create_compute_layer() const {
-		auto filters_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(filters)), (void*)&filters,
+		auto filters_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, span<const uint8_t> { (const uint8_t*)&filters, sizeof(decltype(filters)) },
 														COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(biases)), (void*)&biases,
+		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, span<const uint8_t> { (const uint8_t*)&biases, sizeof(decltype(biases)) },
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		
 		return {
@@ -273,9 +273,9 @@ struct fully_connected_layer_t {
 	}
 	
 	compute_fully_connected_layer_t create_compute_layer() const {
-		auto matrix_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(matrix)), (void*)&matrix,
+		auto matrix_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, span<const uint8_t> { (const uint8_t*)&matrix, sizeof(decltype(matrix)) },
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, sizeof(decltype(biases)), (void*)&biases,
+		auto biases_buf = dnn_state.ctx->create_buffer(*dnn_state.dev_queue, span<const uint8_t> { (const uint8_t*)&biases, sizeof(decltype(biases)) },
 													   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
 		
 		return {
@@ -330,10 +330,10 @@ struct nn_model {
 	template <typename layer_type>
 	bool add_layer(const string& name, layer_type&& layer) {
 		if constexpr (is_same_v<layer_type, compute_conv_layer_t>) {
-			auto [iter, did_emplace] = conv_layers.emplace(name, forward<layer_type>(layer));
+			auto [iter, did_emplace] = conv_layers.emplace(name, std::forward<layer_type>(layer));
 			return did_emplace;
 		} else if constexpr (is_same_v<layer_type, compute_fully_connected_layer_t>) {
-			auto [iter, did_emplace] = fully_connected_layers.emplace(name, forward<layer_type>(layer));
+			auto [iter, did_emplace] = fully_connected_layers.emplace(name, std::forward<layer_type>(layer));
 			return did_emplace;
 		} else {
 			return false;

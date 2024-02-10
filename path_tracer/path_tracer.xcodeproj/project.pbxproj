@@ -214,7 +214,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1520;
+				LastUpgradeCheck = 1530;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -500,7 +500,7 @@
 					/opt/floor/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
@@ -564,7 +564,7 @@
 					/opt/floor/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;

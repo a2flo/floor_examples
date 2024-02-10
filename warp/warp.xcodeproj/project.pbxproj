@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -950,7 +950,8 @@
 		5CD2174519E924A20049D6AE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1330;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1530;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -1371,6 +1372,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
+				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
@@ -1394,7 +1396,6 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
@@ -1402,7 +1403,7 @@
 					/opt/libwarp/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -1445,6 +1446,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
+				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
@@ -1464,7 +1466,6 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
@@ -1472,7 +1473,7 @@
 					/opt/libwarp/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
@@ -1512,6 +1513,7 @@
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUGGING_SYMBOLS = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -1532,6 +1534,7 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_SUSPICIOUS_MOVES = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -1570,6 +1573,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -1595,7 +1599,16 @@
 					/opt/libwarp/include,
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Resources",
+					"@loader_path/../Frameworks",
+					"@executable_path/../Frameworks",
+					/Library/Frameworks,
+					/usr/local/lib,
+					/usr/lib,
+					/opt/floor/lib,
+					/opt/libwarp/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;
@@ -1677,6 +1690,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1697,7 +1711,16 @@
 					/opt/libwarp/include,
 				);
 				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				LD_RUNPATH_SEARCH_PATHS = "/opt/floor/lib /opt/libwarp/lib";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@loader_path/../Resources",
+					"@loader_path/../Frameworks",
+					"@executable_path/../Frameworks",
+					/Library/Frameworks,
+					/usr/local/lib,
+					/usr/lib,
+					/opt/floor/lib,
+					/opt/libwarp/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				MTL_FAST_MATH = YES;

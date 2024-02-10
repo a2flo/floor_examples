@@ -221,7 +221,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1530;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -508,12 +508,11 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -575,12 +574,11 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
 					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
+					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -663,7 +661,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -770,7 +768,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",

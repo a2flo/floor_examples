@@ -484,7 +484,6 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	
 	// traverse nodes starting from the root
 	uint32_t node = 0;
-	uint32_t iters = 0;
 	do {
 		if constexpr(!triangle_vis) {
 			// check abort condition (no need to do further checking when a collision has been found already)
@@ -542,7 +541,6 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 		if(!traverse) {
 			node = *--stack_ptr;
 		}
-		++iters;
 	} while(node != 0);
 }
 

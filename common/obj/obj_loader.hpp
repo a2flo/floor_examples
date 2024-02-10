@@ -112,6 +112,7 @@ public:
 		bool is_mipmapped;
 		bool is_alpha;
 		unique_ptr<uint8_t[]> pixels;
+		size_t image_size;
 	};
 	
 	struct texture {

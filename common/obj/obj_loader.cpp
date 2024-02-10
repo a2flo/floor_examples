@@ -630,6 +630,7 @@ FLOOR_POP_WARNINGS()
 			.is_mipmapped = header->mip_map_count > 1,
 			.is_alpha = (header->flags & 0x8000u) != 0u,
 			.pixels = make_unique<uint8_t[]>(header->surface_size),
+			.image_size = header->surface_size,
 		});
 		memcpy(ret.pvrtc->pixels.get(), img_data.data() + pvrtc_header_size, header->surface_size);
 	}
@@ -742,16 +743,19 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			
 			uint2 dim;
 			void* pixels;
+			size_t image_size = 0;
 			if(textures[i].surface != nullptr) {
 				const SDL_Surface* surface = textures[i].surface;
 				image_type = obj_loader::floor_image_type_format(surface);
 				dim = { uint32_t(surface->w), uint32_t(surface->h) };
 				pixels = surface->pixels;
+				image_size = size_t(surface->pitch) * size_t(surface->h);
 			}
 			else {
 				const auto tex = textures[i].pvrtc;
 				dim = tex->dim;
 				pixels = tex->pixels.get();
+				image_size = tex->image_size;
 				
 				if(tex->bpp != 2 && tex->bpp != 4) {
 					log_error("invalid bpp for pvrtc texture: $", tex->bpp);
@@ -784,7 +788,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			(*model_floor_textures)[i] = ctx.create_image(cqueue,
 														  dim,
 														  image_type,
-														  pixels,
+														  span<uint8_t> { (uint8_t*)pixels, image_size },
 														  COMPUTE_MEMORY_FLAG::READ |
 														  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
 														  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);

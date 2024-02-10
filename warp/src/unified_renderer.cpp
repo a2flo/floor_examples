@@ -149,7 +149,7 @@ void unified_renderer::create_skybox() {
 	skybox_tex = warp_state.ctx->create_image(*warp_state.dev_queue,
 											  skybox_dim,
 											  image_type,
-											  skybox_pixels.get(),
+											  { skybox_pixels.get(), skybox_size },
 											  COMPUTE_MEMORY_FLAG::READ |
 											  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE /*|
 											  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS*/);
@@ -803,7 +803,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->draw_indexed(scene_draw_info, model.vertices_buffer, light_mvpm);
 		
 		renderer->end();
-		renderer->commit();
+		renderer->commit_and_finish();
 	}
 	
 	//////////////////////////////////////////
@@ -889,7 +889,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 			}
 		}
 		renderer->end();
-		renderer->commit();
+		renderer->commit_and_finish();
 	}
 	
 	//////////////////////////////////////////
@@ -917,7 +917,7 @@ void unified_renderer::render_full_scene(const floor_obj_model& model, const cam
 		renderer->begin();
 		renderer->multi_draw(skybox_draw_info, skybox_uniforms, skybox_tex);
 		renderer->end();
-		renderer->commit();
+		renderer->commit_and_finish();
 	}
 	
 	//////////////////////////////////////////

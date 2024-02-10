@@ -18,7 +18,7 @@
 
 #include "dnn.hpp"
 
-#if defined(FLOOR_COMPUTE) && !defined(FLOOR_COMPUTE_VULKAN) // TODO: fix vulkan compilation
+#if defined(FLOOR_COMPUTE)
 
 // special case convolution for VGG with RGB input:
 // from RGB(A) image -> buffer
@@ -33,7 +33,7 @@ floor_inline_always static void convolution_vgg_rgb_f32(const_image_2d<float4> i
 	// VGG16 expects YX ordered images
 	// -> deal with that by flipping X and Y
 	const uint2 coord { global_id.y, global_id.x };
-	const uint2 dim { global_size.y, global_size.x };
+	const int2 dim { int(global_size.y), int(global_size.x) };
 	
 	float3 vals[x_dim * y_dim];
 	
@@ -109,7 +109,7 @@ floor_inline_always static void convolution_f32(buffer<const float> in_data,
 												buffer<const float> biases /* #out-channels */,
 												const uint32_t out_channel_count) {
 	const uint2 coord = group_id.xy;
-	const uint2 dim = group_size.xy;
+	const auto dim = group_size.xy.cast<int32_t>();
 	const uint32_t out_channel = local_id.x;
 	
 	// cache current (x, y) input layer data

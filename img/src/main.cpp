@@ -340,6 +340,7 @@ int main(int, char* argv[]) {
 	// create images
 	static constexpr const size_t img_count { 3 };
 	auto img_data = make_unique<uchar4[]>(image_size.x * image_size.y); // allocated at runtime so it doesn't kill the stack
+	const auto img_data_size = image_size.x * image_size.y * sizeof(uchar4);
 	array<shared_ptr<compute_image>, img_count> imgs;
 	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
 		if(img_idx == 0) {
@@ -369,7 +370,7 @@ int main(int, char* argv[]) {
 												  // first image: read only, second image: write only (also sets NO_SAMPLER flag), third image: read/write
 												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::READ_WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
 												  // init image with our random data, or nothing
-												  (img_idx == 0 ? &img_data[0] : nullptr),
+												  span<uint8_t> { img_idx == 0 ? (uint8_t*)&img_data[0] : nullptr, img_idx == 0 ? img_data_size : 0u },
 												  // NOTE: COMPUTE_MEMORY_FLAG r/w flags are inferred automatically
 												  // w/ opengl: host will only write, w/o opengl: host will read and write
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
