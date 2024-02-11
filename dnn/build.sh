@@ -714,6 +714,8 @@ WARNINGS="${WARNINGS} -Wthread-safety -Wthread-safety-negative -Wthread-safety-b
 WARNINGS="${WARNINGS} -Wno-return-std-move-in-c++11"
 # ignore unsafe pointer/buffer access warnings
 WARNINGS="${WARNINGS} -Wno-unsafe-buffer-usage"
+# ignore reserved identifier warnings because of "__" prefixes
+WARNINGS="${WARNINGS} -Wno-reserved-identifier"
 COMMON_FLAGS="${COMMON_FLAGS} ${WARNINGS}"
 
 # diagnostics
