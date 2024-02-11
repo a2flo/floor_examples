@@ -346,9 +346,9 @@ if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	LDFLAGS="${LDFLAGS} -stdlib=libstdc++"
 else
 	LDFLAGS="${LDFLAGS} -stdlib=libc++"
+	INCLUDES="${INCLUDES} -isystem /usr/local/include/c++/v1"
 fi
 LIBS="${LIBS}"
-INCLUDES="${INCLUDES} -isystem /usr/local/include/c++/v1"
 COMMON_FLAGS="${COMMON_FLAGS}"
 
 # if no AR is specified, set it to the default ar (used when creating a static lib)
@@ -736,6 +736,8 @@ if [ $BUILD_OS == "mingw" ]; then
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-static-libgcc //g")
 	# remove unwanted -lm (this won't work and lead to linker errors!)
 	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-lm //g")
+	# remove unwanted -ldl (this doesn't exist on Windows)
+	LDFLAGS=$(echo "${LDFLAGS}" | sed -E "s/-ldl //g")
 fi
 
 # finally: add all common c++ and c flags/options
