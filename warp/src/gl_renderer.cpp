@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -39,6 +39,9 @@ static struct {
 	GLuint compute_fbo { 0u };
 	GLuint compute_color { 0u };
 	
+	GLuint compute_debug_fbo { 0u };
+	GLuint compute_debug_color { 0u };
+	
 	int2 dim;
 	uint2 dim_multiple;
 } scene_fbo;
@@ -49,16 +52,30 @@ static struct {
 } shadow_map;
 static GLuint skybox_tex { 0u };
 static float3 light_pos;
-static shared_ptr<compute_image> compute_color;
 static matrix4f prev_mvm, prev_prev_mvm;
 static matrix4f prev_rmvm, prev_prev_rmvm;
 static constexpr const float4 clear_color { 0.0f };
 static bool first_frame { true };
+static uint32_t debug_blit_mode { 0u };
+static libwarp_camera_setup cam_setup {};
+
+static void update_cam_setup() {
+	cam_setup = {
+		.screen_width = floor::get_physical_width(),
+		.screen_height = floor::get_physical_height(),
+		.field_of_view = warp_state.fov,
+		.near_plane = warp_state.near_far_plane.x,
+		.far_plane = warp_state.near_far_plane.y,
+		.depth_type = (!warp_state.is_zw_depth ? LIBWARP_DEPTH_NORMALIZED : LIBWARP_DEPTH_Z_DIV_W),
+		.is_screen_origin_top_left = false,
+	};
+}
+
+void gl_renderer::set_debug_blit_mode(const uint32_t mode) {
+	debug_blit_mode = mode;
+}
 
 static void destroy_textures() {
-	// kill old shared/wrapped compute images (also makes sure these don't access the gl objects any more)
-	compute_color = nullptr;
-	
 	// kill gl stuff
 	for(auto& fbo : scene_fbo.fbo) {
 		if(fbo > 0) {
@@ -104,6 +121,15 @@ static void destroy_textures() {
 	if(scene_fbo.compute_color > 0) {
 		glDeleteTextures(1, &scene_fbo.compute_color);
 		scene_fbo.compute_color = 0;
+	}
+	
+	if (scene_fbo.compute_debug_fbo > 0) {
+		glDeleteFramebuffers(1, &scene_fbo.compute_debug_fbo);
+		scene_fbo.compute_debug_fbo = 0;
+	}
+	if (scene_fbo.compute_debug_color > 0) {
+		glDeleteTextures(1, &scene_fbo.compute_debug_color);
+		scene_fbo.compute_debug_color = 0;
 	}
 }
 
@@ -213,6 +239,35 @@ static void create_textures() {
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
+	
+	// for debugging purposes
+	{
+		glGenFramebuffers(1, &scene_fbo.compute_debug_fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.compute_debug_fbo);
+		
+		glGenTextures(1, &scene_fbo.compute_debug_color);
+		glBindTexture(GL_TEXTURE_2D, scene_fbo.compute_debug_color);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scene_fbo.dim.x, scene_fbo.dim.y, 0,
+					 GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, scene_fbo.compute_debug_color, 0);
+		
+		//
+		const auto err = glGetError();
+		const auto fbo_err = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if(err != 0 || fbo_err != GL_FRAMEBUFFER_COMPLETE) {
+			log_error("scene fbo/tex error: $X $X", err, fbo_err);
+		}
+		
+		glClear(GL_COLOR_BUFFER_BIT);
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+	
+	update_cam_setup();
 }
 
 static void create_skybox() {
@@ -409,7 +464,7 @@ bool gl_renderer::render(const gl_obj_model& model,
 		
 		// on opencl: need to make sure that the depth color buffer has finished drawing (oddly enough not needed for other color images)
 		if(warp_state.is_zw_depth &&
-		   warp_state.ctx->get_compute_type() == COMPUTE_TYPE::OPENCL) {
+		   warp_state.cctx->get_compute_type() == COMPUTE_TYPE::OPENCL) {
 			glFinish();
 		}
 		
@@ -420,31 +475,70 @@ bool gl_renderer::render(const gl_obj_model& model,
 }
 
 void gl_renderer::blit(const bool full_scene) {
-	if(!warp_state.is_split_view) {
-		if(full_scene) {
+	if (!warp_state.is_split_view) {
+		uint32_t blit_image = 0u;
+		if (debug_blit_mode > 0) {
+			glFinish();
+			warp_state.cqueue->finish();
+			
+			const uint32_t* depth_buffers = (!warp_state.is_zw_depth ? scene_fbo.depth : scene_fbo.depth_zw);
+			switch (debug_blit_mode) {
+				case 1:
+					if (const auto err = libwarp_debug_depth(&cam_setup, scene_fbo.compute_debug_color,
+															 depth_buffers[warp_state.is_scatter ? 0u : 1u - warp_state.legacy_cur_fbo]);
+						err != LIBWARP_SUCCESS) {
+						log_error("debug depth failed: $", err);
+					}
+					break;
+				case 2:
+					if (const auto err = libwarp_debug_motion_3d(&cam_setup, scene_fbo.compute_debug_color,
+																 scene_fbo.motion[warp_state.is_scatter ? 0u : warp_state.legacy_cur_fbo * 2]);
+						err != LIBWARP_SUCCESS) {
+						log_error("debug motion 3D failed: $", err);
+					}
+					break;
+				case 3:
+					if (const auto err = libwarp_debug_motion_2d(&cam_setup, scene_fbo.compute_debug_color,
+																 scene_fbo.motion[warp_state.legacy_cur_fbo * 2]);
+						err != LIBWARP_SUCCESS) {
+						log_error("debug motion 2D failed: $", err);
+					}
+					break;
+				case 4:
+					if (const auto err = libwarp_debug_motion_2d(&cam_setup, scene_fbo.compute_debug_color,
+																 scene_fbo.motion[warp_state.legacy_cur_fbo * 2 + 1]);
+						err != LIBWARP_SUCCESS) {
+						log_error("debug motion 2D failed: $", err);
+					}
+					break;
+				case 5:
+					if (const auto err = libwarp_debug_motion_depth(&cam_setup, scene_fbo.compute_debug_color,
+																	scene_fbo.motion_depth[warp_state.legacy_cur_fbo]);
+						err != LIBWARP_SUCCESS) {
+						log_error("debug motion depth failed: $", err);
+					}
+					break;
+			}
+			
+			blit_image = scene_fbo.compute_debug_fbo;
+		} else {
 			// if gather: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-							  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			blit_image = (full_scene ? scene_fbo.fbo[warp_state.legacy_cur_fbo] : scene_fbo.compute_fbo);
 		}
-		else {
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.compute_fbo);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-							  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
-							  GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		}
-	}
-	else {
+		
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_image);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+						  0, 0, scene_fbo.dim.x, scene_fbo.dim.y,
+						  GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	} else {
 		// split view rendering
 		// clear first, so that we have a black bar in the middle
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
 		
 		// right side is always the original scene
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.legacy_cur_fbo]);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
 						  scene_fbo.dim.x / 2 + 2, 0, scene_fbo.dim.x, scene_fbo.dim.y,
@@ -452,7 +546,7 @@ void gl_renderer::blit(const bool full_scene) {
 		
 		// left side: either the original scene (for full frames), or the warped frame (for in-between)
 		if(full_scene) {
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, scene_fbo.fbo[warp_state.legacy_cur_fbo]);
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 			glBlitFramebuffer(0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
 							  0, 0, scene_fbo.dim.x / 2 - 2, scene_fbo.dim.y,
@@ -472,7 +566,7 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 								 const size_t& warp_frame_num) {
 //#define WARP_TIMING
 #if defined(WARP_TIMING)
-	warp_state.dev_queue->finish();
+	warp_state.main_dev_queue->finish();
 	const auto timing_start = floor_timer2::start();
 #endif
 	
@@ -508,14 +602,6 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		relative_delta = dbg_delta;
 	}
 	
-	const libwarp_camera_setup cam_setup {
-		.screen_width = floor::get_physical_width(),
-		.screen_height = floor::get_physical_height(),
-		.field_of_view = warp_state.fov,
-		.near_plane = warp_state.near_far_plane.x,
-		.far_plane = warp_state.near_far_plane.y,
-		.depth_type = (!warp_state.is_zw_depth ? LIBWARP_DEPTH_NORMALIZED : LIBWARP_DEPTH_Z_DIV_W),
-	};
 	const uint32_t* depth_buffers = (!warp_state.is_zw_depth ? scene_fbo.depth : scene_fbo.depth_zw);
 	LIBWARP_ERROR_CODE err = LIBWARP_SUCCESS;
 	if(warp_state.is_scatter) {
@@ -531,21 +617,21 @@ void gl_renderer::render_kernels(const float& delta, const float& render_delta,
 		}
 		else {
 			err = libwarp_gather(&cam_setup, relative_delta,
-								 scene_fbo.color[1u - warp_state.cur_fbo],
-								 depth_buffers[1u - warp_state.cur_fbo],
-								 scene_fbo.color[warp_state.cur_fbo],
-								 depth_buffers[warp_state.cur_fbo],
-								 scene_fbo.motion[warp_state.cur_fbo * 2],
-								 scene_fbo.motion[(1u - warp_state.cur_fbo) * 2 + 1],
-								 scene_fbo.motion_depth[warp_state.cur_fbo],
-								 scene_fbo.motion_depth[1u - warp_state.cur_fbo],
+								 scene_fbo.color[1u - warp_state.legacy_cur_fbo],
+								 depth_buffers[1u - warp_state.legacy_cur_fbo],
+								 scene_fbo.color[warp_state.legacy_cur_fbo],
+								 depth_buffers[warp_state.legacy_cur_fbo],
+								 scene_fbo.motion[warp_state.legacy_cur_fbo * 2],
+								 scene_fbo.motion[(1u - warp_state.legacy_cur_fbo) * 2 + 1],
+								 scene_fbo.motion_depth[warp_state.legacy_cur_fbo],
+								 scene_fbo.motion_depth[1u - warp_state.legacy_cur_fbo],
 								 scene_fbo.compute_color);
 		}
 	}
 	if(err != LIBWARP_SUCCESS) log_error("libwarp error: $", err);
 	
 #if defined(WARP_TIMING)
-	warp_state.dev_queue->finish();
+	warp_state.main_dev_queue->finish();
 	log_debug("warp timing: $", double(floor_timer2::stop<chrono::microseconds>(timing_start)) / 1000.0);
 #endif
 }
@@ -591,7 +677,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	
 	// draw main scene
-	glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[warp_state.cur_fbo]);
+	glBindFramebuffer(GL_FRAMEBUFFER, scene_fbo.fbo[warp_state.legacy_cur_fbo]);
 	int32_t draw_buffer_count = 0;
 	const GLenum* draw_buffers = nullptr;
 	if(!warp_state.is_scatter) {
@@ -645,8 +731,8 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	const matrix4f pm { matrix4f::perspective<false>(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
 													 warp_state.near_far_plane.x, warp_state.near_far_plane.y) };
 	const matrix4f rmvm {
-		matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
-		matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x)
+		matrix4f::rotation_deg_named<'y'>(float(cam.get_rotation().y)) *
+		matrix4f::rotation_deg_named<'x'>(float(cam.get_rotation().x))
 	};
 	const matrix4f mvm { matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm };
 
@@ -797,7 +883,7 @@ void gl_renderer::render_full_scene(const gl_obj_model& model, const camera& cam
 	// end
 	if(!warp_state.is_scatter && !warp_state.is_gather_forward) {
 		// flip state
-		warp_state.cur_fbo = 1 - warp_state.cur_fbo;
+		warp_state.legacy_cur_fbo = 1 - warp_state.legacy_cur_fbo;
 	}
 	
 	// remember t-2 and t-1 mvms
@@ -1207,4 +1293,5 @@ bool gl_renderer::compile_shaders() {
 bool gl_renderer::init() { return false; }
 void gl_renderer::destroy() {}
 bool gl_renderer::render(const gl_obj_model&, const camera&) { return false; }
+void gl_renderer::set_debug_blit_mode(const uint32_t) {}
 #endif

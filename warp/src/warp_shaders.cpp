@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,21 +16,23 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <floor/core/essentials.hpp>
+#include "warp_shaders.hpp"
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
-#endif
-
-// metal and vulkan only
+// graphics backends only
 #if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_GRAPHICS_HOST)
 
 #if !defined(WARP_SHADOW_FAR_PLANE)
 #define WARP_SHADOW_FAR_PLANE 260.0f
 #endif
 
-// Sponza scene consists of 25 different materials
-static constexpr constant const uint32_t material_count { 25u };
+#if !defined(WARP_NEAR_PLANE)
+#define WARP_NEAR_PLANE 0.5f
+#endif
+#if !defined(WARP_FAR_PLANE)
+#define WARP_FAR_PLANE 500.0f
+#endif
+
+using namespace warp_shaders;
 
 //////////////////////////////////////////
 // scene
@@ -54,23 +56,6 @@ struct scene_gather_in_out : scene_base_in_out {
 	float4 motion_next;
 };
 
-struct __attribute__((packed)) scene_base_uniforms_t {
-	matrix4f mvpm;
-	matrix4f light_bias_mvpm;
-	float3 cam_pos;
-	float3 light_pos;
-};
-
-struct __attribute__((packed)) scene_scatter_uniforms_t : scene_base_uniforms_t {
-	matrix4f mvm;
-	matrix4f prev_mvm;
-};
-
-struct __attribute__((packed)) scene_gather_uniforms_t : scene_base_uniforms_t {
-	matrix4f next_mvpm; // @t+1
-	matrix4f prev_mvpm; // @t-1
-};
-
 // NOTE: color location indices are generated automatically
 struct scene_scatter_fragment_out {
 	float4 color;
@@ -84,20 +69,6 @@ struct scene_gather_fragment_out {
 	// this actually is a half2, but we can't explicitly use this in vulkan,
 	// however, this is of course still backed by a half2 image
 	float2 motion_depth;
-};
-
-struct model_data_t {
-	enum : uint32_t { POSITION, NORMAL, BINORMAL, TANGENT };
-	// [position, normal, binormal, tangent]
-	array<buffer<const float3>, 4> pnbt;
-	// textcure coordinates
-	buffer<const float2> tc;
-	// per-vertex material indices
-	buffer<const uint32_t> materials_data;
-	// indices
-	buffer<const uint3> indices;
-	// #triangles
-	const uint32_t triangle_count;
 };
 
 // props to:
@@ -176,19 +147,22 @@ static void scene_vs(scene_base_in_out& out,
 					 const float3& in_binormal,
 					 const float3& in_tangent,
 					 const uint32_t& in_material_data,
-					 const scene_base_uniforms_t& uniforms) {
+					 const matrix4f& mvpm,
+					 const matrix4f& light_bias_mvpm,
+					 const float3& cam_pos,
+					 const float3& light_pos) {
 	out.tex_coord = in_tex_coord;
 	
 	float4 pos { in_position, 1.0f };
-	out.shadow_coord = log_depth(pos * uniforms.light_bias_mvpm);
-	out.position = pos * uniforms.mvpm;
+	out.shadow_coord = log_depth(pos * light_bias_mvpm);
+	out.position = pos * mvpm;
 	
-	const auto vview = uniforms.cam_pos - in_position;
+	const auto vview = cam_pos - in_position;
 	out.view_dir.x = vview.dot(in_tangent);
 	out.view_dir.y = vview.dot(in_binormal);
 	out.view_dir.z = vview.dot(in_normal);
 	
-	const auto vlight = uniforms.light_pos - in_position;
+	const auto vlight = light_pos - in_position;
 	out.light_dir.x = vlight.dot(in_tangent);
 	out.light_dir.y = vlight.dot(in_binormal);
 	out.light_dir.z = vlight.dot(in_normal);
@@ -196,7 +170,7 @@ static void scene_vs(scene_base_in_out& out,
 	out.material_data = in_material_data;
 }
 
-#if !defined(WARP_USE_ARGUMENT_BUFFER)
+#if !defined(WARP_USE_ARGUMENT_BUFFER) // -> non-arg-buffer/non-indirect
 vertex auto scene_scatter_vs(buffer<const float3> in_position,
 							 buffer<const float2> in_tex_coord,
 							 buffer<const float3> in_normal,
@@ -206,7 +180,7 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 							 param<scene_scatter_uniforms_t> uniforms) {
 	scene_scatter_in_out out;
 	scene_vs(out, in_position[vertex_id], in_tex_coord[vertex_id], in_normal[vertex_id], in_binormal[vertex_id],
-			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms);
+			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	float4 prev_pos = pos * uniforms.prev_mvm;
@@ -215,7 +189,7 @@ vertex auto scene_scatter_vs(buffer<const float3> in_position,
 	
 	return out;
 }
-#else
+#elif defined(WARP_USE_ARGUMENT_BUFFER) && !defined(WARP_USE_INDIRECT_COMMANDS) // -> arg-buffer/non-indirect
 vertex auto scene_scatter_vs(arg_buffer<model_data_t> model_data,
 							 param<scene_scatter_uniforms_t> uniforms) {
 	scene_scatter_in_out out;
@@ -226,7 +200,7 @@ vertex auto scene_scatter_vs(arg_buffer<model_data_t> model_data,
 			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
 			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
 			 model_data.materials_data[vertex_id],
-			 uniforms);
+			 uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { vtx, 1.0f };
 	float4 prev_pos = pos * uniforms.prev_mvm;
@@ -235,12 +209,33 @@ vertex auto scene_scatter_vs(arg_buffer<model_data_t> model_data,
 	
 	return out;
 }
+#else // -> arg-buffer/indirect
+vertex auto scene_scatter_vs(arg_buffer<model_data_t> model_data,
+							 buffer<const frame_uniforms_t> uniforms) {
+	scene_scatter_in_out out;
+	const auto vtx = model_data.pnbt[model_data_t::POSITION][vertex_id];
+	scene_vs(out, vtx,
+			 model_data.tc[vertex_id],
+			 model_data.pnbt[model_data_t::NORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
+			 model_data.materials_data[vertex_id],
+			 uniforms->mvpm, uniforms->light_bias_mvpm, uniforms->cam_pos, uniforms->light_pos);
+	
+	float4 pos { vtx, 1.0f };
+	float4 prev_pos = pos * uniforms->scatter.scene_prev_mvm;
+	float4 cur_pos = pos * uniforms->scatter.scene_mvm;
+	out.motion = cur_pos.xyz - prev_pos.xyz;
+	
+	return out;
+}
 #endif
 
 #if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
+#if !defined(WARP_USE_INDIRECT_COMMANDS) // -> non-indirect
 [[patch(triangle, 3)]]
 tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
-											   array<const_image_2d<float1>, material_count> disp_tex,
+											   array_param<const_image_2d<float1>, material_count> disp_tex,
 											   param<uint32_t> disp_mode,
 											   param<scene_scatter_uniforms_t> uniforms) {
 	// interpolate vertex position from barycentric coordinate and control points
@@ -270,7 +265,8 @@ tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
 	}
 	
 	scene_scatter_in_out out;
-	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data, uniforms);
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data,
+			 uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { vertex_pos, 1.0f };
 	float4 prev_pos = pos * uniforms.prev_mvm;
@@ -279,10 +275,53 @@ tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
 	
 	return out;
 }
+#else // -> indirect
+[[patch(triangle, 3)]]
+tessellation_evaluation auto scene_scatter_tes(patch_in_t in [[stage_input]],
+											   arg_buffer<materials_t> materials,
+											   buffer<const frame_uniforms_t> uniforms) {
+	// interpolate vertex position from barycentric coordinate and control points
+	auto vertex_pos = (in.control_points[0].position * position_in_patch.x +
+					   in.control_points[1].position * position_in_patch.y +
+					   in.control_points[2].position * position_in_patch.z);
+	auto tex_coord = (in.control_points[0].tex_coord * position_in_patch.x +
+					  in.control_points[1].tex_coord * position_in_patch.y +
+					  in.control_points[2].tex_coord * position_in_patch.z);
+	auto normal = (in.control_points[0].normal * position_in_patch.x +
+				   in.control_points[1].normal * position_in_patch.y +
+				   in.control_points[2].normal * position_in_patch.z);
+	auto binormal = (in.control_points[0].binormal * position_in_patch.x +
+					 in.control_points[1].binormal * position_in_patch.y +
+					 in.control_points[2].binormal * position_in_patch.z);
+	auto tangent = (in.control_points[0].tangent * position_in_patch.x +
+					in.control_points[1].tangent * position_in_patch.y +
+					in.control_points[2].tangent * position_in_patch.z);
+	auto material_data = in.control_points[0].material_data;
+	auto material = material_data & 0xFFFFu; // material is the same for all
+	const bool should_displace = ((material_data & 0xFFFF'0000u) != 0u);
+	
+	if (should_displace && uniforms->displacement_mode == 2) {
+		static constexpr constant const float max_displacement { 0.25f };
+		auto displacement = materials.disp_tex[material].read_linear_repeat(tex_coord) * 2.0f - 1.0f; // [-1, 1]
+		vertex_pos += max_displacement * displacement * normal.normalized();
+	}
+	
+	scene_scatter_in_out out;
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data,
+			 uniforms->mvpm, uniforms->light_bias_mvpm, uniforms->cam_pos, uniforms->light_pos);
+	
+	float4 pos { vertex_pos, 1.0f };
+	float4 prev_pos = pos * uniforms->scatter.scene_prev_mvm;
+	float4 cur_pos = pos * uniforms->scatter.scene_mvm;
+	out.motion = cur_pos.xyz - prev_pos.xyz;
+	
+	return out;
+}
+#endif
 #endif
 
 // also used for forward-only
-#if !defined(WARP_USE_ARGUMENT_BUFFER)
+#if !defined(WARP_USE_ARGUMENT_BUFFER) // -> non-arg-buffer/non-indirect
 vertex auto scene_gather_vs(buffer<const float3> in_position,
 							buffer<const float2> in_tex_coord,
 							buffer<const float3> in_normal,
@@ -292,7 +331,7 @@ vertex auto scene_gather_vs(buffer<const float3> in_position,
 							param<scene_gather_uniforms_t> uniforms) {
 	scene_gather_in_out out;
 	scene_vs(out, in_position[vertex_id], in_tex_coord[vertex_id], in_normal[vertex_id], in_binormal[vertex_id],
-			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms);
+			 in_tangent[vertex_id], in_materials_data[vertex_id], uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { in_position[vertex_id], 1.0f };
 	out.motion_prev = pos * uniforms.prev_mvpm;
@@ -301,7 +340,7 @@ vertex auto scene_gather_vs(buffer<const float3> in_position,
 	
 	return out;
 }
-#else
+#elif defined(WARP_USE_ARGUMENT_BUFFER) && !defined(WARP_USE_INDIRECT_COMMANDS) // -> arg-buffer/non-indirect
 vertex auto scene_gather_vs(arg_buffer<model_data_t> model_data,
 							param<scene_gather_uniforms_t> uniforms) {
 	scene_gather_in_out out;
@@ -312,7 +351,7 @@ vertex auto scene_gather_vs(arg_buffer<model_data_t> model_data,
 			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
 			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
 			 model_data.materials_data[vertex_id],
-			 uniforms);
+			 uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { vtx, 1.0f };
 	out.motion_prev = pos * uniforms.prev_mvpm;
@@ -321,12 +360,33 @@ vertex auto scene_gather_vs(arg_buffer<model_data_t> model_data,
 	
 	return out;
 }
+#else // -> arg-buffer/indirect
+vertex auto scene_gather_vs(arg_buffer<model_data_t> model_data,
+							buffer<const frame_uniforms_t> uniforms) {
+	scene_gather_in_out out;
+	const auto vtx = model_data.pnbt[model_data_t::POSITION][vertex_id];
+	scene_vs(out, vtx,
+			 model_data.tc[vertex_id],
+			 model_data.pnbt[model_data_t::NORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::BINORMAL][vertex_id],
+			 model_data.pnbt[model_data_t::TANGENT][vertex_id],
+			 model_data.materials_data[vertex_id],
+			 uniforms->mvpm, uniforms->light_bias_mvpm, uniforms->cam_pos, uniforms->light_pos);
+	
+	float4 pos { vtx, 1.0f };
+	out.motion_prev = pos * uniforms->gather.scene_prev_mvpm;
+	out.motion_now = pos * uniforms->mvpm;
+	out.motion_next = pos * uniforms->gather.scene_next_mvpm;
+	
+	return out;
+}
 #endif
 
 #if FLOOR_COMPUTE_INFO_TESSELLATION_SUPPORT
+#if !defined(WARP_USE_INDIRECT_COMMANDS) // -> non-indirect
 [[patch(triangle, 3)]]
 tessellation_evaluation auto scene_gather_tes(patch_in_t in [[stage_input]],
-											  array<const_image_2d<float1>, material_count> disp_tex,
+											  array_param<const_image_2d<float1>, material_count> disp_tex,
 											  param<uint32_t> disp_mode,
 											  param<scene_gather_uniforms_t> uniforms) {
 	// interpolate vertex position from barycentric coordinate and control points
@@ -356,7 +416,8 @@ tessellation_evaluation auto scene_gather_tes(patch_in_t in [[stage_input]],
 	}
 	
 	scene_gather_in_out out;
-	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data, uniforms);
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data,
+			 uniforms.mvpm, uniforms.light_bias_mvpm, uniforms.cam_pos, uniforms.light_pos);
 	
 	float4 pos { vertex_pos, 1.0f };
 	out.motion_prev = pos * uniforms.prev_mvpm;
@@ -365,6 +426,49 @@ tessellation_evaluation auto scene_gather_tes(patch_in_t in [[stage_input]],
 	
 	return out;
 }
+#else // -> indirect
+[[patch(triangle, 3)]]
+tessellation_evaluation auto scene_gather_tes(patch_in_t in [[stage_input]],
+											  arg_buffer<materials_t> materials,
+											  buffer<const frame_uniforms_t> uniforms) {
+	// interpolate vertex position from barycentric coordinate and control points
+	auto vertex_pos = (in.control_points[0].position * position_in_patch.x +
+					   in.control_points[1].position * position_in_patch.y +
+					   in.control_points[2].position * position_in_patch.z);
+	auto tex_coord = (in.control_points[0].tex_coord * position_in_patch.x +
+					  in.control_points[1].tex_coord * position_in_patch.y +
+					  in.control_points[2].tex_coord * position_in_patch.z);
+	auto normal = (in.control_points[0].normal * position_in_patch.x +
+				   in.control_points[1].normal * position_in_patch.y +
+				   in.control_points[2].normal * position_in_patch.z);
+	auto binormal = (in.control_points[0].binormal * position_in_patch.x +
+					 in.control_points[1].binormal * position_in_patch.y +
+					 in.control_points[2].binormal * position_in_patch.z);
+	auto tangent = (in.control_points[0].tangent * position_in_patch.x +
+					in.control_points[1].tangent * position_in_patch.y +
+					in.control_points[2].tangent * position_in_patch.z);
+	auto material_data = in.control_points[0].material_data;
+	auto material = material_data & 0xFFFFu; // material is the same for all
+	const bool should_displace = ((material_data & 0xFFFF'0000u) != 0u);
+	
+	if (should_displace && uniforms->displacement_mode == 2) {
+		static constexpr constant const float max_displacement { 0.25f };
+		auto displacement = materials.disp_tex[material].read_linear_repeat(tex_coord) * 2.0f - 1.0f; // [-1, 1]
+		vertex_pos += max_displacement * displacement * normal.normalized();
+	}
+	
+	scene_gather_in_out out;
+	scene_vs(out, vertex_pos, tex_coord, normal, binormal, tangent, material_data,
+			 uniforms->mvpm, uniforms->light_bias_mvpm, uniforms->cam_pos, uniforms->light_pos);
+	
+	float4 pos { vertex_pos, 1.0f };
+	out.motion_prev = pos * uniforms->gather.scene_prev_mvpm;
+	out.motion_now = pos * uniforms->mvpm;
+	out.motion_next = pos * uniforms->gather.scene_next_mvpm;
+	
+	return out;
+}
+#endif
 #endif
 
 static uint32_t encode_3d_motion(const float3& motion) {
@@ -496,17 +600,17 @@ static float4 scene_fs(const scene_base_in_out& in,
 	return { color, 1.0f };
 }
 
-#if !defined(WARP_USE_ARGUMENT_BUFFER)
+#if !defined(WARP_USE_ARGUMENT_BUFFER) // -> non-arg-buffer/non-indirect
 // non-argument-buffer variant: specify all material textures as separate parameters
 // NOTE: since this requires 126 textures (texture locations), this only works on macOS Tier1+ (128 limit) and or iOS Tier2/A13+
 
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   param<uint32_t> disp_mode,
-							   array<const_image_2d<float>, material_count> diff_tex,
-							   array<const_image_2d<float>, material_count> spec_tex,
-							   array<const_image_2d<float>, material_count> norm_tex,
-							   array<const_image_2d<float1>, material_count> mask_tex,
-							   array<const_image_2d<float1>, material_count> disp_tex,
+							   array_param<const_image_2d<float>, material_count> diff_tex,
+							   array_param<const_image_2d<float>, material_count> spec_tex,
+							   array_param<const_image_2d<float>, material_count> norm_tex,
+							   array_param<const_image_2d<float1>, material_count> mask_tex,
+							   array_param<const_image_2d<float1>, material_count> disp_tex,
 							   const_image_2d_depth<float> shadow_tex) {
 	const auto mat_idx = in.material_data & 0xFFFFu;
 	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
@@ -519,11 +623,11 @@ fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 
 fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 							  param<uint32_t> disp_mode,
-							  array<const_image_2d<float>, material_count> diff_tex,
-							  array<const_image_2d<float>, material_count> spec_tex,
-							  array<const_image_2d<float>, material_count> norm_tex,
-							  array<const_image_2d<float1>, material_count> mask_tex,
-							  array<const_image_2d<float1>, material_count> disp_tex,
+							  array_param<const_image_2d<float>, material_count> diff_tex,
+							  array_param<const_image_2d<float>, material_count> spec_tex,
+							  array_param<const_image_2d<float>, material_count> norm_tex,
+							  array_param<const_image_2d<float1>, material_count> mask_tex,
+							  array_param<const_image_2d<float1>, material_count> disp_tex,
 							  const_image_2d_depth<float> shadow_tex) {
 	const auto mat_idx = in.material_data & 0xFFFFu;
 	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
@@ -541,11 +645,11 @@ fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
 
 fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 								  param<uint32_t> disp_mode,
-								  array<const_image_2d<float>, material_count> diff_tex,
-								  array<const_image_2d<float>, material_count> spec_tex,
-								  array<const_image_2d<float>, material_count> norm_tex,
-								  array<const_image_2d<float1>, material_count> mask_tex,
-								  array<const_image_2d<float1>, material_count> disp_tex,
+								  array_param<const_image_2d<float>, material_count> diff_tex,
+								  array_param<const_image_2d<float>, material_count> spec_tex,
+								  array_param<const_image_2d<float>, material_count> norm_tex,
+								  array_param<const_image_2d<float1>, material_count> mask_tex,
+								  array_param<const_image_2d<float1>, material_count> disp_tex,
 								  const_image_2d_depth<float> shadow_tex) {
 	const auto mat_idx = in.material_data & 0xFFFFu;
 	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
@@ -556,16 +660,8 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 	};
 }
 
-#else
+#elif defined(WARP_USE_ARGUMENT_BUFFER) && !defined(WARP_USE_INDIRECT_COMMANDS) // -> arg-buffer/non-indirect
 // argument-buffer variant: put all material textures into a single argument buffer
-
-struct materials_t {
-	array<const_image_2d<float>, material_count> diff_tex;
-	array<const_image_2d<float>, material_count> spec_tex;
-	array<const_image_2d<float>, material_count> norm_tex;
-	array<const_image_2d<float1>, material_count> mask_tex;
-	array<const_image_2d<float1>, material_count> disp_tex;
-};
 
 fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
 							   param<uint32_t> disp_mode,
@@ -611,25 +707,77 @@ fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
 	};
 }
 
+#else // -> arg-buffer/indirect
+// argument-buffer + indirect variant: put all material textures into a single argument buffer + all parameters are contained within buffers
+
+fragment auto scene_scatter_fs(const scene_scatter_in_out in [[stage_input]],
+							   buffer<const frame_uniforms_t> uniforms,
+							   arg_buffer<materials_t> materials,
+							   arg_buffer<scene_fs_data_t> scene_fs_data) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_scatter_fragment_out {
+		scene_fs(in, should_displace ? uniforms->displacement_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], scene_fs_data.shadow_tex),
+		encode_3d_motion(in.motion)
+	};
+}
+
+fragment auto scene_gather_fs(const scene_gather_in_out in [[stage_input]],
+							  buffer<const frame_uniforms_t> uniforms,
+							  arg_buffer<materials_t> materials,
+							  arg_buffer<scene_fs_data_t> scene_fs_data) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_gather_fragment_out {
+		scene_fs(in, should_displace ? uniforms->displacement_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], scene_fs_data.shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+		}
+	};
+}
+
+fragment auto scene_gather_fwd_fs(const scene_gather_in_out in [[stage_input]],
+								  buffer<const frame_uniforms_t> uniforms,
+								  arg_buffer<materials_t> materials,
+								  arg_buffer<scene_fs_data_t> scene_fs_data) {
+	const auto mat_idx = in.material_data & 0xFFFFu;
+	const auto should_displace = ((in.material_data & 0xFFFF'0000u) != 0u);
+	return scene_scatter_fragment_out /* reuse */ {
+		scene_fs(in, should_displace ? uniforms->displacement_mode : 0u, materials.diff_tex[mat_idx], materials.spec_tex[mat_idx],
+				 materials.norm_tex[mat_idx], materials.mask_tex[mat_idx], materials.disp_tex[mat_idx], scene_fs_data.shadow_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
+	};
+}
+
 #endif
 
 //////////////////////////////////////////
 // shadow map
 
-struct shadow_uniforms_t {
-	matrix4f mvpm;
-};
-
 struct shadow_in_out {
 	float4 position [[position]];
 };
 
+#if !defined(WARP_USE_INDIRECT_COMMANDS) // -> non-indirect
 vertex shadow_in_out shadow_vs(buffer<const float3> in_position,
 							   param<shadow_uniforms_t> uniforms) {
 	return {
 		log_depth(float4 { in_position[vertex_id], 1.0f } * uniforms.mvpm)
 	};
 }
+#else // -> indirect
+vertex shadow_in_out shadow_vs(buffer<const float3> in_position,
+							   buffer<const frame_uniforms_t> uniforms) {
+	return {
+		log_depth(float4 { in_position[vertex_id], 1.0f } * uniforms->light_mvpm)
+	};
+}
+#endif
 
 //////////////////////////////////////////
 // sky box
@@ -650,33 +798,20 @@ struct skybox_gather_in_out : skybox_base_in_out {
 	float4 motion_next;
 };
 
-struct skybox_base_uniforms_t {
-	matrix4f imvpm;
-};
-
-struct skybox_scatter_uniforms_t : skybox_base_uniforms_t {
-	matrix4f prev_imvpm;
-};
-
-struct skybox_gather_uniforms_t : skybox_base_uniforms_t {
-	matrix4f next_mvpm;
-	matrix4f prev_mvpm;
-};
-
-
-static void skybox_vs(skybox_base_in_out& out, const skybox_base_uniforms_t& uniforms) {
+static void skybox_vs(skybox_base_in_out& out, const matrix4f& sky_imvpm) {
 	switch (vertex_id) {
 		case 0: out.position = { 3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 1: out.position = { -3.0f, -1.0f, 1.0f, 1.0f }; break;
 		case 2: out.position = { 0.0f, 2.0f, 1.0f, 1.0f }; break;
 		default: floor_unreachable();
 	}
-	out.cube_tex_coord = (out.position * uniforms.imvpm).xyz;
+	out.cube_tex_coord = (out.position * sky_imvpm).xyz;
 }
 
+#if !defined(WARP_USE_INDIRECT_COMMANDS) // -> non-indirect
 vertex auto skybox_scatter_vs(param<skybox_scatter_uniforms_t> uniforms) {
 	skybox_scatter_in_out out;
-	skybox_vs(out, uniforms);
+	skybox_vs(out, uniforms.imvpm);
 	
 	out.cur_pos = out.position * uniforms.imvpm;
 	out.prev_pos = out.position * uniforms.prev_imvpm;
@@ -687,7 +822,7 @@ vertex auto skybox_scatter_vs(param<skybox_scatter_uniforms_t> uniforms) {
 // also used for forward-only
 vertex auto skybox_gather_vs(param<skybox_gather_uniforms_t> uniforms) {
 	skybox_gather_in_out out;
-	skybox_vs(out, uniforms);
+	skybox_vs(out, uniforms.imvpm);
 	
 	const auto proj_vertex = out.position * uniforms.imvpm;
 	out.motion_prev = proj_vertex * uniforms.prev_mvpm;
@@ -696,12 +831,37 @@ vertex auto skybox_gather_vs(param<skybox_gather_uniforms_t> uniforms) {
 	
 	return out;
 }
+#else // -> indirect
+vertex auto skybox_scatter_vs(buffer<const frame_uniforms_t> uniforms) {
+	skybox_scatter_in_out out;
+	skybox_vs(out, uniforms->sky_imvpm);
+	
+	out.cur_pos = out.position * uniforms->sky_imvpm;
+	out.prev_pos = out.position * uniforms->scatter.sky_prev_imvpm;
+	
+	return out;
+}
+
+// also used for forward-only
+vertex auto skybox_gather_vs(buffer<const frame_uniforms_t> uniforms) {
+	skybox_gather_in_out out;
+	skybox_vs(out, uniforms->sky_imvpm);
+	
+	const auto proj_vertex = out.position * uniforms->sky_imvpm;
+	out.motion_prev = proj_vertex * uniforms->gather.sky_prev_mvpm;
+	out.motion_now = out.position;
+	out.motion_next = proj_vertex * uniforms->gather.sky_next_mvpm;
+	
+	return out;
+}
+#endif
 
 static float4 skybox_fs(const skybox_base_in_out& in,
 						const_image_cube<float> skybox_tex) {
 	return skybox_tex.read_linear(in.cube_tex_coord);
 }
 
+#if !defined(WARP_USE_INDIRECT_COMMANDS) // -> non-indirect
 fragment auto skybox_scatter_fs(const skybox_scatter_in_out in [[stage_input]],
 								const_image_cube<float> skybox_tex) {
 	return scene_scatter_fragment_out {
@@ -730,6 +890,36 @@ fragment auto skybox_gather_fwd_fs(const skybox_gather_in_out in [[stage_input]]
 		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
 	};
 }
+#else // -> indirect
+fragment auto skybox_scatter_fs(const skybox_scatter_in_out in [[stage_input]],
+								arg_buffer<sky_fs_data_t> sky_fs_data) {
+	return scene_scatter_fragment_out {
+		skybox_fs(in, sky_fs_data.skybox_tex),
+		encode_3d_motion(in.prev_pos.xyz - in.cur_pos.xyz)
+	};
+}
+
+fragment auto skybox_gather_fs(const skybox_gather_in_out in [[stage_input]],
+							   arg_buffer<sky_fs_data_t> sky_fs_data) {
+	return scene_gather_fragment_out {
+		skybox_fs(in, sky_fs_data.skybox_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w)),
+		encode_2d_motion((in.motion_prev.xy / in.motion_prev.w) - (in.motion_now.xy / in.motion_now.w)),
+		{
+			(in.motion_next.z / in.motion_next.w) - (in.motion_now.z / in.motion_now.w),
+			(in.motion_prev.z / in.motion_prev.w) - (in.motion_now.z / in.motion_now.w)
+		}
+	};
+}
+
+fragment auto skybox_gather_fwd_fs(const skybox_gather_in_out in [[stage_input]],
+								   arg_buffer<sky_fs_data_t> sky_fs_data) {
+	return scene_scatter_fragment_out /* reuse */ {
+		skybox_fs(in, sky_fs_data.skybox_tex),
+		encode_2d_motion((in.motion_next.xy / in.motion_next.w) - (in.motion_now.xy / in.motion_now.w))
+	};
+}
+#endif
 
 //////////////////////////////////////////
 // manual blitting
@@ -749,11 +939,85 @@ vertex blit_in_out blit_vs() {
 
 fragment float4 blit_fs(const blit_in_out in [[stage_input]],
 						const_image_2d<float> img) {
-	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) });
+	return img.read(in.position.xy.cast<uint32_t>());
 }
 fragment float4 blit_swizzle_fs(const blit_in_out in [[stage_input]],
 								const_image_2d<float> img) {
-	return img.read(uint2 { uint32_t(in.position.x), uint32_t(in.position.y) }).swizzle<2, 1, 0, 3>();
+	return img.read(in.position.xy.cast<uint32_t>()).swizzle<2, 1, 0, 3>();
+}
+
+fragment float4 blit_debug_depth_fs(const blit_in_out in [[stage_input]],
+									const_image_2d_depth<float> img) {
+	auto depth = img.read(in.position.xy.cast<uint32_t>());
+	
+	// linearize depth
+	static constexpr const float2 near_far_plane { WARP_NEAR_PLANE, WARP_FAR_PLANE };
+	static constexpr const uint32_t depth_type { 0u /* always normalized right now */ };
+	if constexpr (depth_type == 1 /* z/w */) {
+		depth = depth + near_far_plane.x - (depth * (near_far_plane.x / near_far_plane.y));
+	} else if constexpr (depth_type == 2 /* linear */) {
+		// already linear
+	} else /* normalized, or fallback */ {
+		constexpr const float2 near_far_projection {
+			-(near_far_plane.y + near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+			(2.0f * near_far_plane.y * near_far_plane.x) / (near_far_plane.x - near_far_plane.y),
+		};
+		depth = (depth == 1.0f ? 1.0f : near_far_projection.y / (depth - near_far_projection.x));
+	}
+	
+	depth = math::fmod(depth, 1.0f);
+	return { depth, depth, depth, 1.0f };
+}
+
+fragment float4 blit_debug_motion_2d_fs(const blit_in_out in [[stage_input]],
+										const_image_2d<uint1> img) {
+	auto motion = unpack_snorm_2x16(img.read(in.position.xy.cast<uint32_t>()));
+	return { math::abs(motion.x), math::abs(motion.y), 0.0f, 1.0f };
+}
+
+fragment float4 blit_debug_motion_3d_fs(const blit_in_out in [[stage_input]],
+										const_image_2d<uint1> img) {
+	const auto encoded_motion = img.read(in.position.xy.cast<uint32_t>());
+	
+	static constexpr const float3 signs_lookup[] {
+		{ 1.0f, 1.0f, 1.0f },
+		{ 1.0f, 1.0f, -1.0f },
+		{ 1.0f, -1.0f, 1.0f },
+		{ 1.0f, -1.0f, -1.0f },
+		{ -1.0f, 1.0f, 1.0f },
+		{ -1.0f, 1.0f, -1.0f },
+		{ -1.0f, -1.0f, 1.0f },
+		{ -1.0f, -1.0f, -1.0f },
+	};
+	const float3 signs = signs_lookup[encoded_motion >> 29u];
+	const uint3 shifted_motion {
+		(encoded_motion >> 19u) & 0x3FFu,
+		(encoded_motion >> 10u) & 0x1FFu,
+		encoded_motion & 0x3FFu
+	};
+	constexpr const float3 adjust {
+		const_math::log2(64.0f + 1.0f) / 1024.0f,
+		const_math::log2(64.0f + 1.0f) / 512.0f,
+		const_math::log2(64.0f + 1.0f) / 1024.0f
+	};
+	auto motion = signs * ((float3(shifted_motion) * adjust).exp2() - 1.0f);
+	
+	constexpr const float range = 64.0f; // [-range, range]
+	motion /= range;
+	motion.abs();
+	
+	return { motion.x, motion.y, motion.z, 1.0f };
+}
+
+fragment float4 blit_debug_motion_depth_fs(const blit_in_out in [[stage_input]],
+										   const_image_2d<float2> img) {
+	auto motion_depth = img.read(in.position.xy.cast<uint32_t>());
+	
+	static constexpr const float2 near_far_plane { WARP_NEAR_PLANE, WARP_FAR_PLANE };
+	motion_depth = motion_depth + near_far_plane.x - (motion_depth * (near_far_plane.x / near_far_plane.y));
+	
+	motion_depth = (motion_depth % 0.0005f) * 2000.0f;
+	return { motion_depth.x, motion_depth.y, 0.0f, 1.0f };
 }
 
 #endif

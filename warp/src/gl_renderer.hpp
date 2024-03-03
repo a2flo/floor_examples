@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,6 +36,9 @@ struct gl_renderer {
 	static void render_kernels(const float& delta, const float& render_delta,
 							   const size_t& warp_frame_num);
 	static void render_full_scene(const gl_obj_model& model, const camera& cam);
+	
+	//! for debugging purposes: blits different computed/rendered framebuffers
+	static void set_debug_blit_mode(const uint32_t mode);
 };
 
 #endif

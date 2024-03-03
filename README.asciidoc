@@ -11,7 +11,7 @@ image:https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_cli_
 
 == warp ==
 * image-based warping, implemented using a scatter-based approach and a gather-based approach (based on "Image-Based Bidirectional Scene Reprojection")
-* also demos tessellation/displacement
+* also demonstrates use of: tessellation/displacement, argument buffers and indirect command pipelines
 * build with `./build.sh` inside the folder
 * gather-based warping ref: link:https://www.cse.ust.hk/~psander/docs/bireproj.pdf[Image-Based Bidirectional Scene Reprojection] (link:https://web.archive.org/web/20170611112307/http://www.cs.virginia.edu:80/~gfx/pmwiki/index.php?n=Pubs.Yang2011IBB[original])
 * NOTE: in addition to floor + dependencies, this requires SDL2_image with libpng, as well as link:https://github.com/a2flo/libwarp[libwarp]

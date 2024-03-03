@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2022 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -93,5 +93,6 @@ void auto_cam::run(camera& cam) {
 	cur_rot = cur_iter->rot.catmull_rom_interpolated(next_iter->rot, prev_iter->rot, next_next_iter->rot, interp);
 	
 	cam.set_position(cur_pos);
-	cam.set_rotation(cur_rot.x, cur_rot.y);
+	cam.set_rotation(double(cur_rot.x), double(cur_rot.y));
+	cam.update_state();
 }
