@@ -822,15 +822,18 @@ int main(int, char* argv[]) {
 			// will be using the buffer with OpenGL
 			graphics_sharing_flags = COMPUTE_MEMORY_FLAG::OPENGL_SHARING;
 		} else if (compute_ctx != render_ctx) {
-			// compute context (CUDA/Host/OpenCL) differs from the rendering context and ...
+			// enable automatic buffer sync between the render and compute backends
+			graphics_sharing_flags = (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+									  // render backend only reads data
+									  COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+									  // compute backend only writes data
+									  COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 			if (!nbody_state.no_vulkan) {
-				// ... we're using a Vulkan renderer
-				// -> enable Vulkan buffer sharing and automatic synchronization of the shared Vulkan buffer
-				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING | COMPUTE_MEMORY_FLAG::VULKAN_SHARING_SYNC_SHARED;
+				// we're using a Vulkan renderer -> enable Vulkan buffer sharing
+				graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
 			} else if (!nbody_state.no_metal) {
-				// ... we're using a Metal renderer
-				// -> enable Metal buffer sharing and automatic synchronization of the shared Metal buffer
-				graphics_sharing_flags = COMPUTE_MEMORY_FLAG::METAL_SHARING | COMPUTE_MEMORY_FLAG::METAL_SHARING_SYNC_SHARED;
+				// we're using a Metal renderer -> enable Metal buffer sharing
+				graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::METAL_SHARING;
 			}
 		}
 		for(size_t i = 0; i < pos_buffer_count; ++i) {
