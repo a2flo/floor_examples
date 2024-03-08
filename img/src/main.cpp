@@ -20,6 +20,7 @@
 #include <floor/core/option_handler.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/gl_shader.hpp>
+#include <floor/compute/compute_kernel.hpp>
 #include "gl_blur.hpp"
 #include "img_kernels.hpp"
 
@@ -30,15 +31,9 @@ struct img_option_context {
 typedef option_handler<img_option_context> img_opt_handler;
 
 static bool done { false };
-static bool no_opengl {
-#if !defined(FLOOR_IOS)
-	false
-#else
-	true
-#endif
-};
+static bool no_opengl { true };
 static bool run_gl_blur { false };
-static bool second_cache { true };
+static bool use_half { false };
 static bool dumb {
 #if !defined(FLOOR_IOS)
 	false
@@ -49,17 +44,16 @@ static bool dumb {
 static uint32_t cur_image { 0 };
 static uint2 image_size { 1024 };
 static constexpr const uint32_t tap_count { TAP_COUNT };
-static constexpr const uint32_t inner_tile_size { INNER_TILE_SIZE }; // -> effective tile size
 
 //! option -> function map
 template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handler::options {
 	{ "--help", [](img_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--dim <width> <height>: image width * height in px (default: " << image_size << ")" << endl;
-		cout << "\t--no-opengl: disables opengl rendering and sharing (uses s/w rendering instead)" << endl;
+		cout << "\t--with-opengl: enables OpenGL rendering and sharing (otherwise uses s/w rendering instead)" << endl;
 		cout << "\t--gl-blur: runs the opengl/glsl blur shader instead of the compute one" << endl;
-		cout << "\t--no-second-cache: disables the use of a second (smaller) local memory cache in the kernel" << endl;
 		cout << "\t--dumb: runs the \"dumb\" version of the compute kernel (no caching)" << endl;
+		cout << "\t--half: using half precision computations instead of single precision" << endl;
 		
 		cout << endl;
 		cout << "controls:" << endl;
@@ -86,24 +80,34 @@ template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handle
 			return;
 		}
 		image_size.y = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
+		
+		if ((image_size.x % 32u) != 0 || (image_size.y % 32u) != 0) {
+			cerr << "image dims must be a multiple of 32: " << image_size.x << "x" << image_size.y << endl;
+			done = true;
+			return;
+		}
+		
 		cout << "image size set to: " << image_size << endl;
 	}},
-	{ "--no-opengl", [](img_option_context&, char**&) {
-		no_opengl = true;
-		cout << "opengl disabled" << endl;
+	{ "--with-opengl", [](img_option_context&, char**&) {
+		no_opengl = false;
+		cout << "opengl enabled" << endl;
 	}},
 	{ "--gl-blur", [](img_option_context&, char**&) {
 		run_gl_blur = true;
 		cout << "running gl-blur" << endl;
 	}},
-	{ "--no-second-cache", [](img_option_context&, char**&) {
-		second_cache = false;
-		cout << "disabled second cache" << endl;
-	}},
 	{ "--dumb", [](img_option_context&, char**&) {
 		dumb = true;
 		cout << "running dumb kernels" << endl;
 	}},
+	{ "--half", [](img_option_context&, char**&) {
+		use_half = true;
+		cout << "using half precision for computations" << endl;
+	}},
+	// ignore xcode debug arg
+	{ "-NSDocumentRevisionsDebugMode", [](img_option_context&, char**&) {} },
+	{ "-ApplePersistenceIgnoreState", [](img_option_context&, char**&) {} },
 };
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
@@ -136,8 +140,6 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 }
 
 /////////////////
-// TODO: creata a common header/source file ...
-		
 #if !defined(FLOOR_IOS)
 static GLuint vbo_fullscreen_triangle { 0 };
 static uint32_t global_vao { 0 };
@@ -222,11 +224,59 @@ static bool gl_init() {
 #endif
 
 /////////////////
+
+enum SINGLE_STAGE_BLUR_KERNEL {
+	SINGLE_STAGE_BLUR_1024_32_F32,
+	SINGLE_STAGE_BLUR_256_16_F32,
+	SINGLE_STAGE_BLUR_64_8_F32,
+	SINGLE_STAGE_BLUR_1024_32_F16,
+	SINGLE_STAGE_BLUR_256_16_F16,
+	SINGLE_STAGE_BLUR_64_8_F16,
+	__MAX_SINGLE_STAGE_BLUR_KERNEL
+};
+static constexpr const array single_stage_blur_kernel_names {
+	"image_blur_single_stage_32x32_f32"sv,
+	"image_blur_single_stage_16x16_f32"sv,
+	"image_blur_single_stage_8x8_f32"sv,
+	"image_blur_single_stage_32x32_f16"sv,
+	"image_blur_single_stage_16x16_f16"sv,
+	"image_blur_single_stage_8x8_f16"sv,
+};
+static_assert(size(single_stage_blur_kernel_names) == __MAX_SINGLE_STAGE_BLUR_KERNEL);
+
+//! profiling wrapper that either use compute_queue profiling (if available) or otherwise falls back to use floor_timer
+class start_stop_profiling {
+public:
+	start_stop_profiling(const compute_queue& dev_queue_) : dev_queue(dev_queue_), queue_profiling(dev_queue_.has_profiling_support()) {
+		if (queue_profiling) {
+			dev_queue.start_profiling();
+		} else {
+			profiling_start = floor_timer::start();
+		}
+	}
+	
+	//! stops the timer / profiling and returns the time in milliseconds since the start
+	double stop() {
+		uint64_t microseconds = 0u;
+		if (queue_profiling) {
+			microseconds = dev_queue.stop_profiling();
+		} else {
+			microseconds = floor_timer::stop<chrono::microseconds>(profiling_start);
+		}
+		return double(microseconds) / 1000.0;
+	}
+	
+protected:
+	const compute_queue& dev_queue;
+	const bool queue_profiling { false };
+	floor_timer::timer_clock_type::time_point profiling_start {};
+};
+
 int main(int, char* argv[]) {
 	// handle options
 	img_option_context option_ctx;
 	img_opt_handler::parse_options(argv + 1, option_ctx);
-	if(done) return 0;
+	if (done) return 0;
 	
 	// init floor
 	if(!floor::init(floor::init_state {
@@ -237,19 +287,21 @@ int main(int, char* argv[]) {
 		.data_path = "data/",
 #endif
 		.app_name = "img",
-		.renderer = (no_opengl ? floor::RENDERER::NONE : floor::RENDERER::OPENGL),
+		.renderer = (no_opengl ? floor::RENDERER::DEFAULT : floor::RENDERER::OPENGL),
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
+	floor::set_screen_size(image_size);
 	
 	// disable opengl when using metal/vulkan
-	if(!no_opengl) {
+	if (!no_opengl) {
 		no_opengl = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL) ||
 					 (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN));
 	}
 	
-	if(no_opengl && run_gl_blur) {
-		log_error("can't run opengl blur, because opengl renderer is not available");
+	if (no_opengl && run_gl_blur) {
+		log_error("can't run OpenGL blur, because OpenGL renderer is not available");
 		run_gl_blur = false;
 	}
 	
@@ -280,59 +332,27 @@ int main(int, char* argv[]) {
 	
 	// compile the program and get the kernel functions
 	static_assert(tap_count % 2u == 1u, "tap count must be an odd number!");
-	static constexpr const uint32_t overlap { tap_count / 2u };
-	static constexpr const uint32_t tile_size { inner_tile_size + overlap * 2u };
-	static const uint2 img_global_size { (image_size / inner_tile_size) * tile_size };
-	log_debug("running blur kernel on an $ image, with a tap count of $, inner tile size of $ and work-group tile size of $ -> global work size: $ -> $ texture fetches",
-			  image_size, tap_count, inner_tile_size, tile_size, img_global_size, img_global_size.x * img_global_size.y);
 #if !defined(FLOOR_IOS)
 	auto img_prog = compute_ctx->add_program_file(floor::data_path("../img/src/img_kernels.cpp"),
 												  "-I" + floor::data_path("../img/src") +
-												  " -DTAP_COUNT=" + to_string(tap_count) +
-												  " -DTILE_SIZE=" + to_string(tile_size) +
-												  " -DINNER_TILE_SIZE=" + to_string(inner_tile_size) +
-												  (second_cache ? " -DSECOND_CACHE=1" : ""));
+												  " -DTAP_COUNT=" + to_string(tap_count));
 #else
-	// for now: use a precompiled metal lib instead of compiling at runtime
-	const vector<llvm_toolchain::function_info> function_infos {
-		// non-functional right now
-		/*{
-			"image_blur_single_stage",
-			{
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-			}
-		},*/
-		{
-			"image_blur_dumb_horizontal",
-			{
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-			}
-		},
-		{
-			"image_blur_dumb_vertical",
-			{
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-				llvm_toolchain::function_info::arg_info { .size = 0, llvm_toolchain::function_info::ARG_ADDRESS_SPACE::IMAGE },
-			}
-		},
-	};
-	auto img_prog = compute_ctx->add_precompiled_program_file(floor::data_path("img_kernels.metallib"), function_infos);
+	auto img_prog = compute_ctx->add_universal_binary(floor::data_path("img_kernels.fubar"));
 #endif
-	if(img_prog == nullptr) {
+	if (!img_prog) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto image_blur = img_prog->get_kernel("image_blur_single_stage");
-	auto image_blur_dumb_v = img_prog->get_kernel("image_blur_dumb_vertical");
-	auto image_blur_dumb_h = img_prog->get_kernel("image_blur_dumb_horizontal");
-	if(
-#if !defined(FLOOR_IOS)
-	   image_blur == nullptr ||
-#endif
-	   image_blur_dumb_v == nullptr ||
-	   image_blur_dumb_h == nullptr) {
+	array<shared_ptr<compute_kernel>, size(single_stage_blur_kernel_names)> single_stage_blur_kernels;
+	for (size_t i = 0; i < size(single_stage_blur_kernel_names); ++i) {
+		single_stage_blur_kernels[i] = img_prog->get_kernel(single_stage_blur_kernel_names[i]);
+		if (!single_stage_blur_kernels[i]) {
+			log_warn("failed to retrieve/compile kernel: $", single_stage_blur_kernel_names[i]);
+		}
+	}
+	auto image_blur_dumb_v = img_prog->get_kernel("image_blur_dumb_vertical_"s + (use_half ? "f16" : "f32"));
+	auto image_blur_dumb_h = img_prog->get_kernel("image_blur_dumb_horizontal_"s + (use_half ? "f16" : "f32"));
+	if (!image_blur_dumb_v || !image_blur_dumb_h) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
@@ -342,16 +362,9 @@ int main(int, char* argv[]) {
 	auto img_data = make_unique<uchar4[]>(image_size.x * image_size.y); // allocated at runtime so it doesn't kill the stack
 	const auto img_data_size = image_size.x * image_size.y * sizeof(uchar4);
 	array<shared_ptr<compute_image>, img_count> imgs;
-	for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-		if(img_idx == 0) {
-			for(uint32_t i = 0, count = image_size.x * image_size.y; i < count; ++i) {
-				//img_data[i] = { uchar3::random(), 255u };
-				/*img_data[i] = {
-					uchar3(uint8_t(i * (image_size.x / 2) % 255u),
-						   uint8_t((i * 255u) / count),
-						   uint8_t(((i % image_size.x) * 255u) / image_size.x)),
-					255u
-				};*/
+	for (size_t img_idx = 0; img_idx < img_count; ++img_idx) {
+		if (img_idx == 0) {
+			for (uint32_t i = 0, count = image_size.x * image_size.y; i < count; ++i) {
 				img_data[i] = {
 					uchar4(uint8_t(i * (image_size.x / 2) % 255u),
 						   uint8_t((i * 255u) / count),
@@ -378,7 +391,9 @@ int main(int, char* argv[]) {
 												  (no_opengl ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
 												  // when using opengl sharing: appropriate texture target must be set
 												  GL_TEXTURE_2D);
-		if(img_idx > 0) imgs[img_idx]->zero(*dev_queue);
+		if (img_idx > 0) {
+			imgs[img_idx]->zero(*dev_queue);
+		}
 	}
 	
 	// flush/finish everything (init, data copy) before running the benchmark
@@ -387,45 +402,92 @@ int main(int, char* argv[]) {
 	}
 	dev_queue->finish();
 	
-	//
+	// amount of blur runs we want to perform
 	static constexpr const size_t run_count { 20 };
 	
 	// -> compute blur
-	if(!run_gl_blur) {
+	if (!run_gl_blur) {
 		log_debug("running $compute blur ...", (dumb ? "dumb " : ""));
-		for(size_t i = 0; i < run_count; ++i) {
-			if(!dumb) {
-				const auto blur_start = floor_timer::start();
-				dev_queue->execute(*image_blur,
-								   // total amount of work:
-								   img_global_size,
-								   // work per work-group:
-								   uint2 { tile_size, tile_size },
-								   // kernel arguments:
-								   imgs[0], imgs[1]);
-				dev_queue->finish();
-				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
-				log_debug("blur run in $ms", double(blur_end) / 1000.0);
+		// NOTE: all kernels are run with "wait_until_completion" set to true, since this provides proper synchronization in the absence
+		// of automatic or manual synchronization provided by a backend queue (-> automatic resource tracking or manual dev_queue->finish())
+		if (!dumb) {
+			// figure out which kernel to use
+			compute_kernel* single_stage_blur_kernel = nullptr;
+			uint32_t single_stage_blur_local_size = 1024u;
+			uint32_t kernel_idx = (use_half ? 3u : 0u);
+			for (uint32_t i = 0; i < 3; ++i, single_stage_blur_local_size >>= 2u, ++kernel_idx) {
+				if (single_stage_blur_local_size <= fastest_device->max_total_local_size &&
+					single_stage_blur_kernels[kernel_idx]) {
+					const auto kernel_entry = single_stage_blur_kernels[kernel_idx]->get_kernel_entry(*fastest_device);
+					if (!kernel_entry || kernel_entry->max_total_local_size < single_stage_blur_local_size) {
+						continue;
+					}
+					single_stage_blur_kernel = single_stage_blur_kernels[kernel_idx].get();
+					break;
+				}
 			}
-			else {
-				const auto blur_start = floor_timer::start();
-				dev_queue->execute(*image_blur_dumb_h,
-								   // total amount of work:
-								   image_size,
-								   // work per work-group:
-								   uint2 { tile_size * 4, 2 },
-								   // kernel arguments:
-								   imgs[0], imgs[2]);
-				dev_queue->execute(*image_blur_dumb_v,
-								   // total amount of work:
-								   image_size,
-								   // work per work-group:
-								   uint2 { 2, tile_size * 4 },
-								   // kernel arguments:
-								   imgs[2], imgs[1]);
-				dev_queue->finish();
-				const auto blur_end = floor_timer::stop<chrono::microseconds>(blur_start);
-				log_debug("dumb blur run in $ms", double(blur_end) / 1000.0);
+			if (!single_stage_blur_kernel) {
+				log_error("no single stage blur kernel is supported by the device");
+				return -1;
+			}
+			log_debug("using single-stage blur kernel: $", single_stage_blur_kernel_names[kernel_idx]);
+			
+			// run single-stage blur
+			compute_queue::execution_parameters_t exec_params {
+				// run as 1D kernel
+				.execution_dim = 1u,
+				// total amount of work:
+				.global_work_size = { image_size.x * image_size.y, 0u, 0u },
+				// work per work-group:
+				.local_work_size = { single_stage_blur_local_size, 0u, 0u },
+				// kernel arguments:
+				.args = {
+					imgs[0], imgs[1]
+				},
+				.wait_until_completion = true,
+				.debug_label = "blur_single_stage",
+			};
+			for (size_t i = 0; i < run_count; ++i) {
+				start_stop_profiling prof(*dev_queue);
+				dev_queue->execute_with_parameters(*single_stage_blur_kernel, exec_params);
+				const auto blur_end = prof.stop();
+				log_debug("blur run in $ms", blur_end);
+			}
+		} else {
+			compute_queue::execution_parameters_t exec_params_horizontal {
+				// run as 2D kernel
+				.execution_dim = 2u,
+				// total amount of work:
+				.global_work_size = image_size,
+				// work per work-group:
+				.local_work_size = uint2 { 32, 16 },
+				// kernel arguments:
+				.args = {
+					imgs[0], imgs[2]
+				},
+				.wait_until_completion = true,
+				.debug_label = "blur_horizontal",
+			};
+			compute_queue::execution_parameters_t exec_params_vertical {
+				// run as 2D kernel
+				.execution_dim = 2u,
+				// total amount of work:
+				.global_work_size = image_size,
+				// work per work-group:
+				.local_work_size = uint2 { 32, 16 },
+				// kernel arguments:
+				.args = {
+					imgs[2], imgs[1]
+				},
+				.wait_until_completion = true,
+				.debug_label = "blur_vertical",
+			};
+			for (size_t i = 0; i < run_count; ++i) {
+				start_stop_profiling prof(*dev_queue);
+				dev_queue->execute_with_parameters(*image_blur_dumb_h, exec_params_horizontal);
+				dev_queue->execute_with_parameters(*image_blur_dumb_v, exec_params_vertical);
+				const auto blur_end = prof.stop();
+				log_debug("dumb blur run in $ms", blur_end);
 			}
 		}
 	}
@@ -470,7 +532,7 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if(no_opengl) {
+		if (no_opengl) {
 			// grab the current image buffer data (read-only + blocking) ...
 			auto render_img = (uchar4*)imgs[cur_image]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
@@ -478,10 +540,10 @@ int main(int, char* argv[]) {
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
 			const uint2 render_dim = image_size.minned(uint2 { floor::get_width(), floor::get_height() });
-			for(uint32_t y = 0; y < render_dim.y; ++y) {
+			for (uint32_t y = 0; y < render_dim.y; ++y) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
 				uint32_t img_idx = image_size.x * y;
-				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
+				for (uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
 					*px_ptr++ = SDL_MapRGB(wnd_surface->format, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
 				}
 			}
@@ -504,7 +566,7 @@ int main(int, char* argv[]) {
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	
-	if(!no_opengl) {
+	if (!no_opengl) {
 		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
 		floor::acquire_context();
 		for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {

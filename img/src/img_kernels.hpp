@@ -23,8 +23,6 @@
 
 #if !defined(TAP_COUNT)
 #define TAP_COUNT 15
-#define INNER_TILE_SIZE 14
-#define TILE_SIZE (INNER_TILE_SIZE + ((TAP_COUNT / 2) * 2))
 #endif
 
 #if defined(FLOOR_COMPUTE)

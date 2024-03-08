@@ -45,8 +45,9 @@ image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/path_tr
 * build with `./build.sh` inside the folder
 
 == img ==
-* small program to demonstrate image functionality by doing a gaussian blur (implemented with manual local memory caching as well as a "dumb" version, running the same code as the also provided GLSL implementation)
+* small program to demonstrate image functionality by doing a gaussian blur, implemented as both a single-stage blur with manual local memory caching, as well as a separable horizontal/vertical "dumb" blur w/o manual caching (also: a GLSL/OpenGL implementation that does the same)
 * build with `./build.sh` inside the folder
+image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/img_example.png["image blur example",width=67%]
 
 == occ ==
 * offline-compute-compiler, compiles compute/graphics C++ code to CUDA/PTX, Metal/AIR, OpenCL/SPIR/SPIR-V, Vulkan/SPIR-V code/binaries (see link:https://github.com/a2flo/floor_examples/blob/master/offline_compiler/src/main.cpp#L109[--help] for all options)

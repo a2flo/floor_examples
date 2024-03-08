@@ -22,9 +22,6 @@
 
 // defined during compilation:
 // TAP_COUNT: kernel width, -> N*N filter (effective N computed below)
-// TILE_SIZE: (local) work-group size, this is INNER_TILE_SIZE + (TAPCOUNT / 2) * 2, thus includes the overlap
-// INNER_TILE_SIZE: the image portion that will actually be computed + output in here
-// SECOND_CACHE: flag that determines if a second local/shared memory "cache" is used, so that one barrier can be skipped
 
 // sample pattern must be: <even number> <middle> <even number>
 static_assert(TAP_COUNT % 2 == 1, "tap count must be an odd number!");
@@ -76,40 +73,67 @@ static constexpr auto compute_coefficients() {
 	return ret;
 }
 
-kernel_2d() void image_blur_single_stage(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
-	const int2 gid { global_id.xy };
-	const int2 lid { local_id.xy };
+template <uint32_t tile_size, uint32_t lateral_dim, typename storage_type>
+static void image_blur_single_stage(const_image_2d<storage_type> in_img, image_2d<vector_n<storage_type, 4>, true> out_img) {
+	static_assert(tile_size == lateral_dim * lateral_dim);
+	static_assert(lateral_dim <= 32u);
 	
-	const uint32_t lin_lid { local_id.y * TILE_SIZE + local_id.x };
+	// map 1D to 2D
+	// NOTE: we could also run this as a 2D kernel and avoid this mapping, but this gives us more control
+	const uint2 lid {
+		local_id.x % lateral_dim,
+		local_id.x / lateral_dim,
+	};
 	
 	// awesome constexpr magic
-	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
+	static constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
 	// aka half kernel width or radius, but also the part that "protrudes" out of the inner tile
-	constexpr const int overlap = TAP_COUNT / 2;
+	static constexpr const int overlap = TAP_COUNT / 2;
 	
 	// this uses local memory as a sample + compute cache
-	// note that using a float4 instead of a uchar4 requires more storage, but computation using float4s
-	// is _a_lot_ faster than integer math or doing int->float conversions + float math
-	constexpr const auto sample_count = TILE_SIZE * TILE_SIZE;
-	local_buffer<float4, sample_count> samples;
+	// note that using a float4/half4 instead of a uchar4 requires more storage, but computations using floating point
+	// values are _a_lot_ faster than integer math or doing int->float conversions + float math
+	static constexpr const auto sample_count_x = lateral_dim + 2u * uint32_t(overlap);
+	static constexpr const auto sample_count_y = sample_count_x;
+	static constexpr const auto sample_count = sample_count_x * sample_count_y;
+	local_buffer<vector_n<storage_type, 4>, sample_count> samples;
 	
-	// map from the global work size to the actual image size
-	const int2 img_coord = (gid / TILE_SIZE) * INNER_TILE_SIZE + (lid - overlap);
-	// read the input pixel and store it in the local buffer/"cache" (note: out-of-bound access is clamped)
-	samples[lin_lid] = in_img.read(img_coord);
+	// get image dim and compute offsets
+	const auto img_dim = in_img.dim().xy;
+	// NOTE: we have ensured that the image size is a multiple of 32px and we know that lateral_dim is <= 32 here -> can just divide
+	const auto tile_count_x = img_dim.x / lateral_dim;
+	const uint2 sample_offset_inner {
+		(group_id.x % tile_count_x) * lateral_dim,
+		(group_id.x / tile_count_x) * lateral_dim,
+	};
+	const auto sample_offset_outer = sample_offset_inner.cast<int>() - overlap;
+	
+	// read the input pixels and store them in the local buffer/"cache"
+	// -> since we have more samples than work-items, we loop over the sample count and let the work-items
+	//    read data multiple times to keep everything occupied as best as possible
+	for (uint32_t sample_idx = local_id.x; sample_idx < sample_count; sample_idx += local_size.x) {
+		// compute the image coordinate for this sample index
+		// NOTE: out-of-bounds accesses are clamped-to-edge (only need min() here, because sample_offset_outer is already >= 0)
+		const int2 img_coord {
+			math::clamp(int(sample_idx % sample_count_x) + sample_offset_outer.x, 0, int(img_dim.x) - 1),
+			math::clamp(int(sample_idx / sample_count_x) + sample_offset_outer.y, 0, int(img_dim.y) - 1)
+		};
+		samples[sample_idx] = in_img.read(img_coord);
+	}
 	// make sure the complete tile has been read and stored
 	local_barrier();
 	
 	// the blur is now computed using a separable filter, i.e. one vertical pass and one horizontal pass.
-	// the vertical pass is done before the horizontal pass to increase occupancy
+	// the vertical pass is done before the horizontal pass to increase occupancy:
 	//  -> if the horizontal pass would be computed first, the middle part of a warp/sub-group/SIMD-unit
 	//     would do the blur computation, but the outer parts would simply idle
 	//  -> if the vertical pass is done first, all horizontal lines either have to be computed completely
 	//     or don't have to be computed at all
 	//
 	//      horizontal first
+	//       (active items)
 	//  ------------------------
-	//  |       |xxxxxx|       | // all lines have active work-items
+	//  |       |xxxxxx|       | // all horizontal lines have active and inactive work-items
 	//  |       |xxxxxx|       |
 	//  |       |xxxxxx|       |
 	//  |       |xxxxxx|       |
@@ -124,8 +148,9 @@ kernel_2d() void image_blur_single_stage(const_image_2d<float> in_img, image_2d<
 	//  ------------------------
 	//
 	//       vertical first
+	//       (active items)
 	//  ------------------------
-	//  |                      | // can skip "empty" lines w/o work-items
+	//  |                      | // can skip "empty" horizontal lines w/o any work-items
 	//  |                      |
 	//  |                      |
 	//  |                      |
@@ -139,58 +164,34 @@ kernel_2d() void image_blur_single_stage(const_image_2d<float> in_img, image_2d<
 	//  |                      |
 	//  ------------------------
 	//
-	// NOTE: of course this is simply a matter of mapping ids to execution order, so if "lid" was reversed,
+	// NOTE: of course, this is simply a matter of mapping ids to execution order, so if "lid" was reversed,
 	//       the other way around would be more efficient. also, there is no guarantee that ids/work-items
 	//       are properly mapped to warps/sub-groups/SIMD-units (0-31 warp #0, 32-63 warp #1, ...), but in
-	//       practice, this is usually the case (true for nvidia gpus and intel cpus).
+	//       practice, this is usually the case.
 	
-	// note for later: when using an additional sample cache, only one sync point is necessary after the first pass
-#if defined(SECOND_CACHE)
-	local_buffer<float4, TILE_SIZE * INNER_TILE_SIZE> samples_2;
-#endif
-	
-	// vertical blur:
-	// this must be done for the inner tile and the horizontal overlapping part (necessary for the horizontal blur)
-	// also note that doing this branch is faster than clamping idx to [0, TILE_SIZE - 1]
-	float4 v_color;
-	if(lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
-		int idx = (lid.y - overlap) * TILE_SIZE + lid.x;
+	// the actual in/out pixel block + overlap
+	static constexpr const auto vertical_pass_sample_count = sample_count_x * lateral_dim;
+	// offset to first item we need to handle
+	static constexpr const auto vertical_pass_sample_offset = sample_count_x * overlap;
+	// the results of the vertical pass are written into a separate block of local memory,
+	// since this prevents additional synchronization and lowers registers usage
+	// (we would need to store 2 or 3 color values for each item on the "stack", i.e. registers)
+	local_buffer<vector_n<storage_type, 4>, vertical_pass_sample_count> vertical_pass_samples;
+	for (uint32_t idx = local_id.x; idx < vertical_pass_sample_count; idx += local_size.x) {
+		float4 v_color;
+		auto sample_idx = (vertical_pass_sample_offset + idx) - (overlap * sample_count_x /* Y stride */);
 #pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i, idx += TILE_SIZE) {
+		for (int i = -overlap; i <= overlap; ++i, sample_idx += sample_count_x) {
 			// note that this will be optimized to an fma instruction if possible
-			v_color += coeffs[size_t(overlap + i)] * samples[uint32_t(idx)];
+			v_color += coeffs[size_t(overlap + i)] * samples[sample_idx].template cast<float>();
 		}
-		
-#if defined(SECOND_CACHE)
-		// write results to the second cache
-		samples_2[(lid.y - overlap) * TILE_SIZE + lid.x] = v_color;
-		
-		// this is always executed by all threads in a warp (on nvidia h/w) if the tile size is <= 32.
-		// uncertain about other h/w, so don't do it (TODO: need a get_simd_width() function or SIMD_WIDTH macro)
-#if defined(FLOOR_COMPUTE_CUDA) && TILE_SIZE <= 32
-		local_barrier();
-#endif
-#endif
+		vertical_pass_samples[idx] = v_color;
 	}
 	
-#if defined(SECOND_CACHE) && !defined(FLOOR_COMPUTE_CUDA)
-	// else case from above (aka "the safe route"):
-	// barriers/fences must always be executed by all work-items in a work-group (technically warp/sub-group)
+	// make sure all write accesses have completed in the loop
 	local_barrier();
-#endif
 	
-#if !defined(SECOND_CACHE)
-	// make sure all read accesses have completed (in the loop)
-	local_barrier();
-	// write the sample back to the local cache
-	if(lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
-		samples[lin_lid] = v_color;
-	}
-	// make sure everything has been updated
-	local_barrier();
-#endif
-	
-	// horizontal blur:
+	// horizontal blur: we now only need to run this with the actual in/out block
 	//  ------------------------
 	//  |                      |
 	//  |                      |
@@ -205,31 +206,46 @@ kernel_2d() void image_blur_single_stage(const_image_2d<float> in_img, image_2d<
 	//  |                      |
 	//  |                      |
 	//  ------------------------
-	if(lid.x >= overlap && lid.x < (TILE_SIZE - overlap) &&
-	   lid.y >= overlap && lid.y < (TILE_SIZE - overlap)) {
-		float4 h_color;
-		
-#if defined(SECOND_CACHE)
-		int idx = (lid.y - overlap) * TILE_SIZE + lid.x - overlap;
-#else
-		int idx = lid.y * TILE_SIZE + lid.x - overlap;
-#define samples_2 samples
-#endif
-		
+	
+	float4 h_color;
+	auto sample_idx = lid.x + lid.y * sample_count_x;
 #pragma clang loop unroll_count(TAP_COUNT)
-		for(int i = -overlap; i <= overlap; ++i, ++idx) {
-			h_color += coeffs[size_t(overlap + i)] * samples_2[uint32_t(idx)];
-		}
-		
-		// write out
-		out_img.write(img_coord, h_color);
+	for (uint32_t i = 0; i < TAP_COUNT; ++i, ++sample_idx) {
+		h_color += coeffs[i] * vertical_pass_samples[sample_idx].template cast<float>();
 	}
+	
+	// write out
+	const uint2 img_coord {
+		lid.x + sample_offset_inner.x,
+		lid.y + sample_offset_inner.y
+	};
+	out_img.write(img_coord, h_color);
+}
+
+kernel_1d(1024) void image_blur_single_stage_32x32_f32(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+	image_blur_single_stage<1024, 32, float>(in_img, out_img);
+}
+kernel_1d(256) void image_blur_single_stage_16x16_f32(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+	image_blur_single_stage<256, 16, float>(in_img, out_img);
+}
+kernel_1d(64) void image_blur_single_stage_8x8_f32(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+	image_blur_single_stage<64, 8, float>(in_img, out_img);
+}
+
+kernel_1d(1024) void image_blur_single_stage_32x32_f16(const_image_2d<half> in_img, image_2d<half4, true> out_img) {
+	image_blur_single_stage<1024, 32, half>(in_img, out_img);
+}
+kernel_1d(256) void image_blur_single_stage_16x16_f16(const_image_2d<half> in_img, image_2d<half4, true> out_img) {
+	image_blur_single_stage<256, 16, half>(in_img, out_img);
+}
+kernel_1d(64) void image_blur_single_stage_8x8_f16(const_image_2d<half> in_img, image_2d<half4, true> out_img) {
+	image_blur_single_stage<64, 8, half>(in_img, out_img);
 }
 
 // this is the dumb version of the blur, processing a horizontal or vertical line w/o manual caching
 // NOTE: this is practically the same as the opengl/glsl shader
-template <uint32_t direction /* 0 == horizontal, 1 == vertical */>
-floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+template <uint32_t direction /* 0 == horizontal, 1 == vertical */, typename storage_type>
+floor_inline_always static void image_blur_dumb(const_image_2d<storage_type> in_img, image_2d<vector_n<storage_type, 4>, true> out_img) {
 	const int2 img_coord { global_id.xy };
 	
 	constexpr const auto coeffs = compute_coefficients<TAP_COUNT>();
@@ -237,12 +253,12 @@ floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, im
 	
 	float4 color;
 #pragma clang loop unroll_count(TAP_COUNT)
-	for(int i = -overlap; i <= overlap; ++i) {
+	for (int i = -overlap; i <= overlap; ++i) {
 		color += (coeffs[size_t(overlap + i)] *
 #if TAP_COUNT <= 15 // can use texel offset here, TAP_COUNT == 15 has an offset range of [-7, 7]
-				  in_img.read(img_coord, int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i })
+				  in_img.read(img_coord, int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i }).template cast<float>()
 #else // else: need to resort to integer math
-				  in_img.read(img_coord + int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i })
+				  in_img.read(img_coord + int2 { direction == 0 ? i : 0, direction == 0 ? 0 : i }).template cast<float>()
 #endif
 				  );
 	}
@@ -250,12 +266,18 @@ floor_inline_always static void image_blur_dumb(const_image_2d<float> in_img, im
 	out_img.write(img_coord, color);
 }
 
-kernel_2d() void image_blur_dumb_horizontal(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
-	image_blur_dumb<0>(in_img, out_img);
+kernel_2d() void image_blur_dumb_horizontal_f32(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+	image_blur_dumb<0, float>(in_img, out_img);
+}
+kernel_2d() void image_blur_dumb_horizontal_f16(const_image_2d<half> in_img, image_2d<half4, true> out_img) {
+	image_blur_dumb<0, half>(in_img, out_img);
 }
 
-kernel_2d() void image_blur_dumb_vertical(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
-	image_blur_dumb<1>(in_img, out_img);
+kernel_2d() void image_blur_dumb_vertical_f32(const_image_2d<float> in_img, image_2d<float4, true> out_img) {
+	image_blur_dumb<1, float>(in_img, out_img);
+}
+kernel_2d() void image_blur_dumb_vertical_f16(const_image_2d<half> in_img, image_2d<half4, true> out_img) {
+	image_blur_dumb<1, half>(in_img, out_img);
 }
 
 #endif
