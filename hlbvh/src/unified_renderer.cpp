@@ -171,7 +171,7 @@ void unified_renderer::render(const vector<unique_ptr<animation>>& models,
 	uniforms_buffer->write(*hlbvh_state.rqueue, &uniforms);
 	hlbvh_state.rqueue->finish();
 	
-	const auto draw_collisions = (std::ranges::any_of(collisions, [](const uint32_t& collision) { return (collision > 0u); }) &&
+	const auto draw_collisions = (std::any_of(collisions.begin(), collisions.end(), [](const uint32_t& collision) { return (collision > 0u); }) &&
 								  hlbvh_state.triangle_vis);
 	
 	for (uint32_t i = 0, model_count = uint32_t(models.size()); i < model_count; ++i) {
