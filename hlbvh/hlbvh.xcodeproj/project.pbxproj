@@ -28,7 +28,6 @@
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
 		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
 		5C8646291C19B2A4000518C7 /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
 		5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
 		5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
@@ -50,11 +49,12 @@
 		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
-		5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
-		5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */; };
+		5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
+		5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
+		5CCCE9C52B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
 		5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC61D1F373100369136 /* obj_loader.cpp */; };
-		5CE8AECA1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; };
-		5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; };
+		5CE8AECA1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
+		5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
 		5CE8AECC1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; };
 		5CE8AECF1D1F9CCD00369136 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AECD1D1F9CCD00369136 /* animation.cpp */; };
 		5CE8AED01D1F9CCD00369136 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AECD1D1F9CCD00369136 /* animation.cpp */; };
@@ -126,10 +126,10 @@
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
 		5CB92D9E1ACA0DFB00109EB3 /* hlbvh_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = hlbvh_state.hpp; sourceTree = "<group>"; };
+		5CCCE9C12B9BDC9300EDD2F7 /* unified_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = unified_renderer.hpp; sourceTree = "<group>"; };
+		5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unified_renderer.cpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = metal_renderer.hpp; sourceTree = "<group>"; };
-		5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = metal_renderer.mm; sourceTree = "<group>"; };
 		5CE8AEBF1D1D029200369136 /* triangle_intersection.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = triangle_intersection.hpp; sourceTree = "<group>"; };
 		5CE8AEC61D1F373100369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj/obj_loader.cpp; sourceTree = "<group>"; };
 		5CE8AEC71D1F373100369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj/obj_loader.hpp; sourceTree = "<group>"; };
@@ -258,8 +258,8 @@
 				5CE8AEBF1D1D029200369136 /* triangle_intersection.hpp */,
 				5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */,
 				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
-				5CE843D51B29B3CF00D8B961 /* metal_renderer.mm */,
-				5CE843D41B29B3CF00D8B961 /* metal_renderer.hpp */,
+				5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */,
+				5CCCE9C12B9BDC9300EDD2F7 /* unified_renderer.hpp */,
 				5CE8AEC61D1F373100369136 /* obj_loader.cpp */,
 				5CE8AEC71D1F373100369136 /* obj_loader.hpp */,
 				5CE8AECD1D1F9CCD00369136 /* animation.cpp */,
@@ -452,11 +452,11 @@
 				5CF948991D2AB3D300FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489A1D2AB3D300FEA7AE /* camera.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
-				5CE843D71B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5C0071C21A91F2BD00F4711D /* hlbvh.cpp in Sources */,
 				5CE8AED01D1F9CCD00369136 /* animation.cpp in Sources */,
 				5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
 				5CF11C271D237F2800AB7502 /* collider.cpp in Sources */,
+				5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -468,11 +468,11 @@
 				5CF9489C1D2AB3DA00FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489D1D2AB3DA00FEA7AE /* camera.cpp in Sources */,
 				5C8646271C19B2A4000518C7 /* main.cpp in Sources */,
-				5C8646281C19B2A4000518C7 /* metal_renderer.mm in Sources */,
 				5C8646291C19B2A4000518C7 /* hlbvh.cpp in Sources */,
 				5CE8AED11D1F9CCD00369136 /* animation.cpp in Sources */,
 				5CE8AECC1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
 				5CF11C281D237F2800AB7502 /* collider.cpp in Sources */,
+				5CCCE9C52B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -482,13 +482,13 @@
 			files = (
 				5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
-				5CE843D61B29B3CF00D8B961 /* metal_renderer.mm in Sources */,
 				5CF11C261D237F2800AB7502 /* collider.cpp in Sources */,
 				5CF948971D2AB1BA00FEA7AE /* camera.cpp in Sources */,
 				5CE8AECA1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
 				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
 				5CE8AECF1D1F9CCD00369136 /* animation.cpp in Sources */,
 				5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */,
+				5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

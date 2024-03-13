@@ -104,7 +104,8 @@ public:
 									  const float scale = 0.1f,
 									  const bool cleanup_cpu_data = true,
 									  const bool is_load_textures = true,
-									  const bool create_gpu_buffers = true);
+									  const bool create_gpu_buffers = true,
+									  const COMPUTE_MEMORY_FLAG add_mem_flags = COMPUTE_MEMORY_FLAG::NONE);
 	
 	struct pvrtc_texture {
 		uint2 dim;

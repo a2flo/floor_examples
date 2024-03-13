@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -78,8 +78,8 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		mview = hlbvh_state.cam_rotation.to_matrix4() * matrix4f().translate(0.0f, 0.0f, -hlbvh_state.distance);
 	}
 	else {
-		const auto rmvm = (matrix4f::rotation_deg_named<'y'>(cam.get_rotation().y) *
-						   matrix4f::rotation_deg_named<'x'>(cam.get_rotation().x));
+		const auto rmvm = (matrix4f::rotation_deg_named<'y'>(float(cam.get_rotation().y)) *
+						   matrix4f::rotation_deg_named<'x'>(float(cam.get_rotation().x)));
 		mview = matrix4f::translation(cam.get_position() * float3 { 1.0f, -1.0f, 1.0f }) * rmvm;
 	}
 	const struct __attribute__((packed)) {
@@ -115,7 +115,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		glUniform1f(delta_location, mdl->step);
 		
 		if(hlbvh_state.triangle_vis) {
-			mdl->colliding_vertices->release_opengl_object(hlbvh_state.dev_queue.get());
+			mdl->colliding_vertices->release_opengl_object(hlbvh_state.cqueue.get());
 			glBindBuffer(GL_ARRAY_BUFFER, mdl->colliding_vertices->get_opengl_object());
 			glEnableVertexAttribArray(is_collision_location);
 			glVertexAttribPointer(is_collision_location, 1, GL_UNSIGNED_INT, GL_FALSE, 0, nullptr);
@@ -143,7 +143,7 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 		}
 		
 		if(hlbvh_state.triangle_vis) {
-			mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.dev_queue.get());
+			mdl->colliding_vertices->acquire_opengl_object(hlbvh_state.cqueue.get());
 		}
 	}
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

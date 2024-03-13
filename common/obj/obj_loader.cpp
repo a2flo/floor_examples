@@ -1423,9 +1423,13 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 									   const float scale,
 									   const bool cleanup_cpu_data,
 									   const bool is_load_textures,
-									   const bool create_gpu_buffers) {
+									   const bool create_gpu_buffers,
+									   const COMPUTE_MEMORY_FLAG add_mem_flags) {
 	const bool is_opengl = (ctx.get_compute_type() != COMPUTE_TYPE::METAL &&
-							ctx.get_compute_type() != COMPUTE_TYPE::VULKAN);
+							ctx.get_compute_type() != COMPUTE_TYPE::VULKAN &&
+							!((ctx.get_compute_type() != COMPUTE_TYPE::HOST || ctx.get_compute_type() != COMPUTE_TYPE::CUDA) &&
+							  (has_flag<COMPUTE_MEMORY_FLAG::VULKAN_SHARING>(add_mem_flags) ||
+							   has_flag<COMPUTE_MEMORY_FLAG::METAL_SHARING>(add_mem_flags))));
 	success = false;
 	
 	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
@@ -1747,7 +1751,8 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			
 			// create buffers
 			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
-									  COMPUTE_MEMORY_FLAG::HOST_WRITE);
+									  COMPUTE_MEMORY_FLAG::HOST_WRITE |
+									  add_mem_flags);
 			floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
 			floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
 			floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
@@ -1762,6 +1767,26 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			}
 			floor_model->index_count = (uint32_t)(all_indices.size() * 3);
 			floor_model->indices_buffer = ctx.create_buffer(cqueue, all_indices, buffer_type);
+			
+#if defined(FLOOR_DEBUG)
+			auto model_name = file_name;
+			if (const auto last_slash = model_name.rfind('/'); last_slash != string::npos) {
+				model_name = model_name.substr(last_slash + 1);
+			}
+			if (const auto last_dot = model_name.rfind('.'); last_dot != string::npos) {
+				model_name = model_name.substr(0, last_dot);
+			}
+			floor_model->vertices_buffer->set_debug_label(model_name + ":vertices");
+			floor_model->tex_coords_buffer->set_debug_label(model_name + ":tex_coords");
+			floor_model->normals_buffer->set_debug_label(model_name + ":normals");
+			floor_model->binormals_buffer->set_debug_label(model_name + ":binormals");
+			floor_model->tangents_buffer->set_debug_label(model_name + ":tangents");
+			floor_model->materials_data_buffer->set_debug_label(model_name + ":materials_data");
+			for (auto& obj : floor_model->objects) {
+				obj->indices_floor_vbo->set_debug_label(model_name + ":sub_obj_indices");
+			}
+			floor_model->indices_buffer->set_debug_label(model_name + ":all_indices");
+#endif
 		}
 	}
 	

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #include "hlbvh_state.hpp"
 #include "animation.hpp"
+#include <floor/compute/indirect_command.hpp>
 
 class collider {
 public:
@@ -32,11 +33,16 @@ protected:
 	shared_ptr<compute_buffer> aabb_collision_flags;
 	shared_ptr<compute_buffer> aabbs;
 	shared_ptr<compute_buffer> valid_counts_buffer;
+	vector<shared_ptr<compute_buffer>> bit_buffers;
+	shared_ptr<compute_buffer> rs_params_buffer;
 	vector<uint32_t> collision_flags_host;
+	
+	unique_ptr<indirect_command_pipeline> radix_sort_pipeline;
+	uint32_t radix_sort_pipeline_max_bit = 0u;
 	
 	void radix_sort(shared_ptr<compute_buffer> buffer,
 					shared_ptr<compute_buffer> ping_buffer,
-					const size_t size,
+					const uint32_t size,
 					const uint32_t max_bit = 32u);
 	
 };

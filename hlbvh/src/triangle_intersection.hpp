@@ -40,7 +40,7 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 									  const float& D0D1, const float& D0D2,
 									  float& A, float& B, float& C,
 									  float& X0, float& X1) {
-		if(D0D1 > 0.0f) {
+		if (D0D1 > 0.0f) {
 			// here we know that D0D2 <= 0.0
 			// that is D0, D1 are on the same side, D2 on the other or on the plane
 			A = VV2;
@@ -48,31 +48,27 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 			C = (VV1 - VV2) * D2;
 			X0 = D2 - D0;
 			X1 = D2 - D1;
-		}
-		else if(D0D2 > 0.0f) {
+		} else if (D0D2 > 0.0f) {
 			// here we know that d0d1 <= 0.0
 			A = VV1;
 			B = (VV0 - VV1) * D1;
 			C = (VV2 - VV1) * D1;
 			X0 = D1 - D0;
 			X1 = D1 - D2;
-		}
-		else if(D1 * D2 > 0.0f || D0 != 0.0f) {
+		} else if (D1 * D2 > 0.0f || D0 != 0.0f) {
 			// here we know that d0d1 <= 0.0 or that D0 != 0.0
 			A = VV0;
 			B = (VV1 - VV0) * D0;
 			C = (VV2 - VV0) * D0;
 			X0 = D0 - D1;
 			X1 = D0 - D2;
-		}
-		else if(D1 != 0.0f) {
+		} else if (D1 != 0.0f) {
 			A = VV1;
 			B = (VV0 - VV1) * D1;
 			C = (VV2 - VV1) * D1;
 			X0 = D1 - D0;
 			X1 = D1 - D2;
-		}
-		else if(D2 != 0.0f) {
+		} else if (D2 != 0.0f) {
 			A = VV2;
 			B = (VV0 - VV2) * D2;
 			C = (VV1 - VV2) * D2;
@@ -104,7 +100,7 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 	const auto du0du1 = du0 * du1;
 	const auto du0du2 = du0 * du2;
 	
-	if(du0du1 > 0.0f && du0du2 > 0.0f) { // same sign on all of them + not equal 0?
+	if (du0du1 > 0.0f && du0du2 > 0.0f) { // same sign on all of them + not equal 0?
 		return false; // no intersection occurs
 	}
 	
@@ -125,7 +121,7 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 	const auto dv0dv1 = dv0 * dv1;
 	const auto dv0dv2 = dv0 * dv2;
 	
-	if(dv0dv1 > 0.0f && dv0dv2 > 0.0f) { // same sign on all of them + not equal 0?
+	if (dv0dv1 > 0.0f && dv0dv2 > 0.0f) { // same sign on all of them + not equal 0?
 		return false; // no intersection occurs
 	}
 	
@@ -143,11 +139,11 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 	
 	// compute interval for triangle 1
 	float a, b, c, x0, x1;
-	if(!compute_intervals(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, a, b, c, x0, x1)) return false;
+	if (!compute_intervals(vp0, vp1, vp2, dv0, dv1, dv2, dv0dv1, dv0dv2, a, b, c, x0, x1)) return false;
 	
 	// compute interval for triangle 2
 	float d, e, f, y0, y1;
-	if(!compute_intervals(up0, up1, up2, du0, du1, du2, du0du1, du0du2, d, e, f, y0, y1)) return false;
+	if (!compute_intervals(up0, up1, up2, du0, du1, du2, du0du1, du0du2, d, e, f, y0, y1)) return false;
 	
 	const auto xx = x0 * x1;
 	const auto yy = y0 * y1;

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,46 +31,6 @@
 #define LEAF_INV_MASK 0x7FFFFFFFu
 #define LEAF_FLAG(index) (index | LEAF_MASK)
 
-// since integer operations are still costly in comparison to floating point operations,
-// I've included two different functions (that compute the same morton code) and enable
-// the one that is the fastest depending on the architecture it is running on
-#if defined(FLOOR_COMPUTE_CUDA) // use this for sm_20 - sm_37, or all other backends
-template <uint32_t arch = device_info::cuda_sm(), enable_if_t<arch < 50>* = nullptr>
-#endif
-static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
-	// credits: http://devblogs.nvidia.com/parallelforall/thinking-parallel-part-iii-tree-construction-gpu/
-	// basically just copy and mask in place
-	x = (x * 0x00010001u) & 0xFF0000FFu;
-	x = (x * 0x00000101u) & 0x0F00F00Fu;
-	x = (x * 0x00000011u) & 0xC30C30C3u;
-	x = (x * 0x00000005u) & 0x49249249u;
-	
-	y = (y * 0x00010001u) & 0xFF0000FFu;
-	y = (y * 0x00000101u) & 0x0F00F00Fu;
-	y = (y * 0x00000011u) & 0xC30C30C3u;
-	y = (y * 0x00000005u) & 0x49249249u;
-	
-	z = (z * 0x00010001u) & 0xFF0000FFu;
-	z = (z * 0x00000101u) & 0x0F00F00Fu;
-	z = (z * 0x00000011u) & 0xC30C30C3u;
-	z = (z * 0x00000005u) & 0x49249249u;
-	
-	// total: 12 ANDs, 12 MULs (val single use, no temporary, need 3 registers)
-	
-	// note: relative cost == relative to the max throughput (aka in relation to flops)
-	// e.g. 192 flops possible, only 32 *int ops possible -> cost factor is 6
-	// -> 5.4.1 cuda programming guide
-	
-	// sm_20: 12 * 1 + 12 * 2 = 36 -> 1.5x
-	// sm_21: 12 * 1 + 12 * 2 = 36 -> 1.5x
-	// sm_30: 12 * 1.2 + 12 * 6 = 86.4 -> 3.6x
-	// sm_35: 12 * 1.2 + 12 * 6 = 86.4 -> 3.6x
-	// sm_50: 12 * 1 + 12 * ?? = no native 32-bit integer multiply
-	
-	return x | (y << 1u) | (z << 2u);
-}
-#if defined(FLOOR_COMPUTE_CUDA) // use this for sm_50+
-template <uint32_t arch = device_info::cuda_sm(), enable_if_t<arch >= 50>* = nullptr>
 static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 	// x, y and z are 10-bit numbers in the form
 	// 00000000 00000000 000000A9 87654321
@@ -121,7 +81,6 @@ static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 	
 	return x | (y << 1u) | (z << 2u);
 }
-#endif
 
 // computes all interpolated triangles for this frame, stores these in a global buffer
 // and continues to build the root aabb of the mesh (which will be needed later on)
@@ -447,7 +406,13 @@ static const_array<float3, 3> read_triangle(buffer<const float3> triangles, cons
 	}};
 }
 
-template <bool triangle_vis>
+//! max stack size (element count) of the traversal stack used in collide_bvhs()
+static constexpr const uint32_t collision_stack_size_per_item { 64u };
+//! data type used in the stack in collide_bvhs(), i.e. index type
+//! NOTE: this can be 16-bit, because we can guarantee that we have < 65536 triangles
+using collsion_stack_data_type = uint16_t;
+
+template <bool triangle_vis, uint32_t tile_size>
 floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want to collide with bvh B
 											 const uint32_t leaf_count_a,
 											 buffer<const float3> bvh_aabbs_leaves_a,
@@ -469,7 +434,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 											 buffer<uint32_t> colliding_triangles_a,
 											 buffer<uint32_t> colliding_triangles_b) {
 	const auto idx = global_id.x;
-	if(idx >= leaf_count_a) {
+	if (idx >= leaf_count_a) {
 		return;
 	}
 	
@@ -478,12 +443,12 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	const float3 b_max = bvh_aabbs_leaves_a[idx * 2 + 1];
 	
 	//
-	uint32_t stack[64];
-	auto stack_ptr = stack;
+	local_buffer<collsion_stack_data_type, collision_stack_size_per_item * tile_size> stack;
+	auto stack_ptr = &stack[local_id.x * collision_stack_size_per_item];
 	*stack_ptr++ = 0; // push
 	
 	// traverse nodes starting from the root
-	uint32_t node = 0;
+	uint16_t node = 0;
 	do {
 		if constexpr(!triangle_vis) {
 			// check abort condition (no need to do further checking when a collision has been found already)
@@ -494,7 +459,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 		
 		bool traverse = false;
 #pragma unroll
-		for(uint32_t i = 0; i < 2; ++i) {
+		for (uint32_t i = 0; i < 2; ++i) {
 			// check child node for overlap
 			const auto child = (i == 0 ? bvh_internal_b[node].x : bvh_internal_b[node].y);
 			const auto masked_idx = child & LEAF_INV_MASK; // leaf node if highest bit set
@@ -505,8 +470,8 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 			const auto child_max = (is_leaf ? bvh_aabbs_leaves_b[masked_idx * 2 + 1] : bvh_aabbs_b[masked_idx * 2 + 1]);
 			
 			// query overlaps a leaf node
-			if(check_overlap(b_min, b_max, child_min, child_max)) {
-				if(is_leaf) {
+			if (check_overlap(b_min, b_max, child_min, child_max)) {
+				if (is_leaf) {
 					// read triangle for this leaf node
 					const auto overlap_triangle_idx = morton_codes_b[masked_idx].y;
 					const auto ov = read_triangle(triangles_b, overlap_triangle_idx);
@@ -516,70 +481,88 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 					const auto triangle_idx = morton_codes_a[idx].y;
 					const auto v = read_triangle(triangles_a, triangle_idx);
 					
-					if(check_triangle_intersection(v[0], v[1], v[2], ov[0], ov[1], ov[2])) {
+					if (check_triangle_intersection(v[0], v[1], v[2], ov[0], ov[1], ov[2])) {
 						atomic_inc(&collision_flags[mesh_idx_a]);
 						atomic_inc(&collision_flags[mesh_idx_b]);
-						if constexpr(triangle_vis) {
+						if constexpr (triangle_vis) {
 							atomic_inc(&colliding_triangles_a[triangle_idx]);
 							atomic_inc(&colliding_triangles_b[overlap_triangle_idx]);
 						}
 					}
-				}
-				else {
+				} else {
 					// query overlaps an internal node => traverse
 					// -> set next node to left child (i == 0) or right child (if not traversing left child)
-					if(i == 0 || !traverse) node = child;
+					if (i == 0 || !traverse) {
+						node = (uint16_t)child;
+					}
 					// -> at right child and traversing left child: push right child onto the stack
-					if(i == 1 && traverse) {
-						*stack_ptr++ = child; // push
+					if (i == 1 && traverse) {
+						*stack_ptr++ = (uint16_t)child; // push
 					}
 					traverse = true;
 				}
 			}
 		}
 		// not traversing either child, pop next node from stack
-		if(!traverse) {
+		if (!traverse) {
 			node = *--stack_ptr;
 		}
-	} while(node != 0);
+	} while (node != 0);
 }
 
-kernel_1d() void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
-										 buffer<const float3> bvh_aabbs_leaves_a,
-										 buffer<const float3> triangles_a,
-										 buffer<const uint2> morton_codes_a,
-										 param<uint32_t> internal_node_count_b,
-										 buffer<const uint3> bvh_internal_b,
-										 buffer<const float3> bvh_aabbs_b,
-										 buffer<const float3> bvh_aabbs_leaves_b,
-										 buffer<const float3> triangles_b,
-										 buffer<const uint2> morton_codes_b,
-										 param<uint32_t> mesh_idx_a,
-										 param<uint32_t> mesh_idx_b,
-										 buffer<uint32_t> collision_flags) {
-	collide_bvhs<false>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
-						internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
-						mesh_idx_a, mesh_idx_b, collision_flags, nullptr, nullptr);
+//! computes the max possible local size that can be used for collide_bvhs() based on available local memory size
+static constexpr uint32_t compute_collide_max_local_size() {
+	const auto local_mem_size = device_info::dedicated_local_memory();
+	const auto stack_size_per_item = collision_stack_size_per_item * sizeof(collsion_stack_data_type);
+	if (local_mem_size >= 16384u) {
+		// max possible local size
+		const auto possible_local_size = (local_mem_size / stack_size_per_item);
+		// we can't use directly, because we need to ensure that specific local sizes are specified
+		// -> must be a multiple of 32
+		return ((possible_local_size % 32u) == 0u ? possible_local_size :
+				(possible_local_size / 32u) * 32u);
+	}
+	// otherwise: assume at least 16KiB are available
+	return 128u;
 }
 
-kernel_1d() void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
-									  buffer<const float3> bvh_aabbs_leaves_a,
-									  buffer<const float3> triangles_a,
-									  buffer<const uint2> morton_codes_a,
-									  param<uint32_t> internal_node_count_b,
-									  buffer<const uint3> bvh_internal_b,
-									  buffer<const float3> bvh_aabbs_b,
-									  buffer<const float3> bvh_aabbs_leaves_b,
-									  buffer<const float3> triangles_b,
-									  buffer<const uint2> morton_codes_b,
-									  param<uint32_t> mesh_idx_a,
-									  param<uint32_t> mesh_idx_b,
-									  buffer<uint32_t> collision_flags,
-									  buffer<uint32_t> colliding_triangles_a,
-									  buffer<uint32_t> colliding_triangles_b) {
-	collide_bvhs<true>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
-					   internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
-					   mesh_idx_a, mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
+// NOTE: this also demonstrates that we can use a constexpr function to specify the required local size
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
+																		 buffer<const float3> bvh_aabbs_leaves_a,
+																		 buffer<const float3> triangles_a,
+																		 buffer<const uint2> morton_codes_a,
+																		 param<uint32_t> internal_node_count_b,
+																		 buffer<const uint3> bvh_internal_b,
+																		 buffer<const float3> bvh_aabbs_b,
+																		 buffer<const float3> bvh_aabbs_leaves_b,
+																		 buffer<const float3> triangles_b,
+																		 buffer<const uint2> morton_codes_b,
+																		 param<uint32_t> mesh_idx_a,
+																		 param<uint32_t> mesh_idx_b,
+																		 buffer<uint32_t> collision_flags) {
+	collide_bvhs<false, compute_collide_max_local_size()>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
+														  internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
+														  mesh_idx_a, mesh_idx_b, collision_flags, nullptr, nullptr);
+}
+
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
+																	  buffer<const float3> bvh_aabbs_leaves_a,
+																	  buffer<const float3> triangles_a,
+																	  buffer<const uint2> morton_codes_a,
+																	  param<uint32_t> internal_node_count_b,
+																	  buffer<const uint3> bvh_internal_b,
+																	  buffer<const float3> bvh_aabbs_b,
+																	  buffer<const float3> bvh_aabbs_leaves_b,
+																	  buffer<const float3> triangles_b,
+																	  buffer<const uint2> morton_codes_b,
+																	  param<uint32_t> mesh_idx_a,
+																	  param<uint32_t> mesh_idx_b,
+																	  buffer<uint32_t> collision_flags,
+																	  buffer<uint32_t> colliding_triangles_a,
+																	  buffer<uint32_t> colliding_triangles_b) {
+	collide_bvhs<true, compute_collide_max_local_size()>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_a,
+														 internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b, triangles_b, morton_codes_b,
+														 mesh_idx_a, mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
 }
 
 kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,
@@ -624,11 +607,11 @@ kernel_1d() void map_collided_triangles(buffer<const uint32_t> colliding_triangl
 //////////////////////////////////////////
 // radix sort
 
-kernel_1d() void radix_sort_count(buffer<const uint2> data,
-								  param<uint32_t> size,
-								  param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
-								  param<uint32_t> mask_op_bit,
-								  buffer<uint32_t> valid_counts) {
+kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_count(buffer<const uint2> data,
+													   param<uint32_t> size,
+													   param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+													   param<uint32_t> mask_op_bit,
+													   buffer<uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	
@@ -643,32 +626,31 @@ kernel_1d() void radix_sort_count(buffer<const uint2> data,
 	
 	// reduce + write final result (group sum)
 	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
-	const auto reduced_value = compute_algorithm::reduce<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem, plus<> {});
+	const auto reduced_value = compute_algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
 	if(lid == 0) {
 		valid_counts[gid] = reduced_value;
 	}
 }
 
-kernel_1d() void radix_sort_prefix_sum(buffer<uint32_t> in_out,
-									   param<uint32_t> size) {
+kernel_1d(PREFIX_SUM_GROUP_SIZE) void radix_sort_prefix_sum(buffer<uint32_t> in_out) {
 	const auto idx = global_id.x;
-	uint32_t val = (idx < size ? in_out[idx] : 0);
+	uint32_t val = (idx < COMPACTION_GROUP_COUNT ? in_out[idx] : 0);
 	
 	// work-group scan
 	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<PREFIX_SUM_GROUP_SIZE>()> lmem;
-	const auto result = compute_algorithm::inclusive_scan<PREFIX_SUM_GROUP_SIZE>(val, plus<> {}, lmem);
+	const auto result = compute_algorithm::inclusive_scan_add<PREFIX_SUM_GROUP_SIZE>(val, lmem);
 	
-	if(idx < size) {
+	if (idx < COMPACTION_GROUP_COUNT) {
 		in_out[idx] = result;
 	}
 }
 
-kernel_1d() void radix_sort_stream_split(buffer<const uint2> data,
-										 buffer<uint2> out,
-										 param<uint32_t> size,
-										 param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
-										 param<uint32_t> mask_op_bit,
-										 buffer<const uint32_t> valid_counts) {
+kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_stream_split(buffer<const uint2> data,
+															  buffer<uint2> out,
+															  param<uint32_t> size,
+															  param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+															  param<uint32_t> mask_op_bit,
+															  buffer<const uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	auto valid_elem_offset = (gid == 0 ? 0 : valid_counts[gid - 1]);
@@ -688,7 +670,7 @@ kernel_1d() void radix_sort_stream_split(buffer<const uint2> data,
 		const auto valid = (is_active && (current.x & mask_op_bit) == 0u ? 1u : 0u);
 		
 		local_barrier();
-		const auto result = compute_algorithm::inclusive_scan<COMPACTION_GROUP_SIZE>(valid, plus<> {}, lmem);
+		const auto result = compute_algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
 		
 		if(is_active) {
 			out[valid ?
@@ -698,6 +680,79 @@ kernel_1d() void radix_sort_stream_split(buffer<const uint2> data,
 		
 		// NOTE: scan already does a local_barrier() at the end, so another one is unnecessary here
 		if(lid == COMPACTION_GROUP_SIZE - 1) {
+			lmem[0] = result + valid_elem_offset;
+			lmem[1] = COMPACTION_GROUP_SIZE - result + invalid_elem_offset;
+		}
+		local_barrier();
+		
+		valid_elem_offset = lmem[0];
+		invalid_elem_offset = lmem[1];
+	}
+}
+
+//////////////////////////////////////////
+// radix sort with indirect compute support
+
+kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_count(buffer<const uint2> data,
+																buffer<const indirect_radix_sort_params_t> params,
+																buffer<const uint32_t> mask_op_bit,
+																buffer<uint32_t> valid_counts) {
+	const auto lid = local_id.x;
+	const auto gid = group_id.x;
+	
+	uint32_t counter = 0;
+	for (uint32_t pair_id = lid + gid * params->count_per_group;
+		 pair_id < ((gid + 1u) * params->count_per_group) && pair_id < params->count;
+		 pair_id += COMPACTION_GROUP_SIZE) {
+		if ((data[pair_id].x & *mask_op_bit) == 0u) {
+			++counter;
+		}
+	}
+	
+	// reduce + write final result (group sum)
+	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	const auto reduced_value = compute_algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
+	if (lid == 0) {
+		valid_counts[gid] = reduced_value;
+	}
+}
+
+// no need for indirect_radix_sort_prefix_sum, "size" parameter can be hardcoded
+
+kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_stream_split(buffer<const uint2> data,
+																	   buffer<uint2> out,
+																	   buffer<const indirect_radix_sort_params_t> params,
+																	   buffer<const uint32_t> mask_op_bit,
+																	   buffer<const uint32_t> valid_counts) {
+	const auto lid = local_id.x;
+	const auto gid = group_id.x;
+	auto valid_elem_offset = (gid == 0 ? 0 : valid_counts[gid - 1]);
+	auto invalid_elem_offset = valid_counts[COMPACTION_GROUP_COUNT - 1] + gid * params->count_per_group - valid_elem_offset;
+	
+	// since we're using barriers in here, all work-items must always execute this
+	// -> only abort once the base id is out of range
+	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	for (uint32_t base_id = gid * params->count_per_group;
+		 base_id < ((gid + 1u) * params->count_per_group) && base_id < params->count;
+		 base_id += COMPACTION_GROUP_SIZE) {
+		// pair id/offset for this work-item + check if it is actually active
+		const auto pair_id = base_id + lid;
+		const auto is_active = (pair_id < ((gid + 1u) * params->count_per_group) && pair_id < params->count);
+		
+		const auto current = data[is_active ? pair_id : base_id /* base is always valid */];
+		const auto valid = (is_active && (current.x & *mask_op_bit) == 0u ? 1u : 0u);
+		
+		local_barrier();
+		const auto result = compute_algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
+		
+		if (is_active) {
+			out[valid ?
+				valid_elem_offset + result - 1 :
+					invalid_elem_offset + lid + 1 - result - 1] = current;
+		}
+		
+		// NOTE: scan already does a local_barrier() at the end, so another one is unnecessary here
+		if (lid == COMPACTION_GROUP_SIZE - 1) {
 			lmem[0] = result + valid_elem_offset;
 			lmem[1] = COMPACTION_GROUP_SIZE - result + invalid_elem_offset;
 		}

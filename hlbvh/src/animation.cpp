@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,7 +40,15 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	atomic<uint32_t> done { frame_count };
 	atomic<uint32_t> load_valid { 1u };
 	atomic<uint32_t> max_vertex_count { 0 };
-	for(uint32_t i = 0; i < frame_count; ++i) {
+	auto sharing_flags = COMPUTE_MEMORY_FLAG::NONE;
+	if (hlbvh_state.cctx != hlbvh_state.rctx && !hlbvh_state.benchmark) {
+		if (hlbvh_state.rctx->get_compute_type() == COMPUTE_TYPE::VULKAN) {
+			sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+		} else if (hlbvh_state.rctx->get_compute_type() == COMPUTE_TYPE::METAL) {
+			sharing_flags = COMPUTE_MEMORY_FLAG::METAL_SHARING;
+		}
+	}
+	for (uint32_t i = 0; i < frame_count; ++i) {
 #define THREADED_OBJ_LOAD 0 // TODO: still need to make this thread-safe for opengl
 #if !THREADED_OBJ_LOAD // non-threaded
 		const auto frame_id = i;
@@ -57,7 +65,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			file_name += file_suffix;
 			//log_debug("file name: $", file_name);
 			bool success = false;
-			auto model = obj_loader::load(floor::data_path(file_name), success, *hlbvh_state.ctx, *hlbvh_state.dev_queue,
+			auto model = obj_loader::load(floor::data_path(file_name), success, *hlbvh_state.cctx, *hlbvh_state.cqueue,
 										  // don't scale anything
 										  1.0f,
 										  // keep cpu data, b/c we still need it
@@ -66,7 +74,8 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 										  // don't load textures, we don't need them
 										  false,
 										  // create gpu/graphics buffers?
-										  !hlbvh_state.benchmark);
+										  !hlbvh_state.benchmark,
+										  sharing_flags);
 			frames[frame_id] = model;
 			if(!success) {
 				// signal that something went wrong
@@ -110,10 +119,13 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				frames_centroids[frame_id] = mdl_centroids;
 				
 				// upload key-frame data for this animation
-				frames_triangles_buffer[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_triangles);
-				frames_centroids_buffer[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_centroids);
+				frames_triangles_buffer[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_triangles);
+				frames_triangles_buffer[frame_id]->set_debug_label("frames_triangles");
+				frames_centroids_buffer[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_centroids);
+				frames_centroids_buffer[frame_id]->set_debug_label("frames_centroids");
 				if(hlbvh_state.triangle_vis) {
-					frames_indices[frame_id] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, *mdl_indices);
+					frames_indices[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_indices);
+					frames_indices[frame_id]->set_debug_label("frames_indices");
 				}
 				
 				//
@@ -138,16 +150,19 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	
 	// check if triangle count per frame is the same
 	// (differences in triangle count could be handled, but only at the cost of performance)
-	for(uint32_t i = 0; i < frame_count; ++i) {
+	for (uint32_t i = 0; i < frame_count; ++i) {
 		const auto frame_tri_count = (uint32_t)(frames_triangles[i]->size() / 3);
-		if(i == 0) {
+		if (i == 0) {
 			tri_count = frame_tri_count;
-		}
-		else if(tri_count != frame_tri_count) {
+		} else if (tri_count != frame_tri_count) {
 			log_error("variable triangle count for \"$\" frame #$ (first frame: $, this frame: $)",
 					  file_prefix + file_suffix, i, tri_count, frame_tri_count);
 			return;
 		}
+	}
+	if (tri_count >= 65536) {
+		log_error("triangle count is too large: $' - only up to 65535 triangles are supported", tri_count);
+		return;
 	}
 	log_debug("$ #triangles: $", file_prefix, tri_count);
 	
@@ -155,31 +170,52 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	// note that radix sort requires a multiple of 8192 (32 * 256) elements to function.
 	static const size_t rs_alignment = 32u * COMPACTION_GROUP_SIZE * sizeof(uint2);
 	auto morton_codes_size = tri_count * sizeof(uint2);
-	if(morton_codes_size % rs_alignment != 0) {
+	if (morton_codes_size % rs_alignment != 0) {
 		morton_codes_size = ((morton_codes_size / rs_alignment) + 1) * rs_alignment;
 	}
 	
-	morton_codes = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, morton_codes_size);
-	morton_codes_ping = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, morton_codes_size);
-	triangles = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(float3) * 3u);
+	morton_codes = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_size);
+	morton_codes->set_debug_label("morton_codes");
+	morton_codes_ping = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_size);
+	morton_codes_ping->set_debug_label("morton_codes_ping");
+	triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(float3) * 3u);
+	triangles->set_debug_label("triangles");
 	
 	// N leaves + (N-1) internal nodes, allocating enough for max triangle count
-	bvh_leaves = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
-	bvh_internal = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(uint3));
-	bvh_aabbs = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(float3) * 2u);
-	bvh_aabbs_leaves = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(float3) * 2u);
-	bvh_aabbs_counters = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, (tri_count - 1u) * sizeof(uint32_t));
+	bvh_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
+	bvh_leaves->set_debug_label("bvh_leaves");
+	bvh_internal = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint3));
+	bvh_internal->set_debug_label("bvh_internal");
+	bvh_aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(float3) * 2u);
+	bvh_aabbs->set_debug_label("bvh_aabbs");
+	bvh_aabbs_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(float3) * 2u);
+	bvh_aabbs_leaves->set_debug_label("bvh_aabbs_leaves");
+	bvh_aabbs_counters = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint32_t));
+	bvh_aabbs_counters->set_debug_label("bvh_aabbs_counters");
 	
 	// for visualization purposes
 	if(hlbvh_state.triangle_vis) {
 		log_debug("max vertex count: $", max_vertex_count.load());
-		colliding_vertices = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, max_vertex_count * sizeof(uint32_t),
-															COMPUTE_MEMORY_FLAG::READ_WRITE |
-															COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-															COMPUTE_MEMORY_FLAG::OPENGL_SHARING,
-															GL_ARRAY_BUFFER);
-		colliding_triangles[0] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
-		colliding_triangles[1] = hlbvh_state.ctx->create_buffer(*hlbvh_state.dev_queue, tri_count * sizeof(uint32_t));
+		auto sharing_sync_flags = COMPUTE_MEMORY_FLAG::NONE;
+		if (hlbvh_state.cctx != hlbvh_state.rctx) {
+			sharing_sync_flags |= (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+								   // render backend only reads data
+								   COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+								   // compute backend only writes data
+								   COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
+		}
+		colliding_vertices = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, max_vertex_count * sizeof(uint32_t),
+															 COMPUTE_MEMORY_FLAG::READ_WRITE |
+															 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+															 (!hlbvh_state.uni_renderer ?
+															  COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE) |
+															 sharing_flags | sharing_sync_flags,
+															 GL_ARRAY_BUFFER);
+		colliding_vertices->set_debug_label("colliding_vertices");
+		colliding_triangles[0] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
+		colliding_triangles[1] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
+		colliding_triangles[0]->set_debug_label("colliding_triangles:0");
+		colliding_triangles[1]->set_debug_label("colliding_triangles:1");
 		log_debug("check tri col buffer: $, $", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
 	}
 }

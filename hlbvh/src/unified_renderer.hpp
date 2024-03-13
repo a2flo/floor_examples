@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2019 Florian Ziesche
+ *  Copyright (C) 2004 - 2024 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,18 +16,16 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_HLBVH_METAL_RENDERER_HPP__
-#define __FLOOR_HLBVH_METAL_RENDERER_HPP__
+#ifndef __FLOOR_HLBVH_UNIFIED_RENDERER_HPP__
+#define __FLOOR_HLBVH_UNIFIED_RENDERER_HPP__
 
 #include <floor/core/essentials.hpp>
-
-#if !defined(FLOOR_NO_METAL)
 #include <floor/floor/floor.hpp>
 #include <floor/compute/compute_context.hpp>
 #include "animation.hpp"
 #include "camera.hpp"
 
-struct metal_renderer {
+struct unified_renderer {
 	static bool init(shared_ptr<compute_kernel> vs,
 					 shared_ptr<compute_kernel> fs);
 	static void destroy();
@@ -36,7 +34,5 @@ struct metal_renderer {
 					   const bool cam_mode,
 					   const camera& cam);
 };
-
-#endif
 
 #endif
