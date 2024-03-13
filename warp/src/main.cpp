@@ -134,6 +134,7 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
+	{ "-ApplePersistenceIgnoreState", [](warp_option_context&, char**&) {} },
 };
 static float3 last_cam_pos;
 static void cam_dump() {
@@ -369,7 +370,7 @@ int main(int, char* argv[]) {
 #endif
 		.app_name = "warp",
 		.renderer = wanted_renderer,
-		// disable resource tracking for Metal
+		// disable resource tracking and enable non-blocking Vulkan execution
 		.context_flags = ((warp_state.unified_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
 						   COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE) |
 						  COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING)
@@ -384,7 +385,7 @@ int main(int, char* argv[]) {
 	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
 							floor_renderer == floor::RENDERER::VULKAN);
 	
-	if(floor_renderer == floor::RENDERER::NONE) {
+	if (floor_renderer == floor::RENDERER::NONE) {
 		log_error("no renderer was initialized");
 		return -2;
 	}
