@@ -438,7 +438,7 @@ int main(int, char* argv[]) {
 	}
 	
 	// create collider
-	collider hlbvh_collider;
+	auto hlbvh_collider = make_unique<collider>();
 	
 	// main loop
 	auto frame_time = core::unix_timestamp_us();
@@ -474,7 +474,7 @@ int main(int, char* argv[]) {
 		frame_time = this_frame_time;
 		
 		// run the collision
-		const auto& collisions = hlbvh_collider.collide(models);
+		const auto& collisions = hlbvh_collider->collide(models);
 		
 		//
 		floor::set_caption("hlbvh | frame-time: " + to_string(frame_delta) + "ms");
@@ -494,16 +494,28 @@ int main(int, char* argv[]) {
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	cam = nullptr;
 	
-	if(!hlbvh_state.no_opengl) {
+	// cleanup
+	if (!hlbvh_state.no_opengl) {
 		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
 		floor::acquire_context();
 		models.clear();
 		floor::release_context();
+	} else {
+		models.clear();
 	}
 	
 	if (hlbvh_state.uni_renderer) {
 		unified_renderer::destroy();
 	}
+	
+	hlbvh_collider = nullptr;
+	prog = nullptr;
+	shader_prog = nullptr;
+	hlbvh_state.kernels.clear();
+	hlbvh_state.cqueue = nullptr;
+	hlbvh_state.cctx = nullptr;
+	hlbvh_state.rqueue = nullptr;
+	hlbvh_state.rctx = nullptr;
 	
 	// kthxbye
 	log_msg("done!");

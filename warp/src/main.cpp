@@ -622,7 +622,7 @@ int main(int, char* argv[]) {
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	gl_renderer::destroy();
 	uni_renderer = nullptr;
-	libwarp_cleanup();
+	libwarp_destroy();
 	cam = nullptr;
 	model = nullptr;
 	warp_state.rqueue = nullptr;

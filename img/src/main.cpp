@@ -566,14 +566,21 @@ int main(int, char* argv[]) {
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	
+	// cleanup
 	if (!no_opengl) {
 		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
 		floor::acquire_context();
-		for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-			imgs[img_idx] = nullptr;
-		}
+		imgs.fill(nullptr);
 		floor::release_context();
+	} else {
+		imgs.fill(nullptr);
 	}
+	
+	image_blur_dumb_v = nullptr;
+	image_blur_dumb_h = nullptr;
+	img_prog = nullptr;
+	dev_queue = nullptr;
+	compute_ctx = nullptr;
 	
 	// kthxbye
 	floor::destroy();
