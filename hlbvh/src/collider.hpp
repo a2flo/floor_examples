@@ -25,7 +25,7 @@
 
 class collider {
 public:
-	const vector<uint32_t>& collide(const vector<unique_ptr<animation>>& models);
+	void collide(const vector<unique_ptr<animation>>& models);
 	
 protected:
 	size_t allocated_model_count { 0 };

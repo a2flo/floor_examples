@@ -41,7 +41,6 @@ bool gl_renderer::init() {
 }
 
 void gl_renderer::render(const vector<unique_ptr<animation>>& models,
-						 const vector<uint32_t>& collisions,
 						 const bool cam_mode,
 						 const camera& cam) {
 	// draws ogl stuff
@@ -59,7 +58,6 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 	
 	// fixed locations over the lifetime of this program
 	static const auto mvpm_location = (GLint)shd.program.uniforms["mvpm"].location;
-	static const auto repl_color_location = (GLint)shd.program.uniforms["repl_color"].location;
 	static const auto default_color_location = (GLint)shd.program.uniforms["default_color"].location;
 	static const auto light_dir_location = (GLint)shd.program.uniforms["light_dir"].location;
 	static const auto delta_location = (GLint)shd.program.uniforms["delta"].location;
@@ -70,8 +68,8 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 	static const auto is_collision_location = (hlbvh_state.triangle_vis ? (GLuint)shd.program.attributes["is_collision"].location : 0);
 	
 	const matrix4f mproj {
-		matrix4f().perspective(72.0f, float(floor::get_width()) / float(floor::get_height()),
-							   0.25f, hlbvh_state.max_distance)
+		matrix4f::perspective<false>(72.0f, float(floor::get_width()) / float(floor::get_height()),
+									  0.25f, hlbvh_state.max_distance)
 	};
 	matrix4f mview;
 	if(!cam_mode) {
@@ -84,34 +82,23 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 	}
 	const struct __attribute__((packed)) {
 		matrix4f mvpm;
-		float4 repl_color;
 		float4 default_color;
 		float3 light_dir;
 	} uniforms {
 		.mvpm = mview * mproj,
-		.repl_color = {},
 		.default_color = { 0.9f, 0.9f, 0.9f, 1.0f },
 		.light_dir = { 1.0f, 0.0f, 0.0f },
 	};
-	static constexpr const float4 collision_color { 1.0f, 0.0f, 0.0f, 1.0f };
 	
 	glUniformMatrix4fv(mvpm_location, 1, false, &uniforms.mvpm.data[0]);
-	glUniform4fv(repl_color_location, 1, uniforms.repl_color.data());
 	glUniform4fv(default_color_location, 1, uniforms.default_color.data());
 	glUniform3fv(light_dir_location, 1, uniforms.light_dir.data());
 	
-	for(uint32_t i = 0; i < (uint32_t)models.size(); ++i) {
-		const auto& mdl = models[i];
+	for (const auto& mdl : models) {
 		const auto cur_frame = (const gl_obj_model*)mdl->frames[mdl->cur_frame].get();
 		const auto next_frame = (const gl_obj_model*)mdl->frames[mdl->next_frame].get();
 		
-		if(!hlbvh_state.triangle_vis) {
-			glUniform4fv(default_color_location, 1,
-						 collisions[i] == 0 ? uniforms.default_color.data() : collision_color.data());
-		}
-		else {
-			glUniform4fv(default_color_location, 1, uniforms.default_color.data());
-		}
+		glUniform4fv(default_color_location, 1, uniforms.default_color.data());
 		glUniform1f(delta_location, mdl->step);
 		
 		if(hlbvh_state.triangle_vis) {
@@ -155,7 +142,6 @@ void gl_renderer::render(const vector<unique_ptr<animation>>& models,
 bool gl_renderer::compile_shaders() {
 	static const string hlbvh_vs_text { R"RAWSTR(
 		uniform mat4 mvpm;
-		uniform vec4 repl_color;
 		uniform vec4 default_color;
 		uniform vec3 light_dir;
 		uniform float delta;
@@ -178,17 +164,10 @@ bool gl_renderer::compile_shaders() {
 			gl_Position = mvpm * pos;
 			
 #if COLLIDING_TRIANGLES_VIS
-			collision = (is_collision > 0u ? 1.0 : 0.0);
+			collision = (is_collision > 0u ? 3.0 : 0.0);
 #endif
-			
-			if(repl_color.w > 0.0) {
-				color = repl_color;
-				normal = light_dir;
-			}
-			else {
-				color = default_color;
-				normal = mix(in_normal_a, in_normal_b, delta);
-			}
+			color = default_color;
+			normal = mix(in_normal_a, in_normal_b, delta);
 		}
 	)RAWSTR"};
 	static const string hlbvh_fs_text { R"RAWSTR(
@@ -208,27 +187,20 @@ bool gl_renderer::compile_shaders() {
 			
 			vec4 out_color;
 #if COLLIDING_TRIANGLES_VIS
-			if(collision >= 0.999) {
-				out_color = vec4(1.0, 0.0, 0.0, 1.0);
+			if (collision > 0.0) {
+				out_color = vec4(1.0, 1.0 - clamp(collision * 0.3333, 0.0, 1.0), 0.0, 1.0);
 				out_color.xyz *= max(intensity, 0.6);
 			}
 			else
 #endif
 			{
 				vec4 in_color = color;
-#if !COLLIDING_TRIANGLES_VIS
-				if(in_color.x > in_color.y) {
-					in_color = vec4(1.0, 0.0, 0.0, 1.0);
-				}
-#endif
 				
-				if(intensity > 0.95) {
+				if (intensity > 0.95) {
 					out_color = vec4(in_color.xyz * 1.2, in_color.w);
-				}
-				else if(intensity > 0.25) {
+				} else if (intensity > 0.25) {
 					out_color = vec4(in_color.xyz * intensity, in_color.w);
-				}
-				else {
+				} else {
 					out_color = vec4(in_color.xyz * 0.1, in_color.w);
 				}
 			}

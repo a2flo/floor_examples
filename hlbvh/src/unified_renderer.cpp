@@ -42,7 +42,10 @@ struct uniforms_t {
 };
 
 void unified_renderer::destroy() {
+	render_pass = nullptr;
+	render_pipeline = nullptr;
 	scene_fbo.depth = nullptr;
+	uniforms_buffer = nullptr;
 }
 
 static void create_resources() {
@@ -132,7 +135,6 @@ bool unified_renderer::init(shared_ptr<compute_kernel> vs,
 }
 
 void unified_renderer::render(const vector<unique_ptr<animation>>& models,
-							  const vector<uint32_t>& collisions,
 							  const bool cam_mode,
 							  const camera& cam) {
 	auto renderer = hlbvh_state.rctx->create_graphics_renderer(*hlbvh_state.rqueue, *render_pass, *render_pipeline, false);
@@ -171,11 +173,7 @@ void unified_renderer::render(const vector<unique_ptr<animation>>& models,
 	uniforms_buffer->write(*hlbvh_state.rqueue, &uniforms);
 	hlbvh_state.rqueue->finish();
 	
-	const auto draw_collisions = (std::any_of(collisions.begin(), collisions.end(), [](const uint32_t& collision) { return (collision > 0u); }) &&
-								  hlbvh_state.triangle_vis);
-	
-	for (uint32_t i = 0, model_count = uint32_t(models.size()); i < model_count; ++i) {
-		const auto& mdl = models[i];
+	for (const auto& mdl : models) {
 		const auto cur_frame = (const floor_obj_model*)mdl->frames[mdl->cur_frame].get();
 		const auto next_frame = (const floor_obj_model*)mdl->frames[mdl->next_frame].get();
 		
@@ -184,7 +182,7 @@ void unified_renderer::render(const vector<unique_ptr<animation>>& models,
 				.index_buffer = obj->indices_floor_vbo.get(),
 				.index_count = uint32_t(obj->index_count)
 			};
-			if (!draw_collisions) {
+			if (!hlbvh_state.triangle_vis) {
 				renderer->draw_indexed(model_draw_info,
 									   // vertex shader
 									   cur_frame->vertices_buffer,

@@ -27,7 +27,6 @@
 struct gl_renderer {
 	static bool init();
 	static void render(const vector<unique_ptr<animation>>& models,
-					   const vector<uint32_t>& collisions,
 					   const bool cam_mode,
 					   const camera& cam);
 	static bool compile_shaders();

@@ -30,7 +30,6 @@ struct unified_renderer {
 					 shared_ptr<compute_kernel> fs);
 	static void destroy();
 	static void render(const vector<unique_ptr<animation>>& models,
-					   const vector<uint32_t>& collisions,
 					   const bool cam_mode,
 					   const camera& cam);
 };

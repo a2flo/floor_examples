@@ -848,6 +848,7 @@
 					"/opt/homebrew/opt/openssl@1.1/lib",
 					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -923,6 +924,7 @@
 					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				LLVM_LTO = NO;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -939,7 +941,7 @@
 					"-w",
 					"-lcrypto",
 					"-lssl",
-					"-lfloord",
+					"-lfloor",
 					"-framework",
 					OpenCL,
 					"-framework",

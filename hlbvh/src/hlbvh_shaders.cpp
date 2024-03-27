@@ -66,7 +66,7 @@ vertex auto hlbvh_vertex(buffer<const float3> in_position_a,
 	out.color = uniforms->default_color;
 	out.normal = { in_normal_a[vertex_id].interpolated(in_normal_b[vertex_id], delta) };
 #if COLLIDING_TRIANGLES_VIS
-	out.collision = (is_collision[vertex_id] > 0u ? 1.0f : 0.0f);
+	out.collision = (is_collision[vertex_id] > 0u ? 3.0f : 0.0f);
 #endif
 	
 	return out;
@@ -77,8 +77,8 @@ fragment auto hlbvh_fragment(const scene_in_out in [[stage_input]],
 	const auto intensity = uniforms->light_dir.dot(in.normal);
 	float4 color;
 #if COLLIDING_TRIANGLES_VIS
-	if (in.collision >= 0.999f /* due to interpolation issues, we might not get 1.0 here */) {
-		color = { 1.0f, 0.0f, 0.0f, 1.0f };
+	if (in.collision > 0.0f) {
+		color = { 1.0f, 1.0f - clamp(in.collision * 0.3333f, 0.0f, 1.0f), 0.0f, 1.0f };
 		color.xyz *= max(intensity, 0.6f);
 	}
 	else

@@ -343,7 +343,9 @@ int main(int, char* argv[]) {
 		
 		// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host, depending on the config)
 		hlbvh_state.cctx = floor::get_compute_context();
+		log_warn("compute ctx: $", hlbvh_state.cctx->get_compute_type());
 		hlbvh_state.rctx = floor::get_render_context();
+		log_warn("render ctx: $", hlbvh_state.rctx ? hlbvh_state.rctx->get_compute_type() : COMPUTE_TYPE::NONE);
 		if (!hlbvh_state.rctx) {
 			hlbvh_state.rctx = hlbvh_state.cctx;
 		}
@@ -474,18 +476,18 @@ int main(int, char* argv[]) {
 		frame_time = this_frame_time;
 		
 		// run the collision
-		const auto& collisions = hlbvh_collider->collide(models);
+		hlbvh_collider->collide(models);
 		
 		//
 		floor::set_caption("hlbvh | frame-time: " + to_string(frame_delta) + "ms");
 		
 		if (hlbvh_state.uni_renderer) {
 			// Metal/Vulkan rendering
-			unified_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
+			unified_renderer::render(models, hlbvh_state.cam_mode, *cam.get());
 		} else if (!hlbvh_state.no_opengl) {
 			// OpenGL rendering
 			floor::start_frame();
-			gl_renderer::render(models, collisions, hlbvh_state.cam_mode, *cam.get());
+			gl_renderer::render(models, hlbvh_state.cam_mode, *cam.get());
 			floor::end_frame();
 		}
 	}

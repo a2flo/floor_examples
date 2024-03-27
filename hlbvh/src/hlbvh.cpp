@@ -85,16 +85,16 @@ static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 // computes all interpolated triangles for this frame, stores these in a global buffer
 // and continues to build the root aabb of the mesh (which will be needed later on)
 // TODO: directly combine with build_bvh_aabbs_leaves?
-kernel_1d() void build_aabbs(buffer<const float3> triangles_cur,
-							 buffer<const float3> triangles_next,
-							 param<uint32_t> triangle_count,
-							 param<uint32_t> mesh_idx,
-							 param<float> interp,
-							 buffer<float> aabbs,
-							 buffer<float3> triangles) {
+kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_cur,
+												 buffer<const float3> triangles_next,
+												 param<uint32_t> triangle_count,
+												 param<uint32_t> mesh_idx,
+												 param<float> interp,
+												 buffer<float> aabbs,
+												 buffer<float3> triangles) {
 	const auto id = global_id.x;
 	float3 aabb_min, aabb_max;
-	if(id < triangle_count) {
+	if (id < triangle_count) {
 		const auto v0 = triangles_cur[id * 3].interpolated(triangles_next[id * 3], interp);
 		const auto v1 = triangles_cur[id * 3 + 1].interpolated(triangles_next[id * 3 + 1], interp);
 		const auto v2 = triangles_cur[id * 3 + 2].interpolated(triangles_next[id * 3 + 2], interp);
@@ -103,8 +103,7 @@ kernel_1d() void build_aabbs(buffer<const float3> triangles_cur,
 		triangles[id * 3 + 2] = v2;
 		aabb_min = v0.minned(v1).minned(v2);
 		aabb_max = v0.maxed(v1).maxed(v2);
-	}
-	else {
+	} else {
 		aabb_min = __FLT_MAX__;
 		aabb_max = -__FLT_MAX__;
 	}
@@ -113,9 +112,10 @@ kernel_1d() void build_aabbs(buffer<const float3> triangles_cur,
 	local_buffer<float3, compute_algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE>()> lmem_aabbs;
 	aabb_min = compute_algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs,
 															   [](const auto& lhs, const auto& rhs) { return lhs.minned(rhs); });
+	local_barrier();
 	aabb_max = compute_algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs,
 															   [](const auto& lhs, const auto& rhs) { return lhs.maxed(rhs); });
-	if(local_id.x == 0) {
+	if (local_id.x == 0) {
 		atomic_min(&aabbs[mesh_idx * 6 + 0], aabb_min.x);
 		atomic_min(&aabbs[mesh_idx * 6 + 1], aabb_min.y);
 		atomic_min(&aabbs[mesh_idx * 6 + 2], aabb_min.z);
@@ -193,7 +193,7 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 						   buffer<uint32_t> bvh_leaves,
 						   param<uint32_t> internal_node_count) {
 	const auto idx = global_id.x;
-	if(global_id.x >= internal_node_count) {
+	if (idx >= internal_node_count) {
 		return;
 	}
 	
@@ -209,15 +209,15 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 	// compute upper bound for the length of the range
 	const int delta_min = (d < 0 ? prefix_next : prefix_prev);
 	int l_max = 2;
-	while(prefix_checked(mc_idx, idx, int(idx) + l_max * d) > delta_min) {
+	while (prefix_checked(mc_idx, idx, int(idx) + l_max * d) > delta_min) {
 		l_max <<= 1;
 	}
 	// TODO: use paper hint with l_max <<= 2u and starting at 128? --good enough for now
 	
 	// find the other end using binary search
 	int l = 0;
-	for(int t = l_max >> 1; t > 0; t >>= 1) {
-		if(prefix_checked(mc_idx, idx, int(idx) + (l + t) * d) > delta_min) {
+	for (int t = l_max >> 1; t > 0; t >>= 1) {
+		if (prefix_checked(mc_idx, idx, int(idx) + (l + t) * d) > delta_min) {
 			l += t;
 		}
 	}
@@ -234,7 +234,7 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 	const auto mc_begin = morton_codes[range.x].x;
 	const auto mc_end = morton_codes[range.y].x;
 	uint32_t split = 0u;
-	if(mc_begin != mc_end) {
+	if (mc_begin != mc_end) {
 		const auto common_prefix = prefix_unchecked(mc_begin, mc_end);
 		split = range.x;
 		auto step = range.y - range.x;
@@ -243,16 +243,15 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 			step = (step + 1u) >> 1u;
 			const auto new_split = split + step;
 			
-			if(new_split < range.y) {
+			if (new_split < range.y) {
 				const auto split_code = morton_codes[new_split].x;
 				const auto split_prefix = prefix_unchecked(mc_begin, split_code);
-				if(split_prefix > common_prefix) {
+				if (split_prefix > common_prefix) {
 					split = new_split;
 				}
 			}
 		} while(step > 1u);
-	}
-	else {
+	} else {
 		// Karras says that the split is in the middle of the range if the morton codes are identical,
 		// and simply uses "(range.x + range.y) >> 1", but this is wrong under certain conditions
 		// -> use the same code as above, but with checked parameters
@@ -265,9 +264,9 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 			step = (step + 1u) >> 1u;
 			const auto new_split = split + step;
 			
-			if(new_split < range.y) {
+			if (new_split < range.y) {
 				const auto split_prefix = prefix_checked(mc_begin, range.x, int(new_split));
-				if(split_prefix > common_prefix) {
+				if (split_prefix > common_prefix) {
 					split = new_split;
 				}
 			}
@@ -279,20 +278,18 @@ kernel_1d() void build_bvh(buffer<const uint2> morton_codes,
 	const auto left_idx = split;
 	const auto right_idx = split + 1u;
 	
-	if(range.x == left_idx) {
+	if (range.x == left_idx) {
 		bvh_internal[idx].x = LEAF_FLAG(left_idx);
 		bvh_leaves[left_idx] = idx;
-	}
-	else {
+	} else {
 		bvh_internal[idx].x = left_idx;
 		bvh_internal[left_idx].z = uint32_t(idx);
 	}
 	
-	if(range.y == right_idx) {
+	if (range.y == right_idx) {
 		bvh_internal[idx].y = LEAF_FLAG(right_idx);
 		bvh_leaves[right_idx] = idx;
-	}
-	else {
+	} else {
 		bvh_internal[idx].y = right_idx;
 		bvh_internal[right_idx].z = uint32_t(idx);
 	}
@@ -318,25 +315,22 @@ kernel_1d() void build_bvh_aabbs_leaves(buffer<const uint2> morton_codes,
 	bvh_aabbs_leaves[idx * 2 + 1] = v0.maxed(v1).maxed(v2);
 }
 
-kernel_1d() void build_bvh_aabbs(buffer<const uint2> morton_codes floor_unused,
-								 buffer<const uint3> bvh_internal,
+kernel_1d() void build_bvh_aabbs(buffer<const uint3> bvh_internal,
 								 buffer<const uint32_t> bvh_leaves,
-								 param<uint32_t> internal_node_count floor_unused,
 								 param<uint32_t> leaf_count,
-								 buffer<const float3> triangles floor_unused,
 								 buffer<float3> bvh_aabbs,
-								 buffer<float3> bvh_aabbs_leaves,
+								 buffer<const float3> bvh_aabbs_leaves,
 								 buffer<uint32_t> counters) {
 	const auto idx = global_id.x;
-	if(idx >= leaf_count) {
+	if (idx >= leaf_count) {
 		return;
 	}
 	
 	auto parent = bvh_leaves[idx];
-	for(;;) {
+	for (;;) {
 		// "the first thread terminates immediately while the second one gets to process the node"
 		// counter old/return value is 0 for the first thread, 1 for the second -> process if 1
-		if(atomic_inc(&counters[parent]) != 1u) {
+		if (atomic_inc(&counters[parent]) != 1u) {
 			break;
 		}
 		
@@ -346,20 +340,18 @@ kernel_1d() void build_bvh_aabbs(buffer<const uint2> morton_codes floor_unused,
 		const auto masked_left_idx = node.x & LEAF_INV_MASK; // leaf node if highest bit set
 		const auto masked_right_idx = node.y & LEAF_INV_MASK;
 		
-		if(masked_left_idx != node.x) {
+		if (masked_left_idx != node.x) {
 			b_min_left = bvh_aabbs_leaves[masked_left_idx * 2];
 			b_max_left = bvh_aabbs_leaves[masked_left_idx * 2 + 1];
-		}
-		else {
+		} else {
 			b_min_left = bvh_aabbs[masked_left_idx * 2];
 			b_max_left = bvh_aabbs[masked_left_idx * 2 + 1];
 		}
 		
-		if(masked_right_idx != node.y) {
+		if (masked_right_idx != node.y) {
 			b_min_right = bvh_aabbs_leaves[masked_right_idx * 2];
 			b_max_right = bvh_aabbs_leaves[masked_right_idx * 2 + 1];
-		}
-		else {
+		} else {
 			b_min_right = bvh_aabbs[masked_right_idx * 2];
 			b_max_right = bvh_aabbs[masked_right_idx * 2 + 1];
 		}
@@ -368,7 +360,9 @@ kernel_1d() void build_bvh_aabbs(buffer<const uint2> morton_codes floor_unused,
 		bvh_aabbs[parent * 2 + 1] = b_max_left.max(b_max_right);
 		
 		// unless we're at the root, onto the next parent node
-		if(parent == 0) break;
+		if (parent == 0) {
+			break;
+		}
 		parent = node.z;
 	}
 }
@@ -454,7 +448,9 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 			// check abort condition (no need to do further checking when a collision has been found already)
 			// NOTE: need to check both, because either could have been set previously
 			// NOTE: if both have been set to true previously, this will also immediately return (as it should)
-			if(collision_flags[mesh_idx_a] > 0 && collision_flags[mesh_idx_b] > 0) break;
+			if (collision_flags[mesh_idx_a] > 0 && collision_flags[mesh_idx_b] > 0) {
+				break;
+			}
 		}
 		
 		bool traverse = false;
@@ -608,17 +604,17 @@ kernel_1d() void map_collided_triangles(buffer<const uint32_t> colliding_triangl
 // radix sort
 
 kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_count(buffer<const uint2> data,
-													   param<uint32_t> size,
-													   param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+													   param<uint32_t> count,
+													   param<uint32_t> count_per_group, // == count / COMPACTION_GROUP_COUNT
 													   param<uint32_t> mask_op_bit,
 													   buffer<uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	
 	uint16_t counter = 0;
-	for(uint32_t pair_id = lid + gid * size_per_group;
-		pair_id < ((gid + 1u) * size_per_group) && pair_id < size;
-		pair_id += COMPACTION_GROUP_SIZE) {
+	for (uint32_t pair_id = lid + gid * count_per_group;
+		 pair_id < ((gid + 1u) * count_per_group) && pair_id < count;
+		 pair_id += COMPACTION_GROUP_SIZE) {
 		if((data[pair_id].x & mask_op_bit) == 0u) {
 			++counter;
 		}
@@ -647,24 +643,24 @@ kernel_1d(PREFIX_SUM_GROUP_SIZE) void radix_sort_prefix_sum(buffer<uint32_t> in_
 
 kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_stream_split(buffer<const uint2> data,
 															  buffer<uint2> out,
-															  param<uint32_t> size,
-															  param<uint32_t> size_per_group, // == size / COMPACTION_GROUP_COUNT
+															  param<uint32_t> count,
+															  param<uint32_t> count_per_group, // == count / COMPACTION_GROUP_COUNT
 															  param<uint32_t> mask_op_bit,
 															  buffer<const uint32_t> valid_counts) {
 	const auto lid = local_id.x;
 	const auto gid = group_id.x;
 	auto valid_elem_offset = (gid == 0 ? 0 : valid_counts[gid - 1]);
-	auto invalid_elem_offset = valid_counts[COMPACTION_GROUP_COUNT - 1] + gid * size_per_group - valid_elem_offset;
+	auto invalid_elem_offset = valid_counts[COMPACTION_GROUP_COUNT - 1] + gid * count_per_group - valid_elem_offset;
 	
 	// since we're using barriers in here, all work-items must always execute this
 	// -> only abort once the base id is out of range
 	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
-	for(uint32_t base_id = gid * size_per_group;
-		base_id < ((gid + 1u) * size_per_group) && base_id < size;
-		base_id += COMPACTION_GROUP_SIZE) {
+	for (uint32_t base_id = gid * count_per_group;
+		 base_id < ((gid + 1u) * count_per_group) && base_id < count;
+		 base_id += COMPACTION_GROUP_SIZE) {
 		// pair id/offset for this work-item + check if it is actually active
 		const auto pair_id = base_id + lid;
-		const auto is_active = (pair_id < ((gid + 1u) * size_per_group) && pair_id < size);
+		const auto is_active = (pair_id < ((gid + 1u) * count_per_group) && pair_id < count);
 		
 		const auto current = data[is_active ? pair_id : base_id /* base is always valid */];
 		const auto valid = (is_active && (current.x & mask_op_bit) == 0u ? 1u : 0u);

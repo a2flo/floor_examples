@@ -65,8 +65,7 @@ struct animation {
 	shared_ptr<compute_buffer> bvh_aabbs_leaves;
 	shared_ptr<compute_buffer> bvh_aabbs_counters;
 	
-	uint32_t colliding_triangles_idx { 0 };
-	shared_ptr<compute_buffer> colliding_triangles[2];
+	shared_ptr<compute_buffer> colliding_triangles;
 	shared_ptr<compute_buffer> colliding_vertices;
 	vector<shared_ptr<compute_buffer>> frames_indices;
 	

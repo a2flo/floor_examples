@@ -25,9 +25,10 @@
 #define log_if_debug(...)
 #endif
 
-const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& models) {
-	if (models.empty()) return collision_flags_host;
-	if (hlbvh_state.stop) return collision_flags_host;
+void collider::collide(const vector<unique_ptr<animation>>& models) {
+	if (models.empty() || hlbvh_state.stop) {
+		return;
+	}
 	
 	if (hlbvh_state.benchmark) {
 		hlbvh_state.cqueue->finish();
@@ -67,10 +68,12 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 	
 	if (hlbvh_state.triangle_vis) {
 		for (const auto& mdl : models) {
-			// swap + clear
-			mdl->colliding_triangles_idx = 1 - mdl->colliding_triangles_idx;
-			mdl->colliding_triangles[mdl->colliding_triangles_idx]->zero(*hlbvh_state.cqueue);
+			mdl->colliding_triangles->zero(*hlbvh_state.cqueue);
+			mdl->colliding_vertices->zero(*hlbvh_state.cqueue);
 		}
+	}
+	for (const auto& mdl : models) {
+		mdl->bvh_aabbs_counters->zero(*hlbvh_state.cqueue);
 	}
 	
 	vector<float3> init_aabbs(model_count * 2);
@@ -79,6 +82,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		init_aabbs[i * 2 + 1] = float3(-__FLT_MAX__);
 	}
 	aabbs->write(*hlbvh_state.cqueue, init_aabbs);
+	hlbvh_state.cqueue->finish();
 	
 	// compute root aabbs
 	uint32_t mdl_idx = 0;
@@ -87,19 +91,18 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		const auto triangle_count = mdl->tri_count;
 		
 		log_if_debug("build_aabbs: $ ($)", mdl_idx, triangle_count);
-		hlbvh_state.cqueue->execute(*hlbvh_state.kernels["build_aabbs"],
-									uint1 { triangle_count },
-									uint1 { ROOT_AABB_GROUP_SIZE },
-									mdl->frames_triangles_buffer[cur_frame],
-									mdl->frames_triangles_buffer[next_frame],
-									triangle_count,
-									mdl_idx,
-									mdl->step,
-									aabbs,
-									mdl->triangles);
+		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernels["build_aabbs"],
+										 uint1 { triangle_count },
+										 uint1 { ROOT_AABB_GROUP_SIZE },
+										 mdl->frames_triangles_buffer[cur_frame],
+										 mdl->frames_triangles_buffer[next_frame],
+										 triangle_count,
+										 mdl_idx,
+										 mdl->step,
+										 aabbs,
+										 mdl->triangles);
 		++mdl_idx;
 	}
-	hlbvh_state.cqueue->finish();
 	
 	//
 	unordered_set<uint32_t> valid_meshes;
@@ -118,7 +121,7 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 		// read back aabb collision flags
 		aabb_collision_flags->read(*hlbvh_state.cqueue, aabb_collision_flags_host.get());
 		
-		// we're only interessted in further constructing+colliding bvhs for meshes whose root aabbs collide with something
+		// we're only interested in further constructing+colliding bvhs for meshes whose root aabbs collide with something
 		// and also only the resp. collision pairs
 		for (uint32_t lin_idx = 0; lin_idx < total_aabb_checks; ++lin_idx) {
 			if (aabb_collision_flags_host[lin_idx] != 0) {
@@ -179,16 +182,12 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 										 mdl->bvh_aabbs_leaves);
 		
 		log_if_debug("build_bvh_aabbs: $", i);
-		mdl->bvh_aabbs_counters->zero(*hlbvh_state.cqueue);
 		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernels["build_bvh_aabbs"],
 										 uint1 { leaf_count },
 										 uint1 { hlbvh_state.kernel_max_local_size["build_bvh_aabbs"] },
-										 mdl->morton_codes,
 										 mdl->bvh_internal,
 										 mdl->bvh_leaves,
-										 internal_node_count,
 										 leaf_count,
-										 mdl->triangles,
 										 mdl->bvh_aabbs,
 										 mdl->bvh_aabbs_leaves,
 										 mdl->bvh_aabbs_counters);
@@ -225,8 +224,8 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 											 // flags if resp. mesh A/B collides with anything
 											 // also (ab)used as an abort condition here
 											 collision_flags,
-											 mdl_i->colliding_triangles[mdl_i->colliding_triangles_idx],
-											 mdl_j->colliding_triangles[mdl_j->colliding_triangles_idx]);
+											 mdl_i->colliding_triangles,
+											 mdl_j->colliding_triangles);
 		} else {
 			hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernels["collide_bvhs_no_tri_vis"],
 											 uint1 { leaf_count_i },
@@ -273,20 +272,17 @@ const vector<uint32_t>& collider::collide(const vector<unique_ptr<animation>>& m
 			const auto& mdl = models[i];
 			const auto cur_frame = mdl->cur_frame;
 			const auto triangle_count = mdl->tri_count;
-			mdl->colliding_vertices->zero(*hlbvh_state.cqueue);
 			if (collision_flags_host[i] > 0) {
 				hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernels["map_collided_triangles"],
 												 uint1 { triangle_count },
 												 uint1 { hlbvh_state.kernel_max_local_size["map_collided_triangles"] },
-												 mdl->colliding_triangles[mdl->colliding_triangles_idx],
+												 mdl->colliding_triangles,
 												 mdl->frames_indices[cur_frame],
 												 mdl->colliding_vertices,
 												 triangle_count);
 			}
 		}
 	}
-	
-	return collision_flags_host;
 }
 
 void collider::radix_sort(shared_ptr<compute_buffer> buffer,
@@ -382,6 +378,9 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 		};
 		hlbvh_state.cqueue->execute_indirect(*radix_sort_pipeline, exec_params);
 	} else {
+		const auto count_arg = uint32_t(count);
+		const auto count_per_group_arg = uint32_t(count / COMPACTION_GROUP_COUNT);
+		
 		compute_queue::execution_parameters_t radix_sort_count_params {
 			.execution_dim = 1u,
 			.global_work_size = uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },
@@ -411,16 +410,16 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 			
 			radix_sort_count_params.args = {
 				buffer,
-				uint32_t(count),
-				uint32_t(count / COMPACTION_GROUP_COUNT),
+				count_arg,
+				count_per_group_arg,
 				mask_op_bit,
 				valid_counts_buffer
 			};
 			radix_sort_stream_split_params.args = {
 				buffer,
 				ping_buffer,
-				uint32_t(count),
-				uint32_t(count / COMPACTION_GROUP_COUNT),
+				count_arg,
+				count_per_group_arg,
 				mask_op_bit,
 				valid_counts_buffer
 			};
