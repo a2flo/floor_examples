@@ -343,9 +343,7 @@ int main(int, char* argv[]) {
 		
 		// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host, depending on the config)
 		hlbvh_state.cctx = floor::get_compute_context();
-		log_warn("compute ctx: $", hlbvh_state.cctx->get_compute_type());
 		hlbvh_state.rctx = floor::get_render_context();
-		log_warn("render ctx: $", hlbvh_state.rctx ? hlbvh_state.rctx->get_compute_type() : COMPUTE_TYPE::NONE);
 		if (!hlbvh_state.rctx) {
 			hlbvh_state.rctx = hlbvh_state.cctx;
 		}
