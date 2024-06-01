@@ -26,79 +26,12 @@
 #include <floor/constexpr/const_string.hpp>
 #include <floor/core/core.hpp>
 #include <floor/threading/task.hpp>
-#include <floor/core/gl_support.hpp>
 
-#if defined(__APPLE__)
-#include <SDL2_image/SDL_image.h>
-#elif defined(__WINDOWS__)
-#include <SDL2/SDL_image.h>
-#else
-#include <SDL_image.h>
-#endif
+#include <SDL3_image/SDL_image.h>
 
 #if defined(FLOOR_IOS)
 #include <floor/darwin/darwin_helper.hpp>
 #endif
-
-// -> opengl
-#if !defined(FLOOR_IOS)
-#if !defined(GL_BGRA8)
-#define GL_BGRA8 GL_BGRA
-#endif
-#if !defined(GL_BGR8)
-#define GL_BGR8 GL_BGR
-#endif
-
-#define __TEXTURE_FORMATS(F, src_surface, dst_internal_format, dst_format, dst_type) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 8, 0, 0, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 16, 0, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, 24, 0, 8, 16, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 24) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_BGR8, GL_BGR, GL_UNSIGNED_BYTE, 24, 16, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_BGR8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_BGRA8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 24) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_R16, GL_RED, GL_UNSIGNED_SHORT, 16, 0, 0, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG16, GL_RG, GL_UNSIGNED_SHORT, 32, 0, 16, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB16, GL_RGB, GL_UNSIGNED_SHORT, 48, 0, 16, 32, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT, 64, 0, 16, 32, 48)
-#else
-// these are necessary to correctly convert bgr textures to rgb
-#define FLOOR_IOS_GL_BGR 1
-#define FLOOR_IOS_GL_BGR8 2
-#if !defined(GL_BGRA8)
-#define GL_BGRA8 GL_BGRA
-#endif
-#if !defined(GL_BGR)
-#define GL_BGR FLOOR_IOS_GL_BGR
-#endif
-
-#define __TEXTURE_FORMATS(F, src_surface, dst_internal_format, dst_format, dst_type) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_R8, GL_RED, GL_UNSIGNED_BYTE, 8, 0, 0, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RG8, GL_RG, GL_UNSIGNED_BYTE, 16, 0, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE, 24, 0, 8, 16, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGB8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, 32, 0, 8, 16, 24) \
-F(src_surface, dst_internal_format, dst_format, dst_type, FLOOR_IOS_GL_BGR8, FLOOR_IOS_GL_BGR, GL_UNSIGNED_BYTE, 24, 16, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, FLOOR_IOS_GL_BGR8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 0) \
-F(src_surface, dst_internal_format, dst_format, dst_type, GL_BGRA8, GL_BGRA, GL_UNSIGNED_BYTE, 32, 16, 8, 0, 24)
-#endif
-
-#define __CHECK_FORMAT(src_surface, dst_internal_format, dst_format, dst_type, \
-					   gl_internal_format, gl_format, gl_type, bpp, rshift, gshift, bshift, ashift) \
-if(src_surface->format->Rshift == rshift && \
-   src_surface->format->Gshift == gshift && \
-   src_surface->format->Bshift == bshift && \
-   src_surface->format->Ashift == ashift && \
-   src_surface->format->BitsPerPixel == bpp) { \
-	dst_internal_format = gl_internal_format; \
-	dst_format = gl_format; \
-	dst_type = gl_type; \
-}
-
-#define check_format(surface, internal_format, format, texture_type) { \
-	__TEXTURE_FORMATS(__CHECK_FORMAT, surface, internal_format, format, texture_type); \
-}
 
 // -> floor (for use with metal/vulkan)
 #define __FLOOR_TEXTURE_FORMATS(F, src_surface, dst_image_type) \
@@ -120,7 +53,7 @@ if(src_surface->format->Rshift == rshift && \
    src_surface->format->Gshift == gshift && \
    src_surface->format->Bshift == bshift && \
    src_surface->format->Ashift == ashift && \
-   src_surface->format->BitsPerPixel == bpp) { \
+   src_surface->format->bits_per_pixel == bpp) { \
 	dst_image_type = floor_image_type; \
 }
 
@@ -129,7 +62,7 @@ COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surfac
 	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type)
 	if(image_type == COMPUTE_IMAGE_TYPE::NONE) {
 		log_error("unknown surface format: $, $, $, $, $",
-				  (uint32_t)surface->format->BitsPerPixel,
+				  (uint32_t)surface->format->bits_per_pixel,
 				  (uint32_t)surface->format->Rshift,
 				  (uint32_t)surface->format->Gshift,
 				  (uint32_t)surface->format->Bshift,
@@ -533,15 +466,21 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		static safe_mutex surface_free_mutex;
 		const auto free_surface = [](SDL_Surface* surf) {
 			GUARD(surface_free_mutex);
-			SDL_FreeSurface(surf);
+			SDL_DestroySurface(surf);
 		};
 		
 		// check format, BGR(A) needs to be converted to RGB(A)
-		[[maybe_unused]] GLint internal_format = 0;
-		GLenum format = 0;
-		[[maybe_unused]] GLenum type = 0;
-		check_format(surface, internal_format, format, type)
-		if(format == GL_BGR || format == GL_BGRA) {
+		const bool is_bgr = (surface->format->bits_per_pixel == 24 &&
+							 surface->format->Rshift == 16 &&
+							 surface->format->Gshift == 8 &&
+							 surface->format->Bshift == 0 &&
+							 surface->format->Ashift == 0);
+		const bool is_bgra = (surface->format->bits_per_pixel == 32 &&
+							  surface->format->Rshift == 24 &&
+							  surface->format->Gshift == 16 &&
+							  surface->format->Bshift == 8 &&
+							  (surface->format->Ashift == 0 || surface->format->Ashift == 24));
+		if (is_bgr || is_bgra) {
 			SDL_PixelFormat new_pformat;
 			memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
 			new_pformat.next = nullptr;
@@ -552,17 +491,16 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 			new_pformat.Rmask = surface->format->Bmask;
 			new_pformat.Bmask = surface->format->Rmask;
 			
-			if(surface->format->Ashift == 0) {
-				new_pformat.BytesPerPixel = 3;
-				new_pformat.BitsPerPixel = 24;
-			}
-			else if(format == GL_BGRA) {
-				new_pformat.BytesPerPixel = 4;
-				new_pformat.BitsPerPixel = 32;
+			if (surface->format->Ashift == 0) {
+				new_pformat.bytes_per_pixel = 3;
+				new_pformat.bits_per_pixel = 24;
+			} else if (is_bgra) {
+				new_pformat.bytes_per_pixel = 4;
+				new_pformat.bits_per_pixel = 32;
 			}
 			// else: keep it?
 			
-			SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat, 0);
+			SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat);
 			if(new_surface == nullptr) {
 				log_error("BGR(A)->RGB(A) surface conversion failed!");
 				free_surface(surface);
@@ -640,10 +578,6 @@ FLOOR_POP_WARNINGS()
 
 static void load_textures(// file name -> <gl tex id, compute image ptr>
 						  unordered_map<string, pair<uint32_t, compute_image*>>& texture_filenames,
-						  // opengl or metal/vulkan?
-						  const bool is_opengl,
-						  // gl tex ids
-						  vector<GLuint>* model_gl_textures,
 						  // metal/vulkan tex objects
 						  vector<shared_ptr<compute_image>>* model_floor_textures,
 						  // path prefix
@@ -686,124 +620,78 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 #if defined(FLOOR_DEBUG)
 	log_debug("$ textures loaded to mem", textures.size());
 #endif
-	
-#if !defined(FLOOR_IOS)
-	if(is_opengl) {
-		// create gl textures
-		model_gl_textures->resize(textures.size());
-		glGenTextures((GLsizei)model_gl_textures->size(), &(*model_gl_textures)[0]);
-		for(size_t i = 0, count = model_gl_textures->size(); i < count; ++i) {
+	// create metal/vulkan textures
+	model_floor_textures->resize(textures.size());
+	for (size_t i = 0, count = model_floor_textures->size(); i < count; ++i) {
+		COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
+		
+		if (textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
+			log_debug("texture #$ invalid due to load failure - continuing ...", i);
+			continue;
+		}
+		
+		uint2 dim;
+		void* pixels;
+		size_t image_size = 0;
+		if (textures[i].surface != nullptr) {
 			const SDL_Surface* surface = textures[i].surface;
-			if(surface == nullptr) {
-				log_debug("surface #$ invalid due to texture load failure - continuing ...", i);
+			image_type = obj_loader::floor_image_type_format(surface);
+			dim = { uint32_t(surface->w), uint32_t(surface->h) };
+			pixels = surface->pixels;
+			image_size = size_t(surface->pitch) * size_t(surface->h);
+		} else {
+			const auto tex = textures[i].pvrtc;
+			dim = tex->dim;
+			pixels = tex->pixels.get();
+			image_size = tex->image_size;
+			
+			if (tex->bpp != 2 && tex->bpp != 4) {
+				log_error("invalid bpp for pvrtc texture: $", tex->bpp);
 				continue;
 			}
 			
-			// assign gl tex id to tex filename
-			texture_filenames[filenames[i]].first = (*model_gl_textures)[i];
-			
-			// these values will be computed
-			GLint internal_format = 0;
-			GLenum format = 0;
-			GLenum type = 0;
-			check_format(surface, internal_format, format, type)
-			
-			//
-			glBindTexture(GL_TEXTURE_2D, (*model_gl_textures)[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16);
-			glTexImage2D(GL_TEXTURE_2D, 0, internal_format, surface->w, surface->h, 0, format, type, surface->pixels);
-			glGenerateMipmap(GL_TEXTURE_2D);
-			
-			// check for format problems
-			const auto gl_error = glGetError();
-			if(gl_error != 0) {
-				log_error("gl error in texture #$: $X", i, gl_error);
+			if (tex->bpp == 2) {
+				image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA2 : COMPUTE_IMAGE_TYPE::PVRTC_RGB2);
+			} else {
+				image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA4 : COMPUTE_IMAGE_TYPE::PVRTC_RGB4);
 			}
 		}
-#if defined(FLOOR_DEBUG)
-		log_debug("gl textures created");
-#endif
-	}
-	else
-#endif
-	{
-		// create metal/vulkan textures
-		model_floor_textures->resize(textures.size());
-		for(size_t i = 0, count = model_floor_textures->size(); i < count; ++i) {
-			COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
-			
-			if(textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
-				log_debug("texture #$ invalid due to load failure - continuing ...", i);
-				continue;
-			}
-			
-			uint2 dim;
-			void* pixels;
-			size_t image_size = 0;
-			if(textures[i].surface != nullptr) {
-				const SDL_Surface* surface = textures[i].surface;
-				image_type = obj_loader::floor_image_type_format(surface);
-				dim = { uint32_t(surface->w), uint32_t(surface->h) };
-				pixels = surface->pixels;
-				image_size = size_t(surface->pitch) * size_t(surface->h);
-			}
-			else {
-				const auto tex = textures[i].pvrtc;
-				dim = tex->dim;
-				pixels = tex->pixels.get();
-				image_size = tex->image_size;
-				
-				if(tex->bpp != 2 && tex->bpp != 4) {
-					log_error("invalid bpp for pvrtc texture: $", tex->bpp);
-					continue;
-				}
-				
-				if(tex->bpp == 2) {
-					image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA2 : COMPUTE_IMAGE_TYPE::PVRTC_RGB2);
-				}
-				else {
-					image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA4 : COMPUTE_IMAGE_TYPE::PVRTC_RGB4);
-				}
-			}
-			
-			image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
-						   COMPUTE_IMAGE_TYPE::READ |
-						   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
+		
+		image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
+					   COMPUTE_IMAGE_TYPE::READ |
+					   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
 #if !defined(FLOOR_IOS) && defined(__APPLE__) // TODO: PVRTC+sRGB for iOS, 3ch sRGB for Vulkan
-			// load diffuse and specular maps as sRGB
-			if (floor::get_wide_gamut() || true) {
-				if (filenames[i].find("_diff.") != string::npos ||
-					filenames[i].find("_spec.") != string::npos) {
-					image_type |= COMPUTE_IMAGE_TYPE::FLAG_SRGB;
-				}
+		// load diffuse and specular maps as sRGB
+		if (floor::get_wide_gamut() || true) {
+			if (filenames[i].find("_diff.") != string::npos ||
+				filenames[i].find("_spec.") != string::npos) {
+				image_type |= COMPUTE_IMAGE_TYPE::FLAG_SRGB;
 			}
-#endif
-			
-			//log_debug("tex $: $, $", filenames[i], dim, compute_image::image_type_to_string(image_type));
-			
-			(*model_floor_textures)[i] = ctx.create_image(cqueue,
-														  dim,
-														  image_type,
-														  span<uint8_t> { (uint8_t*)pixels, image_size },
-														  COMPUTE_MEMORY_FLAG::READ |
-														  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-														  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
-			
-			// assign tex ptr to tex filename
-			texture_filenames[filenames[i]].second = (*model_floor_textures)[i].get();
 		}
-#if defined(FLOOR_DEBUG)
-		log_debug("metal/vulkan/floor textures created");
 #endif
+		
+		//log_debug("tex $: $, $", filenames[i], dim, compute_image::image_type_to_string(image_type));
+		
+		(*model_floor_textures)[i] = ctx.create_image(cqueue,
+													  dim,
+													  image_type,
+													  span<uint8_t> { (uint8_t*)pixels, image_size },
+													  COMPUTE_MEMORY_FLAG::READ |
+													  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+													  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+		
+		// assign tex ptr to tex filename
+		texture_filenames[filenames[i]].second = (*model_floor_textures)[i].get();
 	}
+#if defined(FLOOR_DEBUG)
+	log_debug("metal/vulkan/floor textures created");
+#endif
 	
 	// cleanup
-	for(auto& tex : textures) {
-		if(tex.surface != nullptr) SDL_FreeSurface(tex.surface);
+	for (auto& tex : textures) {
+		if (tex.surface != nullptr) {
+			SDL_DestroySurface(tex.surface);
+		}
 		tex.pvrtc = nullptr;
 	}
 	textures.clear();
@@ -1084,7 +972,7 @@ struct obj_grammar {
 		});
 	}
 	
-	void parse(parser_context& ctx, bool& success, const bool is_opengl, const bool is_load_textures, shared_ptr<obj_model> model,
+	void parse(parser_context& ctx, bool& success, const bool is_load_textures, shared_ptr<obj_model> model,
 			   const compute_context& comp_ctx, const compute_queue& cqueue) {
 		// clear all
 		vertices.clear();
@@ -1348,23 +1236,16 @@ struct obj_grammar {
 			texture_filenames.emplace("up_normal.png", pair<uint32_t, compute_image*> { 0, nullptr });
 			
 			//
-			gl_obj_model* gl_model = (is_opengl ? (gl_obj_model*)model.get() : nullptr);
-			floor_obj_model* floor_model = (!is_opengl ? (floor_obj_model*)model.get() : nullptr);
-			if(is_opengl) {
-				gl_model->materials.resize(mats.size());
-			}
-			else {
-				floor_model->diffuse_textures.resize(mats.size());
-				floor_model->specular_textures.resize(mats.size());
-				floor_model->normal_textures.resize(mats.size());
-				floor_model->mask_textures.resize(mats.size());
-				floor_model->displacement_textures.resize(mats.size());
-			}
+			floor_obj_model* floor_model = (floor_obj_model*)model.get();
+			floor_model->diffuse_textures.resize(mats.size());
+			floor_model->specular_textures.resize(mats.size());
+			floor_model->normal_textures.resize(mats.size());
+			floor_model->mask_textures.resize(mats.size());
+			floor_model->displacement_textures.resize(mats.size());
 			model->material_infos.resize(mats.size());
-			if(is_load_textures) {
-				load_textures(texture_filenames, is_opengl,
-							  is_opengl ? &gl_model->textures : nullptr,
-							  !is_opengl ? &floor_model->textures : nullptr,
+			if (is_load_textures) {
+				load_textures(texture_filenames,
+							  &floor_model->textures,
 							  prefix, comp_ctx, cqueue);
 			}
 			
@@ -1385,21 +1266,11 @@ struct obj_grammar {
 				mdl_mat_info.displacement_file_name = (mat.second->displacement != "" ? mat.second->displacement : "gray.png");
 				mdl_mat_info.has_proper_displacement = (mat.second->displacement != "" ? 1u : 0u);
 				
-				if(is_opengl) {
-					auto& mdl_mat = gl_model->materials[mat_map[mat.first]];
-					mdl_mat.diffuse = texture_filenames[mdl_mat_info.diffuse_file_name].first;
-					mdl_mat.specular = texture_filenames[mdl_mat_info.specular_file_name].first;
-					mdl_mat.normal = texture_filenames[mdl_mat_info.normal_file_name].first;
-					mdl_mat.mask = texture_filenames[mdl_mat_info.mask_file_name].first;
-					// NOTE: displacement map is ignored for OpenGL
-				}
-				else {
-					floor_model->diffuse_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.diffuse_file_name].second;
-					floor_model->specular_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.specular_file_name].second;
-					floor_model->normal_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.normal_file_name].second;
-					floor_model->mask_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.mask_file_name].second;
-					floor_model->displacement_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.displacement_file_name].second;
-				}
+				floor_model->diffuse_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.diffuse_file_name].second;
+				floor_model->specular_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.specular_file_name].second;
+				floor_model->normal_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.normal_file_name].second;
+				floor_model->mask_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.mask_file_name].second;
+				floor_model->displacement_textures[mat_map[mat.first]] = texture_filenames[mdl_mat_info.displacement_file_name].second;
 			}
 			
 			// assign materials to sub-objects
@@ -1425,18 +1296,10 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 									   const bool is_load_textures,
 									   const bool create_gpu_buffers,
 									   const COMPUTE_MEMORY_FLAG add_mem_flags) {
-	const bool is_opengl = (ctx.get_compute_type() != COMPUTE_TYPE::METAL &&
-							ctx.get_compute_type() != COMPUTE_TYPE::VULKAN &&
-							!((ctx.get_compute_type() != COMPUTE_TYPE::HOST || ctx.get_compute_type() != COMPUTE_TYPE::CUDA) &&
-							  (has_flag<COMPUTE_MEMORY_FLAG::VULKAN_SHARING>(add_mem_flags) ||
-							   has_flag<COMPUTE_MEMORY_FLAG::METAL_SHARING>(add_mem_flags))));
 	success = false;
 	
-	shared_ptr<gl_obj_model> gl_model = (is_opengl ? make_shared<gl_obj_model>() : nullptr);
-	shared_ptr<floor_obj_model> floor_model = (!is_opengl ? make_shared<floor_obj_model>() : nullptr);
-	shared_ptr<obj_model> model = (is_opengl ?
-								   (shared_ptr<obj_model>)gl_model :
-								   (shared_ptr<obj_model>)floor_model);
+	shared_ptr<floor_obj_model> floor_model = make_shared<floor_obj_model>();
+	shared_ptr<obj_model> model = (shared_ptr<obj_model>)floor_model;
 	static constexpr const uint32_t bin_obj_version { 1 };
 	
 	// -> load .obj
@@ -1462,7 +1325,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		
 		parser_context parser_ctx { *tu };
 		obj_grammar obj_grammar_parser;
-		obj_grammar_parser.parse(parser_ctx, success, is_opengl, is_load_textures, model, ctx, cqueue);
+		obj_grammar_parser.parse(parser_ctx, success, is_load_textures, model, ctx, cqueue);
 		if(!success) {
 			log_error("obj parsing failed");
 			return {};
@@ -1494,9 +1357,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			bin_file.write_uint(bin_obj_version);
 			bin_file.write_uint((uint32_t)model->vertices.size());
 			bin_file.write_uint((uint32_t)model->objects.size());
-			bin_file.write_uint((uint32_t)(is_opengl ?
-										   gl_model->materials.size() :
-										   floor_model->diffuse_textures.size()));
+			bin_file.write_uint((uint32_t)floor_model->diffuse_textures.size());
 			
 			for(const auto& mtl : model->material_infos) {
 				bin_file.write_terminated_block(mtl.name, 0);
@@ -1581,16 +1442,11 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		model->normals.reserve(vertex_count);
 		model->binormals.reserve(vertex_count);
 		model->tangents.reserve(vertex_count);
-		if(is_opengl) {
-			gl_model->materials.reserve(mat_count);
-		}
-		else {
-			floor_model->diffuse_textures.reserve(mat_count);
-			floor_model->specular_textures.reserve(mat_count);
-			floor_model->normal_textures.reserve(mat_count);
-			floor_model->mask_textures.reserve(mat_count);
-			floor_model->displacement_textures.reserve(mat_count);
-		}
+		floor_model->diffuse_textures.reserve(mat_count);
+		floor_model->specular_textures.reserve(mat_count);
+		floor_model->normal_textures.reserve(mat_count);
+		floor_model->mask_textures.reserve(mat_count);
+		floor_model->displacement_textures.reserve(mat_count);
 		model->material_infos.reserve(mat_count);
 		model->objects.reserve(sub_object_count);
 		
@@ -1614,31 +1470,19 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			texture_filenames.emplace(mat.mask_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 			texture_filenames.emplace(mat.displacement_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
 		}
-		if(is_load_textures) {
-			load_textures(texture_filenames, is_opengl,
-						  is_opengl ? &gl_model->textures : nullptr,
-						  !is_opengl ? &floor_model->textures : nullptr,
+		if (is_load_textures) {
+			load_textures(texture_filenames,
+						  &floor_model->textures,
 						  prefix, ctx, cqueue);
 		}
 		
 		for(uint32_t i = 0; i < mat_count; ++i) {
 			auto& mdl_mat_info = model->material_infos[i];
-			if(is_opengl) {
-				gl_model->materials.emplace_back(gl_obj_model::material {
-					texture_filenames[mdl_mat_info.diffuse_file_name].first,
-					texture_filenames[mdl_mat_info.specular_file_name].first,
-					texture_filenames[mdl_mat_info.normal_file_name].first,
-					texture_filenames[mdl_mat_info.mask_file_name].first
-					// NOTE: displacement map is ignored for OpenGL
-				});
-			}
-			else {
-				floor_model->diffuse_textures.emplace_back(texture_filenames[mdl_mat_info.diffuse_file_name].second);
-				floor_model->specular_textures.emplace_back(texture_filenames[mdl_mat_info.specular_file_name].second);
-				floor_model->normal_textures.emplace_back(texture_filenames[mdl_mat_info.normal_file_name].second);
-				floor_model->mask_textures.emplace_back(texture_filenames[mdl_mat_info.mask_file_name].second);
-				floor_model->displacement_textures.emplace_back(texture_filenames[mdl_mat_info.displacement_file_name].second);
-			}
+			floor_model->diffuse_textures.emplace_back(texture_filenames[mdl_mat_info.diffuse_file_name].second);
+			floor_model->specular_textures.emplace_back(texture_filenames[mdl_mat_info.specular_file_name].second);
+			floor_model->normal_textures.emplace_back(texture_filenames[mdl_mat_info.normal_file_name].second);
+			floor_model->mask_textures.emplace_back(texture_filenames[mdl_mat_info.mask_file_name].second);
+			floor_model->displacement_textures.emplace_back(texture_filenames[mdl_mat_info.displacement_file_name].second);
 		}
 		
 		for(uint32_t i = 0; i < sub_object_count; ++i) {
@@ -1706,88 +1550,59 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 	}
 	
 	// create model buffers
-	for(auto& obj : (is_opengl ? gl_model->objects : floor_model->objects)) {
-		obj->index_count = (GLsizei)(obj->indices.size() * 3);
+	for(auto& obj : floor_model->objects) {
+		obj->index_count = (uint32_t)(obj->indices.size() * 3);
 	}
 	if(create_gpu_buffers) {
-		if(is_opengl) {
-			glGenBuffers(1, &gl_model->vertices_vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, gl_model->vertices_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->vertices.size() * sizeof(float3)), &gl_model->vertices[0], GL_STATIC_DRAW);
-			glGenBuffers(1, &gl_model->tex_coords_vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, gl_model->tex_coords_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tex_coords.size() * sizeof(float2)), &gl_model->tex_coords[0], GL_STATIC_DRAW);
-			glGenBuffers(1, &gl_model->normals_vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, gl_model->normals_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->normals.size() * sizeof(float3)), &gl_model->normals[0], GL_STATIC_DRAW);
-			glGenBuffers(1, &gl_model->binormals_vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, gl_model->binormals_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->binormals.size() * sizeof(float3)), &gl_model->binormals[0], GL_STATIC_DRAW);
-			glGenBuffers(1, &gl_model->tangents_vbo);
-			glBindBuffer(GL_ARRAY_BUFFER, gl_model->tangents_vbo);
-			glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(gl_model->tangents.size() * sizeof(float3)), &gl_model->tangents[0], GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			
-			for(auto& obj : gl_model->objects) {
-				glGenBuffers(1, &obj->indices_gl_vbo);
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, obj->indices_gl_vbo);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(obj->indices.size() * sizeof(uint3)), &obj->indices[0], GL_STATIC_DRAW);
+		// set material indices (only needed for floor_obj_model)
+		model->materials_data.clear();
+		model->materials_data.resize(floor_model->vertices.size());
+		for (const auto& obj : floor_model->objects) {
+			for (const auto& index : obj->indices) {
+				floor_model->materials_data[index.x] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
+				floor_model->materials_data[index.y] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
+				floor_model->materials_data[index.z] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
 			}
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			
-			glFinish();
 		}
-		else {
-			// set material indices (only needed for floor_obj_model)
-			model->materials_data.clear();
-			model->materials_data.resize(floor_model->vertices.size());
-			for(const auto& obj : floor_model->objects) {
-				for(const auto& index : obj->indices) {
-					floor_model->materials_data[index.x] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
-					floor_model->materials_data[index.y] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
-					floor_model->materials_data[index.z] = obj->mat_idx | (model->material_infos[obj->mat_idx].has_proper_displacement ? 0x10000u : 0u);
-				}
-			}
-			
-			// create buffers
-			const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
-									  COMPUTE_MEMORY_FLAG::HOST_WRITE |
-									  add_mem_flags);
-			floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
-			floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
-			floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
-			floor_model->binormals_buffer = ctx.create_buffer(cqueue, floor_model->binormals, buffer_type);
-			floor_model->tangents_buffer = ctx.create_buffer(cqueue, floor_model->tangents, buffer_type);
-			floor_model->materials_data_buffer = ctx.create_buffer(cqueue, floor_model->materials_data, buffer_type);
-			
-			vector<uint3> all_indices;
-			for(auto& obj : floor_model->objects) {
-				obj->indices_floor_vbo = ctx.create_buffer(cqueue, obj->indices, buffer_type);
-				all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
-			}
-			floor_model->index_count = (uint32_t)(all_indices.size() * 3);
-			floor_model->indices_buffer = ctx.create_buffer(cqueue, all_indices, buffer_type);
-			
+		
+		// create buffers
+		const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
+								  COMPUTE_MEMORY_FLAG::HOST_WRITE |
+								  add_mem_flags);
+		floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
+		floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
+		floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
+		floor_model->binormals_buffer = ctx.create_buffer(cqueue, floor_model->binormals, buffer_type);
+		floor_model->tangents_buffer = ctx.create_buffer(cqueue, floor_model->tangents, buffer_type);
+		floor_model->materials_data_buffer = ctx.create_buffer(cqueue, floor_model->materials_data, buffer_type);
+		
+		vector<uint3> all_indices;
+		for (auto& obj : floor_model->objects) {
+			obj->indices_floor_vbo = ctx.create_buffer(cqueue, obj->indices, buffer_type);
+			all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
+		}
+		floor_model->index_count = (uint32_t)(all_indices.size() * 3);
+		floor_model->indices_buffer = ctx.create_buffer(cqueue, all_indices, buffer_type);
+		
 #if defined(FLOOR_DEBUG)
-			auto model_name = file_name;
-			if (const auto last_slash = model_name.rfind('/'); last_slash != string::npos) {
-				model_name = model_name.substr(last_slash + 1);
-			}
-			if (const auto last_dot = model_name.rfind('.'); last_dot != string::npos) {
-				model_name = model_name.substr(0, last_dot);
-			}
-			floor_model->vertices_buffer->set_debug_label(model_name + ":vertices");
-			floor_model->tex_coords_buffer->set_debug_label(model_name + ":tex_coords");
-			floor_model->normals_buffer->set_debug_label(model_name + ":normals");
-			floor_model->binormals_buffer->set_debug_label(model_name + ":binormals");
-			floor_model->tangents_buffer->set_debug_label(model_name + ":tangents");
-			floor_model->materials_data_buffer->set_debug_label(model_name + ":materials_data");
-			for (auto& obj : floor_model->objects) {
-				obj->indices_floor_vbo->set_debug_label(model_name + ":sub_obj_indices");
-			}
-			floor_model->indices_buffer->set_debug_label(model_name + ":all_indices");
-#endif
+		auto model_name = file_name;
+		if (const auto last_slash = model_name.rfind('/'); last_slash != string::npos) {
+			model_name = model_name.substr(last_slash + 1);
 		}
+		if (const auto last_dot = model_name.rfind('.'); last_dot != string::npos) {
+			model_name = model_name.substr(0, last_dot);
+		}
+		floor_model->vertices_buffer->set_debug_label(model_name + ":vertices");
+		floor_model->tex_coords_buffer->set_debug_label(model_name + ":tex_coords");
+		floor_model->normals_buffer->set_debug_label(model_name + ":normals");
+		floor_model->binormals_buffer->set_debug_label(model_name + ":binormals");
+		floor_model->tangents_buffer->set_debug_label(model_name + ":tangents");
+		floor_model->materials_data_buffer->set_debug_label(model_name + ":materials_data");
+		for (auto& obj : floor_model->objects) {
+			obj->indices_floor_vbo->set_debug_label(model_name + ":sub_obj_indices");
+		}
+		floor_model->indices_buffer->set_debug_label(model_name + ":all_indices");
+#endif
 	}
 	
 	// clean up mem that isn't needed any more

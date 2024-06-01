@@ -28,6 +28,7 @@ struct unified_renderer {
 					 const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered);
 	static void destroy(const compute_context& ctx);
 	static void render(const compute_context& ctx, const compute_queue& dev_queue, const compute_buffer& position_buffer);
+	static bool resize_handler(EVENT_TYPE type, shared_ptr<event_object> evt);
 };
 
 #endif

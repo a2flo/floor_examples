@@ -1,9 +1,14 @@
-# VS/vcpkg/clang/CMake project for img
-cmake_minimum_required(VERSION 3.11)
+# CMake project for img
+cmake_minimum_required(VERSION 3.21)
 project(img)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
+
+## build options
+option(WITH_ASAN "build with address sanitizer" OFF)
+option(WITH_LIBCXX "build with libc++" OFF)
+option(BUILD_STANDALONE "build as a standalone binary (requires toolchain)" OFF)
 
 ## build output
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -16,8 +21,6 @@ add_executable(${PROJECT_NAME}
 	src/main.cpp
 	src/img_kernels.cpp
 	src/img_kernels.hpp
-	src/gl_blur.cpp
-	src/gl_blur.hpp
 )
 
 # include libfloor base configuration
@@ -27,3 +30,8 @@ if (WIN32)
 else ()
 	include(/opt/floor/include/floor/libfloor.cmake)
 endif (WIN32)
+
+# standalone build options
+if (BUILD_STANDALONE)
+	# TODO
+endif (BUILD_STANDALONE)

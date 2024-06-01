@@ -9,7 +9,7 @@
 		"fullscreen": false,
 		// enable vsync?
 		"vsync": true,
-		// if enabled, will create a opengl/metal window/surface using the native device/display resolution
+		// if enabled, will create a window/surface using the native device/display resolution
 		"hidpi": true,
 		// if enabled, use a wide-gamut render target/surface/view for Metal and Vulkan
 		"wide_gamut": true,
@@ -76,8 +76,6 @@
 	"toolchain": {
 		// opencl, cuda, metal, host or vulkan (NOTE: default backend depends on the OS)
 		"backend": "",
-		// if true, creates an opengl sharing context (only affects opencl right now, opengl sharing is always enabled with cuda and host)
-		"gl_sharing": false,
 		// compile code with debug information
 		"debug": false,
 		// compile code with profiling support
@@ -171,10 +169,10 @@
 		
 		// metal backend settings
 		"metal": {
-			// we need a different LLVM disassembler, because metallib is a container format
-			"dis": "metallib-dis",
+			// we need a different disassembler, because metallib is a container format
+			"metallib_dis": "metallib-dis",
 			// forces the compiler to generate code for the specified Metal version, instead of the one supported by the OS
-			// 0 = ignore this option, 11 = Metal 1.1, 12 = Metal 1.2, 20 = Metal 2.0, ...
+			// 0 = ignore this option, 30 = Metal 3.0, 31 = Metal 3.1, ...
 			"force_version": 0,
 			// if true, enables software printf in functions
 			// NOTE: this does come at a big performance cost and should only be enabled for debugging/development purposes

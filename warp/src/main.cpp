@@ -18,10 +18,8 @@
 
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
-#include <floor/core/gl_shader.hpp>
 #include <floor/compute/vulkan/vulkan_device.hpp>
 #include <libwarp/libwarp.h>
-#include "gl_renderer.hpp"
 #include "unified_renderer.hpp"
 #include "obj_loader.hpp"
 #include "auto_cam.hpp"
@@ -47,13 +45,11 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		cout << "\t--gather: warp in gather mode" << endl;
 		cout << "\t--gather-forward: warp in gather forward-only mode" << endl;
 		cout << "\t--no-warp: disables warping at the start (enable at run-time by pressing '1')" << endl;
-		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via opengl/metal/vulkan)" << endl;
+		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via metal/vulkan)" << endl;
 		cout << "\t                  NOTE: obviously an upper limit" << endl;
 		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
 		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
-		cout << "\t--depth-zw: write depth as z/w into a separate color fbo attachment (use this if OpenGL/OpenCL depth buffer sharing is not supported or broken)" << endl;
 		cout << "\t--always-render: always perform full scene rendering (warping is disabled), not that --frames/--target will be ignored if enabled" << endl;
-		cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << endl;
 		cout << "\t--no-arg-buffer: disables use of argument buffers in the unified renderer (also disables tessellation and indirect)" << endl;
 		cout << "\t--no-tessellation: disables tessellation in the unified renderer" << endl;
 		cout << "\t--no-indirect: disables indirect render/compute commands/pipelines in the unified renderer" << endl;
@@ -98,10 +94,6 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 		warp_state.is_warping = false;
 		cout << "warping disabled" << endl;
 	}},
-	{ "--depth-zw", [](warp_option_context&, char**&) {
-		warp_state.is_zw_depth = true;
-		cout << "using separate z/w depth buffer" << endl;
-	}},
 	{ "--always-render", [](warp_option_context&, char**&) {
 		warp_state.is_always_render = true;
 		cout << "always rendering (warping fully disabled)" << endl;
@@ -113,10 +105,6 @@ template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_hand
 	{ "--no-vulkan", [](warp_option_context&, char**&) {
 		warp_state.no_vulkan = true;
 		cout << "vulkan disabled" << endl;
-	}},
-	{ "--no-unified", [](warp_option_context&, char**&) {
-		warp_state.unified_renderer = false;
-		cout << "unified renderer disabled" << endl;
 	}},
 	{ "--no-arg-buffer", [](warp_option_context&, char**&) {
 		warp_state.use_argument_buffer = false;
@@ -148,7 +136,7 @@ static bool compile_program() {
 	// reset libwarp programs/kernels
 	libwarp_cleanup();
 	
-	if (warp_state.unified_renderer && uni_renderer) {
+	if (uni_renderer) {
 		uni_renderer->rebuild_renderer();
 	}
 	
@@ -245,12 +233,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				log_debug("px fixup? $", warp_state.is_fixup);
 				break;
 			case SDLK_5:
-				warp_state.legacy_cur_fbo = 0;
 				warp_state.is_bidir_scatter ^= true;
 				log_debug("bidirectional scatter? $", warp_state.is_bidir_scatter);
 				break;
 			case SDLK_g:
-				warp_state.legacy_cur_fbo = 0;
 				warp_state.is_scatter ^= true;
 				log_debug("scatter/gather? $", (warp_state.is_scatter ? "scatter" : "gather"));
 				break;
@@ -280,46 +266,22 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				break;
 			}
 			case SDLK_KP_0:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(0);
-				} else {
-					gl_renderer::set_debug_blit_mode(0);
-				}
+				uni_renderer->set_debug_blit_mode(0);
 				break;
 			case SDLK_KP_1:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(1);
-				} else {
-					gl_renderer::set_debug_blit_mode(1);
-				}
+				uni_renderer->set_debug_blit_mode(1);
 				break;
 			case SDLK_KP_2:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(2);
-				} else {
-					gl_renderer::set_debug_blit_mode(2);
-				}
+				uni_renderer->set_debug_blit_mode(2);
 				break;
 			case SDLK_KP_3:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(3);
-				} else {
-					gl_renderer::set_debug_blit_mode(3);
-				}
+				uni_renderer->set_debug_blit_mode(3);
 				break;
 			case SDLK_KP_4:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(4);
-				} else {
-					gl_renderer::set_debug_blit_mode(4);
-				}
+				uni_renderer->set_debug_blit_mode(4);
 				break;
 			case SDLK_KP_5:
-				if (uni_renderer) {
-					uni_renderer->set_debug_blit_mode(5);
-				} else {
-					gl_renderer::set_debug_blit_mode(5);
-				}
+				uni_renderer->set_debug_blit_mode(5);
 				break;
 			default: break;
 		}
@@ -352,14 +314,12 @@ int main(int, char* argv[]) {
 #endif
 	
 	// init floor
-	const auto wanted_renderer = (// if neither opengl or vulkan is disabled, use the default
-								  // (this will choose vulkan if the config compute backend is vulkan)
-								  (!warp_state.no_opengl && !warp_state.no_vulkan && warp_state.unified_renderer) ? floor::RENDERER::DEFAULT :
+	const auto wanted_renderer = (// if neither Metal nor Vulkan is disabled, use the default
+								  (!warp_state.no_metal && !warp_state.no_vulkan) ? floor::RENDERER::DEFAULT :
 								  // else: choose a specific one
-								  !warp_state.no_vulkan && warp_state.unified_renderer ? floor::RENDERER::VULKAN :
-								  !warp_state.no_metal && warp_state.unified_renderer ? floor::RENDERER::METAL :
-								  !warp_state.no_opengl ? floor::RENDERER::OPENGL :
-								  // opengl/vulkan/metal are disabled
+								  !warp_state.no_vulkan ? floor::RENDERER::VULKAN :
+								  !warp_state.no_metal ? floor::RENDERER::METAL :
+								  // vulkan/metal are disabled
 								  floor::RENDERER::NONE);
 	if(!floor::init(floor::init_state {
 		.call_path = argv[0],
@@ -371,18 +331,19 @@ int main(int, char* argv[]) {
 		.app_name = "warp",
 		.renderer = wanted_renderer,
 		// disable resource tracking and enable non-blocking Vulkan execution
-		.context_flags = ((warp_state.unified_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
-						   COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE) |
-						  COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING)
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
 	
-	// disable resp. other renderers when using opengl/metal/vulkan
+	// disable resp. other renderers when using metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
-	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
+	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (floor_renderer == floor::RENDERER::NONE) {
@@ -391,7 +352,6 @@ int main(int, char* argv[]) {
 	}
 	
 	if (is_metal) {
-		warp_state.no_opengl = true;
 		warp_state.no_vulkan = true;
 	} else {
 		warp_state.no_metal = true;
@@ -399,39 +359,20 @@ int main(int, char* argv[]) {
 	
 	if (is_vulkan) {
 		if (floor_renderer == floor::RENDERER::VULKAN) {
-			warp_state.no_opengl = true;
 			warp_state.no_metal = true;
-		}
-		// can't use OpenGL with Vulkan
-		else {
-			warp_state.no_opengl = true;
 		}
 	} else {
 		warp_state.no_vulkan = true;
 	}
 	
 	if (!is_metal && !is_vulkan) {
-		// neither Metal nor Vulkan is available (or disabled)
-		warp_state.unified_renderer = false;
+		log_error("neither Metal nor Vulkan is available (or disabled)");
+		return -3;
 	}
 	
-	log_debug("using $", (warp_state.unified_renderer ? "unified renderer" :
-						  !warp_state.no_opengl ? "opengl renderer" : "no renderer at all"));
-	
-	// floor context handling
-	struct floor_ctx_guard {
-		floor_ctx_guard() {
-			floor::acquire_context();
-		}
-		~floor_ctx_guard() {
-			floor::release_context();
-		}
-	};
 	event::handler evt_handler_fnctr(&evt_handler);
 	shared_ptr<obj_model> model;
 	{
-		floor_ctx_guard grd;
-		
 		// add event handlers
 		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
 													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
@@ -475,22 +416,16 @@ int main(int, char* argv[]) {
 			warp_state.rqueue = warp_state.cqueue;
 		}
 		
-		if (warp_state.unified_renderer) {
-			// disable argument_buffer use when argument buffers with images are not supported by the device
-			warp_state.use_argument_buffer &= warp_state.rdev->argument_buffer_image_support;
-			// tessellation requires argument_buffer support
-			warp_state.use_tessellation &= warp_state.rdev->tessellation_support & warp_state.use_argument_buffer;
-			
-			// if there isn't full argument buffer support or there isn't full indirect command support, disable indirect command use
-			if (!warp_state.use_argument_buffer ||
-				!warp_state.rdev->indirect_command_support ||
-				!warp_state.rdev->indirect_render_command_support ||
-				!warp_state.rdev->indirect_compute_command_support) {
-				warp_state.use_indirect_commands = false;
-			}
-		} else {
-			warp_state.use_argument_buffer = false;
-			warp_state.use_tessellation = false;
+		// disable argument_buffer use when argument buffers with images are not supported by the device
+		warp_state.use_argument_buffer &= warp_state.rdev->argument_buffer_image_support;
+		// tessellation requires argument_buffer support
+		warp_state.use_tessellation &= warp_state.rdev->tessellation_support & warp_state.use_argument_buffer;
+		
+		// if there isn't full argument buffer support or there isn't full indirect command support, disable indirect command use
+		if (!warp_state.use_argument_buffer ||
+			!warp_state.rdev->indirect_command_support ||
+			!warp_state.rdev->indirect_render_command_support ||
+			!warp_state.rdev->indirect_compute_command_support) {
 			warp_state.use_indirect_commands = false;
 		}
 		
@@ -524,24 +459,14 @@ int main(int, char* argv[]) {
 		}
 		
 		// init renderers (need compiled prog first)
-		if (warp_state.unified_renderer) {
-			warp_state.is_zw_depth = false; // not applicable to unified renderer
-			uni_renderer = make_shared<unified_renderer>();
-			if (!uni_renderer->init()) {
-				log_error("error during unified renderer initialization!");
-				return -1;
-			}
-			
-			// init displacement mode depending on tessellation support
-			warp_state.displacement_mode = (warp_state.use_tessellation ? 2u : 1u);
-		} else {
-			if(!warp_state.no_opengl) {
-				if(!gl_renderer::init()) {
-					log_error("error during opengl initialization!");
-					return -1;
-				}
-			}
+		uni_renderer = make_shared<unified_renderer>();
+		if (!uni_renderer->init()) {
+			log_error("error during unified renderer initialization!");
+			return -1;
 		}
+		
+		// init displacement mode depending on tessellation support
+		warp_state.displacement_mode = (warp_state.use_tessellation ? 2u : 1u);
 		
 		//
 		bool model_success { false };
@@ -551,11 +476,9 @@ int main(int, char* argv[]) {
 			return -1;
 		}
 		
-		if (warp_state.unified_renderer) {
-			uni_renderer->post_init(*warp_state.rqueue, *(floor_obj_model*)model.get(), *cam);
-		}
-	
-		// init done, release context
+		uni_renderer->post_init(*warp_state.rqueue, *(floor_obj_model*)model.get(), *cam);
+		
+		// init done
 	}
 	
 	// main loop
@@ -605,22 +528,13 @@ int main(int, char* argv[]) {
 		}
 		
 		if (!warp_state.stop) {
-			if (warp_state.no_opengl && !uni_renderer) {
-				// there is no s/w rendering
-			} else if (uni_renderer) {
-				uni_renderer->render();
-			} else if (!warp_state.no_opengl) {
-				floor::start_frame();
-				gl_renderer::render((const gl_obj_model&)*model.get(), *cam.get());
-				floor::end_frame();
-			}
+			uni_renderer->render();
 		}
 	}
 	log_msg("done!");
 	
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
-	gl_renderer::destroy();
 	uni_renderer = nullptr;
 	libwarp_destroy();
 	cam = nullptr;

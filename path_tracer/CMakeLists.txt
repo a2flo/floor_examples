@@ -1,6 +1,6 @@
-# CMake project for hlbvh
+# CMake project for path_tracer
 cmake_minimum_required(VERSION 3.21)
-project(hlbvh)
+project(path_tracer)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -16,23 +16,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
 ## source files
-include_directories("src" "../common/obj_loader" "../common/camera")
+include_directories("src")
 add_executable(${PROJECT_NAME}
 	src/main.cpp
-	src/collider.cpp
-	src/collider.hpp
-	src/unified_renderer.cpp
-	src/unified_renderer.hpp
-	src/animation.cpp
-	src/animation.hpp
-	src/hlbvh.cpp
-	src/hlbvh_shaders.cpp
-	src/hlbvh_state.hpp
-	src/triangle_intersection.hpp
-	../common/obj_loader/obj_loader.cpp
-	../common/obj_loader/obj_loader.hpp
-	../common/camera/camera.cpp
-	../common/camera/camera.hpp
+	src/cornell_box.hpp
+	src/path_tracer.cpp
+	src/path_tracer.hpp
 )
 
 # include libfloor base configuration

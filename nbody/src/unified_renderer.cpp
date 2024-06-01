@@ -37,10 +37,16 @@ static shared_ptr<compute_image> resolve_image;
 static unique_ptr<graphics_pass> blit_pass;
 static unique_ptr<graphics_pipeline> blit_pipeline;
 static bool is_vr_renderer { false };
+static event::handler resize_handler_fnctr = bind(&unified_renderer::resize_handler, placeholders::_1, placeholders::_2);
+
+static const compute_context* ctx_ptr { nullptr };
+static const compute_queue* dev_queue_ptr { nullptr };
+static bool enable_msaa { false };
+static constexpr const auto msaa_flags = COMPUTE_IMAGE_TYPE::FLAG_MSAA | COMPUTE_IMAGE_TYPE::FLAG_TRANSIENT | COMPUTE_IMAGE_TYPE::SAMPLE_COUNT_4;
+static constexpr const auto render_format = COMPUTE_IMAGE_TYPE::RGBA16F;
 
 static array<shared_ptr<compute_image>, 2> body_textures {};
 static void create_textures(const compute_context& ctx, const compute_queue& dev_queue) {
-	// create/generate an opengl texture and bind it
 	for (auto& body_texture : body_textures) {
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
@@ -74,7 +80,33 @@ static void create_textures(const compute_context& ctx, const compute_queue& dev
 	}
 }
 
-bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, const bool enable_msaa,
+bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
+	if (type == EVENT_TYPE::WINDOW_RESIZE) {
+		// intermediate render output image
+		const auto frame_dim = ctx_ptr->get_renderer_image_dim();
+		render_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
+											 render_format |
+											 (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
+											 (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE) |
+											 COMPUTE_IMAGE_TYPE::READ_WRITE |
+											 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
+											 COMPUTE_MEMORY_FLAG::READ_WRITE);
+		render_image->set_debug_label("render_image");
+		if (enable_msaa) {
+			resolve_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
+												  render_format |
+												  (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
+												  COMPUTE_IMAGE_TYPE::READ_WRITE |
+												  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
+												  COMPUTE_MEMORY_FLAG::READ_WRITE);
+			resolve_image->set_debug_label("resolve_image");
+		}
+		return true;
+	}
+	return false;
+}
+
+bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, const bool enable_msaa_,
 							const compute_kernel& vs, const compute_kernel& fs,
 							const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered) {
 	if (blit_vs == nullptr || blit_fs == nullptr || blit_fs_layered == nullptr) {
@@ -82,14 +114,17 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		return false;
 	}
 
+	enable_msaa = enable_msaa_;
+	dev_queue_ptr = &dev_queue;
+	ctx_ptr = &ctx;
+
+	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
+
 	create_textures(ctx, dev_queue);
 
 	is_vr_renderer = ctx.is_vr_supported();
 
 	// nbody rendering pipeline/pass
-	static constexpr const auto msaa_flags = COMPUTE_IMAGE_TYPE::FLAG_MSAA | COMPUTE_IMAGE_TYPE::FLAG_TRANSIENT | COMPUTE_IMAGE_TYPE::SAMPLE_COUNT_4;
-	const auto render_format = COMPUTE_IMAGE_TYPE::RGBA16F;
-
 	const render_pass_description pass_desc {
 		.attachments = {
 			{
@@ -98,7 +133,8 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 				.store_op = (enable_msaa ? STORE_OP::RESOLVE : STORE_OP::STORE),
 				.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
 			}
-		}
+		},
+		.debug_label = "nbody_render_pass",
 	};
 	renderer_pass = ctx.create_graphics_pass(pass_desc);
 	if (!renderer_pass) {
@@ -130,30 +166,15 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 				},
 			}
 		},
+		.debug_label = "nbody_render_pipeline",
 	};
 	renderer_pipeline = ctx.create_graphics_pipeline(pipeline_desc);
 	if (!renderer_pipeline) {
 		return false;
 	}
 
-	// intermediate render output image
-	render_image = ctx.create_image(dev_queue, ctx.get_renderer_image_dim(),
-									render_format |
-									(!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-									(enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE) |
-									COMPUTE_IMAGE_TYPE::READ_WRITE |
-									COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-									COMPUTE_MEMORY_FLAG::READ_WRITE);
-	render_image->set_debug_label("render_image");
-	if (enable_msaa) {
-		resolve_image = ctx.create_image(dev_queue, ctx.get_renderer_image_dim(),
-										 render_format |
-										 (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-										 COMPUTE_IMAGE_TYPE::READ_WRITE |
-										 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-										 COMPUTE_MEMORY_FLAG::READ_WRITE);
-		resolve_image->set_debug_label("resolve_image");
-	}
+	// trigger resize to create the output image
+	resize_handler(EVENT_TYPE::WINDOW_RESIZE, nullptr);
 
 	// blit pipeline/pass
 	const auto screen_format = ctx.get_renderer_image_type();
@@ -167,7 +188,8 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 				.store_op = STORE_OP::STORE,
 				.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
 			},
-		}
+		},
+		.debug_label = "nbody_blit_pass",
 	};
 	blit_pass = ctx.create_graphics_pass(blit_pass_desc);
 
@@ -184,6 +206,7 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		.color_attachments = {
 			{ .format = screen_format, },
 		},
+		.debug_label = "nbody_blit_pipeline",
 	};
 	blit_pipeline = ctx.create_graphics_pipeline(blit_pipeline_desc);
 	
@@ -191,6 +214,8 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 }
 
 void unified_renderer::destroy(const compute_context& ctx floor_unused) {
+	floor::get_event()->remove_event_handler(resize_handler_fnctr);
+
 	for (auto& tex : body_textures) {
 		tex = nullptr;
 	}
@@ -221,7 +246,11 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		}
 		
 		// attachments set, can begin rendering now
-		renderer->begin();
+		const auto render_dim = render_image->get_image_dim().xy;
+		renderer->begin({
+			.viewport = render_dim,
+			.scissor = { { { 0u, 0u }, render_dim } },
+		});
 
 		// setup uniforms
 		struct uniforms_t {
@@ -255,15 +284,15 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 		}
 		
 		// draw
-		static const vector<graphics_renderer::multi_draw_entry> nbody_draw_info {{
+		static const graphics_renderer::multi_draw_entry nbody_draw_info {
 			.vertex_count = nbody_state.body_count
-		}};
-		renderer->multi_draw(nbody_draw_info,
-							 // vs args
-							 position_buffer,
-							 uniforms,
-							 // fs args
-							 body_textures[0]);
+		};
+		renderer->draw(nbody_draw_info,
+					   // vs args
+					   position_buffer,
+					   uniforms,
+					   // fs args
+					   body_textures[0]);
 		renderer->end();
 		renderer->commit_and_finish();
 	}
@@ -281,13 +310,17 @@ void unified_renderer::render(const compute_context& ctx, const compute_queue& d
 			return;
 		}
 		blitter->set_attachments(drawable);
-		blitter->begin();
+		const auto render_dim = drawable->image->get_image_dim().xy;
+		blitter->begin({
+			.viewport = render_dim,
+			.scissor = { { { 0u, 0u }, render_dim } },
+		});
 		
-		static const vector<graphics_renderer::multi_draw_entry> blit_draw_info {{
+		static const graphics_renderer::multi_draw_entry blit_draw_info {
 			.vertex_count = 3 // fullscreen triangle
-		}};
+		};
 		const auto hdr_scaler = (floor::get_hdr() && floor::get_hdr_linear() ? ctx.get_hdr_range_max() : 1.0f);
-		blitter->multi_draw(blit_draw_info, resolve_image ? resolve_image : render_image, hdr_scaler);
+		blitter->draw(blit_draw_info, resolve_image ? resolve_image : render_image, hdr_scaler);
 		
 		blitter->end();
 		blitter->present();

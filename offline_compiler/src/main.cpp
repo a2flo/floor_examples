@@ -45,18 +45,20 @@
 #include <floor/compute/host/host_device.hpp>
 
 #include "fubar.hpp"
+#include "fubar_dis.hpp"
+#include "function_info.hpp"
 
 #define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
 #define FLOOR_OCC_FULL_VERSION_STR "offline compute compiler v" FLOOR_OCC_VERSION_STR
 
 struct option_context {
-	string filename { "" };
-	string output_filename { "" };
+	string filename;
+	string output_filename;
 	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
 	string sub_target;
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	METAL_VERSION metal_std { METAL_VERSION::METAL_3_0 };
-	uint32_t ptx_version { 60 };
+	uint32_t ptx_version { 80 };
 	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_3 };
 	optional<bool> warnings;
 	bool workarounds { false };
@@ -66,21 +68,20 @@ struct option_context {
 	bool basic_32_bit_float_atomics { false };
 	bool sub_groups { false };
 	uint32_t simd_width { 0 };
-	bool simd_reduction { false };
 	bool sw_depth_compare { true };
 	uint32_t image_rw_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool test { false };
 	bool test_bin { false };
 	bool cuda_sass { false };
 	bool spirv_text { false };
-	string cuda_sdk_path { "" };
-	string cuda_sass_filename { "" };
+	string cuda_sdk_path;
+	string cuda_sass_filename;
 	optional<uint32_t> cuda_max_registers;
 	optional<bool> cuda_no_short_ptr;
-	string spirv_text_filename { "" };
-	string test_bin_filename { "" };
-	string ffi_filename { "" };
-	string additional_options { "" };
+	string spirv_text_filename;
+	string test_bin_filename;
+	string ffi_filename;
+	string additional_options;
 	static constexpr const auto default_verbosity = (size_t)logger::LOG_TYPE::WARNING_MSG;
 	size_t verbosity { default_verbosity };
 	string config_path { "../../data/" };
@@ -90,10 +91,12 @@ struct option_context {
 	bool barycentric_coord_support { false };
 	
 	bool is_fubar_build { false };
+	bool is_fubar_disassemble { false };
 	fubar::TARGET_SET fubar_target_set { fubar::TARGET_SET::MINIMAL };
-	string fubar_target_set_file_name { "" };
-	string fubar_options_file_name { "" };
+	string fubar_target_set_file_name;
+	string fubar_options_file_name;
 	optional<bool> fubar_pch;
+	string fubar_dis_file_name;
 	
 	optional<bool> emit_debug_info;
 	optional<bool> preprocess_condense;
@@ -109,16 +112,17 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--src <input-file>: the source file that should be compiled\n"
 				 "\t--out <output-file>: the output file name (defaults to {$file.fubar,spir.bc,cuda.ptx,metal.air})\n"
 				 "\t--fubar <targets-json|all|minimal|graphics>: builds a Floor Universal Binary ARchive (reads targets from a .json file; uses all/minimal/graphics target set)\n"
+				 "\t--fubar-dis <archive.fubar>: disassembles a FUBAR file, printing the archive info and disassembled contents to console\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_30|sm_32|sm_35|sm_37|sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_30\n"
+				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios|osx|macos], defaults to ios\n"
+				 "\t    Metal/AIR:     [ios|macos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <2.0|2.1|2.2|2.3|2.4|3.0|3.1>: sets the supported Metal version (defaults to 3.0; 2.0 not supported on iOS)\n"
-				 "\t--ptx-version <60|61|62|63|64|65|70|71|72|73|74|75|76|77|78|80|81|82|83|84>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
+				 "\t--metal-std <3.0|3.1>: sets the supported Metal version (defaults to 3.0)\n"
+				 "\t--ptx-version <80|81|82|83|84>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -126,10 +130,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--no-double: explicitly disables double support (only SPIR/SPIR-V)\n"
 				 "\t--64-bit-atomics: explicitly enables basic 64-bit atomic operations support (only SPIR/SPIR-V, always enabled on PTX)\n"
 				 "\t--ext-64-bit-atomics: explicitly enables extended 64-bit atomic operations support (only SPIR/SPIR-V, enabled on PTX if sub-target >= sm_32)\n"
-				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (Metal and Vulkan/SPIR-V, always enabled on PTX)\n"
+				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (only Vulkan/SPIR-V, always enabled on PTX)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
-				 "\t--simd-reduction: enables SIMD reduction operations support (Metal only)\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
@@ -187,6 +190,15 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		} else {
 			ctx.fubar_target_set = fubar::TARGET_SET::USER_JSON;
 		}
+	}},
+	{ "--fubar-dis", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.is_fubar_disassemble = true;
+		ctx.fubar_dis_file_name = *arg_ptr;
 	}},
 	{ "--target", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -253,13 +265,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		const string mtl_version_str = *arg_ptr;
-		if(mtl_version_str == "2.0") { ctx.metal_std = METAL_VERSION::METAL_2_0; }
-		else if(mtl_version_str == "2.1") { ctx.metal_std = METAL_VERSION::METAL_2_1; }
-		else if(mtl_version_str == "2.2") { ctx.metal_std = METAL_VERSION::METAL_2_2; }
-		else if(mtl_version_str == "2.3") { ctx.metal_std = METAL_VERSION::METAL_2_3; }
-		else if(mtl_version_str == "2.4") { ctx.metal_std = METAL_VERSION::METAL_2_4; }
-		else if(mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
-		else if(mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
+		if (mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
+		else if (mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
@@ -272,12 +279,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.ptx_version = stou(*arg_ptr);
-		if(ctx.ptx_version != 60 && ctx.ptx_version != 61 && ctx.ptx_version != 62 && ctx.ptx_version != 63 &&
-		   ctx.ptx_version != 64 && ctx.ptx_version != 65 &&
-		   ctx.ptx_version != 70 && ctx.ptx_version != 71 && ctx.ptx_version != 72 && ctx.ptx_version != 73 &&
-		   ctx.ptx_version != 74 && ctx.ptx_version != 75 && ctx.ptx_version != 76 && ctx.ptx_version != 77 &&
-		   ctx.ptx_version != 78 && ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
-		   ctx.ptx_version != 83 && ctx.ptx_version != 84) {
+		if (ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
+			ctx.ptx_version != 83 && ctx.ptx_version != 84) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
@@ -326,9 +329,6 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.simd_width = stou(*arg_ptr);
-	}},
-	{ "--simd-reduction", [](option_context& ctx, char**&) {
-		ctx.simd_reduction = true;
 	}},
 	{ "--depth-compare", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -486,7 +486,7 @@ static int run_normal_build(option_context& option_ctx) {
 				const char* target_name = (option_ctx.target == llvm_toolchain::TARGET::SPIR ? "SPIR" :
 										   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
 				device = make_shared<opencl_device>();
-				if(option_ctx.sub_target == "" || option_ctx.sub_target == "gpu" ||
+				if(option_ctx.sub_target.empty() || option_ctx.sub_target == "gpu" ||
 				   option_ctx.sub_target == "opencl" || option_ctx.sub_target == "opencl-gpu") {
 					device->type = compute_device::TYPE::GPU;
 				}
@@ -517,11 +517,11 @@ static int run_normal_build(option_context& option_ctx) {
 				device->image_mipmap_write_support = true;
 				if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
 					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
-					device->image_read_write_support = (option_ctx.image_rw_support == 2 ? false : true);
+					device->image_read_write_support = (option_ctx.image_rw_support != 2);
 					device->param_workaround = option_ctx.workarounds;
 				}
 				else {
-					device->image_read_write_support = (option_ctx.image_rw_support == 1 ? true : false);
+					device->image_read_write_support = (option_ctx.image_rw_support == 1);
 					if(option_ctx.target == llvm_toolchain::TARGET::SPIR && option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -cl-spir-intel-workarounds ";
 					}
@@ -531,23 +531,21 @@ static int run_normal_build(option_context& option_ctx) {
 			}
 			case llvm_toolchain::TARGET::PTX:
 				device = make_shared<cuda_device>();
-				if(option_ctx.sub_target != "") {
+				if (!option_ctx.sub_target.empty()) {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
-					if(sm_pos == string::npos) {
+					if (sm_pos == string::npos) {
 						log_error("invalid PTX sub-target: $", option_ctx.sub_target);
 						return -2;
-					}
-					else {
+					} else {
 						const string sm_version = option_ctx.sub_target.substr(sm_pos + 3, option_ctx.sub_target.length() - sm_pos - 3);
 						const auto sm_version_int = stoul(sm_version);
 						((cuda_device*)device.get())->sm.x = (uint32_t)sm_version_int / 10u;
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
 					}
+				} else {
+					option_ctx.sub_target = "sm_50";
 				}
-				else option_ctx.sub_target = "sm_30";
-				device->image_depth_compare_support = (option_ctx.sw_depth_compare ? false : true);
-				device->extended_64_bit_atomics_support = (((cuda_device*)device.get())->sm.x > 3 ||
-														   (((cuda_device*)device.get())->sm.x == 3 && ((cuda_device*)device.get())->sm.y >= 2));
+				device->image_depth_compare_support = !option_ctx.sw_depth_compare;
 				log_debug("compiling to PTX (sm_$) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
 			case llvm_toolchain::TARGET::AIR: {
@@ -564,42 +562,26 @@ static int run_normal_build(option_context& option_ctx) {
 				}
 				
 				dev->family_tier = 1;
-				if (option_ctx.sub_target == "" || option_ctx.sub_target.find("ios") == 0) {
+				if (option_ctx.sub_target.empty() || option_ctx.sub_target.starts_with("ios")) {
 					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
-					if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
-						dev->family_tier = 6;
-					}
-				} else if (option_ctx.sub_target.find("osx") == 0 || option_ctx.sub_target.find("macos") == 0) {
+					dev->family_tier = 7;
+				} else if (option_ctx.sub_target.starts_with("macos")) {
 					dev->family_type = metal_device::FAMILY_TYPE::MAC;
-					if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
-						dev->family_tier = 2;
-						option_ctx.basic_32_bit_float_atomics = true;
-					}
+					dev->family_tier = 2;
 					if (option_ctx.workarounds) {
-						option_ctx.additional_options += " -Xclang -metal-intel-workarounds -Xclang -metal-nvidia-workarounds ";
+						option_ctx.additional_options += " -Xclang -metal-intel-workarounds ";
 					}
 				} else {
 					log_error("invalid AIR sub-target: $", option_ctx.sub_target);
 					return -3;
 				}
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
-				if (dev->family_type == metal_device::FAMILY_TYPE::MAC || option_ctx.sub_groups) {
-					// sub-group support is always available since macOS Metal 2.0, for iOS this needs to be enabled explicitly
-					device->sub_group_support = true;
-					device->sub_group_shuffle_support = true;
-					if (option_ctx.simd_width > 0) {
-						device->simd_width = option_ctx.simd_width;
-						device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
-					}
-				}
-				if (option_ctx.basic_32_bit_float_atomics) {
-					device->basic_32_bit_float_atomics_support = true;
+				if (option_ctx.simd_width > 0) {
+					device->simd_width = option_ctx.simd_width;
+					device->simd_range = { option_ctx.simd_width, option_ctx.simd_width };
 				}
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
-				}
-				if (option_ctx.simd_reduction) {
-					dev->simd_reduction = true;
 				}
 				log_debug("compiling to AIR (type: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
@@ -608,7 +590,7 @@ static int run_normal_build(option_context& option_ctx) {
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 				device = make_shared<vulkan_device>();
 				vulkan_device* dev = (vulkan_device*)device.get();
-				if(option_ctx.sub_target != "" && option_ctx.sub_target != "vulkan") {
+				if(!option_ctx.sub_target.empty() && option_ctx.sub_target != "vulkan") {
 					log_error("invalid SPIR-V Vulkan sub-target: $", option_ctx.sub_target);
 					return -5;
 				}
@@ -662,7 +644,7 @@ static int run_normal_build(option_context& option_ctx) {
 				host_device* dev = (host_device*)device.get();
 				
 				dev->cpu_tier = HOST_CPU_TIER::X86_TIER_1;
-				if (option_ctx.sub_target.find("x86") == 0) {
+				if (option_ctx.sub_target.starts_with("x86")) {
 					if (option_ctx.sub_target == "x86-5") {
 						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_5;
 					} else if (option_ctx.sub_target == "x86-4") {
@@ -672,7 +654,7 @@ static int run_normal_build(option_context& option_ctx) {
 					} else if (option_ctx.sub_target == "x86-2") {
 						dev->cpu_tier = HOST_CPU_TIER::X86_TIER_2;
 					}
-				} else if (option_ctx.sub_target.find("arm") == 0) {
+				} else if (option_ctx.sub_target.starts_with("arm")) {
 					if (option_ctx.sub_target == "arm-7") {
 						dev->cpu_tier = HOST_CPU_TIER::ARM_TIER_7;
 					} else if (option_ctx.sub_target == "arm-6") {
@@ -743,188 +725,13 @@ static int run_normal_build(option_context& option_ctx) {
 			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
 		};
 		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
-		for (const auto& info_ : program.functions) {
-			vector<pair<const llvm_toolchain::function_info*, uint32_t /* arg idx */>> arg_buffers_info;
-			const auto dump_function_info = [&option_ctx, &arg_buffers_info](const llvm_toolchain::function_info& info, string info_prefix) {
-				string info_str = "";
-				for (size_t i = 0, count = info.args.size(); i < count; ++i) {
-					switch (info.args[i].address_space) {
-						case llvm_toolchain::ARG_ADDRESS_SPACE::GLOBAL:
-							info_str += "global ";
-							break;
-						case llvm_toolchain::ARG_ADDRESS_SPACE::LOCAL:
-							info_str += "local ";
-							break;
-						case llvm_toolchain::ARG_ADDRESS_SPACE::CONSTANT:
-							info_str += "constant ";
-							break;
-						case llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE:
-							info_str += "image ";
-							break;
-						default: break;
-					}
-					
-					switch (info.args[i].special_type) {
-						case llvm_toolchain::SPECIAL_TYPE::STAGE_INPUT:
-							info_str += "stage_input ";
-							break;
-						case llvm_toolchain::SPECIAL_TYPE::PUSH_CONSTANT:
-							info_str += "push_constant ";
-							break;
-						case llvm_toolchain::SPECIAL_TYPE::SSBO:
-							info_str += "ssbo ";
-							break;
-						case llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY:
-							// implicitly SSBO
-							if (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN) {
-								info_str += "ssbo-";
-							}
-							[[fallthrough]];
-						case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
-							info_str += "array [" + to_string(info.args[i].size) + "] ";
-							break;
-						case llvm_toolchain::SPECIAL_TYPE::IUB:
-							info_str += "iub ";
-							break;
-						case llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER:
-							info_str += "argument_buffer ";
-							break;
-						default: break;
-					}
-					if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER) {
-						if (!info.args[i].argument_buffer_info) {
-							log_error("argument #$ in $ is an argument buffer, but no argument buffer info exists!",
-									  i, info.name);
-						} else {
-							arg_buffers_info.emplace_back(&info.args[i].argument_buffer_info.value(), i);
-						}
-					}
-					
-					if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE &&
-						info.args[i].special_type != llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
-						info_str += to_string(info.args[i].size);
-					} else if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
-						// nop
-					} else {
-						switch (info.args[i].image_access) {
-							case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
-								info_str += "read_only ";
-								break;
-							case llvm_toolchain::ARG_IMAGE_ACCESS::WRITE:
-								info_str += "write_only ";
-								break;
-							case llvm_toolchain::ARG_IMAGE_ACCESS::READ_WRITE:
-								info_str += "read_write ";
-								break;
-							default:
-								info_str += "no_access? "; // shouldn't happen ...
-								log_error("kernel image argument #$ has no access qualifier ($X)!", i, info.args[i].image_access);
-								break;
-						}
-						
-						if (option_ctx.target == llvm_toolchain::TARGET::PTX) {
-							// image type is not stored for ptx
-							info_str += to_string(info.args[i].size);
-						} else {
-							switch(info.args[i].image_type) {
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D:
-									info_str += "1D";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_ARRAY:
-									info_str += "1D array";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_1D_BUFFER:
-									info_str += "1D buffer";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D:
-									info_str += "2D";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY:
-									info_str += "2D array";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_DEPTH:
-									info_str += "2D depth";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_DEPTH:
-									info_str += "2D array depth";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA:
-									info_str += "2D msaa";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA:
-									info_str += "2D array msaa";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_MSAA_DEPTH:
-									info_str += "2D msaa depth";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_2D_ARRAY_MSAA_DEPTH:
-									info_str += "2D array msaa depth";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_3D:
-									info_str += "3D";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE:
-									info_str += "cube";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY:
-									info_str += "cube array";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_DEPTH:
-									info_str += "cube depth";
-									break;
-								case llvm_toolchain::ARG_IMAGE_TYPE::IMAGE_CUBE_ARRAY_DEPTH:
-									info_str += "cube array depth";
-									break;
-								default:
-									info_str += "unknown_type";
-									log_error("kernel image argument #$ has no type or an unknown type ($X)!", i, info.args[i].image_type);
-									break;
-							}
-						}
-					}
-					info_str += (i + 1 < count ? ", " : " ");
-				}
-				info_str = core::trim(info_str);
-				string func_type_name;
-				switch (info.type) {
-					case llvm_toolchain::FUNCTION_TYPE::KERNEL:
-						func_type_name = "function";
-						break;
-					case llvm_toolchain::FUNCTION_TYPE::VERTEX:
-					case llvm_toolchain::FUNCTION_TYPE::FRAGMENT:
-					case llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL:
-					case llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION:
-						func_type_name = "shader";
-						break;
-					case llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT:
-						func_type_name = "struct";
-						break;
-					case llvm_toolchain::FUNCTION_TYPE::NONE:
-						break;
-				}
-				log_msg("$'$ $: $ ($)",
-						info_prefix,
-						info.type == llvm_toolchain::FUNCTION_TYPE::KERNEL ? "kernel" :
-						info.type == llvm_toolchain::FUNCTION_TYPE::VERTEX ? "vertex" :
-						info.type == llvm_toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
-						info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL ? "tessellation-control" :
-						info.type == llvm_toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION ? "tessellation-evaluation" :
-						info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
-						func_type_name, info.name, info_str);
-			};
-			
-			// dump the function itself first
-			dump_function_info(info_, "");
-			
-			// then dump any argument buffer info
-			for (const auto& arg_buf_info : arg_buffers_info) {
-				dump_function_info(*arg_buf_info.first, "-> @" + to_string(arg_buf_info.second) + " ");
-			}
+		for (const auto& info_ : program.function_info) {
+			dump_function_info(info_, option_ctx.target);
 		}
 		
 		// output
 		const bool wants_console_output = (option_ctx.output_filename == "-");
-		if (option_ctx.output_filename == "" || option_ctx.output_filename == "-") {
+		if (option_ctx.output_filename.empty() || option_ctx.output_filename == "-") {
 			// output file name?
 			option_ctx.output_filename = "unknown.bin";
 			switch (option_ctx.target) {
@@ -940,13 +747,14 @@ static int run_normal_build(option_context& option_ctx) {
 		
 		// write to file
 		if (option_ctx.target == llvm_toolchain::TARGET::AIR ||
-		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
-		   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ||
-		   option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
+			option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
+			option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ||
+			option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
 			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
-			if (option_ctx.output_filename != "") {
-				core::system("mv \"" + program.data_or_filename + "\" \"" + option_ctx.output_filename + "\"");
+			if (!option_ctx.output_filename.empty()) {
+				error_code ec {};
+				std::filesystem::rename(program.data_or_filename, option_ctx.output_filename, ec);
 			} else {
 				option_ctx.output_filename = program.data_or_filename;
 			}
@@ -990,8 +798,8 @@ static int run_normal_build(option_context& option_ctx) {
 	
 	// handle cuda sass generation
 	if(option_ctx.cuda_sass) {
-		const auto dot_pos = option_ctx.output_filename.rfind(".");
-		string cubin_filename = "";
+		const auto dot_pos = option_ctx.output_filename.rfind('.');
+		string cubin_filename;
 		if(dot_pos != string::npos) cubin_filename = option_ctx.output_filename.substr(0, dot_pos);
 		else cubin_filename = option_ctx.output_filename;
 		
@@ -1010,7 +818,7 @@ static int run_normal_build(option_context& option_ctx) {
 			(option_ctx.cuda_sass_filename == "-" ? ""s : " > " + option_ctx.cuda_sass_filename)
 		};
 		if(floor::get_toolchain_log_commands()) log_debug("cuobjdump cmd: $", cuobjdump_cmd);
-		string ptxas_output = "", cuobjdump_output = "";
+		string ptxas_output, cuobjdump_output;
 		core::system(ptxas_cmd, ptxas_output);
 		log_undecorated("$", ptxas_output);
 		core::system(cuobjdump_cmd, cuobjdump_output);
@@ -1018,12 +826,12 @@ static int run_normal_build(option_context& option_ctx) {
 	}
 	
 	// handle spir-v text assembly output
-	if(option_ctx.spirv_text) {
+	if (option_ctx.spirv_text) {
 		const auto& spirv_dis = (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
 								 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis());
-		string spirv_dis_output = "";
+		string spirv_dis_output;
 		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
-		if(spirv_dis_output != "") {
+		if (!spirv_dis_output.empty()) {
 			log_msg("spirv-dis: $", spirv_dis_output);
 		}
 	}
@@ -1035,7 +843,7 @@ static int run_normal_build(option_context& option_ctx) {
 			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
-				auto ctx = make_shared<opencl_compute>(COMPUTE_CONTEXT_FLAGS::NONE, floor::get_opencl_platform(), false /* no opengl here */, floor::get_opencl_whitelist());
+				auto ctx = make_shared<opencl_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, floor::get_opencl_platform(), floor::get_opencl_whitelist());
 				auto cl_ctx = ctx->get_opencl_context();
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
@@ -1050,7 +858,7 @@ static int run_normal_build(option_context& option_ctx) {
 					// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
 					size_t binary_length;
 					const unsigned char* binary_ptr;
-					string binary_str = "";
+					string binary_str;
 					cl_int status = CL_SUCCESS;
 					if(!option_ctx.test_bin) {
 						binary_length = program.data_or_filename.size();
@@ -1129,8 +937,8 @@ static int run_normal_build(option_context& option_ctx) {
 				
 				// retrieve the compiled binaries again
 				const auto binaries = cl_get_info<CL_PROGRAM_BINARIES>(opencl_program);
-				for(size_t i = 0; i < binaries.size(); ++i) {
-					file_io::string_to_file("binary_" + core::to_file_name(dev->name) + ".bin", binaries[i]);
+				for (const auto& binary : binaries) {
+					file_io::string_to_file("binary_" + core::to_file_name(dev->name) + ".bin", binary);
 				}
 #else
 				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
@@ -1139,7 +947,7 @@ static int run_normal_build(option_context& option_ctx) {
 			}
 			case llvm_toolchain::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
-				auto ctx = make_shared<metal_compute>(COMPUTE_CONTEXT_FLAGS::NONE, false, nullptr, floor::get_metal_whitelist());
+				auto ctx = make_shared<metal_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_metal_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
@@ -1152,7 +960,8 @@ static int run_normal_build(option_context& option_ctx) {
 					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_metal_toolchain_version())) {
+					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+																	floor::get_metal_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
 					}
@@ -1174,7 +983,7 @@ static int run_normal_build(option_context& option_ctx) {
 			}
 			case llvm_toolchain::TARGET::PTX: {
 #if !defined(FLOOR_NO_CUDA)
-				auto ctx = make_shared<cuda_compute>(COMPUTE_CONTEXT_FLAGS::NONE, floor::get_cuda_whitelist());
+				auto ctx = make_shared<cuda_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, floor::get_cuda_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
@@ -1190,7 +999,8 @@ static int run_normal_build(option_context& option_ctx) {
 						break;
 					}
 					
-					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions, floor::get_cuda_toolchain_version())) {
+					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+																	floor::get_cuda_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
 					}
@@ -1207,7 +1017,7 @@ static int run_normal_build(option_context& option_ctx) {
 			}
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
-				auto ctx = make_shared<vulkan_compute>(COMPUTE_CONTEXT_FLAGS::NONE, false, nullptr, floor::get_vulkan_whitelist());
+				auto ctx = make_shared<vulkan_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_vulkan_whitelist());
 				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
@@ -1220,8 +1030,8 @@ static int run_normal_build(option_context& option_ctx) {
 					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if(!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.functions,
-																   floor::get_vulkan_toolchain_version())) {
+					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+																	floor::get_vulkan_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $",
 								  option_ctx.ffi_filename);
 						break;
@@ -1256,12 +1066,15 @@ int main(int, char* argv[]) {
 	// handle options
 	option_context option_ctx;
 	occ_opt_handler::parse_options(argv + 1, option_ctx);
-	if(option_ctx.done) return 0;
+	if (option_ctx.done) {
+		return 0;
+	}
 			
 	// preempt floor logger init
-	logger::init(option_ctx.verbosity, false, false, true, true, "occ.txt");
+	logger::init(option_ctx.is_fubar_disassemble ? size_t(logger::LOG_TYPE::UNDECORATED) : option_ctx.verbosity,
+				 false, false, true, true, "occ.txt");
 	
-	if(!floor::init(floor::init_state {
+	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
 		.data_path = option_ctx.config_path.c_str(),
@@ -1323,6 +1136,8 @@ int main(int, char* argv[]) {
 			ret_code = -42;
 			log_error("failed to build FUBAR");
 		}
+	} else if (option_ctx.is_fubar_disassemble) {
+		fubar::disassemble(option_ctx.fubar_dis_file_name);
 	} else {
 		ret_code = run_normal_build(option_ctx);
 	}

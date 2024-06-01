@@ -119,7 +119,7 @@ protected:
 	
 	// hack for mice on os x 10.12+ that don't have proper warp support
 	bool delta_hack { false };
-	int2 last_delta;
+	float2 last_delta;
 	
 	// [right, left, up, down]
 	atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };

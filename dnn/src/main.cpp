@@ -21,18 +21,12 @@
 #include "nn_importer.hpp"
 #include "nn_executer.hpp"
 #include "dnn_state.hpp"
-#include "../../common/obj/obj_loader.hpp"
+#include "../../common/obj_loader/obj_loader.hpp"
 #if defined(FLOOR_IOS)
 #include "ios/CamViewController.h"
 #endif
 
-#if defined(__APPLE__)
-#include <SDL2_image/SDL_image.h>
-#elif defined(__WINDOWS__)
-#include <SDL2/SDL_image.h>
-#else
-#include <SDL_image.h>
-#endif
+#include <SDL3_image/SDL_image.h>
 
 dnn_state_struct dnn_state;
 static constexpr const uint2 expected_img_dim { 224, 224 };
@@ -41,7 +35,7 @@ struct dnn_option_context {
 	string image_file_name { "nets/test/tiger_rgba.png" };
 	bool load_fp16 { false };
 	// unused
-	string additional_options { "" };
+	string additional_options;
 };
 typedef option_handler<dnn_option_context> dnn_opt_handler;
 
@@ -257,34 +251,21 @@ int main(int, char* argv[]) {
 		return -1;
 	}
 	
-	// floor context handling
-	struct floor_ctx_guard {
-		floor_ctx_guard() {
-			floor::acquire_context();
-		}
-		~floor_ctx_guard() {
-			floor::release_context();
-		}
-	};
+	// add event handlers
 	event::handler evt_handler_fnctr(&evt_handler);
-	{
-		floor_ctx_guard grd;
+	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
+												   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN);
 	
-		// add event handlers
-		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN);
-		
-		// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
-		dnn_state.ctx = floor::get_compute_context();
-		
-		// create a compute queue (aka command queue or stream) for the fastest device in the context
-		dnn_state.dev = dnn_state.ctx->get_device(compute_device::TYPE::FASTEST);
-		dnn_state.dev_queue = dnn_state.ctx->create_queue(*dnn_state.dev);
-		
-		// compile the program and get the kernel functions
-		if(!nn_executer::init_kernels()) return -1;
-		
-		// init done, release context
+	// get the compute context that has been automatically created (opencl/cuda/metal/vulkan/host)
+	dnn_state.ctx = floor::get_compute_context();
+	
+	// create a compute queue (aka command queue or stream) for the fastest device in the context
+	dnn_state.dev = dnn_state.ctx->get_device(compute_device::TYPE::FASTEST);
+	dnn_state.dev_queue = dnn_state.ctx->create_queue(*dnn_state.dev);
+	
+	// compile the program and get the kernel functions
+	if (!nn_executer::init_kernels()) {
+		return -1;
 	}
 	
 	do { // scoped for auto-cleanup
@@ -353,10 +334,6 @@ int main(int, char* argv[]) {
 	
 	// unregister event handler (we really don't want to react to events when destructing everything)
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
-	
-	// cleanup
-	floor::acquire_context();
-	floor::release_context();
 	
 	// kthxbye
 	floor::destroy();

@@ -1,6 +1,6 @@
-# CMake project for hlbvh
+# CMake project for warp
 cmake_minimum_required(VERSION 3.21)
-project(hlbvh)
+project(warp)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -19,16 +19,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 include_directories("src" "../common/obj_loader" "../common/camera")
 add_executable(${PROJECT_NAME}
 	src/main.cpp
-	src/collider.cpp
-	src/collider.hpp
+	src/warp_shaders.cpp
+	src/warp_state.hpp
+	src/auto_cam.cpp
+	src/auto_cam.hpp
 	src/unified_renderer.cpp
 	src/unified_renderer.hpp
-	src/animation.cpp
-	src/animation.hpp
-	src/hlbvh.cpp
-	src/hlbvh_shaders.cpp
-	src/hlbvh_state.hpp
-	src/triangle_intersection.hpp
 	../common/obj_loader/obj_loader.cpp
 	../common/obj_loader/obj_loader.hpp
 	../common/camera/camera.cpp
@@ -53,3 +49,18 @@ if (NOT BUILD_STANDALONE)
 	find_package(SDL3_image CONFIG REQUIRED)
 	target_link_libraries(${PROJECT_NAME} PRIVATE SDL3_image::SDL3_image)
 endif (NOT BUILD_STANDALONE)
+
+## add libwarp
+if (WIN32)
+	target_link_directories(${PROJECT_NAME} PRIVATE $ENV{ProgramW6432}/libwarp/lib)
+	target_include_directories(${PROJECT_NAME} PRIVATE $ENV{ProgramW6432}/libwarp/include)
+	target_link_libraries(${PROJECT_NAME} PRIVATE debug libwarpd optimized libwarp)
+else ()
+	target_link_directories(${PROJECT_NAME} PRIVATE /opt/libwarp/lib)
+	target_include_directories(${PROJECT_NAME} PRIVATE /opt/libwarp/include)
+	if (CMAKE_BUILD_TYPE MATCHES "DEBUG" OR CMAKE_BUILD_TYPE MATCHES "Debug")
+		target_link_options(${PROJECT_NAME} PRIVATE -lwarpd)
+	else ()
+		target_link_options(${PROJECT_NAME} PRIVATE -lwarp)
+	endif ()
+endif (WIN32)

@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -27,48 +27,20 @@
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
-		5C8646271C19B2A4000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C8646291C19B2A4000518C7 /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
-		5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
-		5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
-		5C86462D1C19B2A4000518C7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
-		5C86462E1C19B2A4000518C7 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C86462F1C19B2A4000518C7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
-		5C8646301C19B2A4000518C7 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
-		5C8646311C19B2A4000518C7 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
-		5C8646321C19B2A4000518C7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
-		5C8646331C19B2A4000518C7 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
-		5C8646341C19B2A4000518C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
-		5C8646351C19B2A4000518C7 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
-		5C8646361C19B2A4000518C7 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
-		5C8646381C19B2A4000518C7 /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
-		5C8646391C19B2A4000518C7 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
-		5C86463C1C19B2A4000518C7 /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
-		5C86463D1C19B2A4000518C7 /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
-		5C86463E1C19B2A4000518C7 /* hlbvh.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* hlbvh.metallib */; };
-		5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
 		5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
-		5CCCE9C52B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */; };
 		5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC61D1F373100369136 /* obj_loader.cpp */; };
 		5CE8AECA1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
 		5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
-		5CE8AECC1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */; };
 		5CE8AECF1D1F9CCD00369136 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AECD1D1F9CCD00369136 /* animation.cpp */; };
 		5CE8AED01D1F9CCD00369136 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AECD1D1F9CCD00369136 /* animation.cpp */; };
-		5CE8AED11D1F9CCD00369136 /* animation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AECD1D1F9CCD00369136 /* animation.cpp */; };
 		5CF11C261D237F2800AB7502 /* collider.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF11C251D237F2800AB7502 /* collider.cpp */; };
 		5CF11C271D237F2800AB7502 /* collider.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF11C251D237F2800AB7502 /* collider.cpp */; };
-		5CF11C281D237F2800AB7502 /* collider.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF11C251D237F2800AB7502 /* collider.cpp */; };
 		5CF948971D2AB1BA00FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948951D2AB1BA00FEA7AE /* camera.cpp */; };
-		5CF948981D2AB3D300FEA7AE /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
 		5CF948991D2AB3D300FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC61D1F373100369136 /* obj_loader.cpp */; };
 		5CF9489A1D2AB3D300FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948951D2AB1BA00FEA7AE /* camera.cpp */; };
-		5CF9489B1D2AB3DA00FEA7AE /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */; };
-		5CF9489C1D2AB3DA00FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC61D1F373100369136 /* obj_loader.cpp */; };
-		5CF9489D1D2AB3DA00FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948951D2AB1BA00FEA7AE /* camera.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -81,18 +53,6 @@
 				5C5487801B608DE40088272A /* config.json in CopyFiles */,
 				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
 				5C30CAA51AA625F5008986B1 /* hlbvh.metallib in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C86463B1C19B2A4000518C7 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data;
-			dstSubfolderSpec = 7;
-			files = (
-				5C86463C1C19B2A4000518C7 /* config.json in CopyFiles */,
-				5C86463D1C19B2A4000518C7 /* config.json.local in CopyFiles */,
-				5C86463E1C19B2A4000518C7 /* hlbvh.metallib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -119,9 +79,6 @@
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* hlbvh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hlbvh.cpp; sourceTree = "<group>"; };
-		5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
-		5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_renderer.hpp; sourceTree = "<group>"; };
-		5C8646421C19B2A4000518C7 /* hlbvhd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hlbvhd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0941AD3366800215230 /* hlbvhd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = hlbvhd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
@@ -131,8 +88,8 @@
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CE8AEBF1D1D029200369136 /* triangle_intersection.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = triangle_intersection.hpp; sourceTree = "<group>"; };
-		5CE8AEC61D1F373100369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj/obj_loader.cpp; sourceTree = "<group>"; };
-		5CE8AEC71D1F373100369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj/obj_loader.hpp; sourceTree = "<group>"; };
+		5CE8AEC61D1F373100369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj_loader/obj_loader.cpp; sourceTree = "<group>"; };
+		5CE8AEC71D1F373100369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj_loader/obj_loader.hpp; sourceTree = "<group>"; };
 		5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hlbvh_shaders.cpp; sourceTree = "<group>"; };
 		5CE8AECD1D1F9CCD00369136 /* animation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = animation.cpp; sourceTree = "<group>"; };
 		5CE8AECE1D1F9CCD00369136 /* animation.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = animation.hpp; sourceTree = "<group>"; };
@@ -159,25 +116,6 @@
 				5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */,
 				5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */,
 				5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C86462A1C19B2A4000518C7 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5C86462B1C19B2A4000518C7 /* AudioToolbox.framework in Frameworks */,
-				5C86462C1C19B2A4000518C7 /* CoreAudio.framework in Frameworks */,
-				5C86462D1C19B2A4000518C7 /* CoreGraphics.framework in Frameworks */,
-				5C86462E1C19B2A4000518C7 /* CoreMotion.framework in Frameworks */,
-				5C86462F1C19B2A4000518C7 /* Foundation.framework in Frameworks */,
-				5C8646301C19B2A4000518C7 /* ImageIO.framework in Frameworks */,
-				5C8646311C19B2A4000518C7 /* libxml2.2.dylib in Frameworks */,
-				5C8646321C19B2A4000518C7 /* Metal.framework in Frameworks */,
-				5C8646331C19B2A4000518C7 /* MobileCoreServices.framework in Frameworks */,
-				5C8646341C19B2A4000518C7 /* OpenGLES.framework in Frameworks */,
-				5C8646351C19B2A4000518C7 /* QuartzCore.framework in Frameworks */,
-				5C8646361C19B2A4000518C7 /* UIKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +180,6 @@
 				5C8FD0B91AD3392500215230 /* osx */,
 				5C0071911A91EF7E00F4711D /* hlbvhd.app */,
 				5C8FD0941AD3366800215230 /* hlbvhd.app */,
-				5C8646421C19B2A4000518C7 /* hlbvhd.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -256,8 +193,6 @@
 				5C7467131A5828D000999E78 /* hlbvh.cpp */,
 				5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */,
 				5CE8AEBF1D1D029200369136 /* triangle_intersection.hpp */,
-				5C7C93931AC6F12100C93E7C /* gl_renderer.cpp */,
-				5C7C93941AC6F12100C93E7C /* gl_renderer.hpp */,
 				5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */,
 				5CCCE9C12B9BDC9300EDD2F7 /* unified_renderer.hpp */,
 				5CE8AEC61D1F373100369136 /* obj_loader.cpp */,
@@ -293,25 +228,6 @@
 			productReference = 5C0071911A91EF7E00F4711D /* hlbvhd.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5C8646231C19B2A4000518C7 /* hlbvh_ios_sideload */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "hlbvh_ios_sideload" */;
-			buildPhases = (
-				5C8646241C19B2A4000518C7 /* Run Script */,
-				5C8646251C19B2A4000518C7 /* Sources */,
-				5C86462A1C19B2A4000518C7 /* Frameworks */,
-				5C8646371C19B2A4000518C7 /* Resources */,
-				5C86463B1C19B2A4000518C7 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = hlbvh_ios_sideload;
-			productName = hlbvh_ios;
-			productReference = 5C8646421C19B2A4000518C7 /* hlbvhd.app */;
-			productType = "com.apple.product-type.application";
-		};
 		5C8FD0931AD3366800215230 /* hlbvh_osx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "hlbvh_osx" */;
@@ -336,14 +252,11 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1530;
+				LastUpgradeCheck = 1540;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
 						CreatedOnToolsVersion = 6.3;
-					};
-					5C8646231C19B2A4000518C7 = {
-						DevelopmentTeam = S63YFDZ98S;
 					};
 					5C8FD0931AD3366800215230 = {
 						CreatedOnToolsVersion = 6.3;
@@ -351,7 +264,7 @@
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "hlbvh" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -365,7 +278,6 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* hlbvh_osx */,
 				5C0071901A91EF7E00F4711D /* hlbvh_ios */,
-				5C8646231C19B2A4000518C7 /* hlbvh_ios_sideload */,
 			);
 		};
 /* End PBXProject section */
@@ -377,15 +289,6 @@
 			files = (
 				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
 				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646371C19B2A4000518C7 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5C8646381C19B2A4000518C7 /* Base.lproj in Resources */,
-				5C8646391C19B2A4000518C7 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,20 +330,6 @@
 			shellPath = /bin/sh;
 			shellScript = "cd src\nocc --src hlbvh.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -Dhlbvh_TILE_SIZE=512 -Dhlbvh_SOFTENING=0.01f -Dhlbvh_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=hlbvh.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r hlbvh.a hlbvh.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/hlbvh.metallib hlbvh.a\n";
 		};
-		5C8646241C19B2A4000518C7 /* Run Script */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Run Script";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src hlbvh.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -Dhlbvh_TILE_SIZE=512 -Dhlbvh_SOFTENING=0.01f -Dhlbvh_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=hlbvh.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r hlbvh.a hlbvh.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/hlbvh.metallib hlbvh.a\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -448,7 +337,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5CF948981D2AB3D300FEA7AE /* gl_renderer.cpp in Sources */,
 				5CF948991D2AB3D300FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489A1D2AB3D300FEA7AE /* camera.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
@@ -457,22 +345,6 @@
 				5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
 				5CF11C271D237F2800AB7502 /* collider.cpp in Sources */,
 				5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646251C19B2A4000518C7 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5CF9489B1D2AB3DA00FEA7AE /* gl_renderer.cpp in Sources */,
-				5CF9489C1D2AB3DA00FEA7AE /* obj_loader.cpp in Sources */,
-				5CF9489D1D2AB3DA00FEA7AE /* camera.cpp in Sources */,
-				5C8646271C19B2A4000518C7 /* main.cpp in Sources */,
-				5C8646291C19B2A4000518C7 /* hlbvh.cpp in Sources */,
-				5CE8AED11D1F9CCD00369136 /* animation.cpp in Sources */,
-				5CE8AECC1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
-				5CF11C281D237F2800AB7502 /* collider.cpp in Sources */,
-				5CCCE9C52B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -485,7 +357,6 @@
 				5CF11C261D237F2800AB7502 /* collider.cpp in Sources */,
 				5CF948971D2AB1BA00FEA7AE /* camera.cpp in Sources */,
 				5CE8AECA1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
-				5C8FD0B51AD3389B00215230 /* gl_renderer.cpp in Sources */,
 				5CE8AECF1D1F9CCD00369136 /* animation.cpp in Sources */,
 				5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */,
 				5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
@@ -501,34 +372,35 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_BITCODE = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
 					"$(inherited)",
 					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
 					"$(inherited)",
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -538,29 +410,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
+					"-framework",
+					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
@@ -569,7 +424,6 @@
 				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Debug;
 		};
@@ -579,30 +433,31 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
-				ENABLE_BITCODE = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
 					"$(inherited)",
 					PLATFORM_X64,
 				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -612,29 +467,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
+					"-framework",
+					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
@@ -644,164 +482,6 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
-			};
-			name = Release;
-		};
-		5C8646401C19B2A4000518C7 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_BITCODE = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					FLOOR_IOS,
-					FLOOR_NO_OPENCL,
-					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				INFOPLIST_FILE = src/ios/Info.plist;
-				LIBRARY_SEARCH_PATHS = (
-					"$(SDKROOT)/usr/lib",
-					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
-					"-v",
-				);
-				"OTHER_LDFLAGS[arch=*]" = (
-					"$(inherited)",
-					"-lfloord_static",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.hlbvh;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
-			};
-			name = Debug;
-		};
-		5C8646411C19B2A4000518C7 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				COPY_PHASE_STRIP = NO;
-				ENABLE_BITCODE = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					FLOOR_IOS,
-					FLOOR_NO_OPENCL,
-					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				INFOPLIST_FILE = src/ios/Info.plist;
-				LIBRARY_SEARCH_PATHS = (
-					"$(SDKROOT)/usr/lib",
-					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
-				);
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
-					"-v",
-				);
-				"OTHER_LDFLAGS[arch=*]" = (
-					"$(inherited)",
-					"-lfloor_static",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.hlbvh;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Release;
 		};
@@ -812,15 +492,15 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -841,35 +521,23 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-w",
-					"-lcrypto",
-					"-lssl",
 					"-lfloord",
-					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
 					"-framework",
 					Metal,
 					"-framework",
@@ -877,9 +545,9 @@
 					"-framework",
 					QuartzCore,
 					"-framework",
-					SDL2,
+					SDL3,
 					"-framework",
-					SDL2_image,
+					SDL3_image,
 				);
 			};
 			name = Debug;
@@ -891,15 +559,15 @@
 				CLANG_WARN_ASSIGN_ENUM = YES;
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
-				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
+				CLANG_X86_VECTOR_INSTRUCTIONS = default;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
@@ -916,36 +584,24 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				LLVM_LTO = NO;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-w",
-					"-lcrypto",
-					"-lssl",
 					"-lfloor",
-					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
 					"-framework",
 					Metal,
 					"-framework",
@@ -953,9 +609,9 @@
 					"-framework",
 					QuartzCore,
 					"-framework",
-					SDL2,
+					SDL3,
 					"-framework",
-					SDL2_image,
+					SDL3_image,
 				);
 			};
 			name = Release;
@@ -965,8 +621,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -989,11 +644,12 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
@@ -1017,7 +673,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1027,14 +683,10 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				MTL_FAST_MATH = YES;
-				MTL_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=c++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1053,6 +705,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -1084,8 +745,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -1108,12 +768,13 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1131,7 +792,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1141,13 +802,9 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
-				MTL_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=c++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1166,6 +823,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -1200,15 +866,6 @@
 			buildConfigurations = (
 				5C0071B11A91EF7E00F4711D /* Debug */,
 				5C0071B21A91EF7E00F4711D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5C86463F1C19B2A4000518C7 /* Build configuration list for PBXNativeTarget "hlbvh_ios_sideload" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5C8646401C19B2A4000518C7 /* Debug */,
-				5C8646411C19B2A4000518C7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -25,9 +25,6 @@
 #include <floor/compute/host/host_compute.hpp>
 #include <floor/compute/indirect_command.hpp>
 #include <floor/vr/vr_context.hpp>
-#include "gl_renderer.hpp"
-#include "metal_renderer.hpp"
-#include "vulkan_renderer.hpp"
 #include "unified_renderer.hpp"
 #include "nbody_state.hpp"
 nbody_state_struct nbody_state;
@@ -90,18 +87,16 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\t--mass <min> <max>: sets the random mass interval (default: " << nbody_state.mass_minmax_default << ")" << endl;
 		cout << "\t--softening <softening>: sets the simulation softening (default: " << nbody_state.softening << ")" << endl;
 		cout << "\t--damping <damping>: sets the simulation damping (default: " << nbody_state.damping << ")" << endl;
-		cout << "\t--no-opengl: disables opengl rendering (uses s/w rendering instead)" << endl;
 #if defined(__APPLE__)
-		cout << "\t--no-metal: disables metal rendering (uses s/w rendering instead if --no-opengl as well)" << endl;
+		cout << "\t--no-metal: disables metal rendering (uses s/w rendering instead)" << endl;
 #endif
 		cout << "\t--no-vulkan: disables vulkan rendering (uses s/w rendering instead)" << endl;
-		cout << "\t--unified: use the unified renderer (default; requires Metal or Vulkan)" << endl;
-		cout << "\t--no-unified: disables the unified renderer" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
 		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
-		cout << "\t--msaa: enable 4xMSAA rendering" << endl;
+		cout << "\t--no-msaa: disable 4xMSAA rendering" << endl;
 		cout << "\t--no-indirect: disables indirect command pipeline usage" << endl;
+		cout << "\t--no-fubar: don't use the compiled FUBAR file/data if it exists (integrated or on disk)" << endl;
 		for(const auto& desc : nbody_setup_desc) {
 			cout << "\t\t" << desc << endl;
 		}
@@ -229,10 +224,6 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		nbody_state.damping = strtof(*arg_ptr, nullptr);
 		cout << "damping set to: " << nbody_state.damping << endl;
 	}},
-	{ "--no-opengl", [](nbody_option_context&, char**&) {
-		nbody_state.no_opengl = true;
-		cout << "opengl disabled" << endl;
-	}},
 	{ "--no-metal", [](nbody_option_context&, char**&) {
 		nbody_state.no_metal = true;
 		cout << "metal disabled" << endl;
@@ -241,16 +232,7 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		nbody_state.no_vulkan = true;
 		cout << "vulkan disabled" << endl;
 	}},
-	{ "--unified", [](nbody_option_context&, char**&) {
-		nbody_state.unified_renderer = true;
-		cout << "unified renderer enabled" << endl;
-	}},
-	{ "--no-unified", [](nbody_option_context&, char**&) {
-		nbody_state.unified_renderer = false;
-		cout << "unified renderer disabled" << endl;
-	}},
 	{ "--benchmark", [](nbody_option_context&, char**&) {
-		nbody_state.no_opengl = true; // also disable opengl
 		nbody_state.no_metal = true; // also disable metal
 		nbody_state.no_vulkan = true; // also disable vulkan
 		nbody_state.benchmark = true;
@@ -288,13 +270,17 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		nbody_state.render_size = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
 		cout << "render size set to: " << nbody_state.render_size << endl;
 	}},
-	{ "--msaa", [](nbody_option_context&, char**&) {
-		nbody_state.msaa = true;
-		cout << "MSAA rendering enabled" << endl;
+	{ "--no-msaa", [](nbody_option_context&, char**&) {
+		nbody_state.msaa = false;
+		cout << "MSAA rendering disabled" << endl;
 	}},
 	{ "--no-indirect", [](nbody_option_context&, char**&) {
 		nbody_state.no_indirect = true;
 		cout << "indirect command pipelines disabled" << endl;
+	}},
+	{ "--no-fubar", [](nbody_option_context&, char**&) {
+		nbody_state.no_fubar = true;
+		cout << "FUBAR disabled" << endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](nbody_option_context&, char**&) {} },
@@ -593,6 +579,17 @@ void init_system() {
 	sim_time_sum = 0.0L;
 }
 
+// embed the compiled nbody and mip-map-minify FUBAR files if they are available
+#if __has_include("nbody_fubar.hpp") && __has_include("nbody_mmm_fubar.hpp")
+extern unsigned char ___data_nbody_fubar[];
+extern unsigned int ___data_nbody_fubar_len;
+extern unsigned char ___data_mmm_fubar[];
+extern unsigned int ___data_mmm_fubar_len;
+#include "nbody_fubar.hpp"
+#include "nbody_mmm_fubar.hpp"
+#define HAS_EMBEDDED_NBODY_FUBAR 1
+#endif
+
 int main(int, char* argv[]) {
 	nbody_option_context option_ctx;
 	nbody_opt_handler::parse_options(argv + 1, option_ctx);
@@ -607,7 +604,7 @@ int main(int, char* argv[]) {
 #endif
 	
 	// init floor
-	if(!floor::init(floor::init_state {
+	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
 		.data_path = "../../data/",
@@ -618,21 +615,23 @@ int main(int, char* argv[]) {
 		.console_only = nbody_state.benchmark,
 		.renderer = (// no renderer when running in console-only mode
 					 nbody_state.benchmark ? floor::RENDERER::NONE :
-					 // if neither opengl or vulkan is disabled, use the default
-					 // (this will choose vulkan if the config compute backend is vulkan)
-					 (!nbody_state.no_opengl && !nbody_state.no_vulkan) ? floor::RENDERER::DEFAULT :
+					 // if Metal/Vulkan aren't disabled, use the default renderer for the platform
+					 (!nbody_state.no_metal && !nbody_state.no_vulkan) ? floor::RENDERER::DEFAULT :
 					 // else: choose a specific one
+#if !defined(__APPLE__) && !defined(FLOOR_NO_VULKAN)
 					 !nbody_state.no_vulkan ? floor::RENDERER::VULKAN :
+#endif
+#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
 					 !nbody_state.no_metal ? floor::RENDERER::METAL :
-					 !nbody_state.no_opengl ? floor::RENDERER::OPENGL :
-					 // opengl/vulkan/metal are disabled
+#endif
+					 // Vulkan/Metal are disabled
 					 floor::RENDERER::NONE),
 		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
 	
-	// disable resp. other renderers when using opengl/metal/vulkan
+	// disable resp. other renderers when using Metal/Vulkan
 	const auto floor_renderer = floor::get_renderer();
 	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
 							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
@@ -643,7 +642,6 @@ int main(int, char* argv[]) {
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (is_metal) {
-		nbody_state.no_opengl = true;
 		nbody_state.no_vulkan = true;
 	} else {
 		nbody_state.no_metal = true;
@@ -651,269 +649,220 @@ int main(int, char* argv[]) {
 	
 	if (is_vulkan) {
 		if (floor_renderer == floor::RENDERER::VULKAN) {
-			nbody_state.no_opengl = true;
 			nbody_state.no_metal = true;
-		}
-		// can't use OpenGL with Vulkan
-		else {
-			nbody_state.no_opengl = true;
 		}
 	} else {
 		nbody_state.no_vulkan = true;
 	}
 	
-	if (!is_metal && !is_vulkan) {
-		// neither Metal nor Vulkan is available (or disabled)
-		nbody_state.unified_renderer = false;
-	}
-	
-	log_debug("using $",
-			  (nbody_state.unified_renderer ? "unified renderer" :
-			   !nbody_state.no_opengl ? "opengl renderer" :
-			   !nbody_state.no_metal ? "metal renderer" :
-			   !nbody_state.no_vulkan ? "vulkan renderer" : "s/w rasterizer"));
-	
-	// floor context handling
-	struct floor_ctx_guard {
-		floor_ctx_guard() {
-			floor::acquire_context();
-		}
-		~floor_ctx_guard() {
-			floor::release_context();
-		}
-	};
-	event::handler evt_handler_fnctr(&evt_handler);
-	
-	shared_ptr<compute_context> compute_ctx;
-	shared_ptr<compute_context> render_ctx;
-	const compute_device* compute_dev { nullptr };
+	log_debug("using $", (floor_renderer != floor::RENDERER::NONE ? "unified renderer" : "s/w rasterizer"));
+
+	// get the compute and render context that have been automatically created (opencl/cuda/metal/vulkan/host)
+	// NOTE: for Metal and Vulkan these are the same
+	auto compute_ctx = floor::get_compute_context();
+	auto render_ctx = floor::get_render_context();
+
+	// create a compute queue (aka command queue or stream) for the fastest device in the context
+	auto compute_dev = compute_ctx->get_device(compute_device::TYPE::FASTEST);
+	dev_queue = compute_ctx->create_queue(*compute_dev);
+
+	// also retrieve the fastest device from the render context,
+	// if it's not the same device (== same context), also create a queue for it (else, use the same queue)
 	const compute_device* render_dev { nullptr };
+	if (render_ctx) {
+		render_dev = render_ctx->get_device(compute_device::TYPE::FASTEST);
+		render_dev_queue = (render_dev != compute_dev ? render_ctx->create_queue(*render_dev) : dev_queue);
+	}
+
+	// parameter sanity check
+	if (nbody_state.tile_size > compute_dev->max_total_local_size) {
+		nbody_state.tile_size = (uint32_t)compute_dev->max_total_local_size;
+		log_error("tile size too large, > max possible work-group size! - setting tile size to $ now", nbody_state.tile_size);
+	}
+	if ((nbody_state.body_count % nbody_state.tile_size) != 0u) {
+		nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
+		log_error("body count not a multiple of tile size! - setting body count to $ now", nbody_state.body_count);
+	}
+	if (compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
+		!((const host_compute*)compute_ctx.get())->has_host_device_support() && nbody_state.tile_size != NBODY_TILE_SIZE) {
+		log_error("compiled NBODY_TILE_SIZE ($) must match run-time tile-size when using host compute! - using it now",
+				  NBODY_TILE_SIZE);
+		nbody_state.tile_size = NBODY_TILE_SIZE;
+	}
+
 	shared_ptr<compute_program> nbody_prog;
 	shared_ptr<compute_program> nbody_render_prog;
 	shared_ptr<compute_kernel> nbody_compute;
 	shared_ptr<compute_kernel> nbody_compute_fixed_delta;
 	shared_ptr<compute_kernel> nbody_raster;
 	
-	const uint2 img_size { floor::get_physical_screen_size() };
-	size_t img_buffer_flip_flop { 0 };
-	array<shared_ptr<compute_buffer>, 2> img_buffers;
-	
-	{
-		floor_ctx_guard grd;
-		
-		// get the compute and render context that have been automatically created (opencl/cuda/metal/vulkan/host)
-		// NOTE: for Metal and Vulkan these are the same
-		compute_ctx = floor::get_compute_context();
-		render_ctx = floor::get_render_context();
-		
-		// create a compute queue (aka command queue or stream) for the fastest device in the context
-		compute_dev = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-		dev_queue = compute_ctx->create_queue(*compute_dev);
-		
-		// also retrieve the fastest device from the render context,
-		// if it's not the same device (== same context), also create a queue for it (else, use the same queue)
-		if (render_ctx) {
-			render_dev = render_ctx->get_device(compute_device::TYPE::FASTEST);
-			render_dev_queue = (render_dev != compute_dev ? render_ctx->create_queue(*render_dev) : dev_queue);
+	// if embedded FUBAR data exists + it isn't disabled, try to load this first
+	[[maybe_unused]] shared_ptr<compute_program> compute_mmm_prog;
+	[[maybe_unused]] shared_ptr<compute_program> render_mmm_prog;
+#if defined(HAS_EMBEDDED_NBODY_FUBAR)
+	if (!nbody_state.no_fubar) {
+		// nbody kernels/shaders
+		const span<const uint8_t> fubar_data{ ___data_nbody_fubar, ___data_nbody_fubar_len };
+		nbody_prog = compute_ctx->add_universal_binary(fubar_data);
+		nbody_render_prog =
+			(compute_ctx != render_ctx && render_ctx ? render_ctx->add_universal_binary(fubar_data) : nbody_prog);
+		if (nbody_prog && nbody_render_prog) {
+			log_msg("using integrated nbody FUBAR");
 		}
-		
-		// parameter sanity check
-		if(nbody_state.tile_size > compute_dev->max_total_local_size) {
-			nbody_state.tile_size = (uint32_t)compute_dev->max_total_local_size;
-			log_error("tile size too large, > max possible work-group size! - setting tile size to $ now", nbody_state.tile_size);
+
+		// mip-map minify programs/kernels
+		const span<const uint8_t> mmm_fubar_data{ ___data_mmm_fubar, ___data_mmm_fubar_len };
+		compute_mmm_prog = compute_ctx->add_universal_binary(mmm_fubar_data);
+		if (compute_mmm_prog) {
+			compute_image::provide_minify_program(*compute_ctx, compute_mmm_prog);
 		}
-		if((nbody_state.body_count % nbody_state.tile_size) != 0u) {
-			nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
-			log_error("body count not a multiple of tile size! - setting body count to $ now", nbody_state.body_count);
-		}
-		if(compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST && !((const host_compute*)compute_ctx.get())->has_host_device_support() &&
-		   nbody_state.tile_size != NBODY_TILE_SIZE) {
-			log_error("compiled NBODY_TILE_SIZE ($) must match run-time tile-size when using host compute! - using it now",
-					  NBODY_TILE_SIZE);
-			nbody_state.tile_size = NBODY_TILE_SIZE;
-		}
-		
-		// init gl renderer
-#if !defined(FLOOR_IOS)
-		if(!nbody_state.no_opengl) {
-			// setup renderer
-			if(!gl_renderer::init()) {
-				log_error("error during opengl initialization!");
-				return -1;
+		if (compute_ctx != render_ctx && render_ctx) {
+			render_mmm_prog = render_ctx->add_universal_binary(mmm_fubar_data);
+			if (render_mmm_prog) {
+				compute_image::provide_minify_program(*render_ctx, render_mmm_prog);
 			}
+		} else {
+			render_mmm_prog = compute_mmm_prog;
 		}
+		if (compute_mmm_prog && render_mmm_prog) {
+			log_msg("using integrated mip-map minify FUBAR");
+		}
+	}
 #endif
-		
-		// compile the program and get the kernel functions
+
+	// otherwise: compile the program
+	if (!nbody_prog) {
 #if !defined(FLOOR_IOS)
-		llvm_toolchain::compile_options options {
-			.cli = ("-I" + floor::data_path("../nbody/src") +
-					" -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
+		llvm_toolchain::compile_options options{
+			.cli = ("-I" + floor::data_path("../nbody/src") + " -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 					" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
 					" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
 			// override max registers that can be used, this is beneficial here as it yields about +10% of performance
 			.cuda.max_registers = 36,
 		};
 		nbody_prog = compute_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options);
-		nbody_render_prog = (compute_ctx != render_ctx && render_ctx ?
-							 render_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options) : nbody_prog);
+		nbody_render_prog = (compute_ctx != render_ctx && render_ctx
+								 ? render_ctx->add_program_file(floor::data_path("../nbody/src/nbody.cpp"), options)
+								 : nbody_prog);
 #else
 		nbody_prog = compute_ctx->add_universal_binary(floor::data_path("nbody.fubar"));
-		nbody_render_prog = (compute_ctx != render_ctx && render_ctx ?
-							 render_ctx->add_universal_binary(floor::data_path("nbody.fubar")) : nbody_prog);
+		nbody_render_prog =
+			(compute_ctx != render_ctx && render_ctx ? render_ctx->add_universal_binary(floor::data_path("nbody.fubar"))
+													 : nbody_prog);
 #endif
-		if(nbody_prog == nullptr || nbody_render_prog == nullptr) {
-			log_error("program compilation failed");
-			return -1;
-		}
-		nbody_compute = nbody_prog->get_kernel("nbody_compute");
-		nbody_compute_fixed_delta = nbody_prog->get_kernel("nbody_compute_fixed_delta");
-		nbody_raster = nbody_prog->get_kernel("nbody_raster");
-		if (nbody_compute == nullptr || nbody_compute_fixed_delta == nullptr || nbody_raster == nullptr) {
-			log_error("failed to retrieve kernel(s) from program");
-			return -1;
-		}
-		
-		// init unified/metal/vulkan renderers (need compiled prog first)
-		if (nbody_state.unified_renderer) {
-			// setup renderer
-			if (!unified_renderer::init(*render_ctx,
-										*render_dev_queue,
-										nbody_state.msaa,
-										*nbody_render_prog->get_kernel("lighting_vertex"),
-										*nbody_render_prog->get_kernel("lighting_fragment"),
-										nbody_render_prog->get_kernel("blit_vs").get(),
-										nbody_render_prog->get_kernel("blit_fs").get(),
-										nbody_render_prog->get_kernel("blit_fs_layered").get())) {
-				log_error("error during unified renderer initialization!");
-				return -1;
-			}
-		} else {
-#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
-			if (!nbody_state.no_metal && nbody_state.no_opengl && nbody_state.no_vulkan) {
-				// setup renderer
-				if (!metal_renderer::init(*render_ctx,
-										  *render_dev_queue,
-										  nbody_render_prog->get_kernel("lighting_vertex"),
-										  nbody_render_prog->get_kernel("lighting_fragment"))) {
-					log_error("error during metal initialization!");
-					return -1;
-				}
-			}
-#endif
-#if !defined(FLOOR_NO_VULKAN)
-			if (!nbody_state.no_vulkan && nbody_state.no_opengl && nbody_state.no_metal) {
-				// setup renderer
-				if (!vulkan_renderer::init(render_ctx,
-										   *render_dev,
-										   *render_dev_queue,
-										   nbody_render_prog->get_kernel("lighting_vertex"),
-										   nbody_render_prog->get_kernel("lighting_fragment"))) {
-					log_error("error during vulkan initialization!");
-					return -1;
-				}
-			}
-#endif
-		}
-		
-		// create nbody position and velocity buffers
-		COMPUTE_MEMORY_FLAG graphics_sharing_flags = COMPUTE_MEMORY_FLAG::NONE;
-		if (!nbody_state.no_opengl) {
-			// will be using the buffer with OpenGL
-			graphics_sharing_flags = COMPUTE_MEMORY_FLAG::OPENGL_SHARING;
-		} else if (compute_ctx != render_ctx) {
-			// enable automatic buffer sync between the render and compute backends
-			graphics_sharing_flags = (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
-									  // render backend only reads data
-									  COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
-									  // compute backend only writes data
-									  COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
-			if (!nbody_state.no_vulkan) {
-				// we're using a Vulkan renderer -> enable Vulkan buffer sharing
-				graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
-			} else if (!nbody_state.no_metal) {
-				// we're using a Metal renderer -> enable Metal buffer sharing
-				graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::METAL_SHARING;
-			}
-		}
-		for(size_t i = 0; i < pos_buffer_count; ++i) {
-			position_buffers[i] = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * nbody_state.body_count,
-															 (// will be reading and writing from the kernel
-															  COMPUTE_MEMORY_FLAG::READ_WRITE
-															  // host will only write data
-															  | COMPUTE_MEMORY_FLAG::HOST_WRITE
-															  // graphics sharing flags are set above
-															  | graphics_sharing_flags
-															  ), (!nbody_state.no_opengl ? GL_ARRAY_BUFFER : 0));
-		}
-		velocity_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float3) * nbody_state.body_count,
-													 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-		
-		// image buffers (for s/w rendering only)
-		if(nbody_state.no_opengl && nbody_state.no_metal && !nbody_state.benchmark) {
-			img_buffers = {{
-				compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
-										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-				compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
-										   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
-			}};
-			img_buffers[0]->zero(*dev_queue);
-			img_buffers[1]->zero(*dev_queue);
-		}
-		
-		// init nbody system
-		init_system();
-		
-		// create the indirect command pipeline for benchmarking
-		if (nbody_state.benchmark && !nbody_state.no_indirect &&
-			compute_dev->indirect_command_support && compute_dev->indirect_compute_command_support) {
-			do {
-				indirect_command_description desc {
-					.command_type = indirect_command_description::COMMAND_TYPE::COMPUTE,
-					.max_command_count = benchmark_iterations,
-					.debug_label = "indirect_benchmark_pipeline"
-				};
-				desc.compute_buffer_counts_from_functions(*compute_dev, {
-					nbody_compute_fixed_delta.get()
-				});
-				indirect_benchmark_pipeline = compute_ctx->create_indirect_command_pipeline(desc);
-				if (!indirect_benchmark_pipeline->is_valid()) {
-					log_error("failed to create indirect_benchmark_pipeline");
-					// -> fall back to not using an indirect command pipeline
-					nbody_state.no_indirect = true;
-					indirect_benchmark_pipeline = nullptr;
-					break;
-				}
-				
-				// encode indirect pipeline
-				static_assert(pos_buffer_count >= 2, "need at least 2 position buffers");
-				for (uint32_t i = 0; i < benchmark_iterations; ++i) {
-					// will only flip/flop between two position buffers here
-					indirect_benchmark_pipeline->add_compute_command(*compute_dev, *nbody_compute_fixed_delta)
-						.set_arguments(position_buffers[i % 2u],
-									   position_buffers[(i + 1u) % 2u],
-									   velocity_buffer)
-						.execute(nbody_state.body_count, nbody_state.tile_size)
-						.barrier();
-				}
-				indirect_benchmark_pipeline->complete();
-			} while (false);
-		}
-		
-		// add event handlers
-		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
-													   EVENT_TYPE::VR_THUMBSTICK_MOVE,
-													   EVENT_TYPE::VR_TRACKPAD_MOVE, EVENT_TYPE::VR_TRACKPAD_FORCE, EVENT_TYPE::VR_TRACKPAD_PRESS,
-													   EVENT_TYPE::VR_APP_MENU_PRESS, EVENT_TYPE::VR_MAIN_PRESS,
-													   EVENT_TYPE::VR_GRIP_PRESS, EVENT_TYPE::VR_GRIP_FORCE, EVENT_TYPE::VR_GRIP_PULL, EVENT_TYPE::VR_GRIP_TOUCH,
-													   EVENT_TYPE::VR_TRIGGER_PULL, EVENT_TYPE::VR_THUMBSTICK_PRESS);
-		
-		// init done, release context
 	}
+	if (!nbody_prog || !nbody_render_prog) {
+		log_error("program compilation failed");
+		return -1;
+	}
+
+	// get the kernel functions
+	nbody_compute = nbody_prog->get_kernel("nbody_compute");
+	nbody_compute_fixed_delta = nbody_prog->get_kernel("nbody_compute_fixed_delta");
+	nbody_raster = nbody_prog->get_kernel("nbody_raster");
+	if (nbody_compute == nullptr || nbody_compute_fixed_delta == nullptr || nbody_raster == nullptr) {
+		log_error("failed to retrieve kernel(s) from program");
+		return -1;
+	}
+
+	// init unified/metal/vulkan renderers (need compiled prog first)
+	if (floor_renderer != floor::RENDERER::NONE) {
+		// setup renderer
+		if (!unified_renderer::init(
+				*render_ctx, *render_dev_queue, nbody_state.msaa, *nbody_render_prog->get_kernel("lighting_vertex"),
+				*nbody_render_prog->get_kernel("lighting_fragment"), nbody_render_prog->get_kernel("blit_vs").get(),
+				nbody_render_prog->get_kernel("blit_fs").get(), nbody_render_prog->get_kernel("blit_fs_layered").get())) {
+			log_error("error during unified renderer initialization!");
+			return -1;
+		}
+	}
+
+	// create nbody position and velocity buffers
+	COMPUTE_MEMORY_FLAG graphics_sharing_flags = COMPUTE_MEMORY_FLAG::NONE;
+	if (compute_ctx != render_ctx && render_ctx != nullptr) {
+		// enable automatic buffer sync between the render and compute backends
+		graphics_sharing_flags = (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+								  // render backend only reads data
+								  COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+								  // compute backend only writes data
+								  COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
+		if (!nbody_state.no_vulkan) {
+			// we're using a Vulkan renderer -> enable Vulkan buffer sharing
+			graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+		} else if (!nbody_state.no_metal) {
+			// we're using a Metal renderer -> enable Metal buffer sharing
+			graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::METAL_SHARING;
+		}
+	}
+	for (size_t i = 0; i < pos_buffer_count; ++i) {
+		position_buffers[i] = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * nbody_state.body_count,
+														 ( // will be reading and writing from the kernel
+															 COMPUTE_MEMORY_FLAG::READ_WRITE
+															 // host will only write data
+															 | COMPUTE_MEMORY_FLAG::HOST_WRITE
+															 // graphics sharing flags are set above
+															 | graphics_sharing_flags));
+	}
+	velocity_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float3) * nbody_state.body_count,
+												 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
+
+	// image buffers (for s/w rendering only)
+	const uint2 img_size { floor::get_physical_screen_size() };
+	size_t img_buffer_flip_flop { 0 };
+	array<shared_ptr<compute_buffer>, 2> img_buffers;
+	if (floor_renderer == floor::RENDERER::NONE && !nbody_state.benchmark) {
+		img_buffers = { {
+			compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
+									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+			compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
+									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+		} };
+		img_buffers[0]->zero(*dev_queue);
+		img_buffers[1]->zero(*dev_queue);
+	}
+
+	// init nbody system
+	init_system();
+
+	// create the indirect command pipeline for benchmarking
+	if (nbody_state.benchmark && !nbody_state.no_indirect && compute_dev->indirect_command_support &&
+		compute_dev->indirect_compute_command_support) {
+		do {
+			indirect_command_description desc{ .command_type = indirect_command_description::COMMAND_TYPE::COMPUTE,
+											   .max_command_count = benchmark_iterations,
+											   .debug_label = "indirect_benchmark_pipeline" };
+			desc.compute_buffer_counts_from_functions(*compute_dev, { nbody_compute_fixed_delta.get() });
+			indirect_benchmark_pipeline = compute_ctx->create_indirect_command_pipeline(desc);
+			if (!indirect_benchmark_pipeline->is_valid()) {
+				log_error("failed to create indirect_benchmark_pipeline");
+				// -> fall back to not using an indirect command pipeline
+				nbody_state.no_indirect = true;
+				indirect_benchmark_pipeline = nullptr;
+				break;
+			}
+
+			// encode indirect pipeline
+			static_assert(pos_buffer_count >= 2, "need at least 2 position buffers");
+			for (uint32_t i = 0; i < benchmark_iterations; ++i) {
+				// will only flip/flop between two position buffers here
+				indirect_benchmark_pipeline->add_compute_command(*compute_dev, *nbody_compute_fixed_delta)
+					.set_arguments(position_buffers[i % 2u], position_buffers[(i + 1u) % 2u], velocity_buffer)
+					.execute(nbody_state.body_count, nbody_state.tile_size)
+					.barrier();
+			}
+			indirect_benchmark_pipeline->complete();
+		} while (false);
+	}
+
+	// add event handlers
+	event::handler evt_handler_fnctr(&evt_handler);
+	floor::get_event()->add_internal_event_handler(
+		evt_handler_fnctr, EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::MOUSE_LEFT_DOWN,
+		EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE, EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+		EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE, EVENT_TYPE::VR_THUMBSTICK_MOVE,
+		EVENT_TYPE::VR_TRACKPAD_MOVE, EVENT_TYPE::VR_TRACKPAD_FORCE, EVENT_TYPE::VR_TRACKPAD_PRESS,
+		EVENT_TYPE::VR_APP_MENU_PRESS, EVENT_TYPE::VR_MAIN_PRESS, EVENT_TYPE::VR_GRIP_PRESS, EVENT_TYPE::VR_GRIP_FORCE,
+		EVENT_TYPE::VR_GRIP_PULL, EVENT_TYPE::VR_GRIP_TOUCH, EVENT_TYPE::VR_TRIGGER_PULL, EVENT_TYPE::VR_THUMBSTICK_PRESS);
 	
 	// keeps track of the time between two simulation steps -> time delta in kernel
 	auto time_keeper = chrono::high_resolution_clock::now();
@@ -1005,9 +954,10 @@ int main(int, char* argv[]) {
 				++iteration;
 			}
 		}
+		//break;
 		
 		// s/w rendering
-		if(nbody_state.no_opengl && nbody_state.no_metal && nbody_state.no_vulkan && !nbody_state.benchmark) {
+		if (floor_renderer == floor::RENDERER::NONE && !nbody_state.benchmark) {
 			struct {
 				const matrix4f mview;
 				const uint2 img_size;
@@ -1057,26 +1007,9 @@ int main(int, char* argv[]) {
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());
 		}
-		// opengl/metal/vulkan rendering
-		else if(!nbody_state.no_opengl || !nbody_state.no_metal || !nbody_state.no_vulkan) {
-			floor::start_frame();
-			if (!nbody_state.no_opengl) {
-#if !defined(FLOOR_IOS)
-				gl_renderer::render(*dev_queue, position_buffers[cur_buffer]);
-#endif
-			} else if (nbody_state.unified_renderer) {
-				unified_renderer::render(*render_ctx, *render_dev_queue, *position_buffers[cur_buffer]);
-			}
-#if defined(__APPLE__) && !defined(FLOOR_NO_METAL)
-			else if (!nbody_state.no_metal) {
-				metal_renderer::render(*render_ctx, *render_dev_queue, position_buffers[cur_buffer]);
-			}
-#endif
-#if !defined(FLOOR_NO_VULKAN)
-			else if (!nbody_state.no_vulkan) {
-				vulkan_renderer::render(render_ctx, *render_dev_queue, position_buffers[cur_buffer]);
-			}
-#endif
+		// Metal/Vulkan rendering
+		else if (floor_renderer != floor::RENDERER::NONE && (!nbody_state.no_metal || !nbody_state.no_vulkan)) {
+			unified_renderer::render(*render_ctx, *render_dev_queue, *position_buffers[cur_buffer]);
 			floor::end_frame();
 		}
 	}
@@ -1086,7 +1019,6 @@ int main(int, char* argv[]) {
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	
 	// cleanup
-	floor::acquire_context();
 	dev_queue->finish();
 	if (indirect_benchmark_pipeline) {
 		indirect_benchmark_pipeline = nullptr;
@@ -1098,14 +1030,9 @@ int main(int, char* argv[]) {
 	for(auto img_buffer : img_buffers) {
 		img_buffer = nullptr;
 	}
-	if (nbody_state.unified_renderer) {
+	if (floor_renderer != floor::RENDERER::NONE) {
 		unified_renderer::destroy(*render_ctx);
 	}
-#if !defined(FLOOR_NO_VULKAN)
-	if(!nbody_state.no_vulkan) {
-		vulkan_renderer::destroy(render_ctx, *render_dev);
-	}
-#endif
 	nbody_prog = nullptr;
 	nbody_render_prog = nullptr;
 	nbody_compute = nullptr;
@@ -1116,7 +1043,6 @@ int main(int, char* argv[]) {
 	render_dev_queue = nullptr;
 	compute_ctx = nullptr;
 	render_ctx = nullptr;
-	floor::release_context();
 	
 	// kthxbye
 	floor::destroy();

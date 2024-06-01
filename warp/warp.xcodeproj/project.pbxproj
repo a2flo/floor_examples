@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -90,109 +90,18 @@
 		5C3B0BF41BCED855000732F9 /* README in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4E01BB2F6530024467C /* README */; };
 		5C5487841B608E280088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487821B608E110088272A /* config.json */; };
 		5C5487851B608E280088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487831B608E110088272A /* config.json.local */; };
-		5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
-		5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
-		5C8646491C19BFB6000518C7 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
-		5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
-		5C8646501C19BFB6000518C7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
-		5C8646511C19BFB6000518C7 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
-		5C8646521C19BFB6000518C7 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
-		5C8646531C19BFB6000518C7 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C8646541C19BFB6000518C7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
-		5C8646551C19BFB6000518C7 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
-		5C8646561C19BFB6000518C7 /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
-		5C8646571C19BFB6000518C7 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
-		5C8646581C19BFB6000518C7 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
-		5C8646591C19BFB6000518C7 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C31A91FF7C00F4711D /* OpenGLES.framework */; };
-		5C86465A1C19BFB6000518C7 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
-		5C86465B1C19BFB6000518C7 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
-		5C86465D1C19BFB6000518C7 /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
-		5C86465E1C19BFB6000518C7 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
-		5C8646611C19BFB6000518C7 /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487821B608E110088272A /* config.json */; };
-		5C8646621C19BFB6000518C7 /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C5487831B608E110088272A /* config.json.local */; };
-		5C8646631C19BFB6000518C7 /* warp.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* warp.metallib */; };
-		5C8646641C19BFB6000518C7 /* black.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD581BDB585100FAA584 /* black.png */; };
-		5C8646651C19BFB6000518C7 /* up_normal.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD591BDB585100FAA584 /* up_normal.png */; };
-		5C8646661C19BFB6000518C7 /* white.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD5A1BDB585100FAA584 /* white.png */; };
-		5C8646681C19BFB6000518C7 /* README in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4E01BB2F6530024467C /* README */; };
-		5C8646691C19BFB6000518C7 /* sponza.obj in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4DE1BB2F64D0024467C /* sponza.obj */; };
-		5C86466A1C19BFB6000518C7 /* ios_sponza.mtl in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCEC1BDB4A1E00FAA584 /* ios_sponza.mtl */; };
-		5C86466C1C19BFB6000518C7 /* background_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCEE1BDB4A3F00FAA584 /* background_ddn.pvr */; };
-		5C86466D1C19BFB6000518C7 /* background.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCEF1BDB4A3F00FAA584 /* background.pvr */; };
-		5C86466E1C19BFB6000518C7 /* chain_texture_ddn.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF01BDB4A3F00FAA584 /* chain_texture_ddn.png */; };
-		5C86466F1C19BFB6000518C7 /* chain_texture_mask.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF11BDB4A3F00FAA584 /* chain_texture_mask.png */; };
-		5C8646701C19BFB6000518C7 /* chain_texture.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF21BDB4A3F00FAA584 /* chain_texture.png */; };
-		5C8646711C19BFB6000518C7 /* lion_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF31BDB4A3F00FAA584 /* lion_ddn.pvr */; };
-		5C8646721C19BFB6000518C7 /* lion.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF41BDB4A3F00FAA584 /* lion.pvr */; };
-		5C8646731C19BFB6000518C7 /* spnza_bricks_a_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF51BDB4A3F00FAA584 /* spnza_bricks_a_ddn.pvr */; };
-		5C8646741C19BFB6000518C7 /* spnza_bricks_a_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF61BDB4A3F00FAA584 /* spnza_bricks_a_diff.pvr */; };
-		5C8646751C19BFB6000518C7 /* spnza_bricks_a_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF71BDB4A3F00FAA584 /* spnza_bricks_a_spec.pvr */; };
-		5C8646761C19BFB6000518C7 /* sponza_arch_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF81BDB4A3F00FAA584 /* sponza_arch_ddn.pvr */; };
-		5C8646771C19BFB6000518C7 /* sponza_arch_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCF91BDB4A3F00FAA584 /* sponza_arch_diff.pvr */; };
-		5C8646781C19BFB6000518C7 /* sponza_arch_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFA1BDB4A3F00FAA584 /* sponza_arch_spec.pvr */; };
-		5C8646791C19BFB6000518C7 /* sponza_ceiling_a_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFB1BDB4A3F00FAA584 /* sponza_ceiling_a_diff.pvr */; };
-		5C86467A1C19BFB6000518C7 /* sponza_ceiling_a_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFC1BDB4A3F00FAA584 /* sponza_ceiling_a_spec.pvr */; };
-		5C86467B1C19BFB6000518C7 /* sponza_column_a_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFD1BDB4A3F00FAA584 /* sponza_column_a_ddn.pvr */; };
-		5C86467C1C19BFB6000518C7 /* sponza_column_a_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFE1BDB4A3F00FAA584 /* sponza_column_a_diff.pvr */; };
-		5C86467D1C19BFB6000518C7 /* sponza_column_a_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBCFF1BDB4A3F00FAA584 /* sponza_column_a_spec.pvr */; };
-		5C86467E1C19BFB6000518C7 /* sponza_column_b_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD001BDB4A3F00FAA584 /* sponza_column_b_ddn.pvr */; };
-		5C86467F1C19BFB6000518C7 /* sponza_column_b_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD011BDB4A3F00FAA584 /* sponza_column_b_diff.pvr */; };
-		5C8646801C19BFB6000518C7 /* sponza_column_b_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD021BDB4A3F00FAA584 /* sponza_column_b_spec.pvr */; };
-		5C8646811C19BFB6000518C7 /* sponza_column_c_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD031BDB4A3F00FAA584 /* sponza_column_c_ddn.pvr */; };
-		5C8646821C19BFB6000518C7 /* sponza_column_c_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD041BDB4A3F00FAA584 /* sponza_column_c_diff.pvr */; };
-		5C8646831C19BFB6000518C7 /* sponza_column_c_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD051BDB4A3F00FAA584 /* sponza_column_c_spec.pvr */; };
-		5C8646841C19BFB6000518C7 /* sponza_curtain_blue_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD061BDB4A3F00FAA584 /* sponza_curtain_blue_diff.pvr */; };
-		5C8646851C19BFB6000518C7 /* sponza_curtain_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD071BDB4A3F00FAA584 /* sponza_curtain_diff.pvr */; };
-		5C8646861C19BFB6000518C7 /* sponza_curtain_green_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD081BDB4A3F00FAA584 /* sponza_curtain_green_diff.pvr */; };
-		5C8646871C19BFB6000518C7 /* sponza_curtain_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD091BDB4A3F00FAA584 /* sponza_curtain_spec.pvr */; };
-		5C8646881C19BFB6000518C7 /* sponza_details_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0A1BDB4A3F00FAA584 /* sponza_details_diff.pvr */; };
-		5C8646891C19BFB6000518C7 /* sponza_details_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0B1BDB4A3F00FAA584 /* sponza_details_spec.pvr */; };
-		5C86468A1C19BFB6000518C7 /* sponza_fabric_blue_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0C1BDB4A3F00FAA584 /* sponza_fabric_blue_diff.pvr */; };
-		5C86468B1C19BFB6000518C7 /* sponza_fabric_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0D1BDB4A3F00FAA584 /* sponza_fabric_diff.pvr */; };
-		5C86468C1C19BFB6000518C7 /* sponza_fabric_green_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0E1BDB4A3F00FAA584 /* sponza_fabric_green_diff.pvr */; };
-		5C86468D1C19BFB6000518C7 /* sponza_fabric_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD0F1BDB4A3F00FAA584 /* sponza_fabric_spec.pvr */; };
-		5C86468E1C19BFB6000518C7 /* sponza_flagpole_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD101BDB4A3F00FAA584 /* sponza_flagpole_diff.pvr */; };
-		5C86468F1C19BFB6000518C7 /* sponza_flagpole_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD111BDB4A3F00FAA584 /* sponza_flagpole_spec.pvr */; };
-		5C8646901C19BFB6000518C7 /* sponza_floor_a_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD121BDB4A3F00FAA584 /* sponza_floor_a_diff.pvr */; };
-		5C8646911C19BFB6000518C7 /* sponza_floor_a_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD131BDB4A3F00FAA584 /* sponza_floor_a_spec.pvr */; };
-		5C8646921C19BFB6000518C7 /* sponza_roof_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD141BDB4A3F00FAA584 /* sponza_roof_diff.pvr */; };
-		5C8646931C19BFB6000518C7 /* sponza_thorn_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD151BDB4A3F00FAA584 /* sponza_thorn_ddn.pvr */; };
-		5C8646941C19BFB6000518C7 /* sponza_thorn_diff.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD161BDB4A3F00FAA584 /* sponza_thorn_diff.pvr */; };
-		5C8646951C19BFB6000518C7 /* sponza_thorn_mask.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD171BDB4A3F00FAA584 /* sponza_thorn_mask.pvr */; };
-		5C8646961C19BFB6000518C7 /* sponza_thorn_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD181BDB4A3F00FAA584 /* sponza_thorn_spec.pvr */; };
-		5C8646971C19BFB6000518C7 /* vase_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD191BDB4A3F00FAA584 /* vase_ddn.pvr */; };
-		5C8646981C19BFB6000518C7 /* vase_dif.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1A1BDB4A3F00FAA584 /* vase_dif.pvr */; };
-		5C8646991C19BFB6000518C7 /* vase_hanging.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1B1BDB4A3F00FAA584 /* vase_hanging.pvr */; };
-		5C86469A1C19BFB6000518C7 /* vase_plant_mask.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1C1BDB4A3F00FAA584 /* vase_plant_mask.pvr */; };
-		5C86469B1C19BFB6000518C7 /* vase_plant_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1D1BDB4A3F00FAA584 /* vase_plant_spec.pvr */; };
-		5C86469C1C19BFB6000518C7 /* vase_plant.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1E1BDB4A3F00FAA584 /* vase_plant.pvr */; };
-		5C86469D1C19BFB6000518C7 /* vase_round_ddn.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD1F1BDB4A3F00FAA584 /* vase_round_ddn.pvr */; };
-		5C86469E1C19BFB6000518C7 /* vase_round_spec.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD201BDB4A3F00FAA584 /* vase_round_spec.pvr */; };
-		5C86469F1C19BFB6000518C7 /* vase_round.pvr in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C1CBD211BDB4A3F00FAA584 /* vase_round.pvr */; };
-		5C8646A11C19BFB6000518C7 /* negx.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE61BCED83F000732F9 /* negx.png */; };
-		5C8646A21C19BFB6000518C7 /* negy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE71BCED83F000732F9 /* negy.png */; };
-		5C8646A31C19BFB6000518C7 /* negz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE81BCED83F000732F9 /* negz.png */; };
-		5C8646A41C19BFB6000518C7 /* posx.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BE91BCED83F000732F9 /* posx.png */; };
-		5C8646A51C19BFB6000518C7 /* posy.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEA1BCED83F000732F9 /* posy.png */; };
-		5C8646A61C19BFB6000518C7 /* posz.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEB1BCED83F000732F9 /* posz.png */; };
-		5C8646A71C19BFB6000518C7 /* readme.txt in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C3B0BEC1BCED83F000732F9 /* readme.txt */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
 		5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
 		5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C8FEF411AF22325001D47BF /* auto_cam.cpp */; };
-		5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */; };
 		5CE8AEC51D1F356400369136 /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
 		5CEC08AF22C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
 		5CEC08B022C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
-		5CEC08B122C00D7F00033467 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */; };
 		5CF6D76D1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; settings = {COMPILER_FLAGS = "-Wno-unknown-attributes"; }; };
 		5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
-		5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */; };
 		5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
 		5CF9489E1D2AB40600FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
 		5CF9489F1D2AB40600FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
-		5CF948A01D2AB41600FEA7AE /* obj_loader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CE8AEC31D1F356400369136 /* obj_loader.cpp */; };
-		5CF948A11D2AB41600FEA7AE /* camera.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CF948921D2AB15800FEA7AE /* camera.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -297,110 +206,6 @@
 				5C1CBDF81BDC1F1A00FAA584 /* vase_round_ddn.pvr in CopyFiles */,
 				5C1CBDF91BDC1F1A00FAA584 /* vase_round_spec.pvr in CopyFiles */,
 				5C1CBDFA1BDC1F1A00FAA584 /* vase_round.pvr in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646601C19BFB6000518C7 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data;
-			dstSubfolderSpec = 7;
-			files = (
-				5C8646611C19BFB6000518C7 /* config.json in CopyFiles */,
-				5C8646621C19BFB6000518C7 /* config.json.local in CopyFiles */,
-				5C8646631C19BFB6000518C7 /* warp.metallib in CopyFiles */,
-				5C8646641C19BFB6000518C7 /* black.png in CopyFiles */,
-				5C8646651C19BFB6000518C7 /* up_normal.png in CopyFiles */,
-				5C8646661C19BFB6000518C7 /* white.png in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646671C19BFB6000518C7 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data/sponza;
-			dstSubfolderSpec = 7;
-			files = (
-				5C8646681C19BFB6000518C7 /* README in CopyFiles */,
-				5C8646691C19BFB6000518C7 /* sponza.obj in CopyFiles */,
-				5C86466A1C19BFB6000518C7 /* ios_sponza.mtl in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C86466B1C19BFB6000518C7 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data/sponza/pvrtc_textures;
-			dstSubfolderSpec = 7;
-			files = (
-				5C86466C1C19BFB6000518C7 /* background_ddn.pvr in CopyFiles */,
-				5C86466D1C19BFB6000518C7 /* background.pvr in CopyFiles */,
-				5C86466E1C19BFB6000518C7 /* chain_texture_ddn.png in CopyFiles */,
-				5C86466F1C19BFB6000518C7 /* chain_texture_mask.png in CopyFiles */,
-				5C8646701C19BFB6000518C7 /* chain_texture.png in CopyFiles */,
-				5C8646711C19BFB6000518C7 /* lion_ddn.pvr in CopyFiles */,
-				5C8646721C19BFB6000518C7 /* lion.pvr in CopyFiles */,
-				5C8646731C19BFB6000518C7 /* spnza_bricks_a_ddn.pvr in CopyFiles */,
-				5C8646741C19BFB6000518C7 /* spnza_bricks_a_diff.pvr in CopyFiles */,
-				5C8646751C19BFB6000518C7 /* spnza_bricks_a_spec.pvr in CopyFiles */,
-				5C8646761C19BFB6000518C7 /* sponza_arch_ddn.pvr in CopyFiles */,
-				5C8646771C19BFB6000518C7 /* sponza_arch_diff.pvr in CopyFiles */,
-				5C8646781C19BFB6000518C7 /* sponza_arch_spec.pvr in CopyFiles */,
-				5C8646791C19BFB6000518C7 /* sponza_ceiling_a_diff.pvr in CopyFiles */,
-				5C86467A1C19BFB6000518C7 /* sponza_ceiling_a_spec.pvr in CopyFiles */,
-				5C86467B1C19BFB6000518C7 /* sponza_column_a_ddn.pvr in CopyFiles */,
-				5C86467C1C19BFB6000518C7 /* sponza_column_a_diff.pvr in CopyFiles */,
-				5C86467D1C19BFB6000518C7 /* sponza_column_a_spec.pvr in CopyFiles */,
-				5C86467E1C19BFB6000518C7 /* sponza_column_b_ddn.pvr in CopyFiles */,
-				5C86467F1C19BFB6000518C7 /* sponza_column_b_diff.pvr in CopyFiles */,
-				5C8646801C19BFB6000518C7 /* sponza_column_b_spec.pvr in CopyFiles */,
-				5C8646811C19BFB6000518C7 /* sponza_column_c_ddn.pvr in CopyFiles */,
-				5C8646821C19BFB6000518C7 /* sponza_column_c_diff.pvr in CopyFiles */,
-				5C8646831C19BFB6000518C7 /* sponza_column_c_spec.pvr in CopyFiles */,
-				5C8646841C19BFB6000518C7 /* sponza_curtain_blue_diff.pvr in CopyFiles */,
-				5C8646851C19BFB6000518C7 /* sponza_curtain_diff.pvr in CopyFiles */,
-				5C8646861C19BFB6000518C7 /* sponza_curtain_green_diff.pvr in CopyFiles */,
-				5C8646871C19BFB6000518C7 /* sponza_curtain_spec.pvr in CopyFiles */,
-				5C8646881C19BFB6000518C7 /* sponza_details_diff.pvr in CopyFiles */,
-				5C8646891C19BFB6000518C7 /* sponza_details_spec.pvr in CopyFiles */,
-				5C86468A1C19BFB6000518C7 /* sponza_fabric_blue_diff.pvr in CopyFiles */,
-				5C86468B1C19BFB6000518C7 /* sponza_fabric_diff.pvr in CopyFiles */,
-				5C86468C1C19BFB6000518C7 /* sponza_fabric_green_diff.pvr in CopyFiles */,
-				5C86468D1C19BFB6000518C7 /* sponza_fabric_spec.pvr in CopyFiles */,
-				5C86468E1C19BFB6000518C7 /* sponza_flagpole_diff.pvr in CopyFiles */,
-				5C86468F1C19BFB6000518C7 /* sponza_flagpole_spec.pvr in CopyFiles */,
-				5C8646901C19BFB6000518C7 /* sponza_floor_a_diff.pvr in CopyFiles */,
-				5C8646911C19BFB6000518C7 /* sponza_floor_a_spec.pvr in CopyFiles */,
-				5C8646921C19BFB6000518C7 /* sponza_roof_diff.pvr in CopyFiles */,
-				5C8646931C19BFB6000518C7 /* sponza_thorn_ddn.pvr in CopyFiles */,
-				5C8646941C19BFB6000518C7 /* sponza_thorn_diff.pvr in CopyFiles */,
-				5C8646951C19BFB6000518C7 /* sponza_thorn_mask.pvr in CopyFiles */,
-				5C8646961C19BFB6000518C7 /* sponza_thorn_spec.pvr in CopyFiles */,
-				5C8646971C19BFB6000518C7 /* vase_ddn.pvr in CopyFiles */,
-				5C8646981C19BFB6000518C7 /* vase_dif.pvr in CopyFiles */,
-				5C8646991C19BFB6000518C7 /* vase_hanging.pvr in CopyFiles */,
-				5C86469A1C19BFB6000518C7 /* vase_plant_mask.pvr in CopyFiles */,
-				5C86469B1C19BFB6000518C7 /* vase_plant_spec.pvr in CopyFiles */,
-				5C86469C1C19BFB6000518C7 /* vase_plant.pvr in CopyFiles */,
-				5C86469D1C19BFB6000518C7 /* vase_round_ddn.pvr in CopyFiles */,
-				5C86469E1C19BFB6000518C7 /* vase_round_spec.pvr in CopyFiles */,
-				5C86469F1C19BFB6000518C7 /* vase_round.pvr in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646A01C19BFB6000518C7 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = data/skybox;
-			dstSubfolderSpec = 7;
-			files = (
-				5C8646A11C19BFB6000518C7 /* negx.png in CopyFiles */,
-				5C8646A21C19BFB6000518C7 /* negy.png in CopyFiles */,
-				5C8646A31C19BFB6000518C7 /* negz.png in CopyFiles */,
-				5C8646A41C19BFB6000518C7 /* posx.png in CopyFiles */,
-				5C8646A51C19BFB6000518C7 /* posy.png in CopyFiles */,
-				5C8646A61C19BFB6000518C7 /* posz.png in CopyFiles */,
-				5C8646A71C19BFB6000518C7 /* readme.txt in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -545,7 +350,6 @@
 		5C56D5131BB2F6690024467C /* vase_round_ddn.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_ddn.png; path = ../data/sponza/textures/vase_round_ddn.png; sourceTree = "<group>"; };
 		5C56D5141BB2F6690024467C /* vase_round_spec.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round_spec.png; path = ../data/sponza/textures/vase_round_spec.png; sourceTree = "<group>"; };
 		5C56D5151BB2F6690024467C /* vase_round.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = vase_round.png; path = ../data/sponza/textures/vase_round.png; sourceTree = "<group>"; };
-		5C8646AB1C19BFB6000518C7 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0941AD3366800215230 /* warpd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = warpd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
@@ -563,13 +367,11 @@
 		5CA2ADDA27A9E6470061D07E /* spnza_bricks_a_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = spnza_bricks_a_bump.png; path = ../data/sponza/textures/spnza_bricks_a_bump.png; sourceTree = "<group>"; };
 		5CA2ADDB27A9E6470061D07E /* background_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = background_bump.png; path = ../data/sponza/textures/background_bump.png; sourceTree = "<group>"; };
 		5CA2ADDC27A9E6470061D07E /* sponza_column_a_bump.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = sponza_column_a_bump.png; path = ../data/sponza/textures/sponza_column_a_bump.png; sourceTree = "<group>"; };
-		5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_renderer.cpp; sourceTree = "<group>"; };
-		5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_renderer.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CD737F51B00123700D9815E /* warp_state.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = warp_state.hpp; sourceTree = "<group>"; };
-		5CE8AEC31D1F356400369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj/obj_loader.cpp; sourceTree = "<group>"; };
-		5CE8AEC41D1F356400369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj/obj_loader.hpp; sourceTree = "<group>"; };
+		5CE8AEC31D1F356400369136 /* obj_loader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = obj_loader.cpp; path = ../../common/obj_loader/obj_loader.cpp; sourceTree = "<group>"; };
+		5CE8AEC41D1F356400369136 /* obj_loader.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = obj_loader.hpp; path = ../../common/obj_loader/obj_loader.hpp; sourceTree = "<group>"; };
 		5CEC08AD22C00D7D00033467 /* unified_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = unified_renderer.hpp; sourceTree = "<group>"; };
 		5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unified_renderer.cpp; sourceTree = "<group>"; };
 		5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = warp_shaders.cpp; sourceTree = "<group>"; };
@@ -594,25 +396,6 @@
 				5C0071C41A91FF7C00F4711D /* OpenGLES.framework in Frameworks */,
 				5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */,
 				5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C86464F1C19BFB6000518C7 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5C8646501C19BFB6000518C7 /* AudioToolbox.framework in Frameworks */,
-				5C8646511C19BFB6000518C7 /* CoreAudio.framework in Frameworks */,
-				5C8646521C19BFB6000518C7 /* CoreGraphics.framework in Frameworks */,
-				5C8646531C19BFB6000518C7 /* CoreMotion.framework in Frameworks */,
-				5C8646541C19BFB6000518C7 /* Foundation.framework in Frameworks */,
-				5C8646551C19BFB6000518C7 /* ImageIO.framework in Frameworks */,
-				5C8646561C19BFB6000518C7 /* libxml2.2.dylib in Frameworks */,
-				5C8646571C19BFB6000518C7 /* Metal.framework in Frameworks */,
-				5C8646581C19BFB6000518C7 /* MobileCoreServices.framework in Frameworks */,
-				5C8646591C19BFB6000518C7 /* OpenGLES.framework in Frameworks */,
-				5C86465A1C19BFB6000518C7 /* QuartzCore.framework in Frameworks */,
-				5C86465B1C19BFB6000518C7 /* UIKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -839,7 +622,6 @@
 				5C8FD0B91AD3392500215230 /* osx */,
 				5C0071911A91EF7E00F4711D /* warpd.app */,
 				5C8FD0941AD3366800215230 /* warpd.app */,
-				5C8646AB1C19BFB6000518C7 /* warpd.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -850,8 +632,6 @@
 				5CD737F51B00123700D9815E /* warp_state.hpp */,
 				5CF6D76C1C416D0A005EAF64 /* warp_shaders.cpp */,
 				5C97EAD72999617300D4C680 /* warp_shaders.hpp */,
-				5CC330D01AEA129E00836CC4 /* gl_renderer.cpp */,
-				5CC330D11AEA129E00836CC4 /* gl_renderer.hpp */,
 				5CEC08AE22C00D7D00033467 /* unified_renderer.cpp */,
 				5CEC08AD22C00D7D00033467 /* unified_renderer.hpp */,
 				5CE8AEC31D1F356400369136 /* obj_loader.cpp */,
@@ -907,28 +687,6 @@
 			productReference = 5C0071911A91EF7E00F4711D /* warpd.app */;
 			productType = "com.apple.product-type.application";
 		};
-		5C8646441C19BFB6000518C7 /* warp_ios_sideload */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 5C8646A81C19BFB6000518C7 /* Build configuration list for PBXNativeTarget "warp_ios_sideload" */;
-			buildPhases = (
-				5C8646451C19BFB6000518C7 /* ShellScript */,
-				5C8646461C19BFB6000518C7 /* Sources */,
-				5C86464F1C19BFB6000518C7 /* Frameworks */,
-				5C86465C1C19BFB6000518C7 /* Resources */,
-				5C8646601C19BFB6000518C7 /* CopyFiles */,
-				5C8646671C19BFB6000518C7 /* CopyFiles */,
-				5C86466B1C19BFB6000518C7 /* CopyFiles */,
-				5C8646A01C19BFB6000518C7 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = warp_ios_sideload;
-			productName = warp_ios;
-			productReference = 5C8646AB1C19BFB6000518C7 /* warpd.app */;
-			productType = "com.apple.product-type.application";
-		};
 		5C8FD0931AD3366800215230 /* warp_osx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "warp_osx" */;
@@ -953,14 +711,11 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1530;
+				LastUpgradeCheck = 1540;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
 						CreatedOnToolsVersion = 6.3;
-					};
-					5C8646441C19BFB6000518C7 = {
-						DevelopmentTeam = S63YFDZ98S;
 					};
 					5C8FD0931AD3366800215230 = {
 						CreatedOnToolsVersion = 6.3;
@@ -972,7 +727,7 @@
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "warp" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -986,7 +741,6 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* warp_osx */,
 				5C0071901A91EF7E00F4711D /* warp_ios */,
-				5C8646441C19BFB6000518C7 /* warp_ios_sideload */,
 				5CBA3EE81D97EE81001BEDEC /* warp_remote */,
 			);
 		};
@@ -999,15 +753,6 @@
 			files = (
 				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
 				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C86465C1C19BFB6000518C7 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5C86465D1C19BFB6000518C7 /* Base.lproj in Resources */,
-				5C86465E1C19BFB6000518C7 /* Images.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1048,19 +793,6 @@
 			shellPath = /bin/sh;
 			shellScript = "cd src\nocc --src warp.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DSCREEN_WIDTH=1024 -DSCREEN_HEIGHT=768 -DTILE_SIZE_X=32 -DTILE_SIZE_Y=16\nmetal-as -o=warp_unopt.air air_processed.ll\nmetal-opt -o=warp.air warp_unopt.air\nmetal-ar r warp.a warp.air\nmetallib -o ../../data/warp.metallib warp.a\n";
 		};
-		5C8646451C19BFB6000518C7 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src warp.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -DSCREEN_WIDTH=960 -DSCREEN_HEIGHT=640 -DTILE_SIZE_X=32 -DTILE_SIZE_Y=16\nmetal-as -o=warp_unopt.air air_processed.ll\nmetal-opt -o=warp.air warp_unopt.air\nmetal-ar r warp.a warp.air\nmetallib -o ../../data/warp.metallib warp.a\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -1070,25 +802,10 @@
 			files = (
 				5CF9489E1D2AB40600FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489F1D2AB40600FEA7AE /* camera.cpp in Sources */,
-				5C56D4DB1BB2F5C40024467C /* gl_renderer.cpp in Sources */,
 				5C0071C11A91F2BD00F4711D /* main.cpp in Sources */,
 				5CEC08B022C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF441AF22325001D47BF /* auto_cam.cpp in Sources */,
 				5CF6D76E1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5C8646461C19BFB6000518C7 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5CF948A01D2AB41600FEA7AE /* obj_loader.cpp in Sources */,
-				5CF948A11D2AB41600FEA7AE /* camera.cpp in Sources */,
-				5C8646471C19BFB6000518C7 /* gl_renderer.cpp in Sources */,
-				5C8646491C19BFB6000518C7 /* main.cpp in Sources */,
-				5CEC08B122C00D7F00033467 /* unified_renderer.cpp in Sources */,
-				5C86464C1C19BFB6000518C7 /* auto_cam.cpp in Sources */,
-				5CF6D76F1C416D0A005EAF64 /* warp_shaders.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1097,7 +814,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5CE8AEC51D1F356400369136 /* obj_loader.cpp in Sources */,
-				5CC330D21AEA129E00836CC4 /* gl_renderer.cpp in Sources */,
 				5CF948941D2AB15800FEA7AE /* camera.cpp in Sources */,
 				5CEC08AF22C00D7F00033467 /* unified_renderer.cpp in Sources */,
 				5C8FEF431AF22325001D47BF /* auto_cam.cpp in Sources */,
@@ -1115,15 +831,20 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1131,7 +852,6 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
-				MTL_LANGUAGE_REVISION = Metal11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -1152,10 +872,8 @@
 					/usr/include,
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lSDL2_image",
-					"-lcrypto",
-					"-lssl",
+					"-lSDL3",
+					"-lSDL3_image",
 					"-lfreetype",
 					"-lz",
 					"-lbz2",
@@ -1167,7 +885,6 @@
 				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Debug;
 		};
@@ -1177,15 +894,20 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1193,7 +915,6 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
-				MTL_LANGUAGE_REVISION = Metal11;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -1214,10 +935,8 @@
 					/usr/include,
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lSDL2_image",
-					"-lcrypto",
-					"-lssl",
+					"-lSDL3",
+					"-lSDL3_image",
 					"-lfreetype",
 					"-lz",
 					"-lbz2",
@@ -1230,136 +949,6 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
-			};
-			name = Release;
-		};
-		5C8646A91C19BFB6000518C7 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					FLOOR_IOS,
-					FLOOR_NO_OPENCL,
-					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
-				);
-				INFOPLIST_FILE = src/ios/Info.plist;
-				LIBRARY_SEARCH_PATHS = (
-					"$(SDKROOT)/usr/lib",
-					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
-				);
-				MTL_LANGUAGE_REVISION = Metal11;
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
-				);
-				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lSDL2_image",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
-					"-v",
-				);
-				"OTHER_LDFLAGS[arch=*]" = (
-					"$(inherited)",
-					"-lfloord_static",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.warp;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
-			};
-			name = Debug;
-		};
-		5C8646AA1C19BFB6000518C7 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CLANG_ENABLE_MODULES = NO;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
-				COPY_PHASE_STRIP = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					FLOOR_IOS,
-					FLOOR_NO_OPENCL,
-					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
-				);
-				INFOPLIST_FILE = src/ios/Info.plist;
-				LIBRARY_SEARCH_PATHS = (
-					"$(SDKROOT)/usr/lib",
-					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
-				);
-				MTL_LANGUAGE_REVISION = Metal11;
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
-				);
-				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lSDL2_image",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
-					"-v",
-				);
-				"OTHER_LDFLAGS[arch=*]" = (
-					"$(inherited)",
-					"-lfloor_static",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = org.libfloor.warp;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Release;
 		};
@@ -1377,8 +966,8 @@
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_FAST_MATH = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -1399,37 +988,26 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
 					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
 					"-w",
 					"-framework",
-					SDL2,
+					SDL3,
 					"-framework",
-					SDL2_image,
-					"-lcrypto",
-					"-lssl",
+					SDL3_image,
 					"-lfloord",
 					"-lwarpd",
-					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
 					"-framework",
 					Metal,
 				);
@@ -1451,8 +1029,8 @@
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
-					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_FAST_MATH = YES;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
@@ -1469,37 +1047,26 @@
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				INFOPLIST_FILE = src/osx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				OTHER_CFLAGS = (
 					"-fparse-all-comments",
 					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
 					"-w",
 					"-framework",
-					SDL2,
+					SDL3,
 					"-framework",
-					SDL2_image,
-					"-lcrypto",
-					"-lssl",
+					SDL3_image,
 					"-lfloor",
 					"-lwarp",
-					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
 					"-framework",
 					Metal,
 				);
@@ -1550,8 +1117,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -1578,7 +1144,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -1600,7 +1166,7 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1611,14 +1177,10 @@
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				MTL_FAST_MATH = YES;
-				MTL_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1637,6 +1199,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -1648,6 +1219,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -1659,6 +1231,7 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
 				);
 			};
 			name = Debug;
@@ -1667,8 +1240,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -1696,7 +1268,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = fast;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1712,7 +1284,7 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1723,14 +1295,10 @@
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				MTL_FAST_MATH = YES;
-				MTL_OPTIMIZATION_LEVEL = s;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -1749,6 +1317,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -1760,6 +1337,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -1771,6 +1349,7 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
 				);
 			};
 			name = Release;
@@ -1783,15 +1362,6 @@
 			buildConfigurations = (
 				5C0071B11A91EF7E00F4711D /* Debug */,
 				5C0071B21A91EF7E00F4711D /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		5C8646A81C19BFB6000518C7 /* Build configuration list for PBXNativeTarget "warp_ios_sideload" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				5C8646A91C19BFB6000518C7 /* Debug */,
-				5C8646AA1C19BFB6000518C7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

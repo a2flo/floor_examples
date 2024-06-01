@@ -1,13 +1,14 @@
-# VS/vcpkg/clang/CMake project for nbody
-cmake_minimum_required(VERSION 3.11)
+# CMake project for nbody
+cmake_minimum_required(VERSION 3.21)
 project(nbody)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)
 
 ## build options
-set(WITH_ASAN false CACHE BOOL "build with address sanitizer")
-set(WITH_LIBCXX false CACHE BOOL "build with libc++")
+option(WITH_ASAN "build with address sanitizer" OFF)
+option(WITH_LIBCXX "build with libc++" OFF)
+option(BUILD_STANDALONE "build as a standalone binary (requires toolchain)" OFF)
 
 ## build output
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -21,10 +22,6 @@ add_executable(${PROJECT_NAME}
 	src/nbody.cpp
 	src/nbody.hpp
 	src/nbody_state.hpp
-	src/gl_renderer.cpp
-	src/gl_renderer.hpp
-	src/vulkan_renderer.cpp
-	src/vulkan_renderer.hpp
 	src/unified_renderer.cpp
 	src/unified_renderer.hpp
 )
@@ -36,3 +33,15 @@ if (WIN32)
 else ()
 	include(/opt/floor/include/floor/libfloor.cmake)
 endif (WIN32)
+
+# standalone build options
+if (BUILD_STANDALONE)
+	# TODOs:
+	#  * when statically linking libfloor, we need to pull in various system libraries -> how to detect these? should be specified within libfloor.cmake?
+	#  * properly specify CMAKE_EXE_LINKER_FLAGS (or better remove it entirely)
+	#  * can we only export certain symbols (via --export-dynamic-symbol=<list>) instead of exporting everything via -E?
+	#  * similarly, can we get rid of whole-archive linking and use a per-library export symbol list instead?
+	target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
+	set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -L${sysroot}/lib")
+	set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> -static --pie --eh-frame-hdr -E -L/opt/floor/lib -v -e _dlstart ${sysroot}/lib/ldso_rcrt1.o ${sysroot}/lib/crti.o <OBJECTS> ${sysroot}/lib/crtn.o -o <TARGET> -Bstatic --whole-archive -llzma -lc++ -lc++abi -lunwind --no-whole-archive -Bdynamic <LINK_LIBRARIES> --whole-archive -Bstatic -lxcb-dri2 -lxcb-dri3 -lxcb-glx -lxcb-present -lxcb-randr -lxcb-shm -lxcb-sync -lxcb-xfixes -lX11 -lX11-xcb -lXext -lXcursor -lXfixes -lXi -lXrender -lXrandr -lXss -Bdynamic --no-whole-archive --whole-archive -Bstatic -lc -lc_ldso -Bdynamic --no-whole-archive -L ${clang_rt_lib_path} --whole-archive -Bstatic -l:${clang_rt_lib_name} -Bdynamic --no-whole-archive")
+endif (BUILD_STANDALONE)

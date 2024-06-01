@@ -37,10 +37,8 @@ struct warp_state_struct {
 	//
 	bool done { false };
 	bool stop { false };
-	bool no_opengl { false };
 	bool no_metal { false };
 	bool no_vulkan { false };
-	bool unified_renderer { true };
 	bool is_auto_cam {
 #if !defined(FLOOR_IOS)
 		false
@@ -60,7 +58,6 @@ struct warp_state_struct {
 	bool is_clear_frame { false };
 	bool is_fixup { false };
 	bool is_bidir_scatter { false };
-	bool is_zw_depth { false };
 	bool is_always_render { false };
 	
 	// 0 = off, 1 = parallax mapping, 2 = tessellation
@@ -74,11 +71,6 @@ struct warp_state_struct {
 	
 	// use indirect render/compute commands/pipelines?
 	bool use_indirect_commands { true };
-	
-	// when using gather based warping, this is the current flip flop fbo idx
-	// (the one which will be rendered to next)
-	// NOTE: this is only used in the legacy OpenGL renderer
-	uint32_t legacy_cur_fbo = 0;
 	
 	float gather_eps_1 { 0.0025f };
 	float gather_eps_2 { 2.0f };

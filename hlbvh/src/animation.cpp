@@ -207,14 +207,11 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 		colliding_vertices = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, max_vertex_count * sizeof(uint32_t),
 															 COMPUTE_MEMORY_FLAG::READ_WRITE |
 															 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-															 (!hlbvh_state.uni_renderer ?
-															  COMPUTE_MEMORY_FLAG::OPENGL_SHARING : COMPUTE_MEMORY_FLAG::NONE) |
-															 sharing_flags | sharing_sync_flags,
-															 GL_ARRAY_BUFFER);
+															 sharing_flags | sharing_sync_flags);
 		colliding_vertices->set_debug_label("colliding_vertices");
 		colliding_triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
 		colliding_triangles->set_debug_label("colliding_triangles");
-		log_debug("check tri col buffer: $, $", colliding_vertices->get_size(), colliding_vertices->get_opengl_object());
+		log_debug("check tri col buffer: $", colliding_vertices->get_size());
 	}
 }
 

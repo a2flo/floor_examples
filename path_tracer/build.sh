@@ -64,14 +64,14 @@ if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
 	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor|clang_patchlevel" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 11.0 is required (ships with Xcode 12.5)
-		if [ $CLANG_MAJOR -lt 12 ] || [ $CLANG_MAJOR -eq 12 -a $CLANG_MINOR -eq 0 -a $CLANG_PATCHLEVEL -lt 5 ]; then
-			error "at least Xcode 12.5 / Apple clang/LLVM 12.0.5 is required to compile this project!"
+		# apple xcode/llvm/clang versioning scheme -> at least 15.0 is required (ships with Xcode / CLI tools 15.0)
+		if [ $CLANG_MAJOR -lt 15 ] || [ $CLANG_MAJOR -eq 15 -a $CLANG_MINOR -lt 0 -a $CLANG_PATCHLEVEL -lt 0 ]; then
+			error "at least Xcode 15.0 / Apple clang/LLVM 15.0.0 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 10.0 is required
-		if [ $CLANG_MAJOR -lt 10 ] || [ $CLANG_MAJOR -eq 10 -a $CLANG_MINOR -lt 0 ]; then
-			error "at least clang 10.0 is required to compile this project!"
+		# standard clang versioning scheme -> at least 16.0 is required
+		if [ $CLANG_MAJOR -lt 16 ] || [ $CLANG_MAJOR -eq 16 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 16.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -88,11 +88,9 @@ BUILD_JOB_COUNT=0
 eval $(printf "" | ${CXX} -E -dM ${INCLUDES} -isystem /opt/floor/include -include floor/floor/floor_conf.hpp - 2>&1 | grep -E "define FLOOR_" | sed -E "s/.*define (.*) [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 BUILD_CONF_OPENCL=$((1 - $((${FLOOR_NO_OPENCL}))))
 BUILD_CONF_CUDA=$((1 - $((${FLOOR_NO_CUDA}))))
-BUILD_CONF_OPENAL=$((1 - $((${FLOOR_NO_OPENAL}))))
 BUILD_CONF_HOST_COMPUTE=$((1 - $((${FLOOR_NO_HOST_COMPUTE}))))
 BUILD_CONF_METAL=$((1 - $((${FLOOR_NO_METAL}))))
 BUILD_CONF_VULKAN=$((1 - $((${FLOOR_NO_VULKAN}))))
-BUILD_CONF_NET=$((1 - $((${FLOOR_NO_NET}))))
 BUILD_CONF_OPENVR=$((1 - $((${FLOOR_NO_OPENVR}))))
 BUILD_CONF_OPENXR=$((1 - $((${FLOOR_NO_OPENXR}))))
 BUILD_CONF_LIBSTDCXX=0
@@ -146,7 +144,7 @@ for arg in "$@"; do
 			echo ""
 			echo ""
 			echo "example:"
-			echo "	./build.sh -v debug no-cuda no-openal -j1"
+			echo "	./build.sh -v debug -j1"
 			echo ""
 			exit 0
 			;;
@@ -213,7 +211,11 @@ STAT_IS_BSD=0
 case ${BUILD_PLATFORM} in
 	"darwin")
 		if expr `uname -p` : "arm.*" >/dev/null; then
-			BUILD_OS="ios"
+			if expr `sw_vers -productName` : "macOS" >/dev/null; then
+				BUILD_OS="macos"
+			else
+				BUILD_OS="ios"
+			fi
 		else
 			BUILD_OS="macos"
 		fi
@@ -346,6 +348,10 @@ if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	LDFLAGS="${LDFLAGS} -stdlib=libstdc++"
 else
 	LDFLAGS="${LDFLAGS} -stdlib=libc++"
+	if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
+		# preempt all other libc++ paths
+		INCLUDES="${INCLUDES} -isystem /usr/include/c++/v1"
+	fi
 	INCLUDES="${INCLUDES} -isystem /usr/local/include/c++/v1"
 fi
 LIBS="${LIBS}"
@@ -404,14 +410,8 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	COMMON_FLAGS="${COMMON_FLAGS} -fno-pic -fno-pie -Xclang -mrelocation-model -Xclang pic -Xclang -pic-level -Xclang 2"
 	
 	# pkg-config: required libraries/packages and optional libraries/packages
-	PACKAGES="sdl2 SDL2_image"
+	PACKAGES="sdl3 sdl3-image"
 	PACKAGES_OPT=""
-	if [ ${BUILD_CONF_NET} -gt 0 ]; then
-		PACKAGES_OPT="${PACKAGES_OPT} libcrypto libssl"
-	fi
-	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		PACKAGES_OPT="${PACKAGES_OPT} openal"
-	fi
 	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
 		PACKAGES_OPT="${PACKAGES_OPT} openvr"
 	fi
@@ -441,17 +441,12 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
 		UNCHECKED_LIBS="${UNCHECKED_LIBS} OpenCL"
 	fi
-	if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
-		if [ $BUILD_OS != "mingw" ]; then
-			UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan"
-		fi
-	fi
 
 	# add os specific libs
 	if [ $BUILD_OS == "linux" -o $BUILD_OS == "freebsd" -o $BUILD_OS == "openbsd" ]; then
-		UNCHECKED_LIBS="${UNCHECKED_LIBS} GL Xxf86vm"
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} Xxf86vm"
 	elif [ $BUILD_OS == "mingw" -o $BUILD_OS == "cygwin" ]; then
-		UNCHECKED_LIBS="${UNCHECKED_LIBS} opengl32 glu32 gdi32 ws2_32 mswsock"
+		UNCHECKED_LIBS="${UNCHECKED_LIBS} gdi32"
 	fi
 	
 	# linux:
@@ -467,7 +462,11 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	# windows/mingw opencl and vulkan handling
 	if [ $BUILD_OS == "mingw" ]; then
 		if [ ${BUILD_CONF_OPENCL} -gt 0 ]; then
-			if [ ! -z "${AMDAPPSDKROOT}" ]; then
+			if [ "$(pkg-config --exists OpenCL && echo $?)" == "0" -a "$(pkg-config --exists OpenCL-Headers && echo $?)" == "0" ]; then
+				# use MSYS2/MinGW package
+				LIBS="${LIBS} $(pkg-config --libs OpenCL) $(pkg-config --libs OpenCL-Headers)"
+				COMMON_FLAGS="${COMMON_FLAGS} $(pkg-config --cflags OpenCL) $(pkg-config --cflags OpenCL-Headers)"
+			elif [ ! -z "${AMDAPPSDKROOT}" ]; then
 				# use amd opencl sdk
 				AMDAPPSDKROOT_FIXED=$(echo ${AMDAPPSDKROOT} | sed -E "s/\\\\/\//g")
 				LDFLAGS="${LDFLAGS} -L\"${AMDAPPSDKROOT_FIXED}lib/x86_64\""
@@ -489,14 +488,10 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 		
 		if [ ${BUILD_CONF_VULKAN} -gt 0 ]; then
 			if [ "$(pkg-config --exists vulkan && echo $?)" == "0" ]; then
-				# use MSYS2/MinGW package
-				LIBS="${LIBS} $(pkg-config --libs vulkan)"
-				COMMON_FLAGS="${COMMON_FLAGS} $(pkg-config --cflags vulkan)"
+				# -> use MSYS2/MinGW package includes
+				:
 			elif [ ! -z "${VK_SDK_PATH}" ]; then
-				# use official SDK
-				UNCHECKED_LIBS="${UNCHECKED_LIBS} vulkan-1"
-				VK_SDK_PATH_FIXED=$(echo ${VK_SDK_PATH} | sed -E "s/\\\\/\//g")
-				LDFLAGS="${LDFLAGS} -L\"${VK_SDK_PATH_FIXED}/Bin\""
+				# -> use official SDK includes
 				INCLUDES="${INCLUDES} -isystem \"${VK_SDK_PATH_FIXED}/Include\""
 			else
 				error "Vulkan SDK not installed (install official SDK or mingw-w64-x86_64-vulkan)"
@@ -523,16 +518,7 @@ if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
 	# add all libs to LDFLAGS
 	LDFLAGS="${LDFLAGS} ${LIBS}"
 else
-	# aligned allocation is only available with macOS 10.14+, so disable it while we're still targeting 10.13+
-	COMMON_FLAGS="${COMMON_FLAGS} -fno-aligned-allocation"
-
 	# on macOS/iOS: assume everything is installed, pkg-config doesn't really exist
-	if [ ${BUILD_CONF_NET} -gt 0 ]; then
-		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openssl/include"
-	fi
-	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		INCLUDES="${INCLUDES} -isystem /usr/local/opt/openal-soft/include"
-	fi
 	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
 		INCLUDES="${INCLUDES} -isystem /usr/local/include/openvr"
 	fi
@@ -541,13 +527,8 @@ else
 	fi
 	INCLUDES="${INCLUDES} -iframework /Library/Frameworks"
 	
-	# additional lib paths
-	if [ ${BUILD_CONF_NET} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openssl/lib"
-	fi
-	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -L/usr/local/opt/openal-soft/lib"
-	fi
+	# additional lib/framework paths
+	LDFLAGS="${LDFLAGS} -F/Library/Frameworks -L/usr/local/lib"
 
 	# rpath voodoo
 	LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker @loader_path/../Resources"
@@ -562,15 +543,7 @@ else
 	
 	# frameworks and libs
 	LDFLAGS="${LDFLAGS} -F/Library/Frameworks"
-	LDFLAGS="${LDFLAGS} -framework SDL2 -framework SDL2_image"
-	if [ ${BUILD_CONF_NET} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -lcrypto -lssl"
-		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openssl/lib"
-	fi
-	if [ ${BUILD_CONF_OPENAL} -gt 0 ]; then
-		LDFLAGS="${LDFLAGS} -lopenal"
-		LDFLAGS="${LDFLAGS} -Xlinker -rpath -Xlinker /usr/local/opt/openal-soft/lib"
-	fi
+	LDFLAGS="${LDFLAGS} -framework SDL3 -framework SDL3_image"
 	if [ ${BUILD_CONF_OPENVR} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -lopenvr_api"
 	fi
@@ -579,7 +552,7 @@ else
 	fi
 	
 	# system frameworks
-	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework OpenGL -framework QuartzCore"
+	LDFLAGS="${LDFLAGS} -framework ApplicationServices -framework AppKit -framework Cocoa -framework QuartzCore"
 	if [ ${BUILD_CONF_METAL} -gt 0 ]; then
 		LDFLAGS="${LDFLAGS} -framework Metal"
 	fi
@@ -593,13 +566,13 @@ LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
 # flags
 
 # set up initial c++ and c flags
-CXXFLAGS="${CXXFLAGS} -std=gnu++2a"
+CXXFLAGS="${CXXFLAGS} -std=gnu++2b"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
 	CXXFLAGS="${CXXFLAGS} -stdlib=libc++"
 fi
-CFLAGS="${CFLAGS} -std=gnu11"
+CFLAGS="${CFLAGS} -std=gnu17"
 
 OBJCFLAGS="${OBJCFLAGS} -fno-objc-exceptions"
 if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
@@ -637,7 +610,7 @@ fi
 # debug flags, only used in the debug target
 DEBUG_FLAGS="-O0 -DFLOOR_DEBUG=1 -DDEBUG -fno-limit-debug-info"
 if [ $BUILD_OS != "mingw" ]; then
-	DEBUG_FLAGS="${DEBUG_FLAGS} -gdwarf-2"
+	DEBUG_FLAGS="${DEBUG_FLAGS} -gdwarf-4"
 else
 	DEBUG_FLAGS="${DEBUG_FLAGS} -g"
 fi
@@ -646,8 +619,10 @@ fi
 REL_FLAGS="-Ofast -funroll-loops"
 # if we're building for the native/host cpu, the appropriate sse/avx flags will already be set/used
 if [ $BUILD_CONF_NATIVE -eq 0 ]; then
-	# TODO: sse/avx selection/config? default to sse4.1 for now (core2)
-	REL_FLAGS="${REL_FLAGS} -msse4.1"
+	if [ $BUILD_OS != "macos" -a $BUILD_OS != "ios" ]; then
+		# TODO: sse/avx selection/config? default to sse4.1 for now (core2)
+		REL_FLAGS="${REL_FLAGS} -msse4.1"
+	fi
 fi
 
 # additional optimizations (used in addition to REL_CXX_FLAGS)
@@ -657,9 +632,9 @@ REL_OPT_LD_FLAGS="-flto"
 # macOS/iOS: set min version
 if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	if [ $BUILD_OS == "macos" ]; then
-		COMMON_FLAGS="${COMMON_FLAGS} -mmacosx-version-min=10.13"
+		COMMON_FLAGS="${COMMON_FLAGS} -mmacos-version-min=13.0"
 	else # ios
-		COMMON_FLAGS="${COMMON_FLAGS} -miphoneos-version-min=12.0"
+		COMMON_FLAGS="${COMMON_FLAGS} -mios-version-min=16.0"
 	fi
 fi
 
@@ -682,25 +657,26 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (C++20 with gnu and clang extensions is required)
+# remove std compat warnings (C++23 with gnu and clang extensions is required)
 WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic"
-WARNINGS="${WARNINGS} -Wno-c++2a-compat -Wno-c++2a-compat-pedantic -Wno-c++2a-extensions"
+WARNINGS="${WARNINGS} -Wno-c++20-compat -Wno-c++20-compat-pedantic -Wno-c++20-extensions"
+WARNINGS="${WARNINGS} -Wno-c++23-compat -Wno-c++23-compat-pedantic -Wno-c++23-extensions"
 WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
 WARNINGS="${WARNINGS} -Wno-nullability-extension"
 # don't be too pedantic
 WARNINGS="${WARNINGS} -Wno-header-hygiene -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast"
-WARNINGS="${WARNINGS} -Wno-global-constructors -Wno-exit-time-destructors -Wno-reserved-id-macro -Wno-reserved-identifier"
+WARNINGS="${WARNINGS} -Wno-global-constructors -Wno-exit-time-destructors -Wno-reserved-id-macro"
 WARNINGS="${WARNINGS} -Wno-date-time -Wno-poison-system-directories"
 # suppress warnings in system headers
 WARNINGS="${WARNINGS} -Wno-system-headers"
 # these two are only useful in certain situations, but are quite noisy
 WARNINGS="${WARNINGS} -Wno-packed -Wno-padded"
-# this conflicts with the other switch/case warning
-WARNINGS="${WARNINGS} -Wno-switch-enum"
+# these conflict with the other switch/case warning
+WARNINGS="${WARNINGS} -Wno-switch-enum -Wno-switch-default"
 # quite useful feature/extension
 WARNINGS="${WARNINGS} -Wno-nested-anon-types"
 # this should be taken care of in a different way
@@ -713,6 +689,15 @@ WARNINGS="${WARNINGS} -Wno-return-std-move-in-c++11"
 WARNINGS="${WARNINGS} -Wno-unsafe-buffer-usage"
 # ignore reserved identifier warnings because of "__" prefixes
 WARNINGS="${WARNINGS} -Wno-reserved-identifier"
+# ignore UD NaN/infinity due to fast-math
+WARNINGS="${WARNINGS} -Wno-nan-infinity-disabled"
+# ignore warnings about missing designated initializer when they are default-initialized
+# on clang < 19: disable missing field initializer warnings altogether
+if [ $CLANG_MAJOR -ge 19 ]; then
+	WARNINGS="${WARNINGS} -Wno-missing-designated-field-initializers"
+else
+	WARNINGS="${WARNINGS} -Wno-missing-field-initializers"
+fi
 COMMON_FLAGS="${COMMON_FLAGS} ${WARNINGS}"
 
 # diagnostics
@@ -720,7 +705,7 @@ COMMON_FLAGS="${COMMON_FLAGS} -fdiagnostics-show-note-include-stack -fmessage-le
 COMMON_FLAGS="${COMMON_FLAGS} -fparse-all-comments -fno-elide-type -fdiagnostics-show-template-tree"
 
 # includes + replace all "-I"s with "-isystem"s so that we don't get warnings in external headers
-COMMON_FLAGS="${COMMON_FLAGS} ${INCLUDES}"
+COMMON_FLAGS="${INCLUDES} ${COMMON_FLAGS}"
 COMMON_FLAGS=$(echo "${COMMON_FLAGS}" | sed -E "s/-I/-isystem /g")
 COMMON_FLAGS="${COMMON_FLAGS} -I/opt/floor/include -I${SRC_DIR}"
 

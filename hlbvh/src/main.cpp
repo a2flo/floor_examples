@@ -20,7 +20,6 @@
 #include <floor/core/timer.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/compute/compute_kernel.hpp>
-#include "gl_renderer.hpp"
 #include "unified_renderer.hpp"
 #include "hlbvh_state.hpp"
 #include "animation.hpp"
@@ -44,7 +43,6 @@ static const double3 cam_speeds { 25.0 /* default */, 150.0 /* faster */, 2.5 /*
 template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_handler::options {
 	{ "--help", [](hlbvh_option_context&, char**&) {
 		cout << "command line options:" << endl;
-		cout << "\t--no-opengl: disables opengl rendering" << endl;
 #if defined(__APPLE__)
 		cout << "\t--no-metal: disables metal rendering" << endl;
 #endif
@@ -72,10 +70,6 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		// TODO: performance stats
 		cout << endl;
 	}},
-	{ "--no-opengl", [](hlbvh_option_context&, char**&) {
-		hlbvh_state.no_opengl = true;
-		cout << "opengl disabled" << endl;
-	}},
 	{ "--no-metal", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true;
 		cout << "metal disabled" << endl;
@@ -93,7 +87,6 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		cout << "triangle collision visualization disabled" << endl;
 	}},
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
-		hlbvh_state.no_opengl = true; // also disable opengl
 		hlbvh_state.no_metal = true; // also disable metal
 		hlbvh_state.no_vulkan = true; // also disable vulkan
 		hlbvh_state.triangle_vis = false; // triangle visualization is unnecessary here
@@ -247,16 +240,14 @@ int main(int, char* argv[]) {
 #endif
 	
 	// init floor
-	const auto wanted_renderer = (// if neither opengl or vulkan is disabled, use the default
-								  // (this will choose vulkan if the config compute backend is vulkan)
-								  (!hlbvh_state.no_opengl && !hlbvh_state.no_vulkan && hlbvh_state.uni_renderer) ? floor::RENDERER::DEFAULT :
+	const auto wanted_renderer = (// if neither Metal nor Vulkan is disabled, use the default
+								  (!hlbvh_state.no_metal && !hlbvh_state.no_vulkan) ? floor::RENDERER::DEFAULT :
 								  // else: choose a specific one
-								  !hlbvh_state.no_vulkan && hlbvh_state.uni_renderer ? floor::RENDERER::VULKAN :
-								  !hlbvh_state.no_metal && hlbvh_state.uni_renderer ? floor::RENDERER::METAL :
-								  !hlbvh_state.no_opengl ? floor::RENDERER::OPENGL :
-								  // opengl/vulkan/metal are disabled
+								  !hlbvh_state.no_vulkan ? floor::RENDERER::VULKAN :
+								  !hlbvh_state.no_metal ? floor::RENDERER::METAL :
+								  // vulkan/metal are disabled
 								  floor::RENDERER::NONE);
-	if(!floor::init(floor::init_state {
+	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
 		.data_path = "../../data/",
@@ -267,9 +258,7 @@ int main(int, char* argv[]) {
 		.console_only = hlbvh_state.benchmark,
 		.renderer = wanted_renderer,
 		// disable resource tracking and enable non-blocking Vulkan execution
-		.context_flags = ((hlbvh_state.uni_renderer && wanted_renderer != floor::RENDERER::OPENGL ?
-						   COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING : COMPUTE_CONTEXT_FLAGS::NONE) |
-						  COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING)
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
@@ -277,9 +266,12 @@ int main(int, char* argv[]) {
 	
 	// disable resp. other renderers when using opengl/metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
+							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
-	const bool is_vulkan = (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
+	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
+							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (floor_renderer == floor::RENDERER::NONE && !hlbvh_state.benchmark) {
@@ -288,7 +280,6 @@ int main(int, char* argv[]) {
 	}
 	
 	if (is_metal) {
-		hlbvh_state.no_opengl = true;
 		hlbvh_state.no_vulkan = true;
 	} else {
 		hlbvh_state.no_metal = true;
@@ -296,146 +287,117 @@ int main(int, char* argv[]) {
 	
 	if (is_vulkan) {
 		if (floor_renderer == floor::RENDERER::VULKAN) {
-			hlbvh_state.no_opengl = true;
 			hlbvh_state.no_metal = true;
-		}
-		// can't use OpenGL with Vulkan
-		else {
-			hlbvh_state.no_opengl = true;
 		}
 	} else {
 		hlbvh_state.no_vulkan = true;
 	}
 	
-	log_debug("using $", (hlbvh_state.uni_renderer ? "unified renderer" :
-						  !hlbvh_state.no_opengl ? "opengl renderer" : "no renderer at all"));
+	log_debug("using $", (hlbvh_state.uni_renderer ? "unified renderer" : "no renderer at all"));
 	
-	// floor context handling
-	struct floor_ctx_guard {
-		floor_ctx_guard() {
-			floor::acquire_context();
-		}
-		~floor_ctx_guard() {
-			floor::release_context();
-		}
-	};
+	// add event handlers
 	event::handler evt_handler_fnctr(&evt_handler);
-	vector<unique_ptr<animation>> models;
+	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
+												   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
+												   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
+												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
+	
+	cam = make_unique<camera>();
+	cam->set_mouse_input(hlbvh_state.cam_mode);
+	cam->set_wasd_input(hlbvh_state.cam_mode);
+	cam->set_keyboard_input(hlbvh_state.cam_mode);
+	cam->set_rotation_wrapping(true);
+	cam->set_position(-10.5, 6.0, 2.15);
+	cam->set_rotation(28.0, 256.0);
+	
+	// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host, depending on the config)
+	hlbvh_state.cctx = floor::get_compute_context();
+	hlbvh_state.rctx = floor::get_render_context();
+	if (!hlbvh_state.rctx) {
+		hlbvh_state.rctx = hlbvh_state.cctx;
+	}
+	
+	// create a compute queue (aka command queue or stream) for the fastest device in the context
+	hlbvh_state.cdev = hlbvh_state.cctx->get_device(compute_device::TYPE::FASTEST);
+	hlbvh_state.cqueue = hlbvh_state.cctx->create_queue(*hlbvh_state.cdev);
+	if (hlbvh_state.cctx != hlbvh_state.rctx) {
+		// render context is not the same as the compute context -> also create dev and queue for the render context
+		hlbvh_state.rdev = hlbvh_state.rctx->get_device(compute_device::TYPE::FASTEST);
+		hlbvh_state.rqueue = hlbvh_state.rctx->create_queue(*hlbvh_state.rdev);
+	} else {
+		// otherwise: use the same as the compute context
+		hlbvh_state.rdev = hlbvh_state.cdev;
+		hlbvh_state.rqueue = hlbvh_state.cqueue;
+	}
+	
+	// compile the program and get the kernel function
 	shared_ptr<compute_program> prog;
-	shared_ptr<compute_program> shader_prog;
-	{
-		floor_ctx_guard grd;
-		
-		// add event handlers
-		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
-		
-		cam = make_unique<camera>();
-		cam->set_mouse_input(hlbvh_state.cam_mode);
-		cam->set_wasd_input(hlbvh_state.cam_mode);
-		cam->set_keyboard_input(hlbvh_state.cam_mode);
-		cam->set_rotation_wrapping(true);
-		cam->set_position(-10.5, 6.0, 2.15);
-		cam->set_rotation(28.0, 256.0);
-		
-		// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host, depending on the config)
-		hlbvh_state.cctx = floor::get_compute_context();
-		hlbvh_state.rctx = floor::get_render_context();
-		if (!hlbvh_state.rctx) {
-			hlbvh_state.rctx = hlbvh_state.cctx;
-		}
-		
-		// create a compute queue (aka command queue or stream) for the fastest device in the context
-		hlbvh_state.cdev = hlbvh_state.cctx->get_device(compute_device::TYPE::FASTEST);
-		hlbvh_state.cqueue = hlbvh_state.cctx->create_queue(*hlbvh_state.cdev);
-		if (hlbvh_state.cctx != hlbvh_state.rctx) {
-			// render context is not the same as the compute context -> also create dev and queue for the render context
-			hlbvh_state.rdev = hlbvh_state.rctx->get_device(compute_device::TYPE::FASTEST);
-			hlbvh_state.rqueue = hlbvh_state.rctx->create_queue(*hlbvh_state.rdev);
-		} else {
-			// otherwise: use the same as the compute context
-			hlbvh_state.rdev = hlbvh_state.cdev;
-			hlbvh_state.rqueue = hlbvh_state.cqueue;
-		}
-		
-		// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
-		const llvm_toolchain::compile_options options {
-			.enable_warnings = true,
-		};
-		prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
+	const llvm_toolchain::compile_options options {
+		.enable_warnings = true,
+	};
+	prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
 #else
-		// TODO: ios implementation!
+	// TODO: ios implementation!
 #endif
-		if (prog == nullptr) {
-			log_error("program compilation failed");
+	if (prog == nullptr) {
+		log_error("program compilation failed");
+		return -1;
+	}
+	
+	// get all kernels
+	hlbvh_state.kernels = {
+		{ "build_aabbs", {} },
+		{ "collide_root_aabbs", {} },
+		{ "compute_morton_codes", {} },
+		{ "build_bvh", {} },
+		{ "build_bvh_aabbs_leaves", {} },
+		{ "build_bvh_aabbs", {} },
+		{ "collide_bvhs_no_tri_vis", {} },
+		{ "collide_bvhs_tri_vis", {} },
+		{ "map_collided_triangles", {} },
+		{ "radix_sort_count", {} },
+		{ "radix_sort_prefix_sum", {} },
+		{ "radix_sort_stream_split", {} },
+		{ "indirect_radix_sort_count", {} },
+		{ "indirect_radix_sort_stream_split", {} },
+	};
+	for (auto& kernel : hlbvh_state.kernels) {
+		kernel.second = prog->get_kernel(kernel.first);
+		if (kernel.second == nullptr) {
+			log_error("failed to retrieve kernel \"$\" from program", kernel.first);
+			return -1;
+		}
+		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(*hlbvh_state.cdev)->max_total_local_size;
+		log_debug("max local size for \"$\": $", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
+	}
+	
+	// init unified renderer (need compiled prog first)
+	shared_ptr<compute_program> shader_prog;
+	if (hlbvh_state.uni_renderer) {
+		shader_prog = hlbvh_state.rctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
+														 "-DCOLLIDING_TRIANGLES_VIS="s + (hlbvh_state.triangle_vis ? "1" : "0"));
+		if (shader_prog == nullptr) {
+			log_error("shader program compilation failed");
 			return -1;
 		}
 		
-		// get all kernels
-		hlbvh_state.kernels = {
-			{ "build_aabbs", {} },
-			{ "collide_root_aabbs", {} },
-			{ "compute_morton_codes", {} },
-			{ "build_bvh", {} },
-			{ "build_bvh_aabbs_leaves", {} },
-			{ "build_bvh_aabbs", {} },
-			{ "collide_bvhs_no_tri_vis", {} },
-			{ "collide_bvhs_tri_vis", {} },
-			{ "map_collided_triangles", {} },
-			{ "radix_sort_count", {} },
-			{ "radix_sort_prefix_sum", {} },
-			{ "radix_sort_stream_split", {} },
-			{ "indirect_radix_sort_count", {} },
-			{ "indirect_radix_sort_stream_split", {} },
-		};
-		for (auto& kernel : hlbvh_state.kernels) {
-			kernel.second = prog->get_kernel(kernel.first);
-			if (kernel.second == nullptr) {
-				log_error("failed to retrieve kernel \"$\" from program", kernel.first);
-				return -1;
-			}
-			hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(*hlbvh_state.cdev)->max_total_local_size;
-			log_debug("max local size for \"$\": $", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
+		// setup renderer
+		if (!unified_renderer::init(shader_prog->get_kernel("hlbvh_vertex"),
+									shader_prog->get_kernel("hlbvh_fragment"))) {
+			log_error("error during unified renderer initialization!");
+			return -1;
 		}
-		
-		// init gl renderer
-#if !defined(FLOOR_IOS)
-		if (!hlbvh_state.no_opengl) {
-			// setup renderer
-			if (!gl_renderer::init()) {
-				log_error("error during opengl initialization!");
-				return -1;
-			}
-		}
-#endif
-		// init unified renderer (need compiled prog first)
-		if (hlbvh_state.uni_renderer) {
-			shader_prog = hlbvh_state.rctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
-															 "-DCOLLIDING_TRIANGLES_VIS="s + (hlbvh_state.triangle_vis ? "1" : "0"));
-			if (shader_prog == nullptr) {
-				log_error("shader program compilation failed");
-				return -1;
-			}
-			
-			// setup renderer
-			if (!unified_renderer::init(shader_prog->get_kernel("hlbvh_vertex"),
-										shader_prog->get_kernel("hlbvh_fragment"))) {
-				log_error("error during unified renderer initialization!");
-				return -1;
-			}
-		}
-		
-		// load animated models
-		models.emplace_back(make_unique<animation>("collision_models/gear/gear_0000", ".obj", 20, false, 0.1f));
-		models.emplace_back(make_unique<animation>("collision_models/gear2/gear2_0000", ".obj", 20, false, 0.1f));
-		models.emplace_back(make_unique<animation>("collision_models/sinbad/sinbad_0000", ".obj", 20, true));
-		models.emplace_back(make_unique<animation>("collision_models/golem/golem_0000", ".obj", 20, false, 0.125f));
-		models.emplace_back(make_unique<animation>("collision_models/plane/plane_00000", ".obj", 2));
 	}
+	
+	// load animated models
+	vector<unique_ptr<animation>> models;
+	models.emplace_back(make_unique<animation>("collision_models/gear/gear_0000", ".obj", 20, false, 0.1f));
+	models.emplace_back(make_unique<animation>("collision_models/gear2/gear2_0000", ".obj", 20, false, 0.1f));
+	models.emplace_back(make_unique<animation>("collision_models/sinbad/sinbad_0000", ".obj", 20, true));
+	models.emplace_back(make_unique<animation>("collision_models/golem/golem_0000", ".obj", 20, false, 0.125f));
+	models.emplace_back(make_unique<animation>("collision_models/plane/plane_00000", ".obj", 2));
 	
 	// create collider
 	auto hlbvh_collider = make_unique<collider>();
@@ -482,11 +444,6 @@ int main(int, char* argv[]) {
 		if (hlbvh_state.uni_renderer) {
 			// Metal/Vulkan rendering
 			unified_renderer::render(models, hlbvh_state.cam_mode, *cam.get());
-		} else if (!hlbvh_state.no_opengl) {
-			// OpenGL rendering
-			floor::start_frame();
-			gl_renderer::render(models, hlbvh_state.cam_mode, *cam.get());
-			floor::end_frame();
 		}
 	}
 	
@@ -495,14 +452,7 @@ int main(int, char* argv[]) {
 	cam = nullptr;
 	
 	// cleanup
-	if (!hlbvh_state.no_opengl) {
-		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
-		floor::acquire_context();
-		models.clear();
-		floor::release_context();
-	} else {
-		models.clear();
-	}
+	models.clear();
 	
 	if (hlbvh_state.uni_renderer) {
 		unified_renderer::destroy();

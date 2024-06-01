@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -29,7 +29,6 @@
 		5C56D4DA1BB2F11E0024467C /* img_kernels.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C56D4D91BB2F11E0024467C /* img_kernels.metallib */; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
-		5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -74,8 +73,6 @@
 		5CB14EE31B5045AC007183C4 /* img_kernels.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = img_kernels.hpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gl_blur.cpp; sourceTree = "<group>"; };
-		5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = gl_blur.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -168,8 +165,6 @@
 				5CD2175119E924E80049D6AE /* main.cpp */,
 				5C54774B1AD645AF00F55003 /* img_kernels.cpp */,
 				5CB14EE31B5045AC007183C4 /* img_kernels.hpp */,
-				5CD5AEB21AE1BD1600E1891C /* gl_blur.cpp */,
-				5CD5AEB31AE1BD1600E1891C /* gl_blur.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -221,7 +216,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1530;
+				LastUpgradeCheck = 1540;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -233,7 +228,7 @@
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "img" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -315,7 +310,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C54774D1AD645AF00F55003 /* img_kernels.cpp in Sources */,
-				5CD5AEB41AE1BD1600E1891C /* gl_blur.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -329,33 +323,35 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
 					"$(inherited)",
 					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
 					"$(inherited)",
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -365,28 +361,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
+					"$(inherited)",
+					"-framework",
+					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
@@ -395,7 +375,6 @@
 				);
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Debug;
 		};
@@ -405,29 +384,31 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
 				CLANG_ENABLE_MODULES = NO;
-				CONFIGURATION_BUILD_DIR = "bin/$(CONFIGURATION)$(EFFECTIVE_PLATFORM_NAME)";
 				COPY_PHASE_STRIP = NO;
-				FRAMEWORK_SEARCH_PATHS = "$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
+				);
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
+					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-					FLOOR_NO_OPENAL,
 				);
 				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
 					"$(inherited)",
 					PLATFORM_X64,
 				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s]" = (
-					"$(inherited)",
-					PLATFORM_X32,
-				);
 				INFOPLIST_FILE = src/ios/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
+					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
@@ -437,28 +418,12 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/include",
-					"-isystem",
-					"$(DT_TOOLCHAIN_DIR)/usr/lib/c++/v1",
-					"-isystem",
-					/usr/include/libxml2,
-					"-isystem",
-					"$(SDKROOT)/usr/include",
-					"-isystem",
-					"$(SDKROOT)/usr/include/freetype2",
-					"-I$(SDKROOT)/usr/include",
-					"-isystem",
 					/opt/floor/include/floor/ios/deps/include,
-					"-isystem",
-					/usr/include,
 				);
 				OTHER_LDFLAGS = (
-					"-lSDL2",
-					"-lcrypto",
-					"-lssl",
-					"-lfreetype",
-					"-lz",
-					"-lbz2",
+					"$(inherited)",
+					"-framework",
+					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
@@ -468,7 +433,6 @@
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = "arm64 armv7s";
 			};
 			name = Release;
 		};
@@ -482,12 +446,12 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -511,33 +475,30 @@
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
-					"-framework",
-					SDL2,
-					"-lcrypto",
-					"-lssl",
+					"$(inherited)",
+					"-w",
 					"-lfloord",
 					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
-					"-framework",
 					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL3,
+					"-framework",
+					SDL3_image,
 				);
 			};
 			name = Debug;
@@ -552,12 +513,12 @@
 				CLANG_X86_VECTOR_INSTRUCTIONS = sse4.1;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
+					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/macos-arm64_x86_64",
 				);
 				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
@@ -577,33 +538,30 @@
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.23.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
+					"$(inherited)",
 					"-fparse-all-comments",
 					"-isystem",
-					/opt/X11/include,
-					"-isystem",
 					/usr/local/include,
-					"-isystem",
-					/usr/local/opt/openssl/include,
 					"-iframework",
 					/Library/Frameworks,
 				);
 				OTHER_LDFLAGS = (
-					"-framework",
-					SDL2,
-					"-lcrypto",
-					"-lssl",
+					"$(inherited)",
+					"-w",
 					"-lfloor",
 					"-framework",
-					OpenCL,
-					"-framework",
-					OpenGL,
-					"-framework",
 					Metal,
+					"-framework",
+					AppKit,
+					"-framework",
+					QuartzCore,
+					"-framework",
+					SDL3,
+					"-framework",
+					SDL3_image,
 				);
 			};
 			name = Release;
@@ -612,8 +570,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -636,11 +593,12 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -661,7 +619,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -671,12 +629,10 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -695,6 +651,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
@@ -725,8 +690,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -749,12 +713,13 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -768,7 +733,7 @@
 					/usr/local/include,
 					/opt/floor/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -778,11 +743,9 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
-					"-std=gnu++2a",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
 				);
@@ -801,6 +764,15 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",

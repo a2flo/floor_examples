@@ -45,30 +45,11 @@ struct obj_model {
 	struct sub_object {
 		const string name;
 		vector<uint3> indices;
-		GLsizei index_count { 0u };
+		uint32_t index_count { 0u };
 		uint32_t mat_idx { 0u };
-		// not going to put this separately just for that
-		GLuint indices_gl_vbo { 0u };
 		shared_ptr<compute_buffer> indices_floor_vbo;
 	};
 	vector<unique_ptr<sub_object>> objects;
-};
-
-struct gl_obj_model : obj_model {
-	GLuint vertices_vbo { 0u };
-	GLuint tex_coords_vbo { 0u };
-	GLuint normals_vbo { 0u };
-	GLuint binormals_vbo { 0u };
-	GLuint tangents_vbo { 0u };
-	
-	struct material {
-		GLuint diffuse { 0u };
-		GLuint specular { 0u };
-		GLuint normal { 0u };
-		GLuint mask { 0u };
-	};
-	vector<material> materials;
-	vector<GLuint> textures;
 };
 
 struct floor_obj_model : obj_model {

@@ -16,42 +16,40 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#if !defined(__FLOOR_OCC_FUBAR_HPP__)
-#define __FLOOR_OCC_FUBAR_HPP__
+#pragma once
 
 #include <floor/floor/floor.hpp>
 #include <floor/compute/universal_binary.hpp>
 
 namespace fubar {
-	enum class TARGET_SET {
-		USER_JSON,
-		ALL,
-		MINIMAL,
-		GRAPHICS,
-	};
-	
-	struct options_t {
-		optional<string> additional_cli_options;
-		optional<bool> enable_warnings;
-		optional<bool> verbose_compile_output;
-		optional<bool> enable_soft_printf;
-		optional<bool> use_precompiled_header;
-		
-		optional<uint32_t> cuda_max_registers;
-		optional<bool> cuda_short_ptr;
-		
-		optional<bool> emit_debug_info;
-		optional<bool> preprocess_condense;
-		optional<bool> preprocess_preserve_comments;
-	};
-	
-	bool build(const TARGET_SET target_set,
-			   const string& targets_json_file_name /* if TARGET_SET::USER_JSON */,
-			   const string& options_json_file_name,
-			   const string& src_file_name,
-			   const string& dst_archive_file_name,
-			   const options_t& options);
-	
-}
 
-#endif
+enum class TARGET_SET {
+	USER_JSON,
+	ALL,
+	MINIMAL,
+	GRAPHICS,
+};
+
+struct options_t {
+	optional<string> additional_cli_options;
+	optional<bool> enable_warnings;
+	optional<bool> verbose_compile_output;
+	optional<bool> enable_soft_printf;
+	optional<bool> use_precompiled_header;
+	
+	optional<uint32_t> cuda_max_registers;
+	optional<bool> cuda_short_ptr;
+	
+	optional<bool> emit_debug_info;
+	optional<bool> preprocess_condense;
+	optional<bool> preprocess_preserve_comments;
+};
+
+bool build(const TARGET_SET target_set,
+		   const string& targets_json_file_name /* if TARGET_SET::USER_JSON */,
+		   const string& options_json_file_name,
+		   const string& src_file_name,
+		   const string& dst_archive_file_name,
+		   const options_t& options);
+
+} // namespace fubar

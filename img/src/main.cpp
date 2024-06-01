@@ -19,9 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/timer.hpp>
-#include <floor/core/gl_shader.hpp>
 #include <floor/compute/compute_kernel.hpp>
-#include "gl_blur.hpp"
 #include "img_kernels.hpp"
 
 struct img_option_context {
@@ -31,8 +29,6 @@ struct img_option_context {
 typedef option_handler<img_option_context> img_opt_handler;
 
 static bool done { false };
-static bool no_opengl { true };
-static bool run_gl_blur { false };
 static bool use_half { false };
 static bool dumb {
 #if !defined(FLOOR_IOS)
@@ -50,8 +46,6 @@ template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handle
 	{ "--help", [](img_option_context&, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--dim <width> <height>: image width * height in px (default: " << image_size << ")" << endl;
-		cout << "\t--with-opengl: enables OpenGL rendering and sharing (otherwise uses s/w rendering instead)" << endl;
-		cout << "\t--gl-blur: runs the opengl/glsl blur shader instead of the compute one" << endl;
 		cout << "\t--dumb: runs the \"dumb\" version of the compute kernel (no caching)" << endl;
 		cout << "\t--half: using half precision computations instead of single precision" << endl;
 		
@@ -88,14 +82,6 @@ template<> vector<pair<string, img_opt_handler::option_function>> img_opt_handle
 		}
 		
 		cout << "image size set to: " << image_size << endl;
-	}},
-	{ "--with-opengl", [](img_option_context&, char**&) {
-		no_opengl = false;
-		cout << "opengl enabled" << endl;
-	}},
-	{ "--gl-blur", [](img_option_context&, char**&) {
-		run_gl_blur = true;
-		cout << "running gl-blur" << endl;
 	}},
 	{ "--dumb", [](img_option_context&, char**&) {
 		dumb = true;
@@ -138,92 +124,6 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	}
 	return false;
 }
-
-/////////////////
-#if !defined(FLOOR_IOS)
-static GLuint vbo_fullscreen_triangle { 0 };
-static uint32_t global_vao { 0 };
-#endif
-static unordered_map<string, floor_shader_object> shader_objects;
-		
-#if !defined(FLOOR_IOS)
-static void gl_render(shared_ptr<compute_queue> dev_queue floor_unused, shared_ptr<compute_image> img) {
-	// draws ogl stuff
-	// don't need to clear, drawing the complete screen
-	glViewport(0, 0, (GLsizei)floor::get_width(), (GLsizei)floor::get_height());
-	
-	//img->release_opengl_object(dev_queue);
-	
-	auto& shd = shader_objects["IMG_DRAW"];
-	glUseProgram(shd.program.program);
-	
-	glUniform1i(shd.program.uniforms["tex"].location, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, img->get_opengl_object());
-	
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-	glEnableVertexAttribArray(0);
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	glDisableVertexAttribArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	glUseProgram(0);
-	
-	//img->acquire_opengl_object(dev_queue);
-}
-
-static bool compile_shaders() {
-	static const char img_vs_text[] { R"RAWSTR(
-		in vec2 in_vertex;
-		out vec2 tex_coord;
-		void main() {
-			tex_coord = in_vertex.xy * 0.5 + 0.5;
-			gl_Position = vec4(in_vertex.xy, 0.0, 1.0);
-		})RAWSTR" };
-	static const char img_fs_text[] { R"RAWSTR(
-		uniform sampler2D tex;
-		in vec2 tex_coord;
-		out vec4 frag_color;
-		void main() {
-			frag_color = texture(tex, vec2(tex_coord.x, 1.0 - tex_coord.y));
-		}
-	)RAWSTR" };
-	
-	{
-		const auto shd = floor_compile_shader("IMG_DRAW", &img_vs_text[0], &img_fs_text[0]);
-		if(!shd.first) return false;
-		shader_objects.emplace(shd.second.name, shd.second);
-	}
-	return true;
-}
-
-static bool gl_init() {
-	floor::init_gl();
-	glGenVertexArrays(1, &global_vao);
-	glBindVertexArray(global_vao);
-	
-	// create fullscreen triangle/quad vbo
-	static constexpr const float fullscreen_triangle[6] { 1.0f, 1.0f, 1.0f, -3.0f, -3.0f, 1.0f };
-	glGenBuffers(1, &vbo_fullscreen_triangle);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_fullscreen_triangle);
-	glBufferData(GL_ARRAY_BUFFER, 3 * sizeof(float2), fullscreen_triangle, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	
-	//
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
-	glDisable(GL_BLEND);
-	glEnable(GL_BLEND);
-	glDisable(GL_DEPTH_TEST);
-	glFrontFace(GL_CW);
-	
-	return compile_shaders();
-}
-#endif
-
-/////////////////
 
 enum SINGLE_STAGE_BLUR_KERNEL {
 	SINGLE_STAGE_BLUR_1024_32_F32,
@@ -279,7 +179,7 @@ int main(int, char* argv[]) {
 	if (done) return 0;
 	
 	// init floor
-	if(!floor::init(floor::init_state {
+	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
 #if !defined(FLOOR_IOS)
 		.data_path = "../../data/",
@@ -287,33 +187,12 @@ int main(int, char* argv[]) {
 		.data_path = "data/",
 #endif
 		.app_name = "img",
-		.renderer = (no_opengl ? floor::RENDERER::DEFAULT : floor::RENDERER::OPENGL),
+		.renderer = floor::RENDERER::DEFAULT,
 		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
 	floor::set_screen_size(image_size);
-	
-	// disable opengl when using metal/vulkan
-	if (!no_opengl) {
-		no_opengl = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL) ||
-					 (floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN));
-	}
-	
-	if (no_opengl && run_gl_blur) {
-		log_error("can't run OpenGL blur, because OpenGL renderer is not available");
-		run_gl_blur = false;
-	}
-	
-	// floor context handling
-	floor::acquire_context();
-	
-	if(!no_opengl) {
-#if !defined(FLOOR_IOS)
-		if(!gl_init()) return -1;
-		if(run_gl_blur && !gl_blur::init(image_size, tap_count)) return -1;
-#endif
-	}
 	
 	// add event handlers
 	event::handler evt_handler_fnctr(&evt_handler);
@@ -378,35 +257,28 @@ int main(int, char* argv[]) {
 												  // conversion happens automatically
 												  image_size,
 												  // this is a simple 2D image, using 4 channels (CHANNELS_4), unsigned int data (UINT) and normalized 8-bit per channel (FLAG_NORMALIZED + FORMAT_8)
-												  // -> IMAGE_2D + convenience alias RGBA8UI_NORM which does the things specified above (or just RGBA8 for opengl compat)
+												  // -> IMAGE_2D + convenience alias RGBA8UI_NORM which does the things specified above
 												  COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::RGBA8UI_NORM |
 												  // first image: read only, second image: write only (also sets NO_SAMPLER flag), third image: read/write
 												  (img_idx == 0 ? COMPUTE_IMAGE_TYPE::READ : (img_idx == 1 ? COMPUTE_IMAGE_TYPE::READ_WRITE : COMPUTE_IMAGE_TYPE::READ_WRITE)),
 												  // init image with our random data, or nothing
 												  span<uint8_t> { img_idx == 0 ? (uint8_t*)&img_data[0] : nullptr, img_idx == 0 ? img_data_size : 0u },
 												  // NOTE: COMPUTE_MEMORY_FLAG r/w flags are inferred automatically
-												  // w/ opengl: host will only write, w/o opengl: host will read and write
-												  (no_opengl ? COMPUTE_MEMORY_FLAG::HOST_READ_WRITE : COMPUTE_MEMORY_FLAG::HOST_WRITE) |
-												  // we want to render the images, so enable opengl sharing
-												  (no_opengl ? COMPUTE_MEMORY_FLAG::NONE : COMPUTE_MEMORY_FLAG::OPENGL_SHARING),
-												  // when using opengl sharing: appropriate texture target must be set
-												  GL_TEXTURE_2D);
+												  // host will read and write
+												  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
 		if (img_idx > 0) {
 			imgs[img_idx]->zero(*dev_queue);
 		}
 	}
 	
 	// flush/finish everything (init, data copy) before running the benchmark
-	if(!no_opengl) {
-		glFlush(); glFinish();
-	}
 	dev_queue->finish();
 	
 	// amount of blur runs we want to perform
 	static constexpr const size_t run_count { 20 };
 	
 	// -> compute blur
-	if (!run_gl_blur) {
+	{
 		log_debug("running $compute blur ...", (dumb ? "dumb " : ""));
 		// NOTE: all kernels are run with "wait_until_completion" set to true, since this provides proper synchronization in the absence
 		// of automatic or manual synchronization provided by a backend queue (-> automatic resource tracking or manual dev_queue->finish())
@@ -492,36 +364,8 @@ int main(int, char* argv[]) {
 		}
 	}
 	
-	// acquire for opengl use
-	if(!no_opengl) {
-		for(size_t img_idx = 0; img_idx < img_count; ++img_idx) {
-			imgs[img_idx]->release_opengl_object(dev_queue.get());
-		}
-	}
-	
-#if !defined(FLOOR_IOS)
-	// -> opengl/glsl blur
-	if(run_gl_blur) {
-		// flush/finish again after acquire (just to be sure _everything_ has completed)
-		dev_queue->finish();
-		glFlush(); glFinish();
-		
-		log_debug("running gl blur ...");
-		for(size_t i = 0; i < run_count; ++i) {
-			const auto gl_blur_start = floor_timer::start();
-			gl_blur::blur(imgs[0]->get_opengl_object(), imgs[1]->get_opengl_object(), imgs[2]->get_opengl_object(), vbo_fullscreen_triangle);
-			glFlush(); glFinish();
-			const auto gl_blur_end = floor_timer::stop<chrono::microseconds>(gl_blur_start);
-			log_debug("blur run in $ms", double(gl_blur_end) / 1000.0);
-		}
-	}
-#endif
-	
 	// render output image by default
 	cur_image = 1;
-	
-	// init done, release context
-	floor::release_context();
 	
 	// main loop
 	while(!done) {
@@ -532,7 +376,7 @@ int main(int, char* argv[]) {
 		}
 		
 		// s/w rendering
-		if (no_opengl) {
+		{
 			// grab the current image buffer data (read-only + blocking) ...
 			auto render_img = (uchar4*)imgs[cur_image]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
 			
@@ -552,14 +396,6 @@ int main(int, char* argv[]) {
 			SDL_UnlockSurface(wnd_surface);
 			SDL_UpdateWindowSurface(floor::get_window());
 		}
-		// opengl rendering
-		else if(!no_opengl) {
-			floor::start_frame();
-#if !defined(FLOOR_IOS)
-			gl_render(dev_queue, imgs[cur_image]);
-#endif
-			floor::end_frame();
-		}
 	}
 	log_msg("done!");
 	
@@ -567,14 +403,7 @@ int main(int, char* argv[]) {
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	
 	// cleanup
-	if (!no_opengl) {
-		// need to kill off the shared opengl buffers before floor kills the opengl context, otherwise bad things(tm) will happen
-		floor::acquire_context();
-		imgs.fill(nullptr);
-		floor::release_context();
-	} else {
-		imgs.fill(nullptr);
-	}
+	imgs.fill(nullptr);
 	
 	image_blur_dumb_v = nullptr;
 	image_blur_dumb_h = nullptr;

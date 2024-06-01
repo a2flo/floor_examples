@@ -38,6 +38,9 @@ camera::camera_state_t camera::get_current_state() const {
 void camera::run() {
 	prev_position = position;
 	
+FLOOR_PUSH_WARNINGS()
+FLOOR_IGNORE_WARNING(float-equal)
+	
 	// make camera speed dependent on the time between the last update and now (scale with delta)
 	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
 	const auto now = chrono::high_resolution_clock::now();
@@ -71,8 +74,10 @@ void camera::run() {
 		
 		if (mouse_input) {
 			// calculate the rotation via the current mouse cursor position
-			int2 cursor_pos;
-			const auto center_point = (floor::get_screen_size().cast<double>() * 0.5).cast<int32_t>();
+			float2 cursor_pos;
+			
+			const auto screen_size = floor::get_screen_size();
+			const auto center_point = (screen_size / 2u).cast<float>();
 			
 ////////////////////////////////
 // linux/windows version
@@ -135,7 +140,7 @@ void camera::run() {
 	}
 	// -> single frame camera handling
 	else {
-		int2 cursor_pos;
+		float2 cursor_pos;
 		SDL_GetRelativeMouseState(&cursor_pos.x, &cursor_pos.y);
 		
 		const double2 cursor_delta {
@@ -157,10 +162,12 @@ void camera::run() {
 				--ignore_next_rotation;
 			}
 			
-			const double2 center_point(double2(double(floor::get_width()), double(floor::get_height())) * 0.5);
-			SDL_WarpMouseInWindow(floor::get_window(), (int)round(center_point.x), (int)round(center_point.y));
+			const float2 center_point(float2(float(floor::get_width()), float(floor::get_height())) * 0.5f);
+			SDL_WarpMouseInWindow(floor::get_window(), round(center_point.x), round(center_point.y));
 		}
 	}
+	
+FLOOR_POP_WARNINGS()
 	
 	// update state
 	update_state();
@@ -265,7 +272,7 @@ void camera::set_keyboard_input(const bool& state) {
  */
 void camera::set_mouse_input(const bool& state) {
 	// grab input
-	SDL_SetWindowGrab(floor::get_window(), (state ? SDL_TRUE : SDL_FALSE));
+	SDL_SetWindowMouseGrab(floor::get_window(), (state ? SDL_TRUE : SDL_FALSE));
 	
 #if defined(__APPLE__)
 	// this effictively calls CGAssociateMouseAndMouseCursorPosition (which will lock the cursor to the window)

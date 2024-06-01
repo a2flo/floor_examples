@@ -1,35 +1,28 @@
 /*
  *  Flo's Open libRary (floor)
  *  Copyright (C) 2004 - 2024 Florian Ziesche
- *  
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; version 2 of the License only.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License along
  *  with this program; if not, write to the Free Software Foundation, Inc.,
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_NBODY_METAL_RENDERER_HPP__
-#define __FLOOR_NBODY_METAL_RENDERER_HPP__
+#pragma once
 
-#include <floor/core/essentials.hpp>
+#include <floor/compute/llvm_toolchain.hpp>
 
-#if !defined(FLOOR_NO_METAL)
-#include <floor/floor/floor.hpp>
-#include <floor/compute/compute_context.hpp>
-
-struct metal_renderer {
-	static bool init(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_kernel> vs,  shared_ptr<compute_kernel> fs);
-	static void render(const compute_context& ctx, const compute_queue& dev_queue, shared_ptr<compute_buffer> position_buffer);
-};
-
-#endif
-
-#endif
+//! dumps the specified "function_info" to console,
+//! requires "target" info for target-specific handling,
+//! if "do_log_undecorated" is true log_undecorated() will be used instead of log_msg()
+//! if "prefix"/"suffix" are set, the specified prefix/suffix will be attached to the log message
+void dump_function_info(const llvm_toolchain::function_info& function_info, const llvm_toolchain::TARGET& target,
+						const bool do_log_undecorated = false, const string prefix = "", const string suffix = "");

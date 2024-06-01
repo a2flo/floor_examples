@@ -19,13 +19,7 @@
 #include <floor/floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 
-#if defined(__APPLE__)
-#include <SDL2_image/SDL_image.h>
-#elif defined(__WINDOWS__)
-#include <SDL2/SDL_image.h>
-#else
-#include <SDL_image.h>
-#endif
+#include <SDL3_image/SDL_image.h>
 
 struct path_tracer_option_context {
 	bool done { false };
@@ -33,6 +27,32 @@ struct path_tracer_option_context {
 	string additional_options { "" };
 };
 typedef option_handler<path_tracer_option_context> path_tracer_opt_handler;
+
+static bool done { false };
+static uint32_t iteration { 0 };
+static shared_ptr<compute_buffer> img_buffer;
+static shared_ptr<compute_queue> dev_queue;
+
+static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
+	if (type == EVENT_TYPE::QUIT) {
+		done = true;
+		return true;
+	} else if (type == EVENT_TYPE::KEY_UP) {
+		switch (((shared_ptr<key_up_event>&)obj)->key) {
+			case SDLK_q:
+			case SDLK_ESCAPE:
+				done = true;
+				break;
+			case SDLK_r:
+				iteration = 0u;
+				img_buffer->zero(*dev_queue);
+				break;
+			default: break;
+		}
+		return true;
+	}
+	return false;
+}
 
 //! option -> function map
 template<> vector<pair<string, path_tracer_opt_handler::option_function>> path_tracer_opt_handler::options {
@@ -49,7 +69,7 @@ template<> vector<pair<string, path_tracer_opt_handler::option_function>> path_t
 	{ "-ApplePersistenceIgnoreState", [](path_tracer_option_context&, char**&) {} },
 };
 
-static shared_ptr<compute_image> load_texture(compute_context& ctx, const compute_queue& dev_queue, const string& filename) {
+static shared_ptr<compute_image> load_texture(compute_context& ctx, const string& filename) {
 	SDL_Surface* surface = IMG_Load(filename.c_str());
 	if (surface == nullptr) {
 		log_error("error loading texture file \"$\": $!", filename, SDL_GetError());
@@ -57,26 +77,26 @@ static shared_ptr<compute_image> load_texture(compute_context& ctx, const comput
 	}
 	
 	// we only want 8-bit/ch RGB(A) textures that we then convert to single channel 8bpp
-	if (surface->format->BitsPerPixel != 24u &&
-		surface->format->BitsPerPixel != 32u) {
+	if (surface->format->bits_per_pixel != 24u &&
+		surface->format->bits_per_pixel != 32u) {
 		log_error("texture must be 24bpp or 32bpp: \"$\"!", filename);
-		SDL_FreeSurface(surface);
+		SDL_DestroySurface(surface);
 		return {};
 	}
 	
 	const uint4 image_dim { uint32_t(surface->w), uint32_t(surface->h), 0, 0 };
 	const auto pixel_count = image_dim.x * image_dim.y;
 	auto image_data = make_unique<uint8_t[]>(pixel_count);
-	const auto bpp = surface->format->BytesPerPixel;
+	const auto bpp = surface->format->bytes_per_pixel;
 	const auto pitch = (uint32_t)surface->pitch;
 	for (uint32_t y = 0; y < image_dim.y; ++y) {
 		for (uint32_t x = 0; x < image_dim.x; ++x) {
 			image_data[x + y * image_dim.x] = *((uint8_t*)surface->pixels + pitch * y + x * bpp);
 		}
 	}
-	SDL_FreeSurface(surface);
+	SDL_DestroySurface(surface);
 	
-	return ctx.create_image(dev_queue, image_dim,
+	return ctx.create_image(*dev_queue, image_dim,
 							COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::R8UI_NORM,
 							span { image_data.get(), pixel_count });
 }
@@ -94,8 +114,8 @@ int main(int, char* argv[]) {
 		.data_path = "data/",
 #endif
 		.app_name = "path tracer",
+		.renderer = floor::RENDERER::DEFAULT,
 		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
-		// NOTE: don't need a specific renderer here, so just use the defaults
 	})) {
 		return -1;
 	}
@@ -105,7 +125,7 @@ int main(int, char* argv[]) {
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
 	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	auto dev_queue = compute_ctx->create_queue(*fastest_device);
+	dev_queue = compute_ctx->create_queue(*fastest_device);
 	
 	//
 	static const uint2 img_size { 512, 512 }; // fixed for now, b/c random function makes this look horrible at higher res
@@ -137,11 +157,11 @@ int main(int, char* argv[]) {
 	vector<shared_ptr<compute_image>> textures;
 	if (option_ctx.with_textures) {
 		textures = {
-			load_texture(*compute_ctx, *dev_queue, floor::data_path("white.png")),
-			load_texture(*compute_ctx, *dev_queue, floor::data_path("textures/cross.png")),
-			load_texture(*compute_ctx, *dev_queue, floor::data_path("textures/circle.png")),
-			load_texture(*compute_ctx, *dev_queue, floor::data_path("textures/inv_cross.png")),
-			load_texture(*compute_ctx, *dev_queue, floor::data_path("textures/stripe.png")),
+			load_texture(*compute_ctx, floor::data_path("white.png")),
+			load_texture(*compute_ctx, floor::data_path("textures/cross.png")),
+			load_texture(*compute_ctx, floor::data_path("textures/circle.png")),
+			load_texture(*compute_ctx, floor::data_path("textures/inv_cross.png")),
+			load_texture(*compute_ctx, floor::data_path("textures/stripe.png")),
 		};
 		for (const auto& tex : textures) {
 			if (!tex) {
@@ -151,7 +171,7 @@ int main(int, char* argv[]) {
 	}
 	
 	// create the image buffer on the device
-	auto img_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * pixel_count);
+	img_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * pixel_count);
 	
 	// init kernel parameters (will update in loop)
 	compute_queue::execution_parameters_t params {
@@ -173,9 +193,14 @@ int main(int, char* argv[]) {
 		params.args.emplace_back(textures);
 	}
 	
-	bool done = false;
+	// add event handlers
+	event::handler evt_handler_fnctr(&evt_handler);
+	floor::get_event()->add_internal_event_handler(evt_handler_fnctr, EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP);
+	
 	static constexpr const uint32_t iteration_count { 16384 };
-	for (uint32_t iteration = 0; iteration < iteration_count; ++iteration) {
+	for (iteration = 0; iteration < iteration_count; ++iteration) {
+		floor::get_event()->handle_events();
+		
 		params.args[1] = iteration;
 		// new seed each iteration, note that this needs to be stored in a referencable value when using params
 		const auto seed = core::rand<uint32_t>();
@@ -215,26 +240,6 @@ int main(int, char* argv[]) {
 		}
 		floor::set_caption("frame #" + to_string(iteration + 1));
 		
-		// handle quit event
-		SDL_Event event_handle;
-		while (SDL_PollEvent(&event_handle)) {
-			if (event_handle.type == SDL_QUIT) {
-				done = true;
-				break;
-			} else if (event_handle.type == SDL_KEYDOWN) {
-				switch (event_handle.key.keysym.sym) {
-					case SDLK_q:
-					case SDLK_ESCAPE:
-						done = true;
-						break;
-					case SDLK_r:
-						iteration = 0u;
-						img_buffer->zero(*dev_queue);
-						break;
-					default: break;
-				}
-			}
-		}
 		if (done) {
 			break;
 		}

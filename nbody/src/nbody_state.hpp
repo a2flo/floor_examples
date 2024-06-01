@@ -34,7 +34,7 @@
 #endif
 
 struct nbody_state_struct {
-	uint32_t body_count { 32768 };
+	uint32_t body_count { 65536 };
 	
 	// NOTE on iOS: this must be the same variable as used during the kernel compilation (-> build step)
 	uint32_t tile_size { NBODY_TILE_SIZE };
@@ -59,13 +59,12 @@ struct nbody_state_struct {
 	bool stop { false };
 	
 	//
-	bool no_opengl { false };
 	bool no_metal { false };
 	bool no_vulkan { false };
 	bool benchmark { false };
-	bool unified_renderer { true };
-	bool msaa { false };
+	bool msaa { true };
 	bool no_indirect { false };
+	bool no_fubar { false };
 	
 };
 #if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)

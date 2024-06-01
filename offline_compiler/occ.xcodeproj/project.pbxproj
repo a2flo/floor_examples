@@ -3,11 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5CCB82CF2BFC42190037975D /* fubar_dis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCB82CE2BFC42190037975D /* fubar_dis.cpp */; };
+		5CCB82D52C0183240037975D /* function_info.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CCB82D42C0183230037975D /* function_info.cpp */; };
 		5CFEEB1620B0ACB200D48BF1 /* fubar.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CFEEB1420B0ACB200D48BF1 /* fubar.cpp */; };
 /* End PBXBuildFile section */
 
@@ -27,6 +29,13 @@
 		5C00718C1A91507900F4711D /* occd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = occd; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C54878A1B608F560088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54878B1B608F560088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
+		5CCB82CD2BFC42180037975D /* fubar_dis.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = fubar_dis.hpp; sourceTree = "<group>"; };
+		5CCB82CE2BFC42190037975D /* fubar_dis.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fubar_dis.cpp; sourceTree = "<group>"; };
+		5CCB82D02BFC422C0037975D /* example_options.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = example_options.json; sourceTree = "<group>"; };
+		5CCB82D12BFC422C0037975D /* example_targets.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = example_targets.json; sourceTree = "<group>"; };
+		5CCB82D22BFC422D0037975D /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
+		5CCB82D32C0183230037975D /* function_info.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = function_info.hpp; sourceTree = "<group>"; };
+		5CCB82D42C0183230037975D /* function_info.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = function_info.cpp; sourceTree = "<group>"; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CFEEB1420B0ACB200D48BF1 /* fubar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = fubar.cpp; sourceTree = "<group>"; };
@@ -56,6 +65,9 @@
 		5CD2174419E924A20049D6AE = {
 			isa = PBXGroup;
 			children = (
+				5CCB82D22BFC422D0037975D /* CMakeLists.txt */,
+				5CCB82D02BFC422C0037975D /* example_options.json */,
+				5CCB82D12BFC422C0037975D /* example_targets.json */,
 				5CD2174F19E924E80049D6AE /* build.sh */,
 				5CD2175019E924E80049D6AE /* src */,
 				5C0071E01A9200D400F4711D /* data */,
@@ -66,9 +78,13 @@
 		5CD2175019E924E80049D6AE /* src */ = {
 			isa = PBXGroup;
 			children = (
+				5CD2175119E924E80049D6AE /* main.cpp */,
 				5CFEEB1420B0ACB200D48BF1 /* fubar.cpp */,
 				5CFEEB1520B0ACB200D48BF1 /* fubar.hpp */,
-				5CD2175119E924E80049D6AE /* main.cpp */,
+				5CCB82CE2BFC42190037975D /* fubar_dis.cpp */,
+				5CCB82CD2BFC42180037975D /* fubar_dis.hpp */,
+				5CCB82D42C0183230037975D /* function_info.cpp */,
+				5CCB82D32C0183230037975D /* function_info.hpp */,
 			);
 			path = src;
 			sourceTree = "<group>";
@@ -100,7 +116,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 1540;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C6F6ED21A5824B30050C5AC = {
@@ -109,7 +125,7 @@
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "occ" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -133,6 +149,8 @@
 			files = (
 				5CFEEB1620B0ACB200D48BF1 /* fubar.cpp in Sources */,
 				5C6F6EDB1A5826500050C5AC /* main.cpp in Sources */,
+				5CCB82CF2BFC42190037975D /* fubar_dis.cpp in Sources */,
+				5CCB82D52C0183240037975D /* function_info.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,14 +164,12 @@
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				CODE_SIGN_IDENTITY = "-";
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FLOOR_DEBUG=1",
@@ -172,12 +188,9 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -186,29 +199,17 @@
 					"-isystem",
 					/usr/local/include,
 					"-isystem",
-					/usr/local/opt/openssl/include,
-					"-isystem",
 					/opt/homebrew/include,
-					"-isystem",
-					"/opt/homebrew/opt/openssl@1.1/include",
-					"-isystem",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/include",
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-w",
 					"-framework",
-					SDL2,
-					"-lcrypto",
-					"-lssl",
+					SDL3,
 					"-lfloord",
-					"-framework",
-					OpenCL,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)d";
-				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Debug;
 		};
@@ -219,14 +220,12 @@
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				CODE_SIGN_IDENTITY = "-";
-				CONFIGURATION_BUILD_DIR = "bin/$(EFFECTIVE_PLATFORM_NAME)";
 				DEAD_CODE_STRIPPING = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
 					"$(LOCAL_LIBRARY_DIR)/Frameworks",
 				);
-				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_PREPROCESSOR_DEFINITIONS = PLATFORM_X64;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
@@ -241,12 +240,9 @@
 				GCC_WARN_UNUSED_LABEL = YES;
 				GCC_WARN_UNUSED_PARAMETER = YES;
 				LIBRARY_SEARCH_PATHS = (
-					/usr/local/opt/openssl/lib,
 					/usr/local/lib,
 					/opt/floor/lib,
 					/opt/homebrew/lib,
-					"/opt/homebrew/opt/openssl@1.1/lib",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -255,28 +251,16 @@
 					"-isystem",
 					/usr/local/include,
 					"-isystem",
-					/usr/local/opt/openssl/include,
-					"-isystem",
 					/opt/homebrew/include,
-					"-isystem",
-					"/opt/homebrew/opt/openssl@1.1/include",
-					"-isystem",
-					"/opt/homebrew/Cellar/openal-soft/1.21.1/include",
 					"-iframework",
 					/Library/Frameworks,
 				);
-				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
 				OTHER_LDFLAGS = (
 					"-framework",
-					SDL2,
-					"-lcrypto",
-					"-lssl",
+					SDL3,
 					"-lfloor",
-					"-framework",
-					OpenCL,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				VALID_ARCHS = "x86_64 arm64";
 			};
 			name = Release;
 		};
@@ -285,8 +269,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
@@ -310,11 +293,13 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -355,15 +340,13 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
-					"-faligned-allocation",
 				);
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
@@ -378,9 +361,19 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -396,6 +389,7 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
 				);
@@ -407,8 +401,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++2a";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_ASSIGN_ENUM = YES;
@@ -432,12 +425,14 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "${SRCROOT}/bin";
 				COPY_PHASE_STRIP = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
@@ -471,14 +466,12 @@
 					/usr/lib,
 					/opt/floor/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = NO;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				OTHER_CFLAGS = "";
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-fno-elide-type",
 					"-fdiagnostics-show-template-tree",
-					"-faligned-allocation",
 				);
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
@@ -493,9 +486,19 @@
 					"-Wno-c++11-compat-pedantic",
 					"-Wno-c++14-compat",
 					"-Wno-c++14-compat-pedantic",
+					"-Wno-c++17-compat",
+					"-Wno-c++17-compat-pedantic",
+					"-Wno-c++17-extensions",
+					"-Wno-c++20-compat",
+					"-Wno-c++20-compat-pedantic",
+					"-Wno-c++20-extensions",
+					"-Wno-c++23-compat",
+					"-Wno-c++23-compat-pedantic",
+					"-Wno-c++23-extensions",
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
 					"-Wno-system-headers",
@@ -511,6 +514,7 @@
 					"-Wno-reserved-id-macro",
 					"-Wno-documentation-unknown-command",
 					"-Wno-partial-availability",
+					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
 				);

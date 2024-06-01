@@ -38,7 +38,6 @@ struct hlbvh_state_struct {
 	bool stop { false };
 	
 	//
-	bool no_opengl { false };
 	bool no_metal { false };
 	bool no_vulkan { false };
 	bool benchmark { false };
@@ -47,7 +46,7 @@ struct hlbvh_state_struct {
 	
 	// if true:  draw collided triangles red (note that this is slower than
 	//           "just doing collision detection" due the necessity to copy/transform
-	//           data so that it can be used by opengl/metal), also still some inaccuracies
+	//           data so that it can be used by the renderer), also still some inaccuracies
 	// if false: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
 	bool triangle_vis { true };
 	

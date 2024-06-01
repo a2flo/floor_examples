@@ -245,9 +245,6 @@ int main(int, char* argv[]) {
 		return -1;
 	}
 	
-	// floor context handling
-	floor::acquire_context();
-	
 	// add event handlers
 	event::handler evt_handler_fnctr(&evt_handler);
 	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
@@ -306,9 +303,6 @@ int main(int, char* argv[]) {
 	}
 	const uint32_t dev_unit_count = (fastest_device->units != 0 ? fastest_device->units : unit_count_fallback);
 	const uint32_t reduction_global_size = dev_unit_count * 1024u * (fastest_device->is_gpu() ? 2u : 1u);
-	
-	// init done, release context
-	floor::release_context();
 	
 	// inclusive/exclusive scan execution parameters
 	const compute_queue::execution_parameters_t exec_params_scan_local {
@@ -544,11 +538,9 @@ int main(int, char* argv[]) {
 	floor::get_event()->remove_event_handler(evt_handler_fnctr);
 	
 	// cleanup
-	floor::acquire_context();
 	compute_output_data = nullptr;
 	compute_data = nullptr;
 	red_data_sum = nullptr;
-	floor::release_context();
 	
 	// kthxbye
 	floor::destroy();
