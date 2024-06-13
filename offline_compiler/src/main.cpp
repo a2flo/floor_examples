@@ -121,7 +121,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <3.0|3.1>: sets the supported Metal version (defaults to 3.0)\n"
+				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.0)\n"
 				 "\t--ptx-version <80|81|82|83|84>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -267,6 +267,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		const string mtl_version_str = *arg_ptr;
 		if (mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
 		else if (mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
+		else if (mtl_version_str == "3.2") { ctx.metal_std = METAL_VERSION::METAL_3_2; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
@@ -554,11 +555,9 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->metal_language_version = option_ctx.metal_std;
 				dev->metal_software_version = option_ctx.metal_std;
 				
-				if (option_ctx.metal_std >= METAL_VERSION::METAL_3_0) {
-					option_ctx.sub_groups = true;
-					if (option_ctx.simd_width == 0) {
-						option_ctx.simd_width = 32;
-					}
+				option_ctx.sub_groups = true;
+				if (option_ctx.simd_width == 0) {
+					option_ctx.simd_width = 32;
 				}
 				
 				dev->family_tier = 1;
@@ -766,7 +765,7 @@ static int run_normal_build(option_context& option_ctx) {
 		if (wants_console_output) {
 			string output;
 			if (option_ctx.target == llvm_toolchain::TARGET::AIR) {
-				core::system("\"" + floor::get_metal_dis() + "\" -o - " + option_ctx.output_filename, output);
+				core::system("\"" + floor::get_metallib_dis() + "\" -o - " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
 			} else if (option_ctx.target == llvm_toolchain::TARGET::SPIR) {
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);

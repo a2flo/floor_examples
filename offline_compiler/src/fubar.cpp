@@ -542,6 +542,34 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 1,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// OpenCL
@@ -765,6 +793,34 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 1,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
 					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
 					.simd_width = 32,

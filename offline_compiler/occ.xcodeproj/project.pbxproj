@@ -116,7 +116,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 1600;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C6F6ED21A5824B30050C5AC = {
@@ -381,6 +381,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -392,6 +393,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Debug;
@@ -506,6 +509,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -517,6 +521,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Release;
