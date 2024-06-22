@@ -122,7 +122,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1)\n"
-				 "\t--ptx-version <80|81|82|83|84>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
+				 "\t--ptx-version <80|81|82|83|84|85>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -281,7 +281,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		ctx.ptx_version = stou(*arg_ptr);
 		if (ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
-			ctx.ptx_version != 83 && ctx.ptx_version != 84) {
+			ctx.ptx_version != 83 && ctx.ptx_version != 84 && ctx.ptx_version != 85) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
