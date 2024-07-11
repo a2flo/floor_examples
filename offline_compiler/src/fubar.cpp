@@ -155,6 +155,8 @@ namespace fubar {
 			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS;
 		} else if (platform_str == "ios") {
 			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS;
+		} else if (platform_str == "visionos") {
+			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS;
 		} else {
 			throw runtime_error("unknown platform: " + platform_str);
 		}
@@ -169,6 +171,7 @@ namespace fubar {
 				.device_target = target,
 				.simd_width = simd_width,
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
+				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -507,7 +510,7 @@ namespace fubar {
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -535,7 +538,7 @@ namespace fubar {
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -563,7 +566,21 @@ namespace fubar {
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -766,7 +783,7 @@ namespace fubar {
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -794,7 +811,7 @@ namespace fubar {
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -822,7 +839,21 @@ namespace fubar {
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 2,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,

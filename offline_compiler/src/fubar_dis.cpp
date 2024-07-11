@@ -126,6 +126,9 @@ void disassemble(const string& archive_file_name) {
 					case decltype(mtl.platform_target)::IOS:
 						platform_target = "iOS";
 						break;
+					case decltype(mtl.platform_target)::VISIONOS:
+						platform_target = "visionOS";
+						break;
 				}
 				log_undecorated("\t\tplatform target: $", platform_target);
 				

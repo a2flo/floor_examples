@@ -29,7 +29,7 @@
 	{
 		"type": "Metal",
 		"version": [ 3, 0 ],
-		// one of: "macos", "ios"
+		// one of: "macos", "ios", "visionos"
 		"platform": "macos",
 		// one of: "generic", "apple", "amd", "intel"
 		"target": "generic",

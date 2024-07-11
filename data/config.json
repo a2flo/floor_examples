@@ -62,10 +62,12 @@
 		"append_mode": false,
 		// if enabled and verbosity >= 3, this will log msgs into a separate file
 		"separate_msg_file": false,
-		// if enabled prints the current time in each log msg (format: [%H:%M:%S.usecs])
+		// if enabled, prints the current time in each log msg (format: [%H:%M:%S.usecs])
 		"use_time": true,
-		// boolean, if enabled prints the log type in color (error = red, debug = green, ...)
+		// if enabled, prints the log type in color (error = red, debug = green, ...)
 		"use_color": true,
+		// if enabled, performs synchronous logging (flushes after each log call)
+		"synchronous": false,
 		// relative filename of the log file, relative to the current working directory (default: log.txt)
 		"log_filename": "",
 		// relative filename of the msg log file, only used/created if separate_msg_file = true (default: msg.txt)

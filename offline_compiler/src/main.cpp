@@ -117,11 +117,11 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios|macos], defaults to ios\n"
+				 "\t    Metal/AIR:     [ios|macos|visionos], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1)\n"
+				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
 				 "\t--ptx-version <80|81|82|83|84|85>: sets/overwrites the PTX version that should be used/emitted (defaults to 60)\n"
 				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -552,8 +552,6 @@ static int run_normal_build(option_context& option_ctx) {
 			case llvm_toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
-				dev->metal_language_version = option_ctx.metal_std;
-				dev->metal_software_version = option_ctx.metal_std;
 				
 				option_ctx.sub_groups = true;
 				if (option_ctx.simd_width == 0) {
@@ -564,9 +562,19 @@ static int run_normal_build(option_context& option_ctx) {
 				if (option_ctx.sub_target.empty() || option_ctx.sub_target.starts_with("ios")) {
 					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
 					dev->family_tier = 7;
+					dev->platform_type = metal_device::PLATFORM_TYPE::IOS;
+				} else if (option_ctx.sub_target.starts_with("visionos")) {
+					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
+					dev->family_tier = 8;
+					dev->platform_type = metal_device::PLATFORM_TYPE::VISIONOS;
+					if (option_ctx.metal_std < METAL_VERSION::METAL_3_2) {
+						// must at least be 3.2
+						option_ctx.metal_std = METAL_VERSION::METAL_3_2;
+					}
 				} else if (option_ctx.sub_target.starts_with("macos")) {
 					dev->family_type = metal_device::FAMILY_TYPE::MAC;
 					dev->family_tier = 2;
+					dev->platform_type = metal_device::PLATFORM_TYPE::MACOS;
 					if (option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -metal-intel-workarounds ";
 					}
@@ -574,6 +582,8 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("invalid AIR sub-target: $", option_ctx.sub_target);
 					return -3;
 				}
+				dev->metal_language_version = option_ctx.metal_std;
+				dev->metal_software_version = option_ctx.metal_std;
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				if (option_ctx.simd_width > 0) {
 					device->simd_width = option_ctx.simd_width;
@@ -582,8 +592,9 @@ static int run_normal_build(option_context& option_ctx) {
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
 				}
-				log_debug("compiling to AIR (type: $, tier: $) ...",
-						  metal_device::family_type_to_string(dev->family_type), dev->family_tier);
+				log_debug("compiling to AIR (type: $, platform: $, tier: $) ...",
+						  metal_device::family_type_to_string(dev->family_type),
+						  metal_device::platform_type_to_string(dev->platform_type), dev->family_tier);
 				break;
 			}
 			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
@@ -1071,7 +1082,7 @@ int main(int, char* argv[]) {
 			
 	// preempt floor logger init
 	logger::init(option_ctx.is_fubar_disassemble ? size_t(logger::LOG_TYPE::UNDECORATED) : option_ctx.verbosity,
-				 false, false, true, true, "occ.txt");
+				 false, false, true, true, false, "occ.txt");
 	
 	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
