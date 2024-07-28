@@ -27,6 +27,7 @@
 #include <floor/vr/vr_context.hpp>
 #include "unified_renderer.hpp"
 #include "nbody_state.hpp"
+#include <SDL3/SDL_main.h>
 nbody_state_struct nbody_state;
 
 struct nbody_option_context {
@@ -580,14 +581,16 @@ void init_system() {
 }
 
 // embed the compiled nbody and mip-map-minify FUBAR files if they are available
-#if __has_include("nbody_fubar.hpp") && __has_include("nbody_mmm_fubar.hpp")
-extern unsigned char ___data_nbody_fubar[];
-extern unsigned int ___data_nbody_fubar_len;
-extern unsigned char ___data_mmm_fubar[];
-extern unsigned int ___data_mmm_fubar_len;
-#include "nbody_fubar.hpp"
-#include "nbody_mmm_fubar.hpp"
+#if defined(__has_embed)
+#if __has_embed("../../data/nbody.fubar") && __has_embed("../../data/mmm.fubar")
+static constexpr const uint8_t nbody_fubar[] {
+#embed "../../data/nbody.fubar"
+};
+static constexpr const uint8_t mmm_fubar[] {
+#embed "../../data/mmm.fubar"
+};
 #define HAS_EMBEDDED_NBODY_FUBAR 1
+#endif
 #endif
 
 int main(int, char* argv[]) {
@@ -702,7 +705,7 @@ int main(int, char* argv[]) {
 #if defined(HAS_EMBEDDED_NBODY_FUBAR)
 	if (!nbody_state.no_fubar) {
 		// nbody kernels/shaders
-		const span<const uint8_t> fubar_data{ ___data_nbody_fubar, ___data_nbody_fubar_len };
+		const span<const uint8_t> fubar_data{ nbody_fubar, std::size(nbody_fubar) };
 		nbody_prog = compute_ctx->add_universal_binary(fubar_data);
 		nbody_render_prog =
 			(compute_ctx != render_ctx && render_ctx ? render_ctx->add_universal_binary(fubar_data) : nbody_prog);
@@ -711,7 +714,7 @@ int main(int, char* argv[]) {
 		}
 
 		// mip-map minify programs/kernels
-		const span<const uint8_t> mmm_fubar_data{ ___data_mmm_fubar, ___data_mmm_fubar_len };
+		const span<const uint8_t> mmm_fubar_data{ mmm_fubar, std::size(mmm_fubar) };
 		compute_mmm_prog = compute_ctx->add_universal_binary(mmm_fubar_data);
 		if (compute_mmm_prog) {
 			compute_image::provide_minify_program(*compute_ctx, compute_mmm_prog);

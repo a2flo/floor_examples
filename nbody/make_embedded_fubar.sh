@@ -22,8 +22,6 @@ if [ ! -f ../data/nbody.fubar ]; then
 	exit -2
 fi
 
-xxd -i ../data/nbody.fubar > src/nbody_fubar.hpp
-
 # mip map minify
 rm ../data/mmm.fubar 2>/dev/null
 ${OCC} --src /opt/floor/include/floor/compute/device/mip_map_minify.hpp --fubar targets_mmm.json --out ../data/mmm.fubar --no-double -vv
@@ -31,5 +29,3 @@ if [ ! -f ../data/mmm.fubar ]; then
 	echo "failed to build mmm.fubar"
 	exit -3
 fi
-
-xxd -i ../data/mmm.fubar > src/nbody_mmm_fubar.hpp
