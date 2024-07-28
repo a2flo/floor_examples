@@ -129,6 +129,12 @@ void disassemble(const string& archive_file_name) {
 					case decltype(mtl.platform_target)::VISIONOS:
 						platform_target = "visionOS";
 						break;
+					case decltype(mtl.platform_target)::IOS_SIMULATOR:
+						platform_target = "iOS simulator";
+						break;
+					case decltype(mtl.platform_target)::VISIONOS_SIMULATOR:
+						platform_target = "visionOS simulator";
+						break;
 				}
 				log_undecorated("\t\tplatform target: $", platform_target);
 				

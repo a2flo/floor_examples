@@ -19,6 +19,9 @@
 		"hdr_linear": false,
 		// 0 = auto-detect, other values can be used to override the detected value
 		"dpi": 0,
+		// ignores width/height/fullscreen fields and uses the native device fullscreen resolution
+		// NOTE: applies to iOS only
+		"prefer_native_device_resolution": true,
 		// VR settings
 		"vr": {
 			// if enabled, performs rendering on the VR HMD

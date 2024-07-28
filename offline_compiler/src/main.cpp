@@ -117,7 +117,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
 				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
-				 "\t    Metal/AIR:     [ios|macos|visionos], defaults to ios\n"
+				 "\t    Metal/AIR:     [ios|macos|visionos|ios_sim|visionos_sim], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
@@ -559,14 +559,19 @@ static int run_normal_build(option_context& option_ctx) {
 				}
 				
 				dev->family_tier = 1;
-				if (option_ctx.sub_target.empty() || option_ctx.sub_target.starts_with("ios")) {
+				if (option_ctx.sub_target.empty() ||
+					option_ctx.sub_target.starts_with("ios") ||
+					option_ctx.sub_target.starts_with("ios_sim")) {
 					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
 					dev->family_tier = 7;
-					dev->platform_type = metal_device::PLATFORM_TYPE::IOS;
-				} else if (option_ctx.sub_target.starts_with("visionos")) {
+					dev->platform_type = (option_ctx.sub_target.starts_with("ios_sim") ?
+										  metal_device::PLATFORM_TYPE::IOS_SIMULATOR : metal_device::PLATFORM_TYPE::IOS);
+				} else if (option_ctx.sub_target.starts_with("visionos") ||
+						   option_ctx.sub_target.starts_with("visionos_sim")) {
 					dev->family_type = metal_device::FAMILY_TYPE::APPLE;
 					dev->family_tier = 8;
-					dev->platform_type = metal_device::PLATFORM_TYPE::VISIONOS;
+					dev->platform_type = (option_ctx.sub_target.starts_with("visionos_sim") ?
+										  metal_device::PLATFORM_TYPE::VISIONOS_SIMULATOR : metal_device::PLATFORM_TYPE::VISIONOS);
 					if (option_ctx.metal_std < METAL_VERSION::METAL_3_2) {
 						// must at least be 3.2
 						option_ctx.metal_std = METAL_VERSION::METAL_3_2;

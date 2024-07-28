@@ -157,6 +157,10 @@ namespace fubar {
 			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS;
 		} else if (platform_str == "visionos") {
 			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS;
+		} else if (platform_str == "ios_simulator") {
+			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR;
+		} else if (platform_str == "visionos_simulator") {
+			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR;
 		} else {
 			throw runtime_error("unknown platform: " + platform_str);
 		}
@@ -495,6 +499,34 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
 					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
 					.simd_width = 32,
@@ -762,6 +794,34 @@ namespace fubar {
 		static const vector<universal_binary::target> graphics_targets {
 #if 1
 			// Metal
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.metal = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::METAL,
+					.major = 3,
+					.minor = 0,
+					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.simd_width = 32,
+					.soft_printf = 0,
+					.barycentric_coord_support = 0,
+					._unused = 0,
+				}
+			},
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
