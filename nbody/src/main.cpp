@@ -294,16 +294,16 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		return true;
 	} else if (type == EVENT_TYPE::KEY_UP) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
-			case SDLK_q:
+			case SDLK_Q:
 				nbody_state.done = true;
 				break;
 			case SDLK_SPACE:
 				nbody_state.stop ^= true;
 				break;
-			case SDLK_t:
+			case SDLK_T:
 				nbody_state.alpha_mask ^= true;
 				break;
-			case SDLK_r:
+			case SDLK_R:
 				init_system();
 				break;
 			case SDLK_1:
@@ -335,10 +335,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		return true;
 	} else if (type == EVENT_TYPE::KEY_DOWN) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
-			case SDLK_w:
+			case SDLK_W:
 				nbody_state.distance = const_math::clamp(nbody_state.distance - 5.0f, 1.0f, nbody_state.max_distance);
 				break;
-			case SDLK_s:
+			case SDLK_S:
 				nbody_state.distance = const_math::clamp(nbody_state.distance + 5.0f, 1.0f, nbody_state.max_distance);
 				break;
 			default: break;
@@ -998,11 +998,12 @@ int main(int, char* argv[]) {
 			const uint2 surface_dim = { uint32_t(wnd_surface->w), uint32_t(wnd_surface->h) }; // TODO: figure out how to coerce sdl to create a 2x surface
 			const uint2 render_dim = img_size.minned(floor::get_physical_screen_size());
 			const uint2 scale = render_dim / surface_dim;
-			for(uint32_t y = 0; y < surface_dim.y; ++y) {
+			const auto px_format_details = SDL_GetPixelFormatDetails(wnd_surface->format);
+			for (uint32_t y = 0; y < surface_dim.y; ++y) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
 				uint32_t img_idx = img_size.x * y * scale.y;
-				for(uint32_t x = 0; x < surface_dim.x; ++x, img_idx += scale.x) {
-					*px_ptr++ = SDL_MapRGB(wnd_surface->format, img_data[img_idx].x, img_data[img_idx].y, img_data[img_idx].z);
+				for (uint32_t x = 0; x < surface_dim.x; ++x, img_idx += scale.x) {
+					*px_ptr++ = SDL_MapRGB(px_format_details, nullptr, img_data[img_idx].x, img_data[img_idx].y, img_data[img_idx].z);
 				}
 			}
 			img_buffers[img_buffer_flip_flop]->unmap(*dev_queue, img_data);
