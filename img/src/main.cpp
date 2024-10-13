@@ -103,7 +103,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	}
 	else if(type == EVENT_TYPE::KEY_UP) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
-			case SDLK_q:
+			case SDLK_Q:
 				done = true;
 				break;
 			case SDLK_1:
@@ -115,7 +115,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_3:
 				cur_image = 2;
 				break;
-			case SDLK_w:
+			case SDLK_W:
 				cur_image = (cur_image + 1) % 3;
 				break;
 			default: break;
@@ -384,11 +384,12 @@ int main(int, char* argv[]) {
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
 			SDL_LockSurface(wnd_surface);
 			const uint2 render_dim = image_size.minned(uint2 { floor::get_width(), floor::get_height() });
+			const auto px_format_details = SDL_GetPixelFormatDetails(wnd_surface->format);
 			for (uint32_t y = 0; y < render_dim.y; ++y) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
 				uint32_t img_idx = image_size.x * y;
 				for (uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
-					*px_ptr++ = SDL_MapRGB(wnd_surface->format, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
+					*px_ptr++ = SDL_MapRGB(px_format_details, nullptr, render_img[img_idx].x, render_img[img_idx].y, render_img[img_idx].z);
 				}
 			}
 			imgs[cur_image]->unmap(*dev_queue, render_img);

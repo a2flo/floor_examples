@@ -77,10 +77,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	else if(type == EVENT_TYPE::KEY_UP) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
 			case SDLK_ESCAPE:
-			case SDLK_q:
+			case SDLK_Q:
 				dnn_state.done = true;
 				break;
-			case SDLK_c:
+			case SDLK_C:
 				nn_executer::rebuild_kernels();
 				break;
 			default: break;

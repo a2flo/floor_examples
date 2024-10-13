@@ -39,11 +39,11 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		return true;
 	} else if (type == EVENT_TYPE::KEY_UP) {
 		switch (((shared_ptr<key_up_event>&)obj)->key) {
-			case SDLK_q:
+			case SDLK_Q:
 			case SDLK_ESCAPE:
 				done = true;
 				break;
-			case SDLK_r:
+			case SDLK_R:
 				iteration = 0u;
 				img_buffer->zero(*dev_queue);
 				break;
@@ -77,8 +77,9 @@ static shared_ptr<compute_image> load_texture(compute_context& ctx, const string
 	}
 	
 	// we only want 8-bit/ch RGB(A) textures that we then convert to single channel 8bpp
-	if (surface->format->bits_per_pixel != 24u &&
-		surface->format->bits_per_pixel != 32u) {
+	const auto px_format_details = SDL_GetPixelFormatDetails(surface->format);
+	if (px_format_details->bits_per_pixel != 24u &&
+		px_format_details->bits_per_pixel != 32u) {
 		log_error("texture must be 24bpp or 32bpp: \"$\"!", filename);
 		SDL_DestroySurface(surface);
 		return {};
@@ -87,7 +88,7 @@ static shared_ptr<compute_image> load_texture(compute_context& ctx, const string
 	const uint4 image_dim { uint32_t(surface->w), uint32_t(surface->h), 0, 0 };
 	const auto pixel_count = image_dim.x * image_dim.y;
 	auto image_data = make_unique<uint8_t[]>(pixel_count);
-	const auto bpp = surface->format->bytes_per_pixel;
+	const auto bpp = px_format_details->bytes_per_pixel;
 	const auto pitch = (uint32_t)surface->pitch;
 	for (uint32_t y = 0; y < image_dim.y; ++y) {
 		for (uint32_t x = 0; x < image_dim.x; ++x) {
@@ -220,17 +221,18 @@ int main(int, char* argv[]) {
 			};
 			
 			// ... and blit it into the window
-			// (crude and I'd usually do this via GL, but this way it's not a requirement)
-			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());
+			const auto wnd = floor::get_window();
+			const auto wnd_surface = SDL_GetWindowSurface(wnd);
+			const auto scale = uint32_t(SDL_GetWindowDisplayScale(wnd));
 			SDL_LockSurface(wnd_surface);
 			const uint2 render_dim = img_size.minned(uint2 { floor::get_width(), floor::get_height() });
-			for(uint32_t y = 0; y < render_dim.y; ++y) {
+			const auto px_format_details = SDL_GetPixelFormatDetails(wnd_surface->format);
+			for (uint32_t y = 0; y < render_dim.y * scale; ++y) {
 				uint32_t* px_ptr = (uint32_t*)wnd_surface->pixels + ((size_t)wnd_surface->pitch / sizeof(uint32_t)) * y;
-				uint32_t img_idx = img_size.x * y;
-				for(uint32_t x = 0; x < render_dim.x; ++x, ++img_idx) {
+				for (uint32_t x = 0; x < render_dim.x * scale; ++x) {
 					// map and gamma correct each pixel according to the window format
-					const auto rgb = gamma_correct(img_data[img_idx].xyz);
-					*px_ptr++ = SDL_MapRGB(wnd_surface->format, rgb.x, rgb.y, rgb.z);
+					const auto rgb = gamma_correct(img_data[x / scale + (y / scale) * img_size.x].xyz);
+					*px_ptr++ = SDL_MapRGB(px_format_details, nullptr, rgb.x, rgb.y, rgb.z);
 				}
 			}
 			img_buffer->unmap(*dev_queue, img_data);

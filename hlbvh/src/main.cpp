@@ -106,13 +106,13 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	}
 	else if(type == EVENT_TYPE::KEY_UP) {
 		switch(((shared_ptr<key_up_event>&)obj)->key) {
-			case SDLK_q:
+			case SDLK_Q:
 				hlbvh_state.done = true;
 				break;
 			case SDLK_SPACE:
 				hlbvh_state.stop ^= true;
 				break;
-			case SDLK_c:
+			case SDLK_C:
 				hlbvh_state.cam_mode ^= true;
 				if(cam != nullptr) {
 					cam->set_keyboard_input(hlbvh_state.cam_mode);
@@ -141,10 +141,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_RCTRL:
 				cam->set_cam_speed(cam_speeds.z);
 				break;
-			case SDLK_w:
+			case SDLK_W:
 				hlbvh_state.distance = const_math::clamp(hlbvh_state.distance - 5.0f, 1.0f, hlbvh_state.max_distance);
 				break;
-			case SDLK_s:
+			case SDLK_S:
 				hlbvh_state.distance = const_math::clamp(hlbvh_state.distance + 5.0f, 1.0f, hlbvh_state.max_distance);
 				break;
 			default: break;

@@ -11,21 +11,8 @@
 		5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
 		5C0071C11A91F2BD00F4711D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C0071C21A91F2BD00F4711D /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
-		5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
-		5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
-		5C0071CA1A91FFA600F4711D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
-		5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
-		5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
-		5C0071D01A91FFC300F4711D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
-		5C0071D21A91FFCB00F4711D /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
-		5C0071D41A91FFD100F4711D /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
-		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
-		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
 		5C0134D322B6EC1400BA993D /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
 		5C0134D422B6EC1400BA993D /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
-		5C3928862ABDA0F400B3E57D /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928852ABDA0F400B3E57D /* AVFAudio.framework */; };
-		5C3928882ABDA11100B3E57D /* CoreHaptics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928872ABDA11100B3E57D /* CoreHaptics.framework */; };
-		5C39288A2ABDA12700B3E57D /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C3928892ABDA12700B3E57D /* GameController.framework */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C647FD11E33DF180026191F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
@@ -33,6 +20,34 @@
 		5C8FD0B41AD3389B00215230 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; settings = {COMPILER_FLAGS = "-Rpass-analysis=loop-vectorize -Rpass=loop-vectorize"; }; };
 		5C8FD0B61AD338A500215230 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
 		5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C8FD0BA1AD3393700215230 /* Images.xcassets */; };
+		5C9FAC252C4441BB00FD7581 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5CD2175119E924E80049D6AE /* main.cpp */; };
+		5C9FAC262C4441BB00FD7581 /* nbody.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* nbody.cpp */; };
+		5C9FAC272C4441BB00FD7581 /* unified_renderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C0134D222B6EC1400BA993D /* unified_renderer.cpp */; };
+		5C9FAC2C2C4441BB00FD7581 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CB1A91FFAA00F4711D /* AudioToolbox.framework */; };
+		5C9FAC2D2C4441BB00FD7581 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C71A91FF9000F4711D /* CoreAudio.framework */; };
+		5C9FAC2E2C4441BB00FD7581 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C91A91FFA600F4711D /* CoreGraphics.framework */; };
+		5C9FAC2F2C4441BB00FD7581 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C9FAC302C4441BB00FD7581 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CF1A91FFC300F4711D /* Foundation.framework */; };
+		5C9FAC312C4441BB00FD7581 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D11A91FFCB00F4711D /* ImageIO.framework */; };
+		5C9FAC322C4441BB00FD7581 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071C51A91FF8000F4711D /* Metal.framework */; };
+		5C9FAC332C4441BB00FD7581 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D31A91FFD100F4711D /* MobileCoreServices.framework */; };
+		5C9FAC342C4441BB00FD7581 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071CD1A91FFB000F4711D /* QuartzCore.framework */; };
+		5C9FAC352C4441BB00FD7581 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
+		5C9FAC372C4441BB00FD7581 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5C131E811E33D32E003A5688 /* LaunchScreen.storyboard */; };
+		5C9FAC382C4441BB00FD7581 /* Base.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BA1A91F1E800F4711D /* Base.lproj */; };
+		5C9FAC392C4441BB00FD7581 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5C0071BB1A91F1E800F4711D /* Images.xcassets */; };
+		5C9FAC3B2C4441BB00FD7581 /* config.json in Copy Files */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
+		5C9FAC3C2C4441BB00FD7581 /* config.json.local in Copy Files */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
+		5C9FAC3D2C4441BB00FD7581 /* nbody.fubar in Copy Files */ = {isa = PBXBuildFile; fileRef = 5CC3688521611CAF001DE77E /* nbody.fubar */; };
+		5C9FAC4E2C448BCB00FD7581 /* nbody_visionos-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5C9FAC4C2C448BCB00FD7581 /* nbody_visionos-Info.plist */; };
+		5CC50A232C4868DF00A1C603 /* SDL3.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CC50A212C48689F00A1C603 /* SDL3.framework */; };
+		5CC50A242C4868E000A1C603 /* SDL3.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5CC50A212C48689F00A1C603 /* SDL3.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		5CCEA1D72C48663800B37BC1 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1D62C48663800B37BC1 /* Metal.framework */; };
+		5CCEA1D92C48665200B37BC1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1D82C48665200B37BC1 /* Foundation.framework */; };
+		5CCEA1DB2C48667200B37BC1 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1DA2C48667200B37BC1 /* CoreGraphics.framework */; };
+		5CCEA1DD2C48669600B37BC1 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1DC2C48669600B37BC1 /* QuartzCore.framework */; };
+		5CCEA1DF2C48669F00B37BC1 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1DE2C48669F00B37BC1 /* ImageIO.framework */; };
+		5CCEA1E12C4866BD00B37BC1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1E02C4866BD00B37BC1 /* UIKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -48,10 +63,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5C9FAC3A2C4441BB00FD7581 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = data;
+			dstSubfolderSpec = 7;
+			files = (
+				5C9FAC3B2C4441BB00FD7581 /* config.json in Copy Files */,
+				5C9FAC3C2C4441BB00FD7581 /* config.json.local in Copy Files */,
+				5C9FAC3D2C4441BB00FD7581 /* nbody.fubar in Copy Files */,
+			);
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5CC50A252C4868E000A1C603 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				5CC50A242C4868E000A1C603 /* SDL3.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		5C0071911A91EF7E00F4711D /* nbodyd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C0071911A91EF7E00F4711D /* nbodyd_ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd_ios.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C0071BA1A91F1E800F4711D /* Base.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Base.lproj; path = src/ios/Base.lproj; sourceTree = "<group>"; };
 		5C0071BB1A91F1E800F4711D /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/ios/Images.xcassets; sourceTree = "<group>"; };
 		5C0071BC1A91F1E800F4711D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/ios/Info.plist; sourceTree = "<group>"; };
@@ -69,12 +108,7 @@
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
 		5C0134D122B6EC1400BA993D /* unified_renderer.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = unified_renderer.hpp; sourceTree = "<group>"; };
 		5C0134D222B6EC1400BA993D /* unified_renderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = unified_renderer.cpp; sourceTree = "<group>"; };
-		5C131E1D1E32C677003A5688 /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
-		5C131E1F1E32C691003A5688 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS10.2.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		5C131E821E33D32E003A5688 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = src/ios/Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		5C3928852ABDA0F400B3E57D /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/AVFAudio.framework; sourceTree = DEVELOPER_DIR; };
-		5C3928872ABDA11100B3E57D /* CoreHaptics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreHaptics.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/CoreHaptics.framework; sourceTree = DEVELOPER_DIR; };
-		5C3928892ABDA12700B3E57D /* GameController.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GameController.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS17.0.sdk/System/Library/Frameworks/GameController.framework; sourceTree = DEVELOPER_DIR; };
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* nbody.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = nbody.cpp; sourceTree = "<group>"; };
@@ -82,39 +116,59 @@
 		5C8FD0941AD3366800215230 /* nbodyd.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C8FD0BA1AD3393700215230 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = src/osx/Images.xcassets; sourceTree = "<group>"; };
 		5C8FD0BC1AD3393700215230 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = src/osx/Info.plist; sourceTree = "<group>"; };
+		5C9FAC412C4441BB00FD7581 /* nbodyd_visionos.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = nbodyd_visionos.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C9FAC4C2C448BCB00FD7581 /* nbody_visionos-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "nbody_visionos-Info.plist"; sourceTree = "<group>"; };
 		5CB92D9E1ACA0DFB00109EB3 /* nbody_state.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = nbody_state.hpp; sourceTree = "<group>"; };
 		5CC3688521611CAF001DE77E /* nbody.fubar */ = {isa = PBXFileReference; lastKnownFileType = file; name = nbody.fubar; path = ../data/nbody.fubar; sourceTree = "<group>"; };
+		5CC50A212C48689F00A1C603 /* SDL3.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SDL3.framework; path = "../../../../../Library/Frameworks/SDL3.xcframework/ios-arm64/SDL3.framework"; sourceTree = "<group>"; };
 		5CCB82472BF98B3F0037975D /* make_embedded_fubar.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = make_embedded_fubar.sh; sourceTree = "<group>"; };
+		5CCEA1D62C48663800B37BC1 /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Metal.framework; sourceTree = DEVELOPER_DIR; };
+		5CCEA1D82C48665200B37BC1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		5CCEA1DA2C48667200B37BC1 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		5CCEA1DC2C48669600B37BC1 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
+		5CCEA1DE2C48669F00B37BC1 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		5CCEA1E02C4866BD00B37BC1 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5CD2174F19E924E80049D6AE /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
 		5CD2175119E924E80049D6AE /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		5CEC08AC22BFBE8A00033467 /* CMakeLists.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		5C00718E1A91EF7E00F4711D /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				5C39288A2ABDA12700B3E57D /* GameController.framework in Frameworks */,
-				5C3928882ABDA11100B3E57D /* CoreHaptics.framework in Frameworks */,
-				5C3928862ABDA0F400B3E57D /* AVFAudio.framework in Frameworks */,
-				5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */,
-				5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */,
-				5C0071CA1A91FFA600F4711D /* CoreGraphics.framework in Frameworks */,
-				5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */,
-				5C0071D01A91FFC300F4711D /* Foundation.framework in Frameworks */,
-				5C0071D21A91FFCB00F4711D /* ImageIO.framework in Frameworks */,
-				5C0071C61A91FF8000F4711D /* Metal.framework in Frameworks */,
-				5C0071D41A91FFD100F4711D /* MobileCoreServices.framework in Frameworks */,
-				5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */,
-				5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		5C8FD0911AD3366800215230 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5C9FAC282C4441BB00FD7581 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C9FAC2C2C4441BB00FD7581 /* AudioToolbox.framework in Frameworks */,
+				5C9FAC2D2C4441BB00FD7581 /* CoreAudio.framework in Frameworks */,
+				5C9FAC2E2C4441BB00FD7581 /* CoreGraphics.framework in Frameworks */,
+				5C9FAC2F2C4441BB00FD7581 /* CoreMotion.framework in Frameworks */,
+				5C9FAC302C4441BB00FD7581 /* Foundation.framework in Frameworks */,
+				5C9FAC312C4441BB00FD7581 /* ImageIO.framework in Frameworks */,
+				5C9FAC322C4441BB00FD7581 /* Metal.framework in Frameworks */,
+				5C9FAC332C4441BB00FD7581 /* MobileCoreServices.framework in Frameworks */,
+				5C9FAC342C4441BB00FD7581 /* QuartzCore.framework in Frameworks */,
+				5C9FAC352C4441BB00FD7581 /* UIKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5CCEA1D52C48661500B37BC1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5CCEA1DB2C48667200B37BC1 /* CoreGraphics.framework in Frameworks */,
+				5CCEA1D92C48665200B37BC1 /* Foundation.framework in Frameworks */,
+				5CCEA1DF2C48669F00B37BC1 /* ImageIO.framework in Frameworks */,
+				5CC50A232C4868DF00A1C603 /* SDL3.framework in Frameworks */,
+				5CCEA1D72C48663800B37BC1 /* Metal.framework in Frameworks */,
+				5CCEA1DD2C48669600B37BC1 /* QuartzCore.framework in Frameworks */,
+				5CCEA1E12C4866BD00B37BC1 /* UIKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,11 +211,13 @@
 		5C131E1C1E32C676003A5688 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				5C3928892ABDA12700B3E57D /* GameController.framework */,
-				5C3928872ABDA11100B3E57D /* CoreHaptics.framework */,
-				5C3928852ABDA0F400B3E57D /* AVFAudio.framework */,
-				5C131E1F1E32C691003A5688 /* AVFoundation.framework */,
-				5C131E1D1E32C677003A5688 /* GameController.framework */,
+				5CC50A212C48689F00A1C603 /* SDL3.framework */,
+				5CCEA1E02C4866BD00B37BC1 /* UIKit.framework */,
+				5CCEA1DE2C48669F00B37BC1 /* ImageIO.framework */,
+				5CCEA1DC2C48669600B37BC1 /* QuartzCore.framework */,
+				5CCEA1DA2C48667200B37BC1 /* CoreGraphics.framework */,
+				5CCEA1D82C48665200B37BC1 /* Foundation.framework */,
+				5CCEA1D62C48663800B37BC1 /* Metal.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -175,6 +231,15 @@
 			name = osx;
 			sourceTree = "<group>";
 		};
+		5C9FAC4D2C448BCB00FD7581 /* visionos */ = {
+			isa = PBXGroup;
+			children = (
+				5C9FAC4C2C448BCB00FD7581 /* nbody_visionos-Info.plist */,
+			);
+			name = visionos;
+			path = src/visionos;
+			sourceTree = "<group>";
+		};
 		5CD2174419E924A20049D6AE = {
 			isa = PBXGroup;
 			children = (
@@ -185,9 +250,11 @@
 				5C0071E01A9200D400F4711D /* data */,
 				5C0071B91A91F1DD00F4711D /* ios */,
 				5C8FD0B91AD3392500215230 /* osx */,
-				5C0071911A91EF7E00F4711D /* nbodyd.app */,
+				5C0071911A91EF7E00F4711D /* nbodyd_ios.app */,
 				5C8FD0941AD3366800215230 /* nbodyd.app */,
 				5C131E1C1E32C676003A5688 /* Frameworks */,
+				5C9FAC412C4441BB00FD7581 /* nbodyd_visionos.app */,
+				5C9FAC4D2C448BCB00FD7581 /* visionos */,
 			);
 			sourceTree = "<group>";
 		};
@@ -230,9 +297,10 @@
 			buildPhases = (
 				5C30CAA61AA7058D008986B1 /* Run Script */,
 				5C00718D1A91EF7E00F4711D /* Sources */,
-				5C00718E1A91EF7E00F4711D /* Frameworks */,
+				5CCEA1D52C48661500B37BC1 /* Frameworks */,
 				5C00718F1A91EF7E00F4711D /* Resources */,
 				5C0071DB1A9200B200F4711D /* CopyFiles */,
+				5CC50A252C4868E000A1C603 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -240,7 +308,7 @@
 			);
 			name = nbody_ios;
 			productName = nbody_ios;
-			productReference = 5C0071911A91EF7E00F4711D /* nbodyd.app */;
+			productReference = 5C0071911A91EF7E00F4711D /* nbodyd_ios.app */;
 			productType = "com.apple.product-type.application";
 		};
 		5C8FD0931AD3366800215230 /* nbody_macos */ = {
@@ -258,6 +326,25 @@
 			name = nbody_macos;
 			productName = nbody_osx;
 			productReference = 5C8FD0941AD3366800215230 /* nbodyd.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5C9FAC222C4441BB00FD7581 /* nbody_visionos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5C9FAC3E2C4441BB00FD7581 /* Build configuration list for PBXNativeTarget "nbody_visionos" */;
+			buildPhases = (
+				5C9FAC232C4441BB00FD7581 /* Run Script */,
+				5C9FAC242C4441BB00FD7581 /* Sources */,
+				5C9FAC282C4441BB00FD7581 /* Frameworks */,
+				5C9FAC362C4441BB00FD7581 /* Resources */,
+				5C9FAC3A2C4441BB00FD7581 /* Copy Files */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = nbody_visionos;
+			productName = nbody_ios;
+			productReference = 5C9FAC412C4441BB00FD7581 /* nbodyd_visionos.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -297,6 +384,7 @@
 			targets = (
 				5C8FD0931AD3366800215230 /* nbody_macos */,
 				5C0071901A91EF7E00F4711D /* nbody_ios */,
+				5C9FAC222C4441BB00FD7581 /* nbody_visionos */,
 				5C180F711D80623A00AF91E7 /* nbody_remote */,
 			);
 		};
@@ -321,10 +409,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5C9FAC362C4441BB00FD7581 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C9FAC372C4441BB00FD7581 /* LaunchScreen.storyboard in Resources */,
+				5C9FAC4E2C448BCB00FD7581 /* nbody_visionos-Info.plist in Resources */,
+				5C9FAC382C4441BB00FD7581 /* Base.lproj in Resources */,
+				5C9FAC392C4441BB00FD7581 /* Images.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		5C30CAA61AA7058D008986B1 /* Run Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Run Script";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd src\nocc --src nbody.cpp --fubar minimal --out ../../data/nbody.fubar --no-double -vv --config ../../data/ -- -DNBODY_TILE_SIZE=256 -DNBODY_SOFTENING=0.01f -DNBODY_DAMPING=0.999f\n";
+		};
+		5C9FAC232C4441BB00FD7581 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -361,6 +474,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5C9FAC242C4441BB00FD7581 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C9FAC252C4441BB00FD7581 /* main.cpp in Sources */,
+				5C9FAC262C4441BB00FD7581 /* nbody.cpp in Sources */,
+				5C9FAC272C4441BB00FD7581 /* unified_renderer.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
@@ -383,56 +506,36 @@
 				CLANG_ENABLE_MODULES = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = S63YFDZ98S;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64";
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
-					PLATFORM_X64,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[sdk=iphonesimulator*]" = (
-					"$(inherited)",
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
+					"@executable_path/Frameworks",
 					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
 					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-framework",
-					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
 					"$(inherited)",
 					"-lfloord_static",
 				);
+				PRODUCT_NAME = nbodyd_ios;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -446,52 +549,36 @@
 				CLANG_ENABLE_MODULES = NO;
 				COPY_PHASE_STRIP = NO;
 				DEVELOPMENT_TEAM = S63YFDZ98S;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64",
-				);
-				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(SDKROOT)$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks",
-					"$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64";
+				"FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]" = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					FLOOR_IOS,
 					FLOOR_NO_OPENCL,
 					FLOOR_NO_CUDA,
-				);
-				"GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]" = (
-					"$(inherited)",
 					PLATFORM_X64,
 				);
 				INFOPLIST_FILE = src/ios/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
+					"@executable_path/Frameworks",
 					"/Library/Frameworks/SDL3.xcframework/ios-arm64",
 					"/Library/Frameworks/SDL3.xcframework/ios-arm64_x86_64-simulator",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(SDKROOT)/usr/lib",
 					/opt/floor/lib,
-					/opt/floor/include/floor/ios/deps/lib,
 				);
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = (
-					"$(inherited)",
-					"-isystem",
-					/opt/floor/include/floor/ios/deps/include,
-				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-framework",
-					SDL3,
 					"-v",
 				);
 				"OTHER_LDFLAGS[arch=*]" = (
 					"$(inherited)",
 					"-lfloor_static",
 				);
+				PRODUCT_NAME = nbody_ios;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
@@ -544,10 +631,13 @@
 				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				CLANG_X86_VECTOR_INSTRUCTIONS = default;
-				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/Library/Frameworks,
@@ -603,6 +693,7 @@
 					"-framework",
 					SDL3,
 				);
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Debug;
 		};
@@ -672,6 +763,93 @@
 					"-framework",
 					SDL3,
 				);
+			};
+			name = Release;
+		};
+		5C9FAC3F2C4441BB00FD7581 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/visionos-arm64";
+				"FRAMEWORK_SEARCH_PATHS[sdk=xrsimulator*]" = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/visionos-arm64_x86_64-simulator";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_VISIONOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					PLATFORM_X64,
+				);
+				INFOPLIST_FILE = "src/visionos/nbody_visionos-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"/Library/Frameworks/SDL3.xcframework/visionos-arm64",
+					"/Library/Frameworks/SDL3.xcframework/visionos-arm64_x86_64-simulator",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloord_visionos",
+				);
+				PRODUCT_NAME = nbodyd_visionos;
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Debug;
+		};
+		5C9FAC402C4441BB00FD7581 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_ENABLE_MODULES = NO;
+				COPY_PHASE_STRIP = NO;
+				DEVELOPMENT_TEAM = S63YFDZ98S;
+				FRAMEWORK_SEARCH_PATHS = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/visionos-arm64";
+				"FRAMEWORK_SEARCH_PATHS[sdk=xrsimulator*]" = "$(LOCAL_LIBRARY_DIR)/Frameworks/SDL3.xcframework/visionos-arm64_x86_64-simulator";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					FLOOR_VISIONOS,
+					FLOOR_NO_OPENCL,
+					FLOOR_NO_CUDA,
+					PLATFORM_X64,
+				);
+				INFOPLIST_FILE = "src/visionos/nbody_visionos-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"/Library/Frameworks/SDL3.xcframework/visionos-arm64",
+					"/Library/Frameworks/SDL3.xcframework/visionos-arm64_x86_64-simulator",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(SDKROOT)/usr/lib",
+					/opt/floor/lib,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-v",
+				);
+				"OTHER_LDFLAGS[arch=*]" = (
+					"$(inherited)",
+					"-lfloor_visionos",
+				);
+				PRODUCT_NAME = nbody_visionos;
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -783,6 +961,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -794,6 +973,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Debug;
@@ -900,6 +1081,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -911,6 +1093,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Release;
@@ -941,6 +1125,15 @@
 			buildConfigurations = (
 				5C8FD0AE1AD3366900215230 /* Debug */,
 				5C8FD0AF1AD3366900215230 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5C9FAC3E2C4441BB00FD7581 /* Build configuration list for PBXNativeTarget "nbody_visionos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C9FAC3F2C4441BB00FD7581 /* Debug */,
+				5C9FAC402C4441BB00FD7581 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

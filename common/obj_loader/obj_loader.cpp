@@ -34,39 +34,37 @@
 #endif
 
 // -> floor (for use with metal/vulkan)
-#define __FLOOR_TEXTURE_FORMATS(F, src_surface, dst_image_type) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::BGRA8UI_NORM, 32, 16, 8, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::BGRA8UI_NORM, 32, 16, 8, 0, 24) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
-F(src_surface, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA16UI_NORM, 64, 0, 16, 32, 48)
+#define __FLOOR_TEXTURE_FORMATS(F, src_surface, format_details, dst_image_type) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM /* BGR converted to RGB */, 24, 16, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 24) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
+F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA16UI_NORM, 64, 0, 16, 32, 48)
 
-#define __FLOOR_CHECK_FORMAT(src_surface, dst_image_type, \
-					         floor_image_type, bpp, rshift, gshift, bshift, ashift) \
-if(src_surface->format->Rshift == rshift && \
-   src_surface->format->Gshift == gshift && \
-   src_surface->format->Bshift == bshift && \
-   src_surface->format->Ashift == ashift && \
-   src_surface->format->bits_per_pixel == bpp) { \
-	dst_image_type = floor_image_type; \
-}
+#define __FLOOR_CHECK_FORMAT(src_surface, format_details, dst_image_type, floor_image_type, bpp, rshift, gshift, bshift, ashift) \
+	if (format_details->Rshift == rshift && format_details->Gshift == gshift && format_details->Bshift == bshift && \
+		format_details->Ashift == ashift && format_details->bits_per_pixel == bpp) { \
+		dst_image_type = floor_image_type; \
+	}
 
 COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
 	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
-	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, image_type)
-	if(image_type == COMPUTE_IMAGE_TYPE::NONE) {
+	const auto px_format_details = SDL_GetPixelFormatDetails(surface->format);
+	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, px_format_details, image_type)
+	if (image_type == COMPUTE_IMAGE_TYPE::NONE) {
 		log_error("unknown surface format: $, $, $, $, $",
-				  (uint32_t)surface->format->bits_per_pixel,
-				  (uint32_t)surface->format->Rshift,
-				  (uint32_t)surface->format->Gshift,
-				  (uint32_t)surface->format->Bshift,
-				  (uint32_t)surface->format->Ashift);
+				  (uint32_t)px_format_details->bits_per_pixel,
+				  (uint32_t)px_format_details->Rshift,
+				  (uint32_t)px_format_details->Gshift,
+				  (uint32_t)px_format_details->Bshift,
+				  (uint32_t)px_format_details->Ashift);
 	}
 	return image_type;
 }
@@ -469,39 +467,53 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 			SDL_DestroySurface(surf);
 		};
 		
-		// check format, BGR(A) needs to be converted to RGB(A)
-		const bool is_bgr = (surface->format->bits_per_pixel == 24 &&
-							 surface->format->Rshift == 16 &&
-							 surface->format->Gshift == 8 &&
-							 surface->format->Bshift == 0 &&
-							 surface->format->Ashift == 0);
-		const bool is_bgra = (surface->format->bits_per_pixel == 32 &&
-							  surface->format->Rshift == 24 &&
-							  surface->format->Gshift == 16 &&
-							  surface->format->Bshift == 8 &&
-							  (surface->format->Ashift == 0 || surface->format->Ashift == 24));
-		if (is_bgr || is_bgra) {
-			SDL_PixelFormat new_pformat;
-			memcpy(&new_pformat, surface->format, sizeof(SDL_PixelFormat));
-			new_pformat.next = nullptr;
-			new_pformat.palette = nullptr;
-			new_pformat.refcount = 0;
-			new_pformat.Rshift = surface->format->Bshift;
-			new_pformat.Bshift = surface->format->Rshift;
-			new_pformat.Rmask = surface->format->Bmask;
-			new_pformat.Bmask = surface->format->Rmask;
-			
-			if (surface->format->Ashift == 0) {
-				new_pformat.bytes_per_pixel = 3;
-				new_pformat.bits_per_pixel = 24;
-			} else if (is_bgra) {
-				new_pformat.bytes_per_pixel = 4;
-				new_pformat.bits_per_pixel = 32;
-			}
-			// else: keep it?
-			
-			SDL_Surface* new_surface = SDL_ConvertSurface(surface, &new_pformat);
-			if(new_surface == nullptr) {
+		// check format, we always want RGB(A)
+		// NOTE: SDL uses reverse order ... RGBA is ABGR in SDL
+		optional<SDL_PixelFormat> conv_format;
+		switch (surface->format) {
+			default:
+				break;
+			case SDL_PIXELFORMAT_RGBA4444:
+			case SDL_PIXELFORMAT_ARGB4444:
+			case SDL_PIXELFORMAT_BGRA4444:
+				conv_format = SDL_PIXELFORMAT_ABGR4444;
+				break;
+			case SDL_PIXELFORMAT_XRGB1555:
+			case SDL_PIXELFORMAT_ARGB1555:
+			case SDL_PIXELFORMAT_RGBA5551:
+			case SDL_PIXELFORMAT_BGRA5551:
+				conv_format = SDL_PIXELFORMAT_ABGR1555;
+				break;
+			case SDL_PIXELFORMAT_RGB565:
+				conv_format = SDL_PIXELFORMAT_BGR565;
+				break;
+			case SDL_PIXELFORMAT_RGB24:
+				conv_format = SDL_PIXELFORMAT_BGR24;
+				break;
+			case SDL_PIXELFORMAT_XRGB8888:
+			case SDL_PIXELFORMAT_RGBX8888:
+			case SDL_PIXELFORMAT_XBGR8888:
+			case SDL_PIXELFORMAT_BGRX8888:
+				conv_format = SDL_PIXELFORMAT_XBGR8888;
+				break;
+			case SDL_PIXELFORMAT_ARGB8888:
+			case SDL_PIXELFORMAT_RGBA8888:
+			case SDL_PIXELFORMAT_BGRA8888:
+				conv_format = SDL_PIXELFORMAT_ABGR8888;
+				break;
+			case SDL_PIXELFORMAT_RGB48:
+				conv_format = SDL_PIXELFORMAT_BGR48;
+				break;
+			case SDL_PIXELFORMAT_ARGB64:
+			case SDL_PIXELFORMAT_RGBA64:
+			case SDL_PIXELFORMAT_BGRA64:
+				conv_format = SDL_PIXELFORMAT_ABGR64;
+				break;
+		}
+		
+		if (conv_format) {
+			SDL_Surface* new_surface = SDL_ConvertSurface(surface, *conv_format);
+			if (new_surface == nullptr) {
 				log_error("BGR(A)->RGB(A) surface conversion failed!");
 				free_surface(surface);
 				return { false, {} };
@@ -509,6 +521,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 			free_surface(surface);
 			surface = new_surface;
 		}
+		
 		ret.surface = surface;
 	}
 	else {

@@ -850,6 +850,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -861,6 +862,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Debug;
@@ -968,6 +971,7 @@
 					"-Wno-padded",
 					"-Wno-packed",
 					"-Wno-switch-enum",
+					"-Wno-switch-default",
 					"-Wno-exit-time-destructors",
 					"-Wno-unknown-warning-option",
 					"-Wno-nested-anon-types",
@@ -979,6 +983,8 @@
 					"-Wno-return-std-move-in-c++11",
 					"-Wno-c11-extensions",
 					"-Wno-poison-system-directories",
+					"-Wno-nan-infinity-disabled",
+					"-Wno-unsafe-buffer-usage-in-container",
 				);
 			};
 			name = Release;

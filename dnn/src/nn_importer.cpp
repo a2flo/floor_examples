@@ -41,7 +41,7 @@ namespace nn_importer {
 			read_only_serializer_storage {
 				*data,
 				&(*data)[0],
-				&(*data)[data->size()],
+				(&(*data)[data->size() - 1]) + 1,
 			}
 		};
 		

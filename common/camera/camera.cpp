@@ -272,19 +272,20 @@ void camera::set_keyboard_input(const bool& state) {
  */
 void camera::set_mouse_input(const bool& state) {
 	// grab input
-	SDL_SetWindowMouseGrab(floor::get_window(), (state ? SDL_TRUE : SDL_FALSE));
+	const auto wnd = floor::get_window();
+	SDL_SetWindowMouseGrab(wnd, state);
 	
 #if defined(__APPLE__)
 	// this effictively calls CGAssociateMouseAndMouseCursorPosition (which will lock the cursor to the window)
 	// and subsequently handles all mouse moves in relative/delta mode
-	if(!delta_hack) {
-		SDL_SetRelativeMouseMode(state ? SDL_TRUE : SDL_FALSE);
+	if (!delta_hack) {
+		SDL_SetWindowRelativeMouseMode(wnd, state);
 	}
 	
 	// this fixes some weird mouse positioning when switching from grab to non-grab mode
-	if(mouse_input && !state) {
+	if (mouse_input && !state) {
 		const auto center_point = (floor::get_screen_size().cast<double>() * 0.5).cast<int32_t>();
-		SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
+		SDL_WarpMouseInWindow(wnd, center_point.x, center_point.y);
 	}
 #endif
 	
@@ -371,10 +372,10 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		
 		if(wasd_input) {
 			switch(key_evt->key) {
-				case SDLK_d: key_state[0] = true; break;
-				case SDLK_a: key_state[1] = true; break;
-				case SDLK_w: key_state[2] = true; break;
-				case SDLK_s: key_state[3] = true; break;
+				case SDLK_D: key_state[0] = true; break;
+				case SDLK_A: key_state[1] = true; break;
+				case SDLK_W: key_state[2] = true; break;
+				case SDLK_S: key_state[3] = true; break;
 			}
 		}
 	}
@@ -390,10 +391,10 @@ bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		
 		if(wasd_input) {
 			switch(key_evt->key) {
-				case SDLK_d: key_state[0] = false; break;
-				case SDLK_a: key_state[1] = false; break;
-				case SDLK_w: key_state[2] = false; break;
-				case SDLK_s: key_state[3] = false; break;
+				case SDLK_D: key_state[0] = false; break;
+				case SDLK_A: key_state[1] = false; break;
+				case SDLK_W: key_state[2] = false; break;
+				case SDLK_S: key_state[3] = false; break;
 			}
 		}
 	}

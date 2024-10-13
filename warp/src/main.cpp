@@ -162,22 +162,22 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_RCTRL:
 				cam->set_cam_speed(cam_speeds.z);
 				break;
-			case SDLK_i:
+			case SDLK_I:
 				warp_state.gather_eps_1 += eps1_step_size;
 				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
 				log_debug("eps 1: $", warp_state.gather_eps_1);
 				break;
-			case SDLK_u:
+			case SDLK_U:
 				warp_state.gather_eps_1 -= eps1_step_size;
 				warp_state.gather_eps_1 = const_math::clamp(warp_state.gather_eps_1, 0.0f, 32.0f);
 				log_debug("eps 1: $", warp_state.gather_eps_1);
 				break;
-			case SDLK_k:
+			case SDLK_K:
 				warp_state.gather_eps_2 += eps2_step_size;
 				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
 				log_debug("eps 2: $", warp_state.gather_eps_2);
 				break;
-			case SDLK_j:
+			case SDLK_J:
 				warp_state.gather_eps_2 -= eps2_step_size;
 				warp_state.gather_eps_2 = const_math::clamp(warp_state.gather_eps_2, 0.0f, 32.0f);
 				log_debug("eps 2: $", warp_state.gather_eps_2);
@@ -188,7 +188,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	}
 	else if(type == EVENT_TYPE::KEY_UP) {
 		switch(static_pointer_cast<key_up_event>(obj)->key) {
-			case SDLK_q:
+			case SDLK_Q:
 			case SDLK_ESCAPE:
 				warp_state.done = true;
 				break;
@@ -198,19 +198,19 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			case SDLK_RCTRL:
 				cam->set_cam_speed(cam_speeds.x);
 				break;
-			case SDLK_x:
+			case SDLK_X:
 				cam_dump();
 				break;
-			case SDLK_c:
+			case SDLK_C:
 				compile_program();
 				break;
 			case SDLK_SPACE:
 				warp_state.stop ^= true;
 				break;
-			case SDLK_v:
+			case SDLK_V:
 				warp_state.is_auto_cam ^= true;
 				break;
-			case SDLK_r:
+			case SDLK_R:
 				warp_state.is_warping = true;
 				warp_state.is_render_full = true;
 				warp_state.is_clear_frame = true;
@@ -236,7 +236,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.is_bidir_scatter ^= true;
 				log_debug("bidirectional scatter? $", warp_state.is_bidir_scatter);
 				break;
-			case SDLK_g:
+			case SDLK_G:
 				warp_state.is_scatter ^= true;
 				log_debug("scatter/gather? $", (warp_state.is_scatter ? "scatter" : "gather"));
 				break;
@@ -244,19 +244,19 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				warp_state.is_frame_repeat ^= true;
 				log_debug("frame repeat? $", warp_state.is_frame_repeat);
 				break;
-			case SDLK_p:
+			case SDLK_P:
 				if(warp_state.gather_dbg < gather_max_dbg) ++warp_state.gather_dbg;
 				log_debug("dbg: $", warp_state.gather_dbg);
 				break;
-			case SDLK_o:
+			case SDLK_O:
 				if(warp_state.gather_dbg > 0) --warp_state.gather_dbg;
 				log_debug("dbg: $", warp_state.gather_dbg);
 				break;
-			case SDLK_t:
+			case SDLK_T:
 				warp_state.is_debug_delta ^= true;
 				log_debug("debug delta? $", warp_state.is_debug_delta);
 				break;
-			case SDLK_b:
+			case SDLK_B:
 				warp_state.is_split_view ^= true;
 				log_debug("split view? $", warp_state.is_split_view);
 				break;
