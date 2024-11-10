@@ -47,6 +47,7 @@ namespace fubar {
 				.type = COMPUTE_TYPE::CUDA,
 				.sm_major = sm.x,
 				.sm_minor = sm.y,
+				.sm_aa = 0,
 				.ptx_isa_major = ptx.x,
 				.ptx_isa_minor = ptx.y,
 				.is_ptx = target_obj.at("is_ptx").get_or_throw<bool>(),
@@ -133,34 +134,34 @@ namespace fubar {
 		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
 		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
-		decltype(universal_binary::target_v3::metal)::DEVICE_TARGET target {};
+		decltype(universal_binary::target_v4::metal)::DEVICE_TARGET target {};
 		if (target_str == "generic") {
-			target = decltype(universal_binary::target_v3::metal)::GENERIC;
+			target = decltype(universal_binary::target_v4::metal)::GENERIC;
 		} else if (target_str == "amd") {
-			target = decltype(universal_binary::target_v3::metal)::AMD;
+			target = decltype(universal_binary::target_v4::metal)::AMD;
 			if (simd_width == 0) {
 				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
 			}
 		} else if (target_str == "intel") {
-			target = decltype(universal_binary::target_v3::metal)::INTEL;
+			target = decltype(universal_binary::target_v4::metal)::INTEL;
 		} else if (target_str == "apple") {
-			target = decltype(universal_binary::target_v3::metal)::APPLE;
+			target = decltype(universal_binary::target_v4::metal)::APPLE;
 		} else {
 			throw runtime_error("unknown target: " + target_str);
 		}
 		
 		const auto platform_str = core::str_to_lower(target_obj.at("platform").get_or_throw<string>());
-		decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET platform {};
+		decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET platform {};
 		if (platform_str == "macos") {
-			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS;
+			platform = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS;
 		} else if (platform_str == "ios") {
-			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS;
+			platform = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS;
 		} else if (platform_str == "visionos") {
-			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS;
+			platform = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS;
 		} else if (platform_str == "ios_simulator") {
-			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR;
+			platform = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS_SIMULATOR;
 		} else if (platform_str == "visionos_simulator") {
-			platform = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR;
+			platform = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR;
 		} else {
 			throw runtime_error("unknown platform: " + platform_str);
 		}
@@ -194,21 +195,21 @@ namespace fubar {
 		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
 		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
-		decltype(universal_binary::target_v3::opencl)::DEVICE_TARGET target {};
+		decltype(universal_binary::target_v4::opencl)::DEVICE_TARGET target {};
 		if (target_str == "generic") {
-			target = decltype(universal_binary::target_v3::opencl)::GENERIC;
+			target = decltype(universal_binary::target_v4::opencl)::GENERIC;
 		} else if (target_str == "generic_cpu") {
-			target = decltype(universal_binary::target_v3::opencl)::GENERIC_CPU;
+			target = decltype(universal_binary::target_v4::opencl)::GENERIC_CPU;
 		} else if (target_str == "generic_gpu") {
-			target = decltype(universal_binary::target_v3::opencl)::GENERIC_GPU;
+			target = decltype(universal_binary::target_v4::opencl)::GENERIC_GPU;
 		} else if (target_str == "intel_cpu") {
-			target = decltype(universal_binary::target_v3::opencl)::INTEL_CPU;
+			target = decltype(universal_binary::target_v4::opencl)::INTEL_CPU;
 		} else if (target_str == "intel_gpu") {
-			target = decltype(universal_binary::target_v3::opencl)::INTEL_GPU;
+			target = decltype(universal_binary::target_v4::opencl)::INTEL_GPU;
 		} else if (target_str == "amd_cpu") {
-			target = decltype(universal_binary::target_v3::opencl)::AMD_CPU;
+			target = decltype(universal_binary::target_v4::opencl)::AMD_CPU;
 		} else if (target_str == "amd_gpu") {
-			target = decltype(universal_binary::target_v3::opencl)::AMD_GPU;
+			target = decltype(universal_binary::target_v4::opencl)::AMD_GPU;
 			if (simd_width == 0) {
 				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
 			}
@@ -261,18 +262,18 @@ namespace fubar {
 		const auto simd_width = target_obj.at("simd_width").get_or_throw<uint32_t>();
 		
 		const auto target_str = target_obj.at("target").get_or_throw<string>();
-		decltype(universal_binary::target_v3::vulkan)::DEVICE_TARGET target {};
+		decltype(universal_binary::target_v4::vulkan)::DEVICE_TARGET target {};
 		if (target_str == "generic") {
-			target = decltype(universal_binary::target_v3::vulkan)::GENERIC;
+			target = decltype(universal_binary::target_v4::vulkan)::GENERIC;
 		} else if (target_str == "nvidia") {
-			target = decltype(universal_binary::target_v3::vulkan)::NVIDIA;
+			target = decltype(universal_binary::target_v4::vulkan)::NVIDIA;
 		} else if (target_str == "amd") {
-			target = decltype(universal_binary::target_v3::vulkan)::AMD;
+			target = decltype(universal_binary::target_v4::vulkan)::AMD;
 			if (simd_width == 0) {
 				log_warn("should set a specific simd_width when targeting AMD GPUs (32 and/or 64)");
 			}
 		} else if (target_str == "intel") {
-			target = decltype(universal_binary::target_v3::vulkan)::INTEL;
+			target = decltype(universal_binary::target_v4::vulkan)::INTEL;
 		} else {
 			throw runtime_error("unknown target: " + target_str);
 		}
@@ -305,10 +306,10 @@ namespace fubar {
 		try {
 			auto doc = create_document(targets_json_file_name);
 			if (!doc.valid) {
-				throw runtime_error("invalid JSON");
+				throw runtime_error("invalid JSON (" + targets_json_file_name + ")");
 			}
 			const auto targets_arr = doc.root.get_or_throw<json_array>();
-			vector<universal_binary::target_v3> targets;
+			vector<universal_binary::target_v4> targets;
 			for (const auto& target_entry : targets_arr) {
 				const auto target_obj = target_entry.get_or_throw<json_object>();
 				const auto target_type = target_obj.at("type").get_or_throw<string>();
@@ -328,15 +329,15 @@ namespace fubar {
 			}
 			return targets;
 		} catch (exception& exc) {
-			log_error("failed to parse targets JSON: $", exc.what());
+			log_error("failed to parse targets JSON ($): $", targets_json_file_name, exc.what());
 		}
 		return {};
 	}
 	
-	static vector<universal_binary::target_v3> get_targets(const TARGET_SET target_set,
+	static vector<universal_binary::target_v4> get_targets(const TARGET_SET target_set,
 														   const string& targets_json_file_name,
 														   const llvm_toolchain::compile_options& options) {
-		vector<universal_binary::target_v3> ret_targets;
+		vector<universal_binary::target_v4> ret_targets;
 		if (target_set == TARGET_SET::USER_JSON) {
 			ret_targets = get_json_targets(targets_json_file_name);
 			if (ret_targets.empty()) {
@@ -353,6 +354,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 0,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -366,6 +368,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 2,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -379,6 +382,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 0,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -392,6 +396,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 1,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -405,6 +410,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 0,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -418,6 +424,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 5,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -431,6 +438,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 0,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -444,6 +452,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 6,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -457,6 +466,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 7,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -470,6 +480,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 9,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -483,6 +494,7 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 9,
 					.sm_minor = 0,
+					.sm_aa = 0,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
 					.is_ptx = 1,
@@ -499,8 +511,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -513,8 +525,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -527,8 +539,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -541,8 +553,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -555,8 +567,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -569,8 +581,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -583,8 +595,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -597,8 +609,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -611,8 +623,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -629,7 +641,7 @@ namespace fubar {
 					.major = 1,
 					.minor = 2,
 					.is_spir = 1,
-					.device_target = decltype(universal_binary::target_v3::opencl)::GENERIC,
+					.device_target = decltype(universal_binary::target_v4::opencl)::GENERIC,
 					.image_depth_support = 0,
 					.image_msaa_support = 0,
 					.image_mipmap_support = 0,
@@ -650,7 +662,7 @@ namespace fubar {
 					.major = 2,
 					.minor = 0,
 					.is_spir = 0,
-					.device_target = decltype(universal_binary::target_v3::opencl)::GENERIC,
+					.device_target = decltype(universal_binary::target_v4::opencl)::GENERIC,
 					.image_depth_support = 0,
 					.image_msaa_support = 0,
 					.image_mipmap_support = 0,
@@ -675,7 +687,7 @@ namespace fubar {
 					.vulkan_minor = 3,
 					.spirv_major = 1,
 					.spirv_minor = 6,
-					.device_target = decltype(universal_binary::target_v3::vulkan)::GENERIC,
+					.device_target = decltype(universal_binary::target_v4::vulkan)::GENERIC,
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
@@ -800,8 +812,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -814,8 +826,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -828,8 +840,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -842,8 +854,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -856,8 +868,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -870,8 +882,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -884,8 +896,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::GENERIC,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::MACOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::GENERIC,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
@@ -898,8 +910,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::IOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -912,8 +924,8 @@ namespace fubar {
 					.type = COMPUTE_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
-					.platform_target = decltype(universal_binary::target_v3::metal)::PLATFORM_TARGET::VISIONOS,
-					.device_target = decltype(universal_binary::target_v3::metal)::APPLE,
+					.platform_target = decltype(universal_binary::target_v4::metal)::PLATFORM_TARGET::VISIONOS,
+					.device_target = decltype(universal_binary::target_v4::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 0,
@@ -931,7 +943,7 @@ namespace fubar {
 					.vulkan_minor = 3,
 					.spirv_major = 1,
 					.spirv_minor = 6,
-					.device_target = decltype(universal_binary::target_v3::vulkan)::GENERIC,
+					.device_target = decltype(universal_binary::target_v4::vulkan)::GENERIC,
 					.double_support = 0,
 					.basic_64_bit_atomics_support = 0,
 					.extended_64_bit_atomics_support = 0,
@@ -985,6 +997,8 @@ namespace fubar {
 					options.silence_debug_output = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "pch") {
 					options.pch = opt_entry.second.get_or_throw<string>();
+				} else if (opt_entry.first == "compress_binaries") {
+					options.compress_binaries = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "debug") {
 					auto dbg_obj = opt_entry.second.get_or_throw<json_object>();
 					for (const auto& dbg_entry : dbg_obj) {
@@ -1050,6 +1064,9 @@ namespace fubar {
 		if (options.enable_soft_printf) {
 			toolchain_options.metal.soft_printf = *options.enable_soft_printf;
 			toolchain_options.vulkan.soft_printf = *options.enable_soft_printf;
+		}
+		if (options.compress_binaries) {
+			toolchain_options.compress_binaries = *options.compress_binaries;
 		}
 		if (options.cuda_max_registers) {
 			toolchain_options.cuda.max_registers = *options.cuda_max_registers;

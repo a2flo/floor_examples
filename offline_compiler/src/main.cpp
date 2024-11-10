@@ -97,6 +97,7 @@ struct option_context {
 	string fubar_options_file_name;
 	optional<bool> fubar_pch;
 	string fubar_dis_file_name;
+	bool fubar_compress_binaries { false };
 	
 	optional<bool> emit_debug_info;
 	optional<bool> preprocess_condense;
@@ -144,6 +145,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--barycentric-coord: enables barycentric coordinate support (only Metal and Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> llvm_toolchain) from a .json input file (can be overriden by command line)\n"
+				 "\t--fubar-compress: compress all binary data in the built FUBAR\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
 				 "\t--emit-debug-info: enables emission of target dependent debug info\n"
@@ -432,6 +434,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.fubar_options_file_name = *arg_ptr;
+	}},
+	{ "--fubar-compress", [](option_context& ctx, char**&) {
+		ctx.fubar_compress_binaries = true;
 	}},
 	{ "--emit-debug-info", [](option_context& ctx, char**&) {
 		ctx.emit_debug_info = true;
@@ -1145,6 +1150,9 @@ int main(int, char* argv[]) {
 		}
 		if (option_ctx.preprocess_preserve_comments) {
 			options.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments;
+		}
+		if (option_ctx.fubar_compress_binaries) {
+			options.compress_binaries = option_ctx.fubar_compress_binaries;
 		}
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name, option_ctx.fubar_options_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {
