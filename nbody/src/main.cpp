@@ -582,12 +582,9 @@ void init_system() {
 
 // embed the compiled nbody and mip-map-minify FUBAR files if they are available
 #if defined(__has_embed)
-#if __has_embed("../../data/nbody.fubar") && __has_embed("../../data/mmm.fubar")
+#if __has_embed("../../data/nbody.fubar")
 static constexpr const uint8_t nbody_fubar[] {
 #embed "../../data/nbody.fubar"
-};
-static constexpr const uint8_t mmm_fubar[] {
-#embed "../../data/mmm.fubar"
 };
 #define HAS_EMBEDDED_NBODY_FUBAR 1
 #endif
@@ -700,8 +697,6 @@ int main(int, char* argv[]) {
 	shared_ptr<compute_kernel> nbody_raster;
 	
 	// if embedded FUBAR data exists + it isn't disabled, try to load this first
-	[[maybe_unused]] shared_ptr<compute_program> compute_mmm_prog;
-	[[maybe_unused]] shared_ptr<compute_program> render_mmm_prog;
 #if defined(HAS_EMBEDDED_NBODY_FUBAR)
 	if (!nbody_state.no_fubar) {
 		// nbody kernels/shaders
@@ -710,25 +705,7 @@ int main(int, char* argv[]) {
 		nbody_render_prog =
 			(compute_ctx != render_ctx && render_ctx ? render_ctx->add_universal_binary(fubar_data) : nbody_prog);
 		if (nbody_prog && nbody_render_prog) {
-			log_msg("using integrated nbody FUBAR");
-		}
-
-		// mip-map minify programs/kernels
-		const span<const uint8_t> mmm_fubar_data{ mmm_fubar, std::size(mmm_fubar) };
-		compute_mmm_prog = compute_ctx->add_universal_binary(mmm_fubar_data);
-		if (compute_mmm_prog) {
-			compute_image::provide_minify_program(*compute_ctx, compute_mmm_prog);
-		}
-		if (compute_ctx != render_ctx && render_ctx) {
-			render_mmm_prog = render_ctx->add_universal_binary(mmm_fubar_data);
-			if (render_mmm_prog) {
-				compute_image::provide_minify_program(*render_ctx, render_mmm_prog);
-			}
-		} else {
-			render_mmm_prog = compute_mmm_prog;
-		}
-		if (compute_mmm_prog && render_mmm_prog) {
-			log_msg("using integrated mip-map minify FUBAR");
+			log_msg("using embedded nbody FUBAR");
 		}
 	}
 #endif
