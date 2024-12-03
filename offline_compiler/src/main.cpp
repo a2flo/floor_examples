@@ -124,7 +124,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
 				 "\t--ptx-version <80|81|82|83|84|85>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
-				 "\t--vulkan-std <1.3>: sets the supported Vulkan version (defaults to 1.3)\n"
+				 "\t--vulkan-std <1.3|1.4>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
 				 "\t--with-double: explicitly enables double support (only SPIR/SPIR-V)\n"
@@ -296,6 +296,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		const string vlk_version_str = *arg_ptr;
 		if (vlk_version_str == "1.3") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_3; }
+		else if (vlk_version_str == "1.4") { ctx.vulkan_std = VULKAN_VERSION::VULKAN_1_4; }
 		else {
 			cerr << "invalid --vulkan-std argument" << endl;
 			return;
@@ -638,6 +639,7 @@ static int run_normal_build(option_context& option_ctx) {
 				switch (dev->vulkan_version) {
 					default:
 					case VULKAN_VERSION::VULKAN_1_3:
+					case VULKAN_VERSION::VULKAN_1_4:
 						dev->spirv_version = SPIRV_VERSION::SPIRV_1_6;
 						break;
 				}
