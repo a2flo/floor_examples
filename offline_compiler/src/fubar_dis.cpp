@@ -106,7 +106,7 @@ void disassemble(const string& archive_file_name) {
 			}
 			case COMPUTE_TYPE::CUDA: {
 				const auto& cu = target.cuda;
-				log_undecorated("\t\tCUDA sm target: $.$", cu.sm_major, cu.sm_minor);
+				log_undecorated("\t\tCUDA sm target: $.$", cu.sm_major, to_string(cu.sm_minor) + (cu.sm_aa ? "a" : ""));
 				log_undecorated("\t\tCUDA PTX target: $.$", cu.ptx_isa_major, cu.ptx_isa_minor);
 				
 				log_undecorated("\t\tPTX: $", cu.is_ptx ? "yes" : "no");

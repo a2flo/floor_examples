@@ -512,11 +512,17 @@ static constexpr uint32_t compute_collide_max_local_size() {
 	const auto stack_size_per_item = collision_stack_size_per_item * sizeof(collsion_stack_data_type);
 	if (local_mem_size >= 16384u) {
 		// max possible local size
-		const auto possible_local_size = (local_mem_size / stack_size_per_item);
-		// we can't use directly, because we need to ensure that specific local sizes are specified
+		auto possible_local_size = uint32_t(local_mem_size / stack_size_per_item);
+		// we can't use this directly, because we need to ensure that specific local sizes are specified
 		// -> must be a multiple of 32
-		return ((possible_local_size % 32u) == 0u ? possible_local_size :
-				(possible_local_size / 32u) * 32u);
+		if ((possible_local_size % 32) != 0u) {
+			possible_local_size = (possible_local_size / 32u) * 32u;
+		}
+		// if the device requires that the work-group size X is a power-of-two, round down to the next one
+		if constexpr (device_info::requires_work_group_size_x_is_pot()) {
+			possible_local_size = const_math::prev_pot(possible_local_size);
+		}
+		return possible_local_size;
 	}
 	// otherwise: assume at least 16KiB are available
 	return 128u;
