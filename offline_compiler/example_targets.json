@@ -2,6 +2,7 @@
 	{
 		"type": "CUDA",
 		"sm": [ 7, 5 ],
+		"sm_aa": false,
 		"ptx": [ 8, 0 ],
 		// generate PTX or CUBIN?
 		"is_ptx": true,

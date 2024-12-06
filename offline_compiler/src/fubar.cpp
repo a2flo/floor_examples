@@ -31,6 +31,9 @@ namespace fubar {
 			sm_arr[0].get_or_throw<uint32_t>(),
 			sm_arr[1].get_or_throw<uint32_t>(),
 		};
+		const auto sm_aa_entry = target_obj.at("sm_aa").get<bool>();
+		const auto sm_aa = ((sm_aa_entry.first && sm_aa_entry.second) ||
+							(!sm_aa_entry.first && sm.x >= 9));
 		
 		const auto ptx_arr = target_obj.at("ptx").get_or_throw<json_array>();
 		if (ptx_arr.size() != 2) {
@@ -47,7 +50,7 @@ namespace fubar {
 				.type = COMPUTE_TYPE::CUDA,
 				.sm_major = sm.x,
 				.sm_minor = sm.y,
-				.sm_aa = 0,
+				.sm_aa = sm_aa ? 1u : 0u,
 				.ptx_isa_major = ptx.x,
 				.ptx_isa_minor = ptx.y,
 				.is_ptx = target_obj.at("is_ptx").get_or_throw<bool>(),
@@ -494,9 +497,37 @@ namespace fubar {
 					.type = COMPUTE_TYPE::CUDA,
 					.sm_major = 9,
 					.sm_minor = 0,
-					.sm_aa = 0,
+					.sm_aa = 1,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 0,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
+					.sm_major = 10,
+					.sm_minor = 0,
+					.sm_aa = 1,
+					.ptx_isa_major = 8,
+					.ptx_isa_minor = 6,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
+					.sm_major = 10,
+					.sm_minor = 1,
+					.sm_aa = 1,
+					.ptx_isa_major = 8,
+					.ptx_isa_minor = 6,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,

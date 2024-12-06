@@ -116,14 +116,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar-dis <archive.fubar>: disassembles a FUBAR file, printing the archive info and disassembled contents to console\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90], defaults to sm_50\n"
+				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90|sm_90a|sm_100|sm_100a|sm_101|sm_101a], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|macos|visionos|ios_sim|visionos_sim], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
-				 "\t--ptx-version <80|81|82|83|84|85>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
+				 "\t--ptx-version <80|81|82|83|84|85|86>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
 				 "\t--vulkan-std <1.3|1.4>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -283,7 +283,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		}
 		ctx.ptx_version = stou(*arg_ptr);
 		if (ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
-			ctx.ptx_version != 83 && ctx.ptx_version != 84 && ctx.ptx_version != 85) {
+			ctx.ptx_version != 83 && ctx.ptx_version != 84 && ctx.ptx_version != 85 &&
+			ctx.ptx_version != 86) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
@@ -548,6 +549,7 @@ static int run_normal_build(option_context& option_ctx) {
 						const auto sm_version_int = stoul(sm_version);
 						((cuda_device*)device.get())->sm.x = (uint32_t)sm_version_int / 10u;
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
+						((cuda_device*)device.get())->sm_aa = sm_version.ends_with('a');
 					}
 				} else {
 					option_ctx.sub_target = "sm_50";
@@ -737,6 +739,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings.value_or(false),
+			.ignore_runtime_info = true,
 			.debug.emit_debug_info = option_ctx.emit_debug_info.value_or(false),
 			.debug.preprocess_condense = option_ctx.preprocess_condense.value_or(false),
 			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
