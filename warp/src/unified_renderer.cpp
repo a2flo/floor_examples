@@ -1097,7 +1097,7 @@ void render_thread::run() {
 			}
 			
 			// only allow a single blit at a time
-			safe_mutex blit_lock;
+			static safe_mutex blit_lock;
 			GUARD(blit_lock);
 			
 			// setup drawable and attachments
