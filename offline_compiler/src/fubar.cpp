@@ -533,6 +533,20 @@ namespace fubar {
 					._unused = 0,
 				}
 			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = COMPUTE_TYPE::CUDA,
+					.sm_major = 12,
+					.sm_minor = 0,
+					.sm_aa = 1,
+					.ptx_isa_major = 8,
+					.ptx_isa_minor = 7,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
 #endif
 #if 1
 			// Metal
