@@ -89,6 +89,7 @@ struct option_context {
 	bool native_cl { false };
 	optional<bool> soft_printf;
 	bool barycentric_coord_support { false };
+	optional<bool> assert_support;
 	
 	bool is_fubar_build { false };
 	bool is_fubar_disassemble { false };
@@ -151,6 +152,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--emit-debug-info: enables emission of target dependent debug info\n"
 				 "\t--debug-preprocess-condense: preprocesses the input into a single .ii file before compiling it to the target format (only Metal)\n"
 				 "\t--debug-preprocess-preserve-comments: when '--debug-preprocess-condense' is set, disable stripping of comments (only Metal)\n"
+				 "\t--assert: enables assert support\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--version: prints the occ/floor version\n"
@@ -449,6 +451,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--debug-preprocess-preserve-comments", [](option_context& ctx, char**&) {
 		ctx.preprocess_preserve_comments = true;
 	}},
+	{ "--assert", [](option_context& ctx, char**&) {
+		ctx.assert_support = true;
+	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
 	}},
@@ -740,6 +745,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings.value_or(false),
 			.ignore_runtime_info = true,
+			.enable_assert = option_ctx.assert_support.value_or(false),
 			.debug.emit_debug_info = option_ctx.emit_debug_info.value_or(false),
 			.debug.preprocess_condense = option_ctx.preprocess_condense.value_or(false),
 			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
@@ -1158,6 +1164,9 @@ int main(int, char* argv[]) {
 		}
 		if (option_ctx.fubar_compress_binaries) {
 			options.compress_binaries = option_ctx.fubar_compress_binaries;
+		}
+		if (option_ctx.assert_support) {
+			options.enable_assert = option_ctx.assert_support;
 		}
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name, option_ctx.fubar_options_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {

@@ -1044,6 +1044,8 @@ namespace fubar {
 					options.pch = opt_entry.second.get_or_throw<string>();
 				} else if (opt_entry.first == "compress_binaries") {
 					options.compress_binaries = opt_entry.second.get_or_throw<bool>();
+				} else if (opt_entry.first == "enable_assert") {
+					options.enable_assert = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "debug") {
 					auto dbg_obj = opt_entry.second.get_or_throw<json_object>();
 					for (const auto& dbg_entry : dbg_obj) {
@@ -1127,6 +1129,9 @@ namespace fubar {
 		}
 		if (options.preprocess_preserve_comments) {
 			toolchain_options.debug.preprocess_preserve_comments = *options.preprocess_preserve_comments;
+		}
+		if (options.enable_assert) {
+			toolchain_options.enable_assert = *options.enable_assert;
 		}
 		
 		const auto targets = get_targets(target_set, targets_json_file_name, toolchain_options);

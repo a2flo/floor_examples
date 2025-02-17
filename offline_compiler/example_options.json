@@ -2,6 +2,8 @@
 	"cli": "",
 	"enable_warnings": true,
 	"silence_debug_output": false,
+	"compress_binaries": false,
+	"enable_assert": false,
 	"debug": {
 		"emit_debug_info": false,
 		"preprocess_condense": false,

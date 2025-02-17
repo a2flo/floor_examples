@@ -37,7 +37,8 @@ struct options_t {
 	optional<bool> enable_soft_printf;
 	optional<bool> use_precompiled_header;
 	optional<bool> compress_binaries;
-	
+	optional<bool> enable_assert;
+
 	optional<uint32_t> cuda_max_registers;
 	optional<bool> cuda_short_ptr;
 	
