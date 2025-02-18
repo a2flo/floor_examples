@@ -1074,7 +1074,7 @@ static int run_normal_build(option_context& option_ctx) {
 				//       AMD does proper checking there -> to fully check everything, we need to actually create
 				//       a pipeline (however, this can only be done for compute right now)
 				vulkan_program::program_map_type prog_map;
-				prog_map.insert_or_assign((const vulkan_device&)*dev,
+				prog_map.insert_or_assign((const vulkan_device*)dev,
 										  ctx->create_vulkan_program(*dev, program));
 				ctx->add_program(std::move(prog_map)); // will have already printed an error (if sth was wrong)
 #else
