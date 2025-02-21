@@ -953,6 +953,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -975,6 +978,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Debug;
@@ -1017,7 +1022,7 @@
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -1073,6 +1078,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -1095,6 +1103,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Release;
