@@ -76,6 +76,24 @@
 		// relative filename of the msg log file, only used/created if separate_msg_file = true (default: msg.txt)
 		"msg_filename": ""
 	},
+	
+	// general memory settings
+	"memory": {
+		// heap allocation settings for backends that support it
+		"heap": {
+			// wanted size for the device private storage mode heap: [0, 1] * available global memory size
+			// NOTE: for Metal, this won't allocate anything if memory.metal.shared_only_with_unified_memory is true
+			"private_size": 0.25,
+			// wanted size for the device shared storage mode heap: [0, 1] * available global memory size
+			// NOTE: won't allocate anything if the device doesn't have unified memory that is shared with the CPU
+			"shared_size": 0.25
+		},
+		// Metal specific settings
+		"metal": {
+			// if enabled and the device has unified memory, only uses the shared storage mode for memory allocations
+			"shared_only_with_unified_memory": true
+		}
+	},
 
 	// general compute/graphics and toolchain settings, and specific backend settings further down
 	"toolchain": {
