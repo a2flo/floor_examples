@@ -626,7 +626,7 @@ int main(int, char* argv[]) {
 #endif
 					 // Vulkan/Metal are disabled
 					 floor::RENDERER::NONE),
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
+		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING | COMPUTE_CONTEXT_FLAGS::__EXP_INTERNAL_HEAP,
 	})) {
 		return -1;
 	}

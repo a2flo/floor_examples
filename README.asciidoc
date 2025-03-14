@@ -14,12 +14,12 @@ image:https://raw.githubusercontent.com/a2flo/floor_examples/master/dnn/ios_cli_
 * also demonstrates use of: tessellation/displacement, argument buffers and indirect command pipelines
 * build with `./build.sh` inside the folder
 * gather-based warping ref: link:https://www.cse.ust.hk/~psander/docs/bireproj.pdf[Image-Based Bidirectional Scene Reprojection] (link:https://web.archive.org/web/20170611112307/http://www.cs.virginia.edu:80/~gfx/pmwiki/index.php?n=Pubs.Yang2011IBB[original])
-* NOTE: in addition to floor + dependencies, this requires SDL2_image with libpng, as well as link:https://github.com/a2flo/libwarp[libwarp]
+* NOTE: in addition to floor + dependencies, this requires SDL3_image with libpng, as well as link:https://github.com/a2flo/libwarp[libwarp]
 * video: +
 image:http://img.youtube.com/vi/PmfJ2kzC49A/0.jpg[link=https://www.youtube.com/watch?v=PmfJ2kzC49A]
 
 == nbody ==
-* N-body simulation to demonstrate local/shared memory buffers, local memory barriers, OpenGL and Metal buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
+* N-body simulation to demonstrate local/shared memory buffers, local memory barriers, compute/render buffer sharing, loop unrolling and that high performance computing is indeed possible with this toolchain
 * build with `./build.sh` inside the folder
 * ref: http://http.developer.nvidia.com/GPUGems3/gpugems3_ch31.html
 * video: +
@@ -45,13 +45,13 @@ image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/path_tr
 * build with `./build.sh` inside the folder
 
 == img ==
-* small program to demonstrate image functionality by doing a gaussian blur, implemented as both a single-stage blur with manual local memory caching, as well as a separable horizontal/vertical "dumb" blur w/o manual caching (also: a GLSL/OpenGL implementation that does the same)
+* small program to demonstrate image functionality by doing a gaussian blur, implemented as both a single-stage blur with manual local memory caching, as well as a separable horizontal/vertical "dumb" blur w/o manual caching
 * build with `./build.sh` inside the folder
 * example output: +
 image:https://raw.githubusercontent.com/a2flo/floor_examples/master/data/img_example.png["image blur example",width=67%]
 
 == occ ==
-* offline-compute-compiler, compiles compute/graphics C++ code to CUDA/PTX, Metal/AIR, OpenCL/SPIR/SPIR-V, Vulkan/SPIR-V code/binaries (see link:https://github.com/a2flo/floor_examples/blob/master/offline_compiler/src/main.cpp#L109[--help] for all options)
+* offline-compute-compiler, compiles compute/graphics C++ code to CUDA/PTX, Metal/AIR, OpenCL/SPIR/SPIR-V, Vulkan/SPIR-V or Host-Compute/x86/ARM code/binaries (see link:https://github.com/a2flo/floor_examples/blob/master/offline_compiler/src/main.cpp#L109[--help] for all options)
 * build with `./build.sh` inside the folder
 
 == libfloor and toolchain ==

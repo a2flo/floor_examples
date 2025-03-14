@@ -87,8 +87,7 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 		render_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
 											 render_format |
 											 (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-											 (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE) |
-											 COMPUTE_IMAGE_TYPE::READ_WRITE |
+											 (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::READ) |
 											 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 											 COMPUTE_MEMORY_FLAG::READ_WRITE);
 		render_image->set_debug_label("render_image");
@@ -96,7 +95,7 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 			resolve_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
 												  render_format |
 												  (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-												  COMPUTE_IMAGE_TYPE::READ_WRITE |
+												  COMPUTE_IMAGE_TYPE::READ |
 												  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
 												  COMPUTE_MEMORY_FLAG::READ_WRITE);
 			resolve_image->set_debug_label("resolve_image");
