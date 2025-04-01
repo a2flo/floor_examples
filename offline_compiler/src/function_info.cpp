@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,23 @@ void dump_function_info(const llvm_toolchain::function_info& function_info, cons
 																							   string info_prefix) {
 		string info_str = "";
 		for (size_t i = 0, count = info.args.size(); i < count; ++i) {
+			switch (info.args[i].access) {
+				case llvm_toolchain::ARG_ACCESS::READ:
+					info_str += "read_only ";
+					break;
+				case llvm_toolchain::ARG_ACCESS::WRITE:
+					info_str += "write_only ";
+					break;
+				case llvm_toolchain::ARG_ACCESS::READ_WRITE:
+					info_str += "read_write ";
+					break;
+				default:
+					if (info.args[i].address_space == llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
+						log_error("image argument #$ has no access qualifier ($X)!", i, info.args[i].access);
+					}
+					break;
+			}
+			
 			switch (info.args[i].address_space) {
 				case llvm_toolchain::ARG_ADDRESS_SPACE::GLOBAL:
 					info_str += "global ";
@@ -43,34 +60,36 @@ void dump_function_info(const llvm_toolchain::function_info& function_info, cons
 				default: break;
 			}
 			
-			switch (info.args[i].special_type) {
-				case llvm_toolchain::SPECIAL_TYPE::STAGE_INPUT:
-					info_str += "stage_input ";
-					break;
-				case llvm_toolchain::SPECIAL_TYPE::PUSH_CONSTANT:
-					info_str += "push_constant ";
-					break;
-				case llvm_toolchain::SPECIAL_TYPE::SSBO:
-					info_str += "ssbo ";
-					break;
-				case llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY:
+			if (has_flag<llvm_toolchain::ARG_FLAG::ARGUMENT_BUFFER>(info.args[i].flags)) {
+				info_str += "argument_buffer ";
+			}
+			if (has_flag<llvm_toolchain::ARG_FLAG::STAGE_INPUT>(info.args[i].flags)) {
+				info_str += "stage_input ";
+			}
+			if (has_flag<llvm_toolchain::ARG_FLAG::PUSH_CONSTANT>(info.args[i].flags)) {
+				info_str += "push_constant ";
+			}
+			if (has_flag<llvm_toolchain::ARG_FLAG::SSBO>(info.args[i].flags)) {
+				info_str += "ssbo ";
+			}
+			if (has_flag<llvm_toolchain::ARG_FLAG::IUB>(info.args[i].flags)) {
+				info_str += "iub ";
+			}
+			
+			if (info.args[i].is_array()) {
+				if (has_flag<llvm_toolchain::ARG_FLAG::BUFFER_ARRAY>(info.args[i].flags)) {
 					// implicitly SSBO
 					if (target == llvm_toolchain::TARGET::SPIRV_VULKAN) {
 						info_str += "ssbo-";
 					}
-					[[fallthrough]];
-				case llvm_toolchain::SPECIAL_TYPE::IMAGE_ARRAY:
-					info_str += "array [" + to_string(info.args[i].size) + "] ";
-					break;
-				case llvm_toolchain::SPECIAL_TYPE::IUB:
-					info_str += "iub ";
-					break;
-				case llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER:
-					info_str += "argument_buffer ";
-					break;
-				default: break;
+					info_str += "buffer-";
+				} else if (has_flag<llvm_toolchain::ARG_FLAG::IMAGE_ARRAY>(info.args[i].flags)) {
+					info_str += "image-";
+				}
+				info_str += "array[" + to_string(info.args[i].array_extent) + "] ";
 			}
-			if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::ARGUMENT_BUFFER) {
+			
+			if (has_flag<llvm_toolchain::ARG_FLAG::ARGUMENT_BUFFER>(info.args[i].flags)) {
 				if (!info.args[i].argument_buffer_info) {
 					log_error("argument #$ in $ is an argument buffer, but no argument buffer info exists!",
 							  i, info.name);
@@ -79,28 +98,9 @@ void dump_function_info(const llvm_toolchain::function_info& function_info, cons
 				}
 			}
 			
-			if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE &&
-				info.args[i].special_type != llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
+			if (info.args[i].address_space != llvm_toolchain::ARG_ADDRESS_SPACE::IMAGE) {
 				info_str += to_string(info.args[i].size);
-			} else if (info.args[i].special_type == llvm_toolchain::SPECIAL_TYPE::BUFFER_ARRAY) {
-				// nop
 			} else {
-				switch (info.args[i].image_access) {
-					case llvm_toolchain::ARG_IMAGE_ACCESS::READ:
-						info_str += "read_only ";
-						break;
-					case llvm_toolchain::ARG_IMAGE_ACCESS::WRITE:
-						info_str += "write_only ";
-						break;
-					case llvm_toolchain::ARG_IMAGE_ACCESS::READ_WRITE:
-						info_str += "read_write ";
-						break;
-					default:
-						info_str += "no_access? "; // shouldn't happen ...
-						log_error("kernel image argument #$ has no access qualifier ($X)!", i, info.args[i].image_access);
-						break;
-				}
-				
 				if (target == llvm_toolchain::TARGET::PTX) {
 					// image type is not stored for ptx
 					info_str += to_string(info.args[i].size);

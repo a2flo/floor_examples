@@ -16,7 +16,7 @@ fi
 
 # nbody
 rm ../data/nbody.fubar 2>/dev/null
-${OCC} --src src/nbody.cpp --fubar targets_nbody.json --out ../data/nbody.fubar --no-double -vv --warnings
+${OCC} --src src/nbody.cpp --fubar targets_nbody.json --out ../data/nbody.fubar --no-double -vv --warnings -- -fdiscard-value-names
 if [ ! -f ../data/nbody.fubar ]; then
 	echo "failed to build nbody.fubar"
 	exit -2
