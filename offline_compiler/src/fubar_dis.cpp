@@ -26,7 +26,7 @@
 
 namespace fubar {
 
-void disassemble(const string& archive_file_name) {
+void disassemble(const string& archive_file_name, const optional<string> filter) {
 	auto ar_data = universal_binary::load_archive(archive_file_name);
 	if (!ar_data) {
 		log_error("failed to open or read archive: $", archive_file_name);
@@ -52,7 +52,7 @@ void disassemble(const string& archive_file_name) {
 		
 		stringstream hash_hex;
 		hash_hex << hex << uppercase;
-		for(uint32_t i = 0; i < 32; ++i) {
+		for (uint32_t i = 0; i < 32; ++i) {
 			if (hash.hash[i] < 0x10) {
 				hash_hex << '0';
 			}
@@ -243,6 +243,10 @@ void disassemble(const string& archive_file_name) {
 				continue;
 			}
 			assert(info_idx < func_info.size());
+			if (filter && !func.name.starts_with(*filter)) {
+				++info_idx;
+				continue;
+			}
 			dump_function_info(func_info[info_idx++], toolchain_target, true, " * ");
 		}
 		log_undecorated("");
@@ -280,6 +284,21 @@ void disassemble(const string& archive_file_name) {
 			
 			uint32_t mod_idx = 0;
 			for (const auto& entry : container.entries) {
+				// filter: since we're dumping the binary as a single SPIR-V module/binary and not a container,
+				// we need to manually filter the functions here, because "function_names" isn't present in the module itself
+				bool any_match = !filter;
+				if (!any_match) {
+					for (const auto& func_name : entry.function_names) {
+						if (func_name.starts_with(*filter)) {
+							any_match = true;
+							break;
+						}
+					}
+					if (!any_match) {
+						continue;
+					}
+				}
+				
 				const span<const uint8_t> mod_data {
 					(const uint8_t*)&container.spirv_data[entry.data_offset],
 					entry.data_word_count * sizeof(uint32_t)
@@ -304,7 +323,10 @@ void disassemble(const string& archive_file_name) {
 			}
 			
 			// disassemble
-			const string dis_cmd = floor::get_metallib_dis() + " --color -o - " + tmp_file.file_name;
+			string dis_cmd = floor::get_metallib_dis() + " --color -o - " + tmp_file.file_name;
+			if (filter) {
+				dis_cmd += " --filter=\"" + *filter + "\"";
+			}
 			string dis_output;
 			core::system(dis_cmd, dis_output);
 			log_undecorated("metallib data:\n$", dis_output);
@@ -333,7 +355,10 @@ void disassemble(const string& archive_file_name) {
 				}
 				
 				// disassemble
-				const string dis_cmd = floor::get_opencl_spirv_dis() + " --debug-asm --color --comment -o - " + tmp_file.file_name;
+				string dis_cmd = floor::get_opencl_spirv_dis() + " --debug-asm --color --comment -o - " + tmp_file.file_name;
+				if (filter) {
+					dis_cmd += " --filter \"" + *filter + "\"";
+				}
 				string dis_output;
 				core::system(dis_cmd, dis_output);
 				log_undecorated("OpenCL SPIR-V:\n$", dis_output);
@@ -345,7 +370,12 @@ void disassemble(const string& archive_file_name) {
 			}
 			
 			// disassemble
-			const string dis_cmd = floor::get_host_objdump() + " -d --demangle " + tmp_file.file_name;
+			string dis_cmd = floor::get_host_objdump() + " --demangle " + tmp_file.file_name;
+			if (!filter) {
+				dis_cmd += " -d";
+			} else {
+				dis_cmd += " --disassemble-symbols=\"" + *filter + "\"";
+			}
 			string dis_output;
 			core::system(dis_cmd, dis_output);
 			log_undecorated("Host-Compute:\n$", dis_output);

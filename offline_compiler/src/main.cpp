@@ -98,6 +98,7 @@ struct option_context {
 	string fubar_options_file_name;
 	optional<bool> fubar_pch;
 	string fubar_dis_file_name;
+	optional<string> fubar_dis_filter;
 	bool fubar_compress_binaries { false };
 	
 	optional<bool> emit_debug_info;
@@ -155,6 +156,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--assert: enables assert support\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
+				 "\t--fubar-dis-filter <name>: only prints and dumps functions starting with <name>\n"
 				 "\t--version: prints the occ/floor version\n"
 				 "\t--config <path>: the path where config.json is located (defaults to \"../../data/\")\n"
 				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
@@ -459,6 +461,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "-vv", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::UNDECORATED;
+	}},
+	{ "--fubar-dis-filter", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.fubar_dis_filter = *arg_ptr;
 	}},
 	{ "--version", [](option_context& ctx, char**&) {
 		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
@@ -1174,7 +1184,7 @@ int main(int, char* argv[]) {
 			log_error("failed to build FUBAR");
 		}
 	} else if (option_ctx.is_fubar_disassemble) {
-		fubar::disassemble(option_ctx.fubar_dis_file_name);
+		fubar::disassemble(option_ctx.fubar_dis_file_name, option_ctx.fubar_dis_filter);
 	} else {
 		ret_code = run_normal_build(option_ctx);
 	}

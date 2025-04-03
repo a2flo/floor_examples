@@ -23,6 +23,6 @@
 
 namespace fubar {
 
-void disassemble(const string& archive_file_name);
+void disassemble(const string& archive_file_name, const optional<string> filter);
 
 } // namespace fubar
