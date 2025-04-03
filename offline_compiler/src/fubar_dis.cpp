@@ -26,7 +26,17 @@
 
 namespace fubar {
 
-void disassemble(const string& archive_file_name, const optional<string> filter) {
+void disassemble(const string& archive_file_name, const optional<string> filter, const bool load_fubar_in_ctx) {
+	// load FUBAR if specified
+	if (load_fubar_in_ctx) {
+		auto ctx = floor::get_compute_context();
+		auto prog = ctx->add_universal_binary(archive_file_name);
+		if (!prog) {
+			log_error("failed to load universal binary \"$\" in default compute context", archive_file_name);
+		}
+	}
+	
+	// disassemble
 	auto ar_data = universal_binary::load_archive(archive_file_name);
 	if (!ar_data) {
 		log_error("failed to open or read archive: $", archive_file_name);

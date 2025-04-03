@@ -99,6 +99,7 @@ struct option_context {
 	optional<bool> fubar_pch;
 	string fubar_dis_file_name;
 	optional<string> fubar_dis_filter;
+	bool fubar_dis_load { false };
 	bool fubar_compress_binaries { false };
 	
 	optional<bool> emit_debug_info;
@@ -157,6 +158,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--fubar-dis-filter <name>: only prints and dumps functions starting with <name>\n"
+				 "\t--fubar-dis-load: tries to load the specified universal binary in the default compute context\n"
 				 "\t--version: prints the occ/floor version\n"
 				 "\t--config <path>: the path where config.json is located (defaults to \"../../data/\")\n"
 				 "\t--: end of occ options, everything beyond this point is piped through to the compiler") << endl;
@@ -469,6 +471,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.fubar_dis_filter = *arg_ptr;
+	}},
+	{ "--fubar-dis-load", [](option_context& ctx, char**&) {
+		ctx.fubar_dis_load = true;
 	}},
 	{ "--version", [](option_context& ctx, char**&) {
 		cout << FLOOR_OCC_FULL_VERSION_STR << endl;
@@ -1184,7 +1189,7 @@ int main(int, char* argv[]) {
 			log_error("failed to build FUBAR");
 		}
 	} else if (option_ctx.is_fubar_disassemble) {
-		fubar::disassemble(option_ctx.fubar_dis_file_name, option_ctx.fubar_dis_filter);
+		fubar::disassemble(option_ctx.fubar_dis_file_name, option_ctx.fubar_dis_filter, option_ctx.fubar_dis_load);
 	} else {
 		ret_code = run_normal_build(option_ctx);
 	}
