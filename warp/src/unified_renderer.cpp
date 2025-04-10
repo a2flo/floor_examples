@@ -1410,7 +1410,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		} else {
 			shadow_map_renderer->execute_indirect(*frame.indirect_shadow_pipeline);
 		}
-		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, compute_fence::SYNC_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
+		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, SYNC_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
 		
 		shadow_map_renderer->end();
 	}
@@ -1503,7 +1503,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 			// -> indirect rendering
 			scene_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_scene_scatter_pipeline : *frame.indirect_scene_gather_pipeline);
 		}
-		scene_renderer->signal_fence(*frame.render_post_scene_fence, compute_fence::SYNC_STAGE::FRAGMENT);
+		scene_renderer->signal_fence(*frame.render_post_scene_fence, SYNC_STAGE::FRAGMENT);
 		scene_renderer->end();
 	}
 	
@@ -1536,7 +1536,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		} else {
 			sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline : *frame.indirect_skybox_gather_pipeline);
 		}
-		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence, compute_fence::SYNC_STAGE::FRAGMENT);
+		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence, SYNC_STAGE::FRAGMENT);
 		sky_box_renderer->end();
 	}
 	
