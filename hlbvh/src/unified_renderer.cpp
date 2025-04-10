@@ -182,30 +182,18 @@ void unified_renderer::render(const vector<unique_ptr<animation>>& models,
 				.index_buffer = obj->indices_floor_vbo.get(),
 				.index_count = uint32_t(obj->index_count)
 			};
-			if (!hlbvh_state.triangle_vis) {
-				renderer->draw_indexed(model_draw_info,
-									   // vertex shader
-									   cur_frame->vertices_buffer,
-									   next_frame->vertices_buffer,
-									   cur_frame->normals_buffer,
-									   next_frame->normals_buffer,
-									   uniforms_buffer,
-									   mdl->step,
-									   // fragment shader
-									   uniforms_buffer);
-			} else {
-				renderer->draw_indexed(model_draw_info,
-									   // vertex shader
-									   cur_frame->vertices_buffer,
-									   next_frame->vertices_buffer,
-									   cur_frame->normals_buffer,
-									   next_frame->normals_buffer,
-									   uniforms_buffer,
-									   mdl->step,
-									   mdl->colliding_vertices,
-									   // fragment shader
-									   uniforms_buffer);
-			}
+			renderer->draw_indexed(model_draw_info,
+								   // vertex shader
+								   cur_frame->vertices_buffer,
+								   next_frame->vertices_buffer,
+								   cur_frame->normals_buffer,
+								   next_frame->normals_buffer,
+								   uniforms_buffer,
+								   mdl->step,
+								   hlbvh_state.triangle_vis ? 1u : 0u,
+								   mdl->colliding_vertices,
+								   // fragment shader
+								   uniforms_buffer);
 		}
 	}
 	

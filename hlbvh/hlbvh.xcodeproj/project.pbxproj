@@ -23,7 +23,6 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
-		5C30CAA51AA625F5008986B1 /* hlbvh.metallib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C30CAA31AA625DC008986B1 /* hlbvh.metallib */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
@@ -52,7 +51,6 @@
 			files = (
 				5C5487801B608DE40088272A /* config.json in CopyFiles */,
 				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
-				5C30CAA51AA625F5008986B1 /* hlbvh.metallib in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,7 +73,6 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
-		5C30CAA31AA625DC008986B1 /* hlbvh.metallib */ = {isa = PBXFileReference; lastKnownFileType = "archive.metal-library"; name = hlbvh.metallib; path = ../data/hlbvh.metallib; sourceTree = "<group>"; };
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* hlbvh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hlbvh.cpp; sourceTree = "<group>"; };
@@ -154,7 +151,6 @@
 		5C0071E01A9200D400F4711D /* data */ = {
 			isa = PBXGroup;
 			children = (
-				5C30CAA31AA625DC008986B1 /* hlbvh.metallib */,
 				5C54877E1B608CF50088272A /* config.json */,
 				5C54877F1B608CF50088272A /* config.json.local */,
 			);
@@ -252,7 +248,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 1630;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -717,6 +713,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -739,6 +738,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Debug;
@@ -781,7 +782,7 @@
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = fast;
+				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_UNROLL_LOOPS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -838,6 +839,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -860,6 +864,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Release;

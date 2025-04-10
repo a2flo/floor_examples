@@ -41,6 +41,7 @@ struct hlbvh_state_struct {
 	bool no_metal { false };
 	bool no_vulkan { false };
 	bool benchmark { false };
+	bool no_fubar { false };
 	
 	bool uni_renderer { true };
 	

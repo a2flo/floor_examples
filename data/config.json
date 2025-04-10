@@ -228,8 +228,8 @@
 			// if non-empty: only devices with names matching any of the names in this list will be used
 			// NOTE: capitalization is ignored, names can be partially matched
 			"whitelist": [],
-			// if true, uses vkGetFenceStatus spin-loop waiting/polling instead of vkWaitForFences
-			"fence_wait_polling": true,
+			// if true, uses vkGetSemaphoreCounterValue spin-loop waiting/polling instead of vkWaitSemaphores
+			"sema_wait_polling": true,
 			
 			// if toolchain.log_binaries is true and this is non-empty, then only functions whose name matches any of the filter strings will be dumped
 			// e.g. [ "foo", "bar" ] will only dump functions whose name contains "foo" or "bar"

@@ -580,13 +580,13 @@ void init_system() {
 	sim_time_sum = 0.0L;
 }
 
-// embed the compiled nbody and mip-map-minify FUBAR files if they are available
+// embed the compiled nbody FUBAR file if it is available
 #if defined(__has_embed)
 #if __has_embed("../../data/nbody.fubar")
 static constexpr const uint8_t nbody_fubar[] {
 #embed "../../data/nbody.fubar"
 };
-#define HAS_EMBEDDED_NBODY_FUBAR 1
+#define HAS_EMBEDDED_FUBAR 1
 #endif
 #endif
 
@@ -697,10 +697,10 @@ int main(int, char* argv[]) {
 	shared_ptr<compute_kernel> nbody_raster;
 	
 	// if embedded FUBAR data exists + it isn't disabled, try to load this first
-#if defined(HAS_EMBEDDED_NBODY_FUBAR)
+#if defined(HAS_EMBEDDED_FUBAR)
 	if (!nbody_state.no_fubar) {
 		// nbody kernels/shaders
-		const span<const uint8_t> fubar_data{ nbody_fubar, std::size(nbody_fubar) };
+		const span<const uint8_t> fubar_data { nbody_fubar, std::size(nbody_fubar) };
 		nbody_prog = compute_ctx->add_universal_binary(fubar_data);
 		nbody_render_prog =
 			(compute_ctx != render_ctx && render_ctx ? render_ctx->add_universal_binary(fubar_data) : nbody_prog);

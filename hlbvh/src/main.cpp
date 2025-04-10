@@ -94,6 +94,10 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		hlbvh_state.benchmark = true;
 		cout << "benchmark mode enabled" << endl;
 	}},
+	{ "--no-fubar", [](hlbvh_option_context&, char**&) {
+		hlbvh_state.no_fubar = true;
+		cout << "FUBAR disabled" << endl;
+	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](hlbvh_option_context&, char**&) {} },
 	{ "-ApplePersistenceIgnoreState", [](hlbvh_option_context&, char**&) {} },
@@ -120,6 +124,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 					cam->set_mouse_input(hlbvh_state.cam_mode);
 				}
 				log_msg("switched cam mode");
+				break;
+			case SDLK_V:
+				hlbvh_state.triangle_vis ^= true;
 				break;
 			case SDLK_LSHIFT:
 			case SDLK_RSHIFT:
@@ -224,6 +231,19 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	}
 	return false;
 }
+
+// embed the compiled hlbvh FUBAR files if they are available
+#if defined(__has_embed)
+#if __has_embed("../../data/hlbvh.fubar") && __has_embed("../../data/hlbvh_shaders.fubar")
+static constexpr const uint8_t hlbvh_fubar[] {
+#embed "../../data/hlbvh.fubar"
+};
+static constexpr const uint8_t hlbvh_shaders_fubar[] {
+#embed "../../data/hlbvh_shaders.fubar"
+};
+#define HAS_EMBEDDED_FUBAR 1
+#endif
+#endif
 
 int main(int, char* argv[]) {
 	// handle options
@@ -331,18 +351,40 @@ int main(int, char* argv[]) {
 		hlbvh_state.rqueue = hlbvh_state.cqueue;
 	}
 	
-	// compile the program and get the kernel function
+	//
 	shared_ptr<compute_program> prog;
-#if !defined(FLOOR_IOS)
-	const llvm_toolchain::compile_options options {
-		.enable_warnings = true,
-	};
-	prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
-#else
-	// TODO: ios implementation!
+	shared_ptr<compute_program> shader_prog;
+	
+	// if embedded FUBAR data exists + it isn't disabled, try to load this first
+#if defined(HAS_EMBEDDED_FUBAR)
+	if (!hlbvh_state.no_fubar) {
+		// hlbvh kernels/shaders
+		const span<const uint8_t> fubar_data { hlbvh_fubar, std::size(hlbvh_fubar) };
+		prog = hlbvh_state.cctx->add_universal_binary(fubar_data);
+		if (prog) {
+			log_msg("using embedded hlbvh FUBAR");
+		}
+		if (hlbvh_state.uni_renderer) {
+			const span<const uint8_t> fubar_shader_data { hlbvh_shaders_fubar, std::size(hlbvh_shaders_fubar) };
+			shader_prog = hlbvh_state.rctx->add_universal_binary(fubar_shader_data);
+			if (shader_prog) {
+				log_msg("using embedded hlbvh shaders FUBAR");
+			}
+		}
+	}
 #endif
-	if (prog == nullptr) {
-		log_error("program compilation failed");
+	
+	// compile the program and get the kernel function
+#if !defined(FLOOR_IOS)
+	if (!prog) {
+		const llvm_toolchain::compile_options options {
+			.enable_warnings = true,
+		};
+		prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
+	}
+#endif
+	if (!prog) {
+		log_error("program compilation/loading failed");
 		return -1;
 	}
 	
@@ -374,13 +416,13 @@ int main(int, char* argv[]) {
 	}
 	
 	// init unified renderer (need compiled prog first)
-	shared_ptr<compute_program> shader_prog;
 	if (hlbvh_state.uni_renderer) {
-		shader_prog = hlbvh_state.rctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"),
-														 "-DCOLLIDING_TRIANGLES_VIS="s + (hlbvh_state.triangle_vis ? "1" : "0"));
-		if (shader_prog == nullptr) {
-			log_error("shader program compilation failed");
-			return -1;
+		if (!shader_prog) {
+			shader_prog = hlbvh_state.rctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"));
+			if (!shader_prog) {
+				log_error("shader program compilation failed");
+				return -1;
+			}
 		}
 		
 		// setup renderer

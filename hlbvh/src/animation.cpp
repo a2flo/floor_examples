@@ -34,9 +34,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	frames_centroids.resize(frame_count);
 	frames_triangles_buffer.resize(frame_count);
 	frames_centroids_buffer.resize(frame_count);
-	if(hlbvh_state.triangle_vis) {
-		frames_indices.resize(frame_count);
-	}
+	frames_indices.resize(frame_count);
 	atomic<uint32_t> done { frame_count };
 	atomic<uint32_t> load_valid { 1u };
 	atomic<uint32_t> max_vertex_count { 0 };
@@ -95,9 +93,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				}
 				mdl_triangles->reserve(triangle_count * 3);
 				mdl_centroids->reserve(triangle_count);
-				if(hlbvh_state.triangle_vis) {
-					mdl_indices->reserve(triangle_count);
-				}
+				mdl_indices->reserve(triangle_count);
 				
 				for(const auto& sub_obj : model->objects) {
 					for(const auto& idx : sub_obj->indices) {
@@ -110,9 +106,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 						mdl_triangles->emplace_back(tri[1]);
 						mdl_triangles->emplace_back(tri[2]);
 						mdl_centroids->emplace_back((tri[0] + tri[1] + tri[2]) * (1.0f / 3.0f));
-						if(hlbvh_state.triangle_vis) {
-							mdl_indices->emplace_back(idx);
-						}
+						mdl_indices->emplace_back(idx);
 					}
 				}
 				frames_triangles[frame_id] = mdl_triangles;
@@ -123,10 +117,8 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				frames_triangles_buffer[frame_id]->set_debug_label("frames_triangles");
 				frames_centroids_buffer[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_centroids);
 				frames_centroids_buffer[frame_id]->set_debug_label("frames_centroids");
-				if(hlbvh_state.triangle_vis) {
-					frames_indices[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_indices);
-					frames_indices[frame_id]->set_debug_label("frames_indices");
-				}
+				frames_indices[frame_id] = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, *mdl_indices);
+				frames_indices[frame_id]->set_debug_label("frames_indices");
 				
 				//
 				const auto vertex_count = (uint32_t)model->vertices.size();
@@ -194,25 +186,23 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	bvh_aabbs_counters->set_debug_label("bvh_aabbs_counters");
 	
 	// for visualization purposes
-	if(hlbvh_state.triangle_vis) {
-		log_debug("max vertex count: $", max_vertex_count.load());
-		auto sharing_sync_flags = COMPUTE_MEMORY_FLAG::NONE;
-		if (hlbvh_state.cctx != hlbvh_state.rctx) {
-			sharing_sync_flags |= (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
-								   // render backend only reads data
-								   COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
-								   // compute backend only writes data
-								   COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
-		}
-		colliding_vertices = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, max_vertex_count * sizeof(uint32_t),
-															 COMPUTE_MEMORY_FLAG::READ_WRITE |
-															 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-															 sharing_flags | sharing_sync_flags);
-		colliding_vertices->set_debug_label("colliding_vertices");
-		colliding_triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
-		colliding_triangles->set_debug_label("colliding_triangles");
-		log_debug("check tri col buffer: $", colliding_vertices->get_size());
+	log_debug("max vertex count: $", max_vertex_count.load());
+	auto sharing_sync_flags = COMPUTE_MEMORY_FLAG::NONE;
+	if (hlbvh_state.cctx != hlbvh_state.rctx) {
+		sharing_sync_flags |= (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+							   // render backend only reads data
+							   COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+							   // compute backend only writes data
+							   COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 	}
+	colliding_vertices = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, max_vertex_count * sizeof(uint32_t),
+														 COMPUTE_MEMORY_FLAG::READ_WRITE |
+														 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+														 sharing_flags | sharing_sync_flags);
+	colliding_vertices->set_debug_label("colliding_vertices");
+	colliding_triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
+	colliding_triangles->set_debug_label("colliding_triangles");
+	log_debug("check tri col buffer: $", colliding_vertices->get_size());
 }
 
 void animation::do_step() {
