@@ -18,8 +18,9 @@
 
 #include "fubar.hpp"
 #include <floor/core/json.hpp>
+using namespace std;
 
-namespace fubar {
+namespace fl::fubar {
 	using namespace json;
 
 	static universal_binary::target parse_cuda_target(const json_object& target_obj) {
@@ -47,7 +48,7 @@ namespace fubar {
 		return {
 			.cuda = {
 				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::CUDA,
+				.type = PLATFORM_TYPE::CUDA,
 				.sm_major = sm.x,
 				.sm_minor = sm.y,
 				.sm_aa = sm_aa ? 1u : 0u,
@@ -117,7 +118,7 @@ namespace fubar {
 		return {
 			.host = {
 				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::HOST,
+				.type = PLATFORM_TYPE::HOST,
 				.cpu_tier = cpu_tier,
 				._unused = 0,
 			}
@@ -172,7 +173,7 @@ namespace fubar {
 		return {
 			.metal = {
 				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::METAL,
+				.type = PLATFORM_TYPE::METAL,
 				.major = version.x,
 				.minor = version.y,
 				.platform_target = platform,
@@ -223,7 +224,7 @@ namespace fubar {
 		return {
 			.opencl = {
 				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::OPENCL,
+				.type = PLATFORM_TYPE::OPENCL,
 				.major = version.x,
 				.minor = version.y,
 				.is_spir = target_obj.at("is_spir").get_or_throw<bool>(),
@@ -284,7 +285,7 @@ namespace fubar {
 		return {
 			.vulkan = {
 				.version = universal_binary::target_format_version,
-				.type = COMPUTE_TYPE::VULKAN,
+				.type = PLATFORM_TYPE::VULKAN,
 				.vulkan_major = version.x,
 				.vulkan_minor = version.y,
 				.spirv_major = spirv.x,
@@ -339,7 +340,7 @@ namespace fubar {
 	
 	static vector<universal_binary::target_v5> get_targets(const TARGET_SET target_set,
 														   const string& targets_json_file_name,
-														   const llvm_toolchain::compile_options& options) {
+														   const toolchain::compile_options& options) {
 		vector<universal_binary::target_v5> ret_targets;
 		if (target_set == TARGET_SET::USER_JSON) {
 			ret_targets = get_json_targets(targets_json_file_name);
@@ -354,7 +355,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 0,
 					.sm_aa = 0,
@@ -368,7 +369,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 5,
 					.sm_minor = 2,
 					.sm_aa = 0,
@@ -382,7 +383,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 0,
 					.sm_aa = 0,
@@ -396,7 +397,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 6,
 					.sm_minor = 1,
 					.sm_aa = 0,
@@ -410,7 +411,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 0,
 					.sm_aa = 0,
@@ -424,7 +425,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 7,
 					.sm_minor = 5,
 					.sm_aa = 0,
@@ -438,7 +439,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 0,
 					.sm_aa = 0,
@@ -452,7 +453,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 6,
 					.sm_aa = 0,
@@ -466,7 +467,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 7,
 					.sm_aa = 0,
@@ -480,7 +481,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 8,
 					.sm_minor = 9,
 					.sm_aa = 0,
@@ -494,7 +495,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 9,
 					.sm_minor = 0,
 					.sm_aa = 1,
@@ -508,7 +509,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 10,
 					.sm_minor = 0,
 					.sm_aa = 1,
@@ -522,7 +523,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 10,
 					.sm_minor = 1,
 					.sm_aa = 1,
@@ -536,7 +537,7 @@ namespace fubar {
 			{
 				.cuda = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::CUDA,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 12,
 					.sm_minor = 0,
 					.sm_aa = 1,
@@ -553,7 +554,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
@@ -567,7 +568,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
@@ -581,7 +582,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -595,7 +596,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -609,7 +610,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -623,7 +624,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -637,7 +638,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -651,7 +652,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -665,7 +666,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::VISIONOS,
@@ -682,7 +683,7 @@ namespace fubar {
 			{
 				.opencl = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::OPENCL,
+					.type = PLATFORM_TYPE::OPENCL,
 					.major = 1,
 					.minor = 2,
 					.is_spir = 1,
@@ -703,7 +704,7 @@ namespace fubar {
 			{
 				.opencl = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::OPENCL,
+					.type = PLATFORM_TYPE::OPENCL,
 					.major = 2,
 					.minor = 0,
 					.is_spir = 0,
@@ -727,7 +728,7 @@ namespace fubar {
 			{
 				.vulkan = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::VULKAN,
+					.type = PLATFORM_TYPE::VULKAN,
 					.vulkan_major = 1,
 					.vulkan_minor = 3,
 					.spirv_major = 1,
@@ -752,7 +753,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::X86_TIER_1,
 					._unused = 0,
 				}
@@ -760,7 +761,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::X86_TIER_2,
 					._unused = 0,
 				}
@@ -768,7 +769,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::X86_TIER_3,
 					._unused = 0,
 				}
@@ -776,7 +777,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::X86_TIER_4,
 					._unused = 0,
 				}
@@ -784,7 +785,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::X86_TIER_5,
 					._unused = 0,
 				}
@@ -792,7 +793,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_1,
 					._unused = 0,
 				}
@@ -800,7 +801,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_2,
 					._unused = 0,
 				}
@@ -808,7 +809,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_3,
 					._unused = 0,
 				}
@@ -816,7 +817,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_4,
 					._unused = 0,
 				}
@@ -824,7 +825,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_5,
 					._unused = 0,
 				}
@@ -832,7 +833,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_6,
 					._unused = 0,
 				}
@@ -840,7 +841,7 @@ namespace fubar {
 			{
 				.host = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::HOST,
+					.type = PLATFORM_TYPE::HOST,
 					.cpu_tier = HOST_CPU_TIER::ARM_TIER_7,
 					._unused = 0,
 				}
@@ -854,7 +855,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
@@ -868,7 +869,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
@@ -882,7 +883,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -896,7 +897,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 0,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -910,7 +911,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -924,7 +925,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 1,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -938,7 +939,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::MACOS,
@@ -952,7 +953,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::IOS,
@@ -966,7 +967,7 @@ namespace fubar {
 			{
 				.metal = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::METAL,
+					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v5::metal)::PLATFORM_TARGET::VISIONOS,
@@ -983,7 +984,7 @@ namespace fubar {
 			{
 				.vulkan = {
 					.version = universal_binary::target_format_version,
-					.type = COMPUTE_TYPE::VULKAN,
+					.type = PLATFORM_TYPE::VULKAN,
 					.vulkan_major = 1,
 					.vulkan_minor = 3,
 					.spirv_major = 1,
@@ -1013,7 +1014,7 @@ namespace fubar {
 		
 		// overwrite options if specified/necessary
 		for (auto& target : ret_targets) {
-			if (target.common.type == COMPUTE_TYPE::CUDA && target.cuda.max_registers == 0) {
+			if (target.common.type == PLATFORM_TYPE::CUDA && target.cuda.max_registers == 0) {
 				target.cuda.max_registers = options.cuda.max_registers;
 			}
 		}
@@ -1021,19 +1022,19 @@ namespace fubar {
 		return ret_targets;
 	}
 	
-	static llvm_toolchain::compile_options get_compile_options(const string& options_json_file_name) {
+	static toolchain::compile_options get_compile_options(const string& options_json_file_name) {
 		if (options_json_file_name.empty()) {
 			return {};
 		}
 		
-		llvm_toolchain::compile_options options {};
+		toolchain::compile_options options {};
 		try {
 			auto doc = create_document(options_json_file_name);
 			if (!doc.valid) {
 				throw runtime_error("invalid JSON");
 			}
 			const auto opts_obj = doc.root.get_or_throw<json_object>();
-			for (const auto& opt_entry : opts_obj) {
+			for (auto&& opt_entry : opts_obj) {
 				if (opt_entry.first == "cli") {
 					options.cli = opt_entry.second.get_or_throw<string>();
 				} else if (opt_entry.first == "enable_warnings") {
@@ -1048,7 +1049,7 @@ namespace fubar {
 					options.enable_assert = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "debug") {
 					auto dbg_obj = opt_entry.second.get_or_throw<json_object>();
-					for (const auto& dbg_entry : dbg_obj) {
+					for (auto&& dbg_entry : dbg_obj) {
 						if (dbg_entry.first == "emit_debug_info") {
 							options.debug.emit_debug_info = dbg_entry.second.get_or_throw<bool>();
 						} else if (dbg_entry.first == "preprocess_condense") {
@@ -1061,7 +1062,7 @@ namespace fubar {
 					}
 				} else if (opt_entry.first == "cuda") {
 					auto cuda_obj = opt_entry.second.get_or_throw<json_object>();
-					for (const auto& cuda_entry : cuda_obj) {
+					for (auto&& cuda_entry : cuda_obj) {
 						if (cuda_entry.first == "max_registers") {
 							options.cuda.max_registers = cuda_entry.second.get_or_throw<uint32_t>();
 						} else if (cuda_entry.first == "short_ptr") {
@@ -1072,7 +1073,7 @@ namespace fubar {
 					}
 				} else if (opt_entry.first == "vulkan") {
 					auto vulkan_obj = opt_entry.second.get_or_throw<json_object>();
-					for (const auto& vulkan_entry : vulkan_obj) {
+					for (auto&& vulkan_entry : vulkan_obj) {
 						if (vulkan_entry.first == "pre_structurization_pass") {
 							options.vulkan.pre_structurization_pass = vulkan_entry.second.get_or_throw<bool>();
 						} else {
@@ -1142,4 +1143,4 @@ namespace fubar {
 														 options.use_precompiled_header.value_or(false));
 	}
 	
-}
+} // namespace fl::fubar

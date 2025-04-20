@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,18 +16,21 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/core.hpp>
-#include <floor/compute/compute_kernel.hpp>
-#include <floor/compute/metal/metal_compute.hpp>
-#include <floor/compute/vulkan/vulkan_compute.hpp>
-#include <floor/compute/host/host_compute.hpp>
-#include <floor/compute/indirect_command.hpp>
+#include <floor/device/device_function.hpp>
+#include <floor/device/metal/metal_context.hpp>
+#include <floor/device/vulkan/vulkan_context.hpp>
+#include <floor/device/host/host_context.hpp>
+#include <floor/device/indirect_command.hpp>
 #include <floor/vr/vr_context.hpp>
+#include <chrono>
 #include "unified_renderer.hpp"
 #include "nbody_state.hpp"
 #include <SDL3/SDL_main.h>
+using namespace std;
+
 nbody_state_struct nbody_state;
 
 struct nbody_option_context {
@@ -57,14 +60,14 @@ static constexpr const array<const char*, (size_t)NBODY_SETUP::__MAX_NBODY_SETUP
 }};
 
 // device compute/command queue
-static shared_ptr<compute_queue> dev_queue;
-static shared_ptr<compute_queue> render_dev_queue;
+static shared_ptr<device_queue> dev_queue;
+static shared_ptr<device_queue> render_dev_queue;
 // amount of nbody position buffers (need at least 2)
 static constexpr const size_t pos_buffer_count { 3 };
 // nbody position buffers
-static array<shared_ptr<compute_buffer>, pos_buffer_count> position_buffers;
+static array<shared_ptr<device_buffer>, pos_buffer_count> position_buffers;
 // nbody velocity buffer
-static shared_ptr<compute_buffer> velocity_buffer;
+static shared_ptr<device_buffer> velocity_buffer;
 // iterates over [0, pos_buffer_count - 1] (-> currently active position buffer)
 static size_t buffer_flip_flop { 0 };
 // current iteration number (used to track/compute gflops, resets every 100 iterations)
@@ -483,8 +486,8 @@ void init_system() {
 	// finish up old execution before we start with anything new
 	dev_queue->finish();
 	
-	auto positions = (float4*)position_buffers[0]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
-	auto velocities = (float3*)velocity_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::WRITE_INVALIDATE | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+	auto positions = (float4*)position_buffers[0]->map(*dev_queue, MEMORY_MAP_FLAG::WRITE_INVALIDATE | MEMORY_MAP_FLAG::BLOCK);
+	auto velocities = (float3*)velocity_buffer->map(*dev_queue, MEMORY_MAP_FLAG::WRITE_INVALIDATE | MEMORY_MAP_FLAG::BLOCK);
 	if(nbody_setup != NBODY_SETUP::STAR_COLLAPSE) {
 		nbody_state.mass_minmax = nbody_state.mass_minmax_default;
 	}
@@ -581,13 +584,11 @@ void init_system() {
 }
 
 // embed the compiled nbody FUBAR file if it is available
-#if defined(__has_embed)
 #if __has_embed("../../data/nbody.fubar")
 static constexpr const uint8_t nbody_fubar[] {
 #embed "../../data/nbody.fubar"
 };
 #define HAS_EMBEDDED_FUBAR 1
-#endif
 #endif
 
 int main(int, char* argv[]) {
@@ -626,19 +627,19 @@ int main(int, char* argv[]) {
 #endif
 					 // Vulkan/Metal are disabled
 					 floor::RENDERER::NONE),
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING | COMPUTE_CONTEXT_FLAGS::__EXP_INTERNAL_HEAP,
+		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING | DEVICE_CONTEXT_FLAGS::__EXP_INTERNAL_HEAP,
 	})) {
 		return -1;
 	}
 	
 	// disable resp. other renderers when using Metal/Vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
-							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_metal = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::METAL ||
+							floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
-	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_vulkan = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::VULKAN ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::CUDA ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (is_metal) {
@@ -659,18 +660,18 @@ int main(int, char* argv[]) {
 
 	// get the compute and render context that have been automatically created (opencl/cuda/metal/vulkan/host)
 	// NOTE: for Metal and Vulkan these are the same
-	auto compute_ctx = floor::get_compute_context();
+	auto compute_ctx = floor::get_device_context();
 	auto render_ctx = floor::get_render_context();
 
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
-	auto compute_dev = compute_ctx->get_device(compute_device::TYPE::FASTEST);
+	auto compute_dev = compute_ctx->get_device(device::TYPE::FASTEST);
 	dev_queue = compute_ctx->create_queue(*compute_dev);
 
 	// also retrieve the fastest device from the render context,
 	// if it's not the same device (== same context), also create a queue for it (else, use the same queue)
-	const compute_device* render_dev { nullptr };
+	const device* render_dev { nullptr };
 	if (render_ctx) {
-		render_dev = render_ctx->get_device(compute_device::TYPE::FASTEST);
+		render_dev = render_ctx->get_device(device::TYPE::FASTEST);
 		render_dev_queue = (render_dev != compute_dev ? render_ctx->create_queue(*render_dev) : dev_queue);
 	}
 
@@ -683,18 +684,18 @@ int main(int, char* argv[]) {
 		nbody_state.body_count = ((nbody_state.body_count / nbody_state.tile_size) + 1u) * nbody_state.tile_size;
 		log_error("body count not a multiple of tile size! - setting body count to $ now", nbody_state.body_count);
 	}
-	if (compute_ctx->get_compute_type() == COMPUTE_TYPE::HOST &&
-		!((const host_compute*)compute_ctx.get())->has_host_device_support() && nbody_state.tile_size != NBODY_TILE_SIZE) {
+	if (compute_ctx->get_platform_type() == PLATFORM_TYPE::HOST &&
+		!((const host_context*)compute_ctx.get())->has_host_device_support() && nbody_state.tile_size != NBODY_TILE_SIZE) {
 		log_error("compiled NBODY_TILE_SIZE ($) must match run-time tile-size when using host compute! - using it now",
 				  NBODY_TILE_SIZE);
 		nbody_state.tile_size = NBODY_TILE_SIZE;
 	}
 
-	shared_ptr<compute_program> nbody_prog;
-	shared_ptr<compute_program> nbody_render_prog;
-	shared_ptr<compute_kernel> nbody_compute;
-	shared_ptr<compute_kernel> nbody_compute_fixed_delta;
-	shared_ptr<compute_kernel> nbody_raster;
+	shared_ptr<device_program> nbody_prog;
+	shared_ptr<device_program> nbody_render_prog;
+	shared_ptr<device_function> nbody_compute;
+	shared_ptr<device_function> nbody_compute_fixed_delta;
+	shared_ptr<device_function> nbody_raster;
 	
 	// if embedded FUBAR data exists + it isn't disabled, try to load this first
 #if defined(HAS_EMBEDDED_FUBAR)
@@ -713,7 +714,7 @@ int main(int, char* argv[]) {
 	// otherwise: compile the program
 	if (!nbody_prog) {
 #if !defined(FLOOR_IOS)
-		llvm_toolchain::compile_options options{
+		toolchain::compile_options options {
 			.cli = ("-I" + floor::data_path("../nbody/src") + " -DNBODY_TILE_SIZE=" + to_string(nbody_state.tile_size) +
 					" -DNBODY_SOFTENING=" + to_string(nbody_state.softening) + "f" +
 					" -DNBODY_DAMPING=" + to_string(nbody_state.damping) + "f"),
@@ -737,9 +738,9 @@ int main(int, char* argv[]) {
 	}
 
 	// get the kernel functions
-	nbody_compute = nbody_prog->get_kernel("nbody_compute");
-	nbody_compute_fixed_delta = nbody_prog->get_kernel("nbody_compute_fixed_delta");
-	nbody_raster = nbody_prog->get_kernel("nbody_raster");
+	nbody_compute = nbody_prog->get_function("nbody_compute");
+	nbody_compute_fixed_delta = nbody_prog->get_function("nbody_compute_fixed_delta");
+	nbody_raster = nbody_prog->get_function("nbody_raster");
 	if (nbody_compute == nullptr || nbody_compute_fixed_delta == nullptr || nbody_raster == nullptr) {
 		log_error("failed to retrieve kernel(s) from program");
 		return -1;
@@ -749,53 +750,53 @@ int main(int, char* argv[]) {
 	if (floor_renderer != floor::RENDERER::NONE) {
 		// setup renderer
 		if (!unified_renderer::init(
-				*render_ctx, *render_dev_queue, nbody_state.msaa, *nbody_render_prog->get_kernel("lighting_vertex"),
-				*nbody_render_prog->get_kernel("lighting_fragment"), nbody_render_prog->get_kernel("blit_vs").get(),
-				nbody_render_prog->get_kernel("blit_fs").get(), nbody_render_prog->get_kernel("blit_fs_layered").get())) {
+				*render_ctx, *render_dev_queue, nbody_state.msaa, *nbody_render_prog->get_function("lighting_vertex"),
+				*nbody_render_prog->get_function("lighting_fragment"), nbody_render_prog->get_function("blit_vs").get(),
+				nbody_render_prog->get_function("blit_fs").get(), nbody_render_prog->get_function("blit_fs_layered").get())) {
 			log_error("error during unified renderer initialization!");
 			return -1;
 		}
 	}
 
 	// create nbody position and velocity buffers
-	COMPUTE_MEMORY_FLAG graphics_sharing_flags = COMPUTE_MEMORY_FLAG::NONE;
+	MEMORY_FLAG graphics_sharing_flags = MEMORY_FLAG::NONE;
 	if (compute_ctx != render_ctx && render_ctx != nullptr) {
 		// enable automatic buffer sync between the render and compute backends
-		graphics_sharing_flags = (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+		graphics_sharing_flags = (MEMORY_FLAG::SHARING_SYNC |
 								  // render backend only reads data
-								  COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+								  MEMORY_FLAG::SHARING_RENDER_READ |
 								  // compute backend only writes data
-								  COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
+								  MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 		if (!nbody_state.no_vulkan) {
 			// we're using a Vulkan renderer -> enable Vulkan buffer sharing
-			graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
+			graphics_sharing_flags |= MEMORY_FLAG::VULKAN_SHARING;
 		} else if (!nbody_state.no_metal) {
 			// we're using a Metal renderer -> enable Metal buffer sharing
-			graphics_sharing_flags |= COMPUTE_MEMORY_FLAG::METAL_SHARING;
+			graphics_sharing_flags |= MEMORY_FLAG::METAL_SHARING;
 		}
 	}
 	for (size_t i = 0; i < pos_buffer_count; ++i) {
 		position_buffers[i] = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * nbody_state.body_count,
 														 ( // will be reading and writing from the kernel
-															 COMPUTE_MEMORY_FLAG::READ_WRITE
+															 MEMORY_FLAG::READ_WRITE
 															 // host will only write data
-															 | COMPUTE_MEMORY_FLAG::HOST_WRITE
+															 | MEMORY_FLAG::HOST_WRITE
 															 // graphics sharing flags are set above
 															 | graphics_sharing_flags));
 	}
 	velocity_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float3) * nbody_state.body_count,
-												 COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_WRITE);
+												 MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HOST_WRITE);
 
 	// image buffers (for s/w rendering only)
 	const uint2 img_size { floor::get_physical_screen_size() };
 	size_t img_buffer_flip_flop { 0 };
-	array<shared_ptr<compute_buffer>, 2> img_buffers;
+	array<shared_ptr<device_buffer>, 2> img_buffers;
 	if (floor_renderer == floor::RENDERER::NONE && !nbody_state.benchmark) {
 		img_buffers = { {
 			compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
-									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+									   MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HOST_READ),
 			compute_ctx->create_buffer(*dev_queue, sizeof(uint32_t) * img_size.x * img_size.y,
-									   COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ),
+									   MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HOST_READ),
 		} };
 		img_buffers[0]->zero(*dev_queue);
 		img_buffers[1]->zero(*dev_queue);
@@ -886,7 +887,7 @@ int main(int, char* argv[]) {
 				dev_queue->finish();
 				time_keeper = chrono::high_resolution_clock::now();
 				
-				const compute_queue::indirect_execution_parameters_t exec_params {
+				const device_queue::indirect_execution_parameters_t exec_params {
 					.wait_until_completion = true,
 					.debug_label = "nbody_benchmark",
 				};
@@ -956,7 +957,7 @@ int main(int, char* argv[]) {
 							   // work per work-group:
 							   uint1 {
 								   nbody_state.render_size == 0 ?
-								   nbody_raster->get_kernel_entry(*compute_dev)->max_total_local_size : nbody_state.render_size
+								   nbody_raster->get_function_entry(*compute_dev)->max_total_local_size : nbody_state.render_size
 							   },
 							   // kernel arguments:
 							   /* in_positions: */		position_buffers[buffer_flip_flop],
@@ -967,7 +968,7 @@ int main(int, char* argv[]) {
 			if(is_vulkan || is_metal) dev_queue->finish();
 			
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto img_data = (uchar4*)img_buffers[img_buffer_flip_flop]->map(*dev_queue, MEMORY_MAP_FLAG::READ | MEMORY_MAP_FLAG::BLOCK);
 			
 			// ... and blit it into the window
 			const auto wnd_surface = SDL_GetWindowSurface(floor::get_window());

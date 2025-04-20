@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@
 #if !defined(NBODY_TILE_SIZE)
 #define NBODY_TILE_SIZE 512u
 #endif
+
+using namespace fl;
 
 struct nbody_state_struct {
 	uint32_t body_count { 65536 };
@@ -67,7 +69,7 @@ struct nbody_state_struct {
 	bool no_fubar { false };
 	
 };
-#if !defined(FLOOR_COMPUTE) || defined(FLOOR_COMPUTE_HOST)
+#if !defined(FLOOR_DEVICE) || defined(FLOOR_DEVICE_HOST_COMPUTE)
 extern nbody_state_struct nbody_state;
 #endif
 

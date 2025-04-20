@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <floor/floor/floor.hpp>
-#include <floor/compute/universal_binary.hpp>
+#include <floor/floor.hpp>
+#include <floor/device/universal_binary.hpp>
 
-namespace fubar {
+namespace fl::fubar {
 
 enum class TARGET_SET {
 	USER_JSON,
@@ -31,27 +31,27 @@ enum class TARGET_SET {
 };
 
 struct options_t {
-	optional<string> additional_cli_options;
-	optional<bool> enable_warnings;
-	optional<bool> verbose_compile_output;
-	optional<bool> enable_soft_printf;
-	optional<bool> use_precompiled_header;
-	optional<bool> compress_binaries;
-	optional<bool> enable_assert;
+	std::optional<std::string> additional_cli_options;
+	std::optional<bool> enable_warnings;
+	std::optional<bool> verbose_compile_output;
+	std::optional<bool> enable_soft_printf;
+	std::optional<bool> use_precompiled_header;
+	std::optional<bool> compress_binaries;
+	std::optional<bool> enable_assert;
 
-	optional<uint32_t> cuda_max_registers;
-	optional<bool> cuda_short_ptr;
+	std::optional<uint32_t> cuda_max_registers;
+	std::optional<bool> cuda_short_ptr;
 	
-	optional<bool> emit_debug_info;
-	optional<bool> preprocess_condense;
-	optional<bool> preprocess_preserve_comments;
+	std::optional<bool> emit_debug_info;
+	std::optional<bool> preprocess_condense;
+	std::optional<bool> preprocess_preserve_comments;
 };
 
 bool build(const TARGET_SET target_set,
-		   const string& targets_json_file_name /* if TARGET_SET::USER_JSON */,
-		   const string& options_json_file_name,
-		   const string& src_file_name,
-		   const string& dst_archive_file_name,
+		   const std::string& targets_json_file_name /* if TARGET_SET::USER_JSON */,
+		   const std::string& options_json_file_name,
+		   const std::string& src_file_name,
+		   const std::string& dst_archive_file_name,
 		   const options_t& options);
 
-} // namespace fubar
+} // namespace fl::fubar

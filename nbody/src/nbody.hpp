@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@
 
 #include <floor/core/essentials.hpp>
 
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_DEVICE)
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
+#if defined(FLOOR_DEVICE_HOST_COMPUTE)
+#include <floor/device/backend/common.hpp>
 #endif
 
 #include "nbody_state.hpp"

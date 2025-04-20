@@ -21,32 +21,36 @@
 #define FLOOR_OPENCL_INFO_FUNCS
 #endif
 
-#include <floor/floor/floor.hpp>
-#include <floor/floor/floor_version.hpp>
-#include <floor/compute/llvm_toolchain.hpp>
-#include <floor/compute/spirv_handler.hpp>
-#include <floor/compute/compute_device.hpp>
+#include <floor/floor.hpp>
+#include <floor/floor_version.hpp>
+#include <floor/device/toolchain.hpp>
+#include <floor/device/spirv_handler.hpp>
+#include <floor/device/device.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/core/cpp_ext.hpp>
 
-#include <floor/compute/opencl/opencl_common.hpp>
-#include <floor/compute/opencl/opencl_compute.hpp>
-#include <floor/compute/opencl/opencl_device.hpp>
+#include <floor/device/opencl/opencl_common.hpp>
+#include <floor/device/opencl/opencl_context.hpp>
+#include <floor/device/opencl/opencl_device.hpp>
 
-#include <floor/compute/cuda/cuda_compute.hpp>
-#include <floor/compute/cuda/cuda_device.hpp>
+#include <floor/device/cuda/cuda_context.hpp>
+#include <floor/device/cuda/cuda_device.hpp>
 
-#include <floor/compute/metal/metal_compute.hpp>
-#include <floor/compute/metal/metal_device.hpp>
+#include <floor/device/metal/metal_context.hpp>
+#include <floor/device/metal/metal_device.hpp>
 
-#include <floor/compute/vulkan/vulkan_compute.hpp>
-#include <floor/compute/vulkan/vulkan_device.hpp>
+#include <floor/device/vulkan/vulkan_context.hpp>
+#include <floor/device/vulkan/vulkan_device.hpp>
 
-#include <floor/compute/host/host_compute.hpp>
-#include <floor/compute/host/host_device.hpp>
+#include <floor/device/host/host_context.hpp>
+#include <floor/device/host/host_device.hpp>
 
 #include "fubar.hpp"
 #include "fubar_dis.hpp"
 #include "function_info.hpp"
+
+using namespace std;
+using namespace fl;
 
 #define FLOOR_OCC_VERSION_STR FLOOR_MAJOR_VERSION_STR "." << FLOOR_MINOR_VERSION_STR "." FLOOR_REVISION_VERSION_STR FLOOR_DEV_STAGE_VERSION_STR
 #define FLOOR_OCC_FULL_VERSION_STR "offline compute compiler v" FLOOR_OCC_VERSION_STR
@@ -54,7 +58,7 @@
 struct option_context {
 	string filename;
 	string output_filename;
-	llvm_toolchain::TARGET target { llvm_toolchain::TARGET::SPIR };
+	toolchain::TARGET target { toolchain::TARGET::SPIR };
 	string sub_target;
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
 	METAL_VERSION metal_std { METAL_VERSION::METAL_3_1 };
@@ -147,7 +151,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--barycentric-coord: enables barycentric coordinate support (only Metal and Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
-				 "\t--fubar-options: reads compile options (-> llvm_toolchain) from a .json input file (can be overriden by command line)\n"
+				 "\t--fubar-options: reads compile options (-> toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--fubar-compress: compress all binary data in the built FUBAR\n"
 				 "\t--test: tests/compiles the compiled binary on the target platform (if possible) - experimental!\n"
 				 "\t--test-bin <input-file> <function-info-file>: tests/compiles the specified binary on the target platform (if possible) - experimental!\n"
@@ -217,24 +221,24 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		
 		const string target = *arg_ptr;
 		if(target == "spir") {
-			ctx.target = llvm_toolchain::TARGET::SPIR;
+			ctx.target = toolchain::TARGET::SPIR;
 		}
 		else if(target == "ptx") {
-			ctx.target = llvm_toolchain::TARGET::PTX;
+			ctx.target = toolchain::TARGET::PTX;
 		}
 		else if(target == "air") {
-			ctx.target = llvm_toolchain::TARGET::AIR;
+			ctx.target = toolchain::TARGET::AIR;
 		}
 		else if(target == "spirv") {
-			ctx.target = llvm_toolchain::TARGET::SPIRV_VULKAN;
+			ctx.target = toolchain::TARGET::SPIRV_VULKAN;
 		}
 		else if(target == "native-cl") {
 			// very hacky and undocumented way of compiling std opencl c on the native opencl platform
-			ctx.target = llvm_toolchain::TARGET::SPIR;
+			ctx.target = toolchain::TARGET::SPIR;
 			ctx.native_cl = true;
 		}
 		else if(target == "host") {
-			ctx.target = llvm_toolchain::TARGET::HOST_COMPUTE_CPU;
+			ctx.target = toolchain::TARGET::HOST_COMPUTE_CPU;
 		}
 		else {
 			cerr << "invalid target: " << target << endl;
@@ -491,14 +495,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 
 static int run_normal_build(option_context& option_ctx) {
 	// handle spir-v target change
-	if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN &&
+	if(option_ctx.target == toolchain::TARGET::SPIRV_VULKAN &&
 	   (option_ctx.sub_target == "opencl" ||
 		option_ctx.sub_target == "opencl-gpu" ||
 		option_ctx.sub_target == "opencl-cpu")) {
-		option_ctx.target = llvm_toolchain::TARGET::SPIRV_OPENCL;
+		option_ctx.target = toolchain::TARGET::SPIRV_OPENCL;
 	}
 	
-	llvm_toolchain::program_data program {};
+	toolchain::program_data program {};
 	if(!option_ctx.test_bin && !option_ctx.native_cl) {
 		// post-checking
 		if(option_ctx.filename.empty()) {
@@ -507,19 +511,19 @@ static int run_normal_build(option_context& option_ctx) {
 		}
 		
 		// create target specific device
-		shared_ptr<compute_device> device;
+		shared_ptr<device> device;
 		switch (option_ctx.target) {
-			case llvm_toolchain::TARGET::SPIR:
-			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
-				const char* target_name = (option_ctx.target == llvm_toolchain::TARGET::SPIR ? "SPIR" :
-										   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
+			case toolchain::TARGET::SPIR:
+			case toolchain::TARGET::SPIRV_OPENCL: {
+				const char* target_name = (option_ctx.target == toolchain::TARGET::SPIR ? "SPIR" :
+										   option_ctx.target == toolchain::TARGET::SPIRV_OPENCL ? "SPIR-V OpenCL" : "UNKNOWN");
 				device = make_shared<opencl_device>();
 				if(option_ctx.sub_target.empty() || option_ctx.sub_target == "gpu" ||
 				   option_ctx.sub_target == "opencl" || option_ctx.sub_target == "opencl-gpu") {
-					device->type = compute_device::TYPE::GPU;
+					device->type = device::TYPE::GPU;
 				}
 				else if(option_ctx.sub_target == "cpu" || option_ctx.sub_target == "opencl-cpu") {
-					device->type = compute_device::TYPE::CPU;
+					device->type = device::TYPE::CPU;
 				}
 				else {
 					log_error("invalid $ sub-target: $", target_name, option_ctx.sub_target);
@@ -543,21 +547,21 @@ static int run_normal_build(option_context& option_ctx) {
 				device->image_msaa_array_support = true;
 				device->image_mipmap_support = true;
 				device->image_mipmap_write_support = true;
-				if(option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
+				if(option_ctx.target == toolchain::TARGET::SPIRV_OPENCL) {
 					((opencl_device*)device.get())->spirv_version = SPIRV_VERSION::SPIRV_1_0;
 					device->image_read_write_support = (option_ctx.image_rw_support != 2);
 					device->param_workaround = option_ctx.workarounds;
 				}
 				else {
 					device->image_read_write_support = (option_ctx.image_rw_support == 1);
-					if(option_ctx.target == llvm_toolchain::TARGET::SPIR && option_ctx.workarounds) {
+					if(option_ctx.target == toolchain::TARGET::SPIR && option_ctx.workarounds) {
 						option_ctx.additional_options += " -Xclang -cl-spir-intel-workarounds ";
 					}
 				}
-				log_debug("compiling to $ ($) ...", target_name, (device->type == compute_device::TYPE::GPU ? "GPU" : "CPU"));
+				log_debug("compiling to $ ($) ...", target_name, (device->type == device::TYPE::GPU ? "GPU" : "CPU"));
 				break;
 			}
-			case llvm_toolchain::TARGET::PTX:
+			case toolchain::TARGET::PTX:
 				device = make_shared<cuda_device>();
 				if (!option_ctx.sub_target.empty()) {
 					const auto sm_pos = option_ctx.sub_target.find("sm_");
@@ -577,7 +581,7 @@ static int run_normal_build(option_context& option_ctx) {
 				device->image_depth_compare_support = !option_ctx.sw_depth_compare;
 				log_debug("compiling to PTX (sm_$) ...", ((cuda_device*)device.get())->sm.x * 10 + ((cuda_device*)device.get())->sm.y);
 				break;
-			case llvm_toolchain::TARGET::AIR: {
+			case toolchain::TARGET::AIR: {
 				device = make_shared<metal_device>();
 				metal_device* dev = (metal_device*)device.get();
 				
@@ -630,14 +634,14 @@ static int run_normal_build(option_context& option_ctx) {
 						  metal_device::platform_type_to_string(dev->platform_type), dev->family_tier);
 				break;
 			}
-			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
+			case toolchain::TARGET::SPIRV_VULKAN: {
 				device = make_shared<vulkan_device>();
 				vulkan_device* dev = (vulkan_device*)device.get();
 				if(!option_ctx.sub_target.empty() && option_ctx.sub_target != "vulkan") {
 					log_error("invalid SPIR-V Vulkan sub-target: $", option_ctx.sub_target);
 					return -5;
 				}
-				device->type = compute_device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
+				device->type = device::TYPE::GPU; // there are non-gpu devices as well, but this makes more sense
 				if(option_ctx.basic_64_atomics) device->basic_64_bit_atomics_support = true;
 				if(option_ctx.extended_64_atomics) device->extended_64_bit_atomics_support = true;
 				if(option_ctx.basic_32_bit_float_atomics) device->basic_32_bit_float_atomics_support = true;
@@ -681,10 +685,10 @@ static int run_normal_build(option_context& option_ctx) {
 				log_debug("compiling to SPIR-V Vulkan ...");
 				break;
 			}
-			case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: {
+			case toolchain::TARGET::HOST_COMPUTE_CPU: {
 				device = make_shared<host_device>();
-				device->platform_vendor = COMPUTE_VENDOR::HOST;
-				device->type = compute_device::TYPE::CPU0;
+				device->platform_vendor = VENDOR::HOST;
+				device->type = device::TYPE::CPU0;
 				host_device* dev = (host_device*)device.get();
 				
 				dev->cpu_tier = HOST_CPU_TIER::X86_TIER_1;
@@ -755,7 +759,7 @@ static int run_normal_build(option_context& option_ctx) {
 		}
 		
 		// compile
-		llvm_toolchain::compile_options options {
+		toolchain::compile_options options {
 			.target = option_ctx.target,
 			.cli = option_ctx.additional_options,
 			.enable_warnings = option_ctx.warnings.value_or(false),
@@ -770,7 +774,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.metal.soft_printf = option_ctx.soft_printf.value_or(false),
 			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
 		};
-		program = llvm_toolchain::compile_program_file(*device, option_ctx.filename, options);
+		program = toolchain::compile_program_file(*device, option_ctx.filename, options);
 		for (const auto& info_ : program.function_info) {
 			dump_function_info(info_, option_ctx.target);
 		}
@@ -781,21 +785,21 @@ static int run_normal_build(option_context& option_ctx) {
 			// output file name?
 			option_ctx.output_filename = "unknown.bin";
 			switch (option_ctx.target) {
-				case llvm_toolchain::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
-				case llvm_toolchain::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
+				case toolchain::TARGET::SPIR: option_ctx.output_filename = "spir.bc"; break;
+				case toolchain::TARGET::PTX: option_ctx.output_filename = "cuda.ptx"; break;
 				// don't do anything for air, spir-v and host-compute, it's already stored in a file
-				case llvm_toolchain::TARGET::AIR:
-				case llvm_toolchain::TARGET::SPIRV_VULKAN:
-				case llvm_toolchain::TARGET::SPIRV_OPENCL:
-				case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: option_ctx.output_filename = ""; break;
+				case toolchain::TARGET::AIR:
+				case toolchain::TARGET::SPIRV_VULKAN:
+				case toolchain::TARGET::SPIRV_OPENCL:
+				case toolchain::TARGET::HOST_COMPUTE_CPU: option_ctx.output_filename = ""; break;
 			}
 		}
 		
 		// write to file
-		if (option_ctx.target == llvm_toolchain::TARGET::AIR ||
-			option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
-			option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL ||
-			option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
+		if (option_ctx.target == toolchain::TARGET::AIR ||
+			option_ctx.target == toolchain::TARGET::SPIRV_VULKAN ||
+			option_ctx.target == toolchain::TARGET::SPIRV_OPENCL ||
+			option_ctx.target == toolchain::TARGET::HOST_COMPUTE_CPU) {
 			// program_data.first always contains the air/spir-v binary filename
 			// -> just move the file if an output file was actually requested
 			if (!option_ctx.output_filename.empty()) {
@@ -811,19 +815,19 @@ static int run_normal_build(option_context& option_ctx) {
 		// print to console, as well as to file!
 		if (wants_console_output) {
 			string output;
-			if (option_ctx.target == llvm_toolchain::TARGET::AIR) {
+			if (option_ctx.target == toolchain::TARGET::AIR) {
 				core::system("\"" + floor::get_metallib_dis() + "\" -o - " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			} else if (option_ctx.target == llvm_toolchain::TARGET::SPIR) {
+			} else if (option_ctx.target == toolchain::TARGET::SPIR) {
 				core::system("\"" + floor::get_opencl_dis() + "\" -o - " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			} else if (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ||
-					   option_ctx.target == llvm_toolchain::TARGET::SPIRV_OPENCL) {
-				core::system("\"" + (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
+			} else if (option_ctx.target == toolchain::TARGET::SPIRV_VULKAN ||
+					   option_ctx.target == toolchain::TARGET::SPIRV_OPENCL) {
+				core::system("\"" + (option_ctx.target == toolchain::TARGET::SPIRV_VULKAN ?
 									 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis()) +
 							 "\" --debug-asm " + option_ctx.output_filename, output);
 				log_undecorated("$", output);
-			} else if (option_ctx.target == llvm_toolchain::TARGET::HOST_COMPUTE_CPU) {
+			} else if (option_ctx.target == toolchain::TARGET::HOST_COMPUTE_CPU) {
 #if 1
 				core::system("readelf -a " + option_ctx.output_filename, output);
 				core::system("objdump -d -T -C "
@@ -873,7 +877,7 @@ static int run_normal_build(option_context& option_ctx) {
 	
 	// handle spir-v text assembly output
 	if (option_ctx.spirv_text) {
-		const auto& spirv_dis = (option_ctx.target == llvm_toolchain::TARGET::SPIRV_VULKAN ?
+		const auto& spirv_dis = (option_ctx.target == toolchain::TARGET::SPIRV_VULKAN ?
 								 floor::get_vulkan_spirv_dis() : floor::get_opencl_spirv_dis());
 		string spirv_dis_output;
 		core::system("\"" + spirv_dis + "\" -o " + option_ctx.spirv_text_filename + " " + option_ctx.output_filename, spirv_dis_output);
@@ -885,13 +889,13 @@ static int run_normal_build(option_context& option_ctx) {
 	// test the compiled binary (if this was specified)
 	if (option_ctx.test || option_ctx.test_bin || option_ctx.native_cl) {
 		switch(option_ctx.target) {
-			case llvm_toolchain::TARGET::SPIR:
-			case llvm_toolchain::TARGET::SPIRV_OPENCL: {
+			case toolchain::TARGET::SPIR:
+			case toolchain::TARGET::SPIRV_OPENCL: {
 #if !defined(FLOOR_NO_OPENCL)
 				// have to create a proper opencl context to compile anything
-				auto ctx = make_shared<opencl_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, floor::get_opencl_platform(), floor::get_opencl_whitelist());
+				auto ctx = make_shared<opencl_context>(DEVICE_CONTEXT_FLAGS::NONE, true, floor::get_opencl_platform(), floor::get_opencl_whitelist());
 				auto cl_ctx = ctx->get_opencl_context();
-				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				auto dev = ctx->get_device(device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
 					break;
@@ -901,7 +905,7 @@ static int run_normal_build(option_context& option_ctx) {
 				
 				cl_program opencl_program { nullptr };
 				if(!option_ctx.native_cl) {
-					// pretty much copy&paste from opencl_compute::add_program(...) with some small changes (only build for 1 device):
+					// pretty much copy&paste from opencl_context::add_program(...) with some small changes (only build for 1 device):
 					size_t binary_length;
 					const unsigned char* binary_ptr;
 					string binary_str;
@@ -922,7 +926,7 @@ static int run_normal_build(option_context& option_ctx) {
 					
 					// create the program object ...
 					cl_int create_err = CL_SUCCESS;
-					if(option_ctx.target != llvm_toolchain::TARGET::SPIRV_OPENCL) {
+					if(option_ctx.target != toolchain::TARGET::SPIRV_OPENCL) {
 						opencl_program = clCreateProgramWithBinary(cl_ctx, 1, (const cl_device_id*)&cl_dev,
 																   &binary_length, &binary_ptr, &status, &create_err);
 						if(create_err != CL_SUCCESS) {
@@ -948,7 +952,7 @@ static int run_normal_build(option_context& option_ctx) {
 					
 					// ... and build it
 					const string build_options {
-						(option_ctx.target == llvm_toolchain::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
+						(option_ctx.target == toolchain::TARGET::SPIR ? " -x spir -spir-std=1.2" : "")
 					};
 					CL_CALL_ERR_PARAM_RET(clBuildProgram(opencl_program, 1, (const cl_device_id*)&cl_dev, build_options.c_str(), nullptr, nullptr),
 										  build_err, "failed to build opencl program", {})
@@ -987,14 +991,14 @@ static int run_normal_build(option_context& option_ctx) {
 					file_io::string_to_file("binary_" + core::to_file_name(dev->name) + ".bin", binary);
 				}
 #else
-				log_error("opencl testing not supported on this platform (or disabled during floor compilation)");
+				log_error("OpenCL testing not supported on this platform (or disabled during floor compilation)");
 #endif
 				break;
 			}
-			case llvm_toolchain::TARGET::AIR: {
+			case toolchain::TARGET::AIR: {
 #if !defined(FLOOR_NO_METAL)
-				auto ctx = make_shared<metal_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_metal_whitelist());
-				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				auto ctx = make_shared<metal_context>(DEVICE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_metal_whitelist());
+				auto dev = ctx->get_device(device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
 					break;
@@ -1006,14 +1010,14 @@ static int run_normal_build(option_context& option_ctx) {
 					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+					if (!toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
 																	floor::get_metal_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
 					}
 				}
 				
-				auto prog_entry = ctx->create_program_entry(*dev, program, llvm_toolchain::TARGET::AIR);
+				auto prog_entry = ctx->create_program_entry(*dev, program, toolchain::TARGET::AIR);
 				if(!prog_entry->valid) {
 					log_error("program compilation failed!");
 				}
@@ -1023,14 +1027,14 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("device program compilation failed!");
 				}
 #else
-				log_error("metal testing not supported on this platform (or disabled during floor compilation)");
+				log_error("Metal testing not supported on this platform (or disabled during floor compilation)");
 #endif
 				break;
 			}
-			case llvm_toolchain::TARGET::PTX: {
+			case toolchain::TARGET::PTX: {
 #if !defined(FLOOR_NO_CUDA)
-				auto ctx = make_shared<cuda_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, floor::get_cuda_whitelist());
-				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				auto ctx = make_shared<cuda_context>(DEVICE_CONTEXT_FLAGS::NONE, true, floor::get_cuda_whitelist());
+				auto dev = ctx->get_device(device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
 					break;
@@ -1045,7 +1049,7 @@ static int run_normal_build(option_context& option_ctx) {
 						break;
 					}
 					
-					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+					if (!toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
 																	floor::get_cuda_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $", option_ctx.ffi_filename);
 						break;
@@ -1057,14 +1061,14 @@ static int run_normal_build(option_context& option_ctx) {
 					log_error("program compilation failed!");
 				}
 #else
-				log_error("cuda testing not supported on this platform (or disabled during floor compilation)");
+				log_error("CUDA testing not supported on this platform (or disabled during floor compilation)");
 #endif
 				break;
 			}
-			case llvm_toolchain::TARGET::SPIRV_VULKAN: {
+			case toolchain::TARGET::SPIRV_VULKAN: {
 #if !defined(FLOOR_NO_VULKAN)
-				auto ctx = make_shared<vulkan_compute>(COMPUTE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_vulkan_whitelist());
-				auto dev = ctx->get_device(compute_device::TYPE::FASTEST);
+				auto ctx = make_shared<vulkan_context>(DEVICE_CONTEXT_FLAGS::NONE, true, false, nullptr, floor::get_vulkan_whitelist());
+				auto dev = ctx->get_device(device::TYPE::FASTEST);
 				if(dev == nullptr) {
 					log_error("no device available!");
 					break;
@@ -1076,7 +1080,7 @@ static int run_normal_build(option_context& option_ctx) {
 					program.valid = true;
 					program.data_or_filename = option_ctx.test_bin_filename;
 					
-					if (!llvm_toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
+					if (!toolchain::create_floor_function_info(option_ctx.ffi_filename, program.function_info,
 																	floor::get_vulkan_toolchain_version())) {
 						log_error("failed to create floor function info from specified ffi file $",
 								  option_ctx.ffi_filename);
@@ -1093,13 +1097,13 @@ static int run_normal_build(option_context& option_ctx) {
 										  ctx->create_vulkan_program(*dev, program));
 				ctx->add_program(std::move(prog_map)); // will have already printed an error (if sth was wrong)
 #else
-				log_error("vulkan testing not supported on this platform (or disabled during floor compilation)");
+				log_error("Vulkan testing not supported on this platform (or disabled during floor compilation)");
 #endif
 				break;
 			}
-			case llvm_toolchain::TARGET::HOST_COMPUTE_CPU: {
+			case toolchain::TARGET::HOST_COMPUTE_CPU: {
 				// TODO: implement this
-				log_error("host-compute testing is not supported yet");
+				log_error("Host-Compute testing is not supported yet");
 				break;
 			}
 		}

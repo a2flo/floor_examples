@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,20 +18,22 @@
 
 #include "nbody.hpp"
 
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_DEVICE)
+using namespace fl;
+using namespace std;
 
 // ref: https://developer.nvidia.com/gpugems/GPUGems3/gpugems3_ch31.html
 
 static void compute_body_interaction(const float4& shared_body,
 									 const float4& this_body,
 									 float3& acceleration) {
-#if !defined(FLOOR_COMPUTE_INFO_HAS_FMA_1) // (potentially!) non-fma version
+#if !defined(FLOOR_DEVICE_INFO_HAS_FMA_1) // (potentially!) non-fma version
 	// 3 flops
 	const float3 r { shared_body.xyz - this_body.xyz };
 	// 5 flops + 1 flop = 6 flops
 	const float dist_sq = r.dot(r) + (NBODY_SOFTENING * NBODY_SOFTENING);
 	// 1 flop
-	const float inv_dist = rsqrt(dist_sq);
+	const float inv_dist = math::rsqrt(dist_sq);
 	// 3 flops
 	const float s = shared_body.w * (inv_dist * inv_dist * inv_dist); // .w is body mass
 	// 3 flops + 3 flops = 6 flops
@@ -43,7 +45,7 @@ static void compute_body_interaction(const float4& shared_body,
 	// 3 fma-ops (6 flops)
 	const float dist_sq = fma(r.x, r.x, fma(r.y, r.y, fma(r.z, r.z, NBODY_SOFTENING * NBODY_SOFTENING)));
 	// 1 flop
-	const float inv_dist = rsqrt(dist_sq);
+	const float inv_dist = math::rsqrt(dist_sq);
 	// 3 flops
 	const float s = shared_body.w * (inv_dist * inv_dist * inv_dist);
 	// 1 fma-op / 2 flops
@@ -76,14 +78,14 @@ static void nbody_compute_impl(buffer<const float4>& in_positions,
 		local_barrier();
 
 		// TODO: should probably add some kind of "max supported/good unroll count" define
-#if (!defined(FLOOR_COMPUTE_METAL) || \
-     (defined(FLOOR_COMPUTE_INFO_OS_OSX) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL) && \
-        !defined(FLOOR_COMPUTE_INFO_VENDOR_AMD) && !defined(FLOOR_COMPUTE_INFO_VENDOR_APPLE))) \
-	&& !defined(FLOOR_COMPUTE_HOST)
+#if (!defined(FLOOR_DEVICE_METAL) || \
+     (defined(FLOOR_DEVICE_INFO_OS_OSX) && !defined(FLOOR_DEVICE_INFO_VENDOR_INTEL) && \
+        !defined(FLOOR_DEVICE_INFO_VENDOR_AMD) && !defined(FLOOR_DEVICE_INFO_VENDOR_APPLE))) \
+	&& !defined(FLOOR_DEVICE_HOST_COMPUTE)
 #pragma clang loop unroll_count(NBODY_TILE_SIZE)
-#elif defined(FLOOR_COMPUTE_METAL) && !defined(FLOOR_COMPUTE_INFO_VENDOR_INTEL)
+#elif defined(FLOOR_DEVICE_METAL) && !defined(FLOOR_DEVICE_INFO_VENDOR_INTEL)
 #pragma clang loop unroll_count(4)
-#elif defined(FLOOR_COMPUTE_HOST)
+#elif defined(FLOOR_DEVICE_HOST_COMPUTE)
 #pragma clang loop unroll_count(16) vectorize(enable)
 #endif
 		for(uint32_t j = 0; j < NBODY_TILE_SIZE; ++j) {
@@ -128,9 +130,9 @@ static float3 compute_gradient(const float& interpolator) {
 	};
 	
 	// scale from [0, 1] to [0, range]
-	const auto scaled_interp = interpolator * float(size(gradients) - 1);
+	const auto scaled_interp = interpolator * float(std::size(gradients) - 1);
 	// determine lower gradient idx
-	const auto gradient_idx = min(uint32_t(scaled_interp), uint32_t(size(gradients) - 2));
+	const auto gradient_idx = math::min(uint32_t(scaled_interp), uint32_t(std::size(gradients) - 2));
 	// interp range is [0, 1] between gradients, just need to wrap/mod it
 	const auto wrapped_interp = math::fmod(scaled_interp, 1.0f);
 	// linear interpolation between gradients
@@ -184,7 +186,7 @@ kernel_1d(/* can by empty */) void nbody_raster(buffer<const float4> positions,
 }
 
 // shader: metal and vulkan only
-#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN)
+#if defined(FLOOR_DEVICE_METAL) || defined(FLOOR_DEVICE_VULKAN)
 struct uniforms_t {
 	matrix4f mvpms[2];
 	matrix4f mvms[2];

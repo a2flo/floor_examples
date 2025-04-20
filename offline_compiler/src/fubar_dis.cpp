@@ -18,18 +18,19 @@
 
 #include "fubar_dis.hpp"
 #include "function_info.hpp"
-#include <floor/compute/universal_binary.hpp>
-#include <floor/compute/spirv_handler.hpp>
+#include <floor/device/universal_binary.hpp>
+#include <floor/device/spirv_handler.hpp>
 #include <floor/core/file_io.hpp>
 #include <floor/core/core.hpp>
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
+using namespace std;
 
-namespace fubar {
+namespace fl::fubar {
 
 void disassemble(const string& archive_file_name, const optional<string> filter, const bool load_fubar_in_ctx) {
 	// load FUBAR if specified
 	if (load_fubar_in_ctx) {
-		auto ctx = floor::get_compute_context();
+		auto ctx = floor::get_device_context();
 		auto prog = ctx->add_universal_binary(archive_file_name);
 		if (!prog) {
 			log_error("failed to load universal binary \"$\" in default compute context", archive_file_name);
@@ -55,7 +56,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 		const auto toolchain_version = ar.header.toolchain_versions.at(tidx);
 		const auto hash = ar.header.hashes.at(tidx);
 		
-		log_undecorated("\t[#$: $]", tidx, compute_type_to_string(target.common.type));
+		log_undecorated("\t[#$: $]", tidx, platform_type_to_string(target.common.type));
 		log_undecorated("\t\ttarget format version: $", target.common.version);
 		log_undecorated("\t\ttoolchain version: $", toolchain_version);
 		log_undecorated("\t\tbinary offset: $", offset);
@@ -71,7 +72,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 		log_undecorated("\t\thash: $", hash_hex.str());
 		
 		switch (target.common.type) {
-			case COMPUTE_TYPE::OPENCL: {
+			case PLATFORM_TYPE::OPENCL: {
 				const auto& cl = target.opencl;
 				log_undecorated("\t\tOpenCL target: $.$", cl.major, cl.minor);
 				log_undecorated("\t\tformat: $", cl.is_spir ? "SPIR" : "SPIR-V");
@@ -114,7 +115,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tSIMD width: $", cl.simd_width);
 				break;
 			}
-			case COMPUTE_TYPE::CUDA: {
+			case PLATFORM_TYPE::CUDA: {
 				const auto& cu = target.cuda;
 				log_undecorated("\t\tCUDA sm target: $.$", cu.sm_major, to_string(cu.sm_minor) + (cu.sm_aa ? "a" : ""));
 				log_undecorated("\t\tCUDA PTX target: $.$", cu.ptx_isa_major, cu.ptx_isa_minor);
@@ -124,7 +125,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tmax registers: $", cu.max_registers);
 				break;
 			}
-			case COMPUTE_TYPE::METAL: {
+			case PLATFORM_TYPE::METAL: {
 				const auto& mtl = target.metal;
 				log_undecorated("\t\tMetal target: $.$", mtl.major, mtl.minor);
 				
@@ -170,12 +171,12 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tSIMD width: $", mtl.simd_width);
 				break;
 			}
-			case COMPUTE_TYPE::HOST: {
+			case PLATFORM_TYPE::HOST: {
 				const auto& hst = target.host;
 				log_undecorated("\t\tHost CPU target: $", host_cpu_tier_to_string(hst.cpu_tier));
 				break;
 			}
-			case COMPUTE_TYPE::VULKAN: {
+			case PLATFORM_TYPE::VULKAN: {
 				const auto& vk = target.vulkan;
 				log_undecorated("\t\tVulkan target: $.$", vk.vulkan_major, vk.vulkan_minor);
 				log_undecorated("\t\tSPIR-V target: $.$", vk.spirv_major, vk.spirv_minor);
@@ -222,34 +223,34 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 		const auto& target = ar.header.targets.at(tidx);
 		const auto& bin = ar.binaries.at(tidx);
 		
-		llvm_toolchain::TARGET toolchain_target {};
+		toolchain::TARGET toolchain_target {};
 		switch (target.common.type) {
-			case COMPUTE_TYPE::CUDA:
-				toolchain_target = llvm_toolchain::TARGET::PTX;
+			case PLATFORM_TYPE::CUDA:
+				toolchain_target = toolchain::TARGET::PTX;
 				break;
-			case COMPUTE_TYPE::OPENCL:
-				toolchain_target = (target.opencl.is_spir ? llvm_toolchain::TARGET::SPIR : llvm_toolchain::TARGET::SPIRV_OPENCL);
+			case PLATFORM_TYPE::OPENCL:
+				toolchain_target = (target.opencl.is_spir ? toolchain::TARGET::SPIR : toolchain::TARGET::SPIRV_OPENCL);
 				break;
-			case COMPUTE_TYPE::METAL:
-				toolchain_target = llvm_toolchain::TARGET::AIR;
+			case PLATFORM_TYPE::METAL:
+				toolchain_target = toolchain::TARGET::AIR;
 				break;
-			case COMPUTE_TYPE::VULKAN:
-				toolchain_target = llvm_toolchain::TARGET::SPIRV_VULKAN;
+			case PLATFORM_TYPE::VULKAN:
+				toolchain_target = toolchain::TARGET::SPIRV_VULKAN;
 				break;
-			case COMPUTE_TYPE::HOST:
-				toolchain_target = llvm_toolchain::TARGET::HOST_COMPUTE_CPU;
+			case PLATFORM_TYPE::HOST:
+				toolchain_target = toolchain::TARGET::HOST_COMPUTE_CPU;
 				break;
-			case COMPUTE_TYPE::NONE:
+			case PLATFORM_TYPE::NONE:
 				continue;
 		}
 		
-		log_undecorated("[#$: $]", tidx, compute_type_to_string(target.common.type));
+		log_undecorated("[#$: $]", tidx, platform_type_to_string(target.common.type));
 		// NOTE: this contains both the function info, but also determine the actual function count
 		const auto func_info = universal_binary::translate_function_info(bin.function_info);
 		log_undecorated("#functions: $", func_info.size());
 		for (size_t info_idx = 0, fidx = 0, func_count = bin.static_binary_header.function_count; fidx < func_count; ++fidx) {
 			const auto& func = bin.function_info.at(fidx);
-			if (func.static_function_info.type == llvm_toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT) {
+			if (func.static_function_info.type == toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT) {
 				continue;
 			}
 			assert(info_idx < func_info.size());
@@ -285,7 +286,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 			return { mod_name };
 		};
 		
-		if (target.common.type == COMPUTE_TYPE::VULKAN && floor::has_vulkan_toolchain()) {
+		if (target.common.type == PLATFORM_TYPE::VULKAN && floor::has_vulkan_toolchain()) {
 			auto container = spirv_handler::load_container_from_memory(bin.data.data(), bin.data.size(),
 																	   archive_file_name);
 			if (!container.valid || !container.spirv_data) {
@@ -326,7 +327,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				core::system(dis_cmd, dis_output);
 				log_undecorated("SPIR-V module #$:\n$", cur_mod_idx, dis_output);
 			}
-		} else if (target.common.type == COMPUTE_TYPE::METAL && floor::has_metal_toolchain()) {
+		} else if (target.common.type == PLATFORM_TYPE::METAL && floor::has_metal_toolchain()) {
 			auto tmp_file = make_tmp_bin("tmp_mtl_target_" + to_string(tidx), ".metallib", bin.data);
 			if (!tmp_file.is_valid()) {
 				continue;
@@ -340,13 +341,13 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 			string dis_output;
 			core::system(dis_cmd, dis_output);
 			log_undecorated("metallib data:\n$", dis_output);
-		} else if (target.common.type == COMPUTE_TYPE::CUDA) {
+		} else if (target.common.type == PLATFORM_TYPE::CUDA) {
 			if (target.cuda.is_ptx) {
 				const string ptx((const char*)bin.data.data(), bin.data.size());
 				log_undecorated("CUDA PTX:\n$", ptx);
 			}
 			// else: unimplemented
-		} else if (target.common.type == COMPUTE_TYPE::OPENCL && floor::has_opencl_toolchain()) {
+		} else if (target.common.type == PLATFORM_TYPE::OPENCL && floor::has_opencl_toolchain()) {
 			if (target.opencl.is_spir) {
 				auto tmp_file = make_tmp_bin("tmp_cl_target_" + to_string(tidx), ".ll", bin.data);
 				if (!tmp_file.is_valid()) {
@@ -373,7 +374,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				core::system(dis_cmd, dis_output);
 				log_undecorated("OpenCL SPIR-V:\n$", dis_output);
 			}
-		} else if (target.common.type == COMPUTE_TYPE::HOST && floor::has_host_toolchain()) {
+		} else if (target.common.type == PLATFORM_TYPE::HOST && floor::has_host_toolchain()) {
 			auto tmp_file = make_tmp_bin("tmp_host_target_" + to_string(tidx), ".bin", bin.data);
 			if (!tmp_file.is_valid()) {
 				continue;
@@ -395,4 +396,4 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 	}
 }
 
-} // namespace fubar
+} // namespace fl::fubar

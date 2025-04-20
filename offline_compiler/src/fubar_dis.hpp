@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <floor/floor/floor.hpp>
-#include <floor/compute/universal_binary.hpp>
+#include <floor/floor.hpp>
+#include <floor/device/universal_binary.hpp>
 
-namespace fubar {
+namespace fl::fubar {
 
-void disassemble(const string& archive_file_name, const optional<string> filter, const bool load_fubar_in_ctx);
+void disassemble(const std::string& archive_file_name, const std::optional<std::string> filter, const bool load_fubar_in_ctx);
 
-} // namespace fubar
+} // namespace fl::fubar

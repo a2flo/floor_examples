@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,35 +18,36 @@
 
 #include "unified_renderer.hpp"
 #include "nbody_state.hpp"
-#include <floor/compute/compute_context.hpp>
-#include <floor/compute/compute_device.hpp>
-#include <floor/compute/compute_buffer.hpp>
-#include <floor/compute/compute_image.hpp>
-#include <floor/compute/compute_queue.hpp>
-#include <floor/compute/compute_kernel.hpp>
-#include <floor/graphics/graphics_renderer.hpp>
-#include <floor/graphics/graphics_pipeline.hpp>
-#include <floor/graphics/graphics_pass.hpp>
+#include <floor/device/device_context.hpp>
+#include <floor/device/device.hpp>
+#include <floor/device/device_buffer.hpp>
+#include <floor/device/device_image.hpp>
+#include <floor/device/device_queue.hpp>
+#include <floor/device/device_function.hpp>
+#include <floor/device/graphics_renderer.hpp>
+#include <floor/device/graphics_pipeline.hpp>
+#include <floor/device/graphics_pass.hpp>
 #include <floor/vr/vr_context.hpp>
+using namespace std;
 
 // renderer
 static unique_ptr<graphics_pass> renderer_pass;
 static unique_ptr<graphics_pipeline> renderer_pipeline;
-static shared_ptr<compute_image> render_image;
-static shared_ptr<compute_image> resolve_image;
+static shared_ptr<device_image> render_image;
+static shared_ptr<device_image> resolve_image;
 static unique_ptr<graphics_pass> blit_pass;
 static unique_ptr<graphics_pipeline> blit_pipeline;
 static bool is_vr_renderer { false };
 static event::handler resize_handler_fnctr = bind(&unified_renderer::resize_handler, placeholders::_1, placeholders::_2);
 
-static const compute_context* ctx_ptr { nullptr };
-static const compute_queue* dev_queue_ptr { nullptr };
+static const device_context* ctx_ptr { nullptr };
+static const device_queue* dev_queue_ptr { nullptr };
 static bool enable_msaa { false };
-static constexpr const auto msaa_flags = COMPUTE_IMAGE_TYPE::FLAG_MSAA | COMPUTE_IMAGE_TYPE::FLAG_TRANSIENT | COMPUTE_IMAGE_TYPE::SAMPLE_COUNT_4;
-static constexpr const auto render_format = COMPUTE_IMAGE_TYPE::RGBA16F;
+static constexpr const auto msaa_flags = IMAGE_TYPE::FLAG_MSAA | IMAGE_TYPE::FLAG_TRANSIENT | IMAGE_TYPE::SAMPLE_COUNT_4;
+static constexpr const auto render_format = IMAGE_TYPE::RGBA16F;
 
-static array<shared_ptr<compute_image>, 2> body_textures {};
-static void create_textures(const compute_context& ctx, const compute_queue& dev_queue) {
+static array<shared_ptr<device_image>, 2> body_textures {};
+static void create_textures(const device_context& ctx, const device_queue& dev_queue) {
 	for (auto& body_texture : body_textures) {
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
@@ -69,14 +70,14 @@ static void create_textures(const compute_context& ctx, const compute_queue& dev
 		}
 
 		body_texture = ctx.create_image(dev_queue, texture_size,
-										(COMPUTE_IMAGE_TYPE::IMAGE_2D |
-										 COMPUTE_IMAGE_TYPE::RGBA16F |
-										 COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
-										 COMPUTE_IMAGE_TYPE::READ),
+										(IMAGE_TYPE::IMAGE_2D |
+										 IMAGE_TYPE::RGBA16F |
+										 IMAGE_TYPE::FLAG_MIPMAPPED |
+										 IMAGE_TYPE::READ),
 										{ (uint8_t*)pixel_data.data(), pixel_data.size() * sizeof(ushort4) },
-										(COMPUTE_MEMORY_FLAG::READ |
-										 COMPUTE_MEMORY_FLAG::HOST_WRITE |
-										 COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS));
+										(MEMORY_FLAG::READ |
+										 MEMORY_FLAG::HOST_WRITE |
+										 MEMORY_FLAG::GENERATE_MIP_MAPS));
 	}
 }
 
@@ -86,18 +87,18 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 		const auto frame_dim = ctx_ptr->get_renderer_image_dim();
 		render_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
 											 render_format |
-											 (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-											 (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::READ) |
-											 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-											 COMPUTE_MEMORY_FLAG::READ_WRITE);
+											 (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
+											 (enable_msaa ? msaa_flags : IMAGE_TYPE::READ) |
+											 IMAGE_TYPE::FLAG_RENDER_TARGET,
+											 MEMORY_FLAG::READ_WRITE);
 		render_image->set_debug_label("render_image");
 		if (enable_msaa) {
 			resolve_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
 												  render_format |
-												  (!is_vr_renderer ? COMPUTE_IMAGE_TYPE::IMAGE_2D : COMPUTE_IMAGE_TYPE::IMAGE_2D_ARRAY) |
-												  COMPUTE_IMAGE_TYPE::READ |
-												  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-												  COMPUTE_MEMORY_FLAG::READ_WRITE);
+												  (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
+												  IMAGE_TYPE::READ |
+												  IMAGE_TYPE::FLAG_RENDER_TARGET,
+												  MEMORY_FLAG::READ_WRITE);
 			resolve_image->set_debug_label("resolve_image");
 		}
 		return true;
@@ -105,9 +106,9 @@ bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>)
 	return false;
 }
 
-bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev_queue, const bool enable_msaa_,
-							const compute_kernel& vs, const compute_kernel& fs,
-							const compute_kernel* blit_vs, const compute_kernel* blit_fs, const compute_kernel* blit_fs_layered) {
+bool unified_renderer::init(const device_context& ctx, const device_queue& dev_queue, const bool enable_msaa_,
+							const device_function& vs, const device_function& fs,
+							const device_function* blit_vs, const device_function* blit_fs, const device_function* blit_fs_layered) {
 	if (blit_vs == nullptr || blit_fs == nullptr || blit_fs_layered == nullptr) {
 		log_error("missing blit shader(s)");
 		return false;
@@ -127,7 +128,7 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 	const render_pass_description pass_desc {
 		.attachments = {
 			{
-				.format = render_format | (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE),
+				.format = render_format | (enable_msaa ? msaa_flags : IMAGE_TYPE::NONE),
 				.load_op = LOAD_OP::CLEAR,
 				.store_op = (enable_msaa ? STORE_OP::RESOLVE : STORE_OP::STORE),
 				.clear.color = { 0.0f, 0.0f, 0.0f, 0.0f },
@@ -153,7 +154,7 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 		},
 		.color_attachments = {
 			{
-				.format = render_format | (enable_msaa ? msaa_flags : COMPUTE_IMAGE_TYPE::NONE),
+				.format = render_format | (enable_msaa ? msaa_flags : IMAGE_TYPE::NONE),
 				.blend = {
 					.enable = true,
 					.src_color_factor = BLEND_FACTOR::ONE,
@@ -212,7 +213,7 @@ bool unified_renderer::init(const compute_context& ctx, const compute_queue& dev
 	return true;
 }
 
-void unified_renderer::destroy(const compute_context& ctx floor_unused) {
+void unified_renderer::destroy(const device_context& ctx floor_unused) {
 	floor::get_event()->remove_event_handler(resize_handler_fnctr);
 
 	for (auto& tex : body_textures) {
@@ -228,7 +229,7 @@ void unified_renderer::destroy(const compute_context& ctx floor_unused) {
 	resolve_image = nullptr;
 }
 
-void unified_renderer::render(const compute_context& ctx, const compute_queue& dev_queue, const compute_buffer& position_buffer) {
+void unified_renderer::render(const device_context& ctx, const device_queue& dev_queue, const device_buffer& position_buffer) {
 	// render scene
 	{
 		// create the renderer for this frame

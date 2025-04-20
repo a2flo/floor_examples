@@ -18,11 +18,15 @@
 
 #pragma once
 
-#include <floor/compute/llvm_toolchain.hpp>
+#include <floor/device/toolchain.hpp>
+
+namespace fl {
 
 //! dumps the specified "function_info" to console,
 //! requires "target" info for target-specific handling,
 //! if "do_log_undecorated" is true log_undecorated() will be used instead of log_msg()
 //! if "prefix"/"suffix" are set, the specified prefix/suffix will be attached to the log message
-void dump_function_info(const llvm_toolchain::function_info& function_info, const llvm_toolchain::TARGET& target,
-						const bool do_log_undecorated = false, const string prefix = "", const string suffix = "");
+void dump_function_info(const toolchain::function_info& function_info, const toolchain::TARGET& target,
+						const bool do_log_undecorated = false, const std::string prefix = "", const std::string suffix = "");
+
+} // namespace fl
