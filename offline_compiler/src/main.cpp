@@ -28,6 +28,8 @@
 #include <floor/device/device.hpp>
 #include <floor/core/option_handler.hpp>
 #include <floor/core/cpp_ext.hpp>
+#include <floor/core/core.hpp>
+#include <floor/core/file_io.hpp>
 
 #include <floor/device/opencl/opencl_common.hpp>
 #include <floor/device/opencl/opencl_context.hpp>

@@ -18,6 +18,7 @@
 
 #include "fubar.hpp"
 #include <floor/core/json.hpp>
+#include <floor/core/core.hpp>
 using namespace std;
 
 namespace fl::fubar {
@@ -538,11 +539,39 @@ namespace fl::fubar {
 				.cuda = {
 					.version = universal_binary::target_format_version,
 					.type = PLATFORM_TYPE::CUDA,
+					.sm_major = 10,
+					.sm_minor = 3,
+					.sm_aa = 1,
+					.ptx_isa_major = 8,
+					.ptx_isa_minor = 8,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 12,
 					.sm_minor = 0,
 					.sm_aa = 1,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 7,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = PLATFORM_TYPE::CUDA,
+					.sm_major = 12,
+					.sm_minor = 1,
+					.sm_aa = 1,
+					.ptx_isa_major = 8,
+					.ptx_isa_minor = 8,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
