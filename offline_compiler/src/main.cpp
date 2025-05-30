@@ -80,6 +80,8 @@ struct option_context {
 	bool test_bin { false };
 	bool cuda_sass { false };
 	bool spirv_text { false };
+	bool spirv_opt { false };
+	optional<string> spirv_opt_override;
 	string cuda_sdk_path;
 	string cuda_sass_filename;
 	optional<uint32_t> cuda_max_registers;
@@ -150,6 +152,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-max-registers <#registers>: restricts/specifies how many registers can be used when jitting the PTX code (default: 0/unlimited)\n"
 				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
+				 "\t--spirv-opt [opt-overrides]: runs spirv-opt after toolchain compilation (only Vulkan), with optional options override (CSV)\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--barycentric-coord: enables barycentric coordinate support (only Metal and Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
@@ -432,6 +435,27 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.spirv_text_filename = *arg_ptr;
 		ctx.spirv_text = true;
 	}},
+	{ "--spirv-opt", [](option_context& ctx, char**& arg_ptr) {
+		ctx.spirv_opt = true;
+		const auto next_arg = arg_ptr + 1;
+		if (next_arg != nullptr && *next_arg != nullptr && **next_arg != '-') {
+			++arg_ptr;
+			auto spv_options_csv = std::string(*arg_ptr);
+			auto spv_options = core::tokenize(spv_options_csv, ',');
+			string spv_options_str;
+			for (const auto& opt : spv_options) {
+				if (opt.empty()) {
+					continue;
+				}
+				if (opt[0] == 'O') {
+					spv_options_str += "-" + opt + " ";
+				} else {
+					spv_options_str += "--" + opt + " ";
+				}
+			}
+			ctx.spirv_opt_override = spv_options_str;
+		}
+	}},
 	{ "--soft-printf", [](option_context& ctx, char**&) {
 		ctx.soft_printf = true;
 	}},
@@ -655,9 +679,6 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->indirect_render_command_support = true;
 				dev->indirect_compute_command_support = true;
 				
-				// mip-mapping support is already enabled, just need to set the max supported mip level count
-				device->max_mip_levels = 15;
-				
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
 				}
@@ -775,6 +796,8 @@ static int run_normal_build(option_context& option_ctx) {
 			.cuda.short_ptr = !option_ctx.cuda_no_short_ptr.value_or(false),
 			.metal.soft_printf = option_ctx.soft_printf.value_or(false),
 			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
+			.vulkan.run_opt = option_ctx.spirv_opt,
+			.vulkan.opt_overrides = option_ctx.spirv_opt_override,
 		};
 		program = toolchain::compile_program_file(*device, option_ctx.filename, options);
 		for (const auto& info_ : program.function_info) {

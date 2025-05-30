@@ -1105,6 +1105,13 @@ namespace fl::fubar {
 					for (auto&& vulkan_entry : vulkan_obj) {
 						if (vulkan_entry.first == "pre_structurization_pass") {
 							options.vulkan.pre_structurization_pass = vulkan_entry.second.get_or_throw<bool>();
+						} else if (vulkan_entry.first == "run_opt") {
+							options.vulkan.run_opt = vulkan_entry.second.get_or_throw<bool>();
+						} else if (vulkan_entry.first == "opt_overrides") {
+							const auto opt_overrides = vulkan_entry.second.get_or_throw<std::string>();
+							if (!opt_overrides.empty()) {
+								options.vulkan.opt_overrides = opt_overrides;
+							}
 						} else {
 							log_warn("ignoring unknown Vulkan option: $", vulkan_entry.first);
 						}
