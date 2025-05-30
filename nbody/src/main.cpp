@@ -97,13 +97,13 @@ template<> vector<pair<string, nbody_opt_handler::option_function>> nbody_opt_ha
 		cout << "\t--no-vulkan: disables vulkan rendering (uses s/w rendering instead)" << endl;
 		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
 		cout << "\t--type <type>: sets the initial nbody setup (default: on-sphere)" << endl;
+		for(const auto& desc : nbody_setup_desc) {
+			cout << "\t\t" << desc << endl;
+		}
 		cout << "\t--render-size <work-items>: sets the amount of work-items/work-group when using s/w rendering" << endl;
 		cout << "\t--no-msaa: disable 4xMSAA rendering" << endl;
 		cout << "\t--no-indirect: disables indirect command pipeline usage" << endl;
 		cout << "\t--no-fubar: don't use the compiled FUBAR file/data if it exists (integrated or on disk)" << endl;
-		for(const auto& desc : nbody_setup_desc) {
-			cout << "\t\t" << desc << endl;
-		}
 		nbody_state.done = true;
 		
 		cout << endl;
