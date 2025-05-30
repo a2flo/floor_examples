@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_CORNELL_BOX_HPP__
-#define __FLOOR_CORNELL_BOX_HPP__
+#pragma once
 
 // ref: http://www.graphics.cornell.edu/online/box/data.html
 
@@ -386,5 +385,3 @@ alignas(16) static constant constexpr const material cornell_materials[(size_t)C
 		.texture_index = 4u,
 	},
 };
-
-#endif

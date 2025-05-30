@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,9 @@
 
 #include "path_tracer.hpp"
 
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_DEVICE)
+using namespace fl;
+using namespace std;
 
 // to keep things simple in here, the cornell box model and material data is located in another file
 #include "cornell_box.hpp"

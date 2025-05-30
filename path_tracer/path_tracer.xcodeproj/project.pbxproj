@@ -676,6 +676,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -698,6 +701,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Debug;
@@ -798,6 +803,9 @@
 					"-Wno-gcc-compat",
 					"-Wno-gnu",
 					"-Wno-c99-extensions",
+					"-Wno-c11-extensions",
+					"-Wno-c17-extensions",
+					"-Wno-c23-extensions",
 					"-Wno-nullability-extension",
 					"-Wno-header-hygiene",
 					"-Wno-documentation",
@@ -820,6 +828,8 @@
 					"-Wno-poison-system-directories",
 					"-Wno-nan-infinity-disabled",
 					"-Wno-unsafe-buffer-usage-in-container",
+					"-Wno-missing-include-dirs",
+					"-Wno-missing-designated-field-initializers",
 				);
 			};
 			name = Release;

@@ -1,7 +1,7 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
- *  
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; version 2 of the License only.
@@ -16,10 +16,14 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
+#include <floor/core/core.hpp>
 
 #include <SDL3_image/SDL_image.h>
+
+using namespace fl;
+using namespace std;
 
 struct path_tracer_option_context {
 	bool done { false };
@@ -30,8 +34,8 @@ typedef option_handler<path_tracer_option_context> path_tracer_opt_handler;
 
 static bool done { false };
 static uint32_t iteration { 0 };
-static shared_ptr<compute_buffer> img_buffer;
-static shared_ptr<compute_queue> dev_queue;
+static shared_ptr<device_buffer> img_buffer;
+static shared_ptr<device_queue> dev_queue;
 
 static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 	if (type == EVENT_TYPE::QUIT) {
@@ -69,7 +73,7 @@ template<> vector<pair<string, path_tracer_opt_handler::option_function>> path_t
 	{ "-ApplePersistenceIgnoreState", [](path_tracer_option_context&, char**&) {} },
 };
 
-static shared_ptr<compute_image> load_texture(compute_context& ctx, const string& filename) {
+static shared_ptr<device_image> load_texture(device_context& ctx, const string& filename) {
 	SDL_Surface* surface = IMG_Load(filename.c_str());
 	if (surface == nullptr) {
 		log_error("error loading texture file \"$\": $!", filename, SDL_GetError());
@@ -83,6 +87,39 @@ static shared_ptr<compute_image> load_texture(compute_context& ctx, const string
 		log_error("texture must be 24bpp or 32bpp: \"$\"!", filename);
 		SDL_DestroySurface(surface);
 		return {};
+	}
+
+	// check format, we always want RGB(A)
+	// NOTE: SDL uses reverse order ... RGBA is ABGR in SDL
+	std::optional<SDL_PixelFormat> conv_format;
+	switch (surface->format) {
+		default:
+			break;
+		case SDL_PIXELFORMAT_RGB24:
+			conv_format = SDL_PIXELFORMAT_BGR24;
+			break;
+		case SDL_PIXELFORMAT_XRGB8888:
+		case SDL_PIXELFORMAT_RGBX8888:
+		case SDL_PIXELFORMAT_XBGR8888:
+		case SDL_PIXELFORMAT_BGRX8888:
+			conv_format = SDL_PIXELFORMAT_XBGR8888;
+			break;
+		case SDL_PIXELFORMAT_ARGB8888:
+		case SDL_PIXELFORMAT_RGBA8888:
+		case SDL_PIXELFORMAT_BGRA8888:
+			conv_format = SDL_PIXELFORMAT_ABGR8888;
+			break;
+	}
+	
+	if (conv_format) {
+		SDL_Surface* new_surface = SDL_ConvertSurface(surface, *conv_format);
+		if (new_surface == nullptr) {
+			log_error("BGR(A)->RGB(A) surface conversion failed!");
+			SDL_DestroySurface(surface);
+			return {};
+		}
+		SDL_DestroySurface(surface);
+		surface = new_surface;
 	}
 	
 	const uint4 image_dim { uint32_t(surface->w), uint32_t(surface->h), 0, 0 };
@@ -98,7 +135,7 @@ static shared_ptr<compute_image> load_texture(compute_context& ctx, const string
 	SDL_DestroySurface(surface);
 	
 	return ctx.create_image(*dev_queue, image_dim,
-							COMPUTE_IMAGE_TYPE::IMAGE_2D | COMPUTE_IMAGE_TYPE::READ | COMPUTE_IMAGE_TYPE::R8UI_NORM,
+							IMAGE_TYPE::IMAGE_2D | IMAGE_TYPE::READ | IMAGE_TYPE::R8UI_NORM,
 							span { image_data.get(), pixel_count });
 }
 
@@ -116,17 +153,17 @@ int main(int, char* argv[]) {
 #endif
 		.app_name = "path tracer",
 		.renderer = floor::RENDERER::DEFAULT,
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
+		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
 	
-	// get the compute context that has been automatically created (opencl/cuda/metal/host, depending on the config)
-	auto compute_ctx = floor::get_compute_context();
+	// get the default device context that has been automatically created (CUDA/Host-Compute/Metal/OpenCL/Vulkan, depending on the config or platform default)
+	auto ctx = floor::get_device_context();
 	
-	// create a compute queue (aka command queue or stream) for the fastest device in the context
-	auto fastest_device = compute_ctx->get_device(compute_device::TYPE::FASTEST);
-	dev_queue = compute_ctx->create_queue(*fastest_device);
+	// create a device queue (aka command queue or stream) for the fastest device in the context
+	auto fastest_device = ctx->get_device(device::TYPE::FASTEST);
+	dev_queue = ctx->create_queue(*fastest_device);
 	
 	//
 	static const uint2 img_size { 512, 512 }; // fixed for now, b/c random function makes this look horrible at higher res
@@ -135,34 +172,34 @@ int main(int, char* argv[]) {
 	
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
-	auto path_tracer_prog = compute_ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"),
-														  llvm_toolchain::compile_options {
+	auto path_tracer_prog = ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"),
+												  toolchain::compile_options {
 		.cli = ("-I" + floor::data_path("../path_tracer/src") +
 				" -DSCREEN_WIDTH=" + to_string(img_size.x) +
 				" -DSCREEN_HEIGHT=" + to_string(img_size.y)),
 	});
 #else
-	auto path_tracer_prog = compute_ctx->add_universal_binary(floor::data_path("path_tracer.fubar"));
+	auto path_tracer_prog = ctx->add_universal_binary(floor::data_path("path_tracer.fubar"));
 #endif
 	if (path_tracer_prog == nullptr) {
 		log_error("program compilation failed");
 		return -1;
 	}
-	auto path_tracer_kernel = path_tracer_prog->get_kernel(!option_ctx.with_textures ? "path_trace" : "path_trace_textured");
+	auto path_tracer_kernel = path_tracer_prog->get_function(!option_ctx.with_textures ? "path_trace" : "path_trace_textured");
 	if (path_tracer_kernel == nullptr) {
 		log_error("failed to retrieve kernel from program");
 		return -1;
 	}
 	
 	// load textures if specified
-	vector<shared_ptr<compute_image>> textures;
+	vector<shared_ptr<device_image>> textures;
 	if (option_ctx.with_textures) {
 		textures = {
-			load_texture(*compute_ctx, floor::data_path("white.png")),
-			load_texture(*compute_ctx, floor::data_path("textures/cross.png")),
-			load_texture(*compute_ctx, floor::data_path("textures/circle.png")),
-			load_texture(*compute_ctx, floor::data_path("textures/inv_cross.png")),
-			load_texture(*compute_ctx, floor::data_path("textures/stripe.png")),
+			load_texture(*ctx, floor::data_path("white.png")),
+			load_texture(*ctx, floor::data_path("textures/cross.png")),
+			load_texture(*ctx, floor::data_path("textures/circle.png")),
+			load_texture(*ctx, floor::data_path("textures/inv_cross.png")),
+			load_texture(*ctx, floor::data_path("textures/stripe.png")),
 		};
 		for (const auto& tex : textures) {
 			if (!tex) {
@@ -172,10 +209,10 @@ int main(int, char* argv[]) {
 	}
 	
 	// create the image buffer on the device
-	img_buffer = compute_ctx->create_buffer(*dev_queue, sizeof(float4) * pixel_count);
+	img_buffer = ctx->create_buffer(*dev_queue, sizeof(float4) * pixel_count);
 	
 	// init kernel parameters (will update in loop)
-	compute_queue::execution_parameters_t params {
+	device_queue::execution_parameters_t params {
 		// this is a 1D kernel
 		.execution_dim = 1u,
 		// total amount of work
@@ -211,7 +248,7 @@ int main(int, char* argv[]) {
 		// draw every 10th frame (except for the first 10 frames)
 		if (iteration < 10 || iteration % 10 == 0) {
 			// grab the current image buffer data (read-only + blocking) ...
-			auto img_data = (float4*)img_buffer->map(*dev_queue, COMPUTE_MEMORY_MAP_FLAG::READ | COMPUTE_MEMORY_MAP_FLAG::BLOCK);
+			auto img_data = (float4*)img_buffer->map(*dev_queue, MEMORY_MAP_FLAG::READ | MEMORY_MAP_FLAG::BLOCK);
 
 			// path tracer output needs gamma correction (fixed 2.2), otherwise it'll look too dark
 			const auto gamma_correct = [](const float3& color) {
@@ -254,7 +291,7 @@ int main(int, char* argv[]) {
 	path_tracer_prog = nullptr;
 	img_buffer = nullptr;
 	dev_queue = nullptr;
-	compute_ctx = nullptr;
+	ctx = nullptr;
 	floor::destroy();
 	return 0;
 }
