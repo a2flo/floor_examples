@@ -351,6 +351,7 @@
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -400,6 +401,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Debug;
@@ -485,6 +487,7 @@
 				SDKROOT = macosx;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -534,6 +537,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Release;

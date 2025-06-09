@@ -127,13 +127,13 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar-dis <archive.fubar>: disassembles a FUBAR file, printing the archive info and disassembled contents to console\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90|sm_90a|sm_100|sm_100a|sm_101|sm_101a|sm_120|sm_120a], defaults to sm_50\n"
+				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90|sm_90a|sm_100|sm_100a|sm_101|sm_101a|sm_103|sm_103a|sm_120|sm_120a|sm_121|sm_121a], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|macos|visionos|ios_sim|visionos_sim], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <3.0|3.1|3.2>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
+				 "\t--metal-std <3.0|3.1|3.2|4.0>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
 				 "\t--ptx-version <80|81|82|83|84|85|86|87>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
 				 "\t--vulkan-std <1.3|1.4>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -285,6 +285,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if (mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
 		else if (mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
 		else if (mtl_version_str == "3.2") { ctx.metal_std = METAL_VERSION::METAL_3_2; }
+		else if (mtl_version_str == "4.0") { ctx.metal_std = METAL_VERSION::METAL_4_0; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
 			return;
@@ -299,7 +300,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		ctx.ptx_version = stou(*arg_ptr);
 		if (ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
 			ctx.ptx_version != 83 && ctx.ptx_version != 84 && ctx.ptx_version != 85 &&
-			ctx.ptx_version != 86 && ctx.ptx_version != 87) {
+			ctx.ptx_version != 86 && ctx.ptx_version != 87 && ctx.ptx_version != 88) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
