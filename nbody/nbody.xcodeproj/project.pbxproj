@@ -39,7 +39,6 @@
 		5C9FAC3B2C4441BB00FD7581 /* config.json in Copy Files */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C9FAC3C2C4441BB00FD7581 /* config.json.local in Copy Files */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C9FAC3D2C4441BB00FD7581 /* nbody.fubar in Copy Files */ = {isa = PBXBuildFile; fileRef = 5CC3688521611CAF001DE77E /* nbody.fubar */; };
-		5C9FAC4E2C448BCB00FD7581 /* nbody_visionos-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5C9FAC4C2C448BCB00FD7581 /* nbody_visionos-Info.plist */; };
 		5CC50A232C4868DF00A1C603 /* SDL3.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CC50A212C48689F00A1C603 /* SDL3.framework */; };
 		5CC50A242C4868E000A1C603 /* SDL3.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5CC50A212C48689F00A1C603 /* SDL3.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5CCEA1D72C48663800B37BC1 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CCEA1D62C48663800B37BC1 /* Metal.framework */; };
@@ -354,7 +353,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -414,7 +413,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				5C9FAC372C4441BB00FD7581 /* LaunchScreen.storyboard in Resources */,
-				5C9FAC4E2C448BCB00FD7581 /* nbody_visionos-Info.plist in Resources */,
 				5C9FAC382C4441BB00FD7581 /* Base.lproj in Resources */,
 				5C9FAC392C4441BB00FD7581 /* Images.xcassets in Resources */,
 			);
@@ -887,6 +885,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu23;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
@@ -929,9 +928,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbodyd;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SYMROOT = "${SRCROOT}/bin";
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -981,6 +982,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Debug;
@@ -1020,6 +1022,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu23;
 				GCC_ENABLE_OBJC_EXCEPTIONS = NO;
 				GCC_FAST_MATH = YES;
@@ -1055,9 +1058,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = nbody;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SYMROOT = "${SRCROOT}/bin";
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -1107,6 +1112,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Release;

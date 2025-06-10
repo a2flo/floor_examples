@@ -52,7 +52,7 @@ static void create_textures(const device_context& ctx, const device_queue& dev_q
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
 		static constexpr float2 texture_sizef { texture_size };
-		array<ushort4, texture_size.x * texture_size.y> pixel_data;
+		vector<ushort4> pixel_data(texture_size.x * texture_size.y);
 		for (uint32_t y = 0; y < texture_size.y; ++y) {
 			for (uint32_t x = 0; x < texture_size.x; ++x) {
 				float2 dir = (uint2(x, y).cast<float>() / texture_sizef) * 2.0f - 1.0f;

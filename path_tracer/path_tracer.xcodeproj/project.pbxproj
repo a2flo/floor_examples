@@ -214,7 +214,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -349,7 +349,6 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -412,7 +411,6 @@
 					/opt/floor/lib,
 					/opt/floor/include/floor/ios/deps/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -651,9 +649,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = path_tracerd;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SYMROOT = "${SRCROOT}/bin";
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -703,6 +703,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Debug;
@@ -778,9 +779,11 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = path_tracer;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SYMROOT = "${SRCROOT}/bin";
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -830,6 +833,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Release;

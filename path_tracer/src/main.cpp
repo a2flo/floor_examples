@@ -60,9 +60,10 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 
 //! option -> function map
 template<> vector<pair<string, path_tracer_opt_handler::option_function>> path_tracer_opt_handler::options {
-	{ "--help", [](path_tracer_option_context&, char**&) {
+	{ "--help", [](path_tracer_option_context& ctx, char**&) {
 		cout << "command line options:" << endl;
 		cout << "\t--with-textures: enables rendering with simple textures" << endl;
+		ctx.done = true;
 	}},
 	{ "--with-textures", [](path_tracer_option_context& ctx, char**&) {
 		ctx.with_textures = true;
@@ -174,7 +175,7 @@ int main(int, char* argv[]) {
 #if !defined(FLOOR_IOS)
 	auto path_tracer_prog = ctx->add_program_file(floor::data_path("../path_tracer/src/path_tracer.cpp"),
 												  toolchain::compile_options {
-		.cli = ("-I" + floor::data_path("../path_tracer/src") +
+		.cli = ("-I\"" + floor::data_path("../path_tracer/src") + "\"" +
 				" -DSCREEN_WIDTH=" + to_string(img_size.x) +
 				" -DSCREEN_HEIGHT=" + to_string(img_size.y)),
 	});
