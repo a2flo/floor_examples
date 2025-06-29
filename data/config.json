@@ -71,6 +71,8 @@
 		"use_color": true,
 		// if enabled, performs synchronous logging (flushes after each log call)
 		"synchronous": false,
+		// if enabled, writes all log messages to the specified or default log file(s)
+		"file_logging": true,
 		// relative filename of the log file, relative to the current working directory (default: log.txt)
 		"log_filename": "",
 		// relative filename of the msg log file, only used/created if separate_msg_file = true (default: msg.txt)

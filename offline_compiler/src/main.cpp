@@ -1148,7 +1148,7 @@ int main(int, char* argv[]) {
 			
 	// preempt floor logger init
 	logger::init(option_ctx.is_fubar_disassemble ? size_t(logger::LOG_TYPE::UNDECORATED) : option_ctx.verbosity,
-				 false, false, true, true, false, "occ.txt");
+				 false, false, true, true, false, true, "occ.txt");
 	
 	if (!floor::init(floor::init_state {
 		.call_path = argv[0],
