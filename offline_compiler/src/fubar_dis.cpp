@@ -206,8 +206,8 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tprimitive-id-support: $", vk.primitive_id_support ? "yes" : "no");
 				log_undecorated("\t\tbarycentric-coord-support: $", vk.barycentric_coord_support ? "yes" : "no");
 				log_undecorated("\t\ttessellation-support: $", vk.tessellation_support ? "yes" : "no");
-				log_undecorated("\t\tdescriptor-buffer-support: $", vk.descriptor_buffer_support ? "yes" : "no");
 				log_undecorated("\t\tSIMD width: $", vk.simd_width);
+				log_undecorated("\t\tmax mip levels: $", vk.max_mip_levels);
 				break;
 			}
 			default:
@@ -246,7 +246,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 		
 		log_undecorated("[#$: $]", tidx, platform_type_to_string(target.common.type));
 		// NOTE: this contains both the function info, but also determine the actual function count
-		const auto func_info = universal_binary::translate_function_info(bin.function_info);
+		const auto func_info = universal_binary::translate_function_info({ &bin, target });
 		log_undecorated("#functions: $", func_info.size());
 		for (size_t info_idx = 0, fidx = 0, func_count = bin.static_binary_header.function_count; fidx < func_count; ++fidx) {
 			const auto& func = bin.function_info.at(fidx);
