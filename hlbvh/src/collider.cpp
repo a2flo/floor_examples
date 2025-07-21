@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 #define log_if_debug(...)
 #endif
 
-void collider::collide(const vector<unique_ptr<animation>>& models) {
+void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 	if (models.empty() || hlbvh_state.stop) {
 		return;
 	}
@@ -49,16 +49,16 @@ void collider::collide(const vector<unique_ptr<animation>>& models) {
 		allocated_model_count = model_count;
 		
 		collision_flags = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, model_count * sizeof(uint32_t),
-														  COMPUTE_MEMORY_FLAG::WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+														  MEMORY_FLAG::WRITE | MEMORY_FLAG::HOST_READ_WRITE);
 		collision_flags->set_debug_label("collision_flags");
 		collision_flags_host.resize(model_count);
 		
 		aabb_collision_flags = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, total_aabb_checks * sizeof(uint32_t),
-															   COMPUTE_MEMORY_FLAG::WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+															   MEMORY_FLAG::WRITE | MEMORY_FLAG::HOST_READ_WRITE);
 		aabb_collision_flags->set_debug_label("aabb_collision_flags");
 		
 		aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, model_count * sizeof(float3) * 2,
-												COMPUTE_MEMORY_FLAG::READ_WRITE | COMPUTE_MEMORY_FLAG::HOST_READ_WRITE);
+												MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HOST_READ_WRITE);
 		aabbs->set_debug_label("aabbs");
 	}
 	
@@ -76,7 +76,7 @@ void collider::collide(const vector<unique_ptr<animation>>& models) {
 		mdl->bvh_aabbs_counters->zero(*hlbvh_state.cqueue);
 	}
 	
-	vector<float3> init_aabbs(model_count * 2);
+	std::vector<float3> init_aabbs(model_count * 2);
 	for (size_t i = 0; i < model_count; ++i) {
 		init_aabbs[i * 2] = float3(__FLT_MAX__);
 		init_aabbs[i * 2 + 1] = float3(-__FLT_MAX__);
@@ -105,11 +105,11 @@ void collider::collide(const vector<unique_ptr<animation>>& models) {
 	}
 	
 	//
-	unordered_set<uint32_t> valid_meshes;
-	vector<uint2> potential_pairs;
+	std::unordered_set<uint32_t> valid_meshes;
+	std::vector<uint2> potential_pairs;
 	{
 		log_if_debug("collide_root_aabbs");
-		auto aabb_collision_flags_host = make_unique<uint32_t[]>(total_aabb_checks);
+		auto aabb_collision_flags_host = std::make_unique<uint32_t[]>(total_aabb_checks);
 		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernels["collide_root_aabbs"],
 										 uint1 { total_aabb_checks },
 										 uint1 { hlbvh_state.kernel_max_local_size["collide_root_aabbs"] },
@@ -251,7 +251,7 @@ void collider::collide(const vector<unique_ptr<animation>>& models) {
 	}
 	
 	//
-	const auto stop_time = floor_timer::stop<chrono::microseconds>(start_time);
+	const auto stop_time = floor_timer::stop<std::chrono::microseconds>(start_time);
 	if (hlbvh_state.benchmark) {
 		log_debug("time: $ms", ((long double)stop_time) / 1000.0L);
 	}
@@ -285,30 +285,30 @@ void collider::collide(const vector<unique_ptr<animation>>& models) {
 	}
 }
 
-void collider::radix_sort(shared_ptr<compute_buffer> buffer,
-						  shared_ptr<compute_buffer> ping_buffer,
+void collider::radix_sort(std::shared_ptr<device_buffer> buffer,
+						  std::shared_ptr<device_buffer> ping_buffer,
 						  const uint32_t count,
 						  const uint32_t max_bit) {
 	if (!valid_counts_buffer) {
 		valid_counts_buffer = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, COMPACTION_GROUP_COUNT * sizeof(uint32_t),
-															  COMPUTE_MEMORY_FLAG::READ_WRITE);
+															  MEMORY_FLAG::READ_WRITE);
 		valid_counts_buffer->set_debug_label("valid_counts_buffer");
 	}
 	if (bit_buffers.empty()) {
-		array<uint32_t, 4> data; // must have at least 16 bytes in the buffer, even if we only use 4 bytes
+		std::array<uint32_t, 4> data; // must have at least 16 bytes in the buffer, even if we only use 4 bytes
 		for (uint32_t bit = 0u; bit < 32u; ++bit) {
 			data[0] = 1u << bit; // mask op bit
 			auto bit_buf = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, { (uint8_t*)data.data(), data.size() * sizeof(uint32_t) },
-														   COMPUTE_MEMORY_FLAG::READ | COMPUTE_MEMORY_FLAG::HOST_WRITE);
-			bit_buf->set_debug_label("bit_buffer:" + to_string(bit) + ":mask=" + to_string(data[0]));
+														   MEMORY_FLAG::READ | MEMORY_FLAG::HOST_WRITE);
+			bit_buf->set_debug_label("bit_buffer:" + std::to_string(bit) + ":mask=" + std::to_string(data[0]));
 			bit_buffers.emplace_back(bit_buf);
 		}
 	}
 	if (!rs_params_buffer) {
 		rs_params_buffer = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, sizeof(indirect_radix_sort_params_t),
-														   COMPUTE_MEMORY_FLAG::READ |
-														   COMPUTE_MEMORY_FLAG::HOST_WRITE |
-														   COMPUTE_MEMORY_FLAG::VULKAN_HOST_COHERENT);
+														   MEMORY_FLAG::READ |
+														   MEMORY_FLAG::HOST_WRITE |
+														   MEMORY_FLAG::VULKAN_HOST_COHERENT);
 		rs_params_buffer->set_debug_label("rs_params_buffer");
 	}
 	
@@ -332,7 +332,7 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 			});
 			radix_sort_pipeline = hlbvh_state.cctx->create_indirect_command_pipeline(desc);
 			if (!radix_sort_pipeline->is_valid()) {
-				throw runtime_error("failed to create indirect radix sort pipeline");
+				throw std::runtime_error("failed to create indirect radix sort pipeline");
 			}
 		} else {
 			radix_sort_pipeline->reset();
@@ -368,11 +368,11 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 							   valid_counts_buffer)
 				.execute(COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE, COMPACTION_GROUP_SIZE)
 				.barrier();
-			swap(cur_buffer, cur_ping_buffer);
+			std::swap(cur_buffer, cur_ping_buffer);
 		}
 		radix_sort_pipeline->complete();
 		
-		const compute_queue::indirect_execution_parameters_t exec_params {
+		const device_queue::indirect_execution_parameters_t exec_params {
 			.wait_until_completion = true,
 			.debug_label = "radix_sort",
 		};
@@ -381,14 +381,14 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 		const auto count_arg = uint32_t(count);
 		const auto count_per_group_arg = uint32_t(count / COMPACTION_GROUP_COUNT);
 		
-		compute_queue::execution_parameters_t radix_sort_count_params {
+		device_queue::execution_parameters_t radix_sort_count_params {
 			.execution_dim = 1u,
 			.global_work_size = uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },
 			.local_work_size = uint1 { COMPACTION_GROUP_SIZE },
 			.wait_until_completion = true,
 			.debug_label = "radix_sort_count",
 		};
-		compute_queue::execution_parameters_t radix_sort_prefix_sum_params {
+		device_queue::execution_parameters_t radix_sort_prefix_sum_params {
 			.execution_dim = 1u,
 			.global_work_size = uint1 { PREFIX_SUM_GROUP_SIZE },
 			.local_work_size = uint1 { PREFIX_SUM_GROUP_SIZE },
@@ -396,7 +396,7 @@ void collider::radix_sort(shared_ptr<compute_buffer> buffer,
 			.wait_until_completion = true,
 			.debug_label = "radix_sort_prefix_sum",
 		};
-		compute_queue::execution_parameters_t radix_sort_stream_split_params {
+		device_queue::execution_parameters_t radix_sort_stream_split_params {
 			.execution_dim = 1u,
 			.global_work_size = uint1 { COMPACTION_GROUP_COUNT * COMPACTION_GROUP_SIZE },
 			.local_work_size = uint1 { COMPACTION_GROUP_SIZE },

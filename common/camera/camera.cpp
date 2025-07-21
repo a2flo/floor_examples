@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 #include "camera.hpp"
 
 camera::camera() : evt(floor::get_event()),
-keyboard_handler(bind(&camera::key_handler, this, placeholders::_1, placeholders::_2)) {
-	evt->add_internal_event_handler(keyboard_handler, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::KEY_UP);
+keyboard_handler(bind(&camera::key_handler, this, std::placeholders::_1, std::placeholders::_2)) {
+	evt->add_event_handler(keyboard_handler, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::KEY_UP);
 }
 
 camera::~camera() {
@@ -42,8 +42,8 @@ FLOOR_PUSH_WARNINGS()
 FLOOR_IGNORE_WARNING(float-equal)
 	
 	// make camera speed dependent on the time between the last update and now (scale with delta)
-	static const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
-	const auto now = chrono::high_resolution_clock::now();
+	static const long double time_den { std::chrono::high_resolution_clock::time_point::duration::period::den };
+	const auto now = std::chrono::high_resolution_clock::now();
 	const auto delta_tp = now - time_keeper;
 	time_keeper = now;
 	
@@ -356,7 +356,7 @@ double3 camera::get_direction(const double2 rotation_) {
 	return { xz_dir.x, -unit_vec_x.x, xz_dir.y };
 }
 
-bool camera::key_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
+bool camera::key_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 	// if keyboard input flag is not set, return
 	if(!keyboard_input) return false;
 	

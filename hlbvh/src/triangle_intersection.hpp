@@ -30,8 +30,7 @@
  *  OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __FLOOR_HLBVH_TRIANGLE_INTERSECTION_HPP__
-#define __FLOOR_HLBVH_TRIANGLE_INTERSECTION_HPP__
+#pragma once
 
 static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, const float3 v2_a,
 										const float3 v0_b, const float3 v1_b, const float3 v2_b) {
@@ -93,9 +92,9 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 	
 	// coplanarity robustness check
 	static constexpr const float triangle_epsilon = 0.000001f;
-	du0 = (abs(du0) < triangle_epsilon ? 0.0f : du0);
-	du1 = (abs(du1) < triangle_epsilon ? 0.0f : du1);
-	du2 = (abs(du2) < triangle_epsilon ? 0.0f : du2);
+	du0 = (math::abs(du0) < triangle_epsilon ? 0.0f : du0);
+	du1 = (math::abs(du1) < triangle_epsilon ? 0.0f : du1);
+	du2 = (math::abs(du2) < triangle_epsilon ? 0.0f : du2);
 	
 	const auto du0du1 = du0 * du1;
 	const auto du0du2 = du0 * du2;
@@ -114,9 +113,9 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 	auto dv1 = N2.dot(v1_a) - d2;
 	auto dv2 = N2.dot(v2_a) - d2;
 	
-	dv0 = (abs(dv0) < triangle_epsilon ? 0.0f : dv0);
-	dv1 = (abs(dv1) < triangle_epsilon ? 0.0f : dv1);
-	dv2 = (abs(dv2) < triangle_epsilon ? 0.0f : dv2);
+	dv0 = (math::abs(dv0) < triangle_epsilon ? 0.0f : dv0);
+	dv1 = (math::abs(dv1) < triangle_epsilon ? 0.0f : dv1);
+	dv2 = (math::abs(dv2) < triangle_epsilon ? 0.0f : dv2);
 	
 	const auto dv0dv1 = dv0 * dv1;
 	const auto dv0dv2 = dv0 * dv2;
@@ -161,8 +160,6 @@ static bool check_triangle_intersection(const float3 v0_a, const float3 v1_a, co
 		tmp2 + f * xx * y0
 	};
 	
-	return (max(isect1[0], isect1[1]) < min(isect2[0], isect2[1]) ||
-			max(isect2[0], isect2[1]) < min(isect1[0], isect1[1]) ? false : true);
+	return (math::max(isect1[0], isect1[1]) < math::min(isect2[0], isect2[1]) ||
+			math::max(isect2[0], isect2[1]) < math::min(isect1[0], isect1[1]) ? false : true);
 }
-
-#endif

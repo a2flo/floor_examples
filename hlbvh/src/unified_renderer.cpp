@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,19 +19,19 @@
 #include "unified_renderer.hpp"
 
 #include "hlbvh_state.hpp"
-#include <floor/compute/compute_context.hpp>
-#include <floor/compute/compute_kernel.hpp>
-#include <floor/graphics/graphics_renderer.hpp>
-#include <floor/graphics/graphics_pipeline.hpp>
-#include <floor/graphics/graphics_pass.hpp>
+#include <floor/device/device_context.hpp>
+#include <floor/device/device_function.hpp>
+#include <floor/device/graphics_renderer.hpp>
+#include <floor/device/graphics_pipeline.hpp>
+#include <floor/device/graphics_pass.hpp>
 
 // renderer
-static unique_ptr<graphics_pass> render_pass;
-static unique_ptr<graphics_pipeline> render_pipeline;
-static shared_ptr<compute_buffer> uniforms_buffer;
+static std::unique_ptr<graphics_pass> render_pass;
+static std::unique_ptr<graphics_pipeline> render_pipeline;
+static std::shared_ptr<device_buffer> uniforms_buffer;
 
 static struct {
-	shared_ptr<compute_image> depth;
+	std::shared_ptr<device_image> depth;
 	uint2 dim;
 } scene_fbo;
 
@@ -52,21 +52,21 @@ static void create_resources() {
 	scene_fbo.dim = floor::get_physical_screen_size();
 	
 	scene_fbo.depth = hlbvh_state.rctx->create_image(*hlbvh_state.rqueue, scene_fbo.dim,
-													 COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
-													 COMPUTE_IMAGE_TYPE::D32F |
-													 COMPUTE_IMAGE_TYPE::READ |
-													 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-													 COMPUTE_MEMORY_FLAG::READ);
+													 IMAGE_TYPE::IMAGE_DEPTH |
+													 IMAGE_TYPE::D32F |
+													 IMAGE_TYPE::READ |
+													 IMAGE_TYPE::FLAG_RENDER_TARGET,
+													 MEMORY_FLAG::READ);
 	
 	uniforms_buffer = hlbvh_state.rctx->create_buffer(*hlbvh_state.rqueue, sizeof(uniforms_t),
-													  COMPUTE_MEMORY_FLAG::READ |
-													  COMPUTE_MEMORY_FLAG::HOST_WRITE |
-													  COMPUTE_MEMORY_FLAG::VULKAN_HOST_COHERENT);
+													  MEMORY_FLAG::READ |
+													  MEMORY_FLAG::HOST_WRITE |
+													  MEMORY_FLAG::VULKAN_HOST_COHERENT);
 	uniforms_buffer->set_debug_label("uniforms");
 }
 
-bool unified_renderer::init(shared_ptr<compute_kernel> vs,
-							shared_ptr<compute_kernel> fs) {
+bool unified_renderer::init(std::shared_ptr<device_function> vs,
+							std::shared_ptr<device_function> fs) {
 	// check vs/fs and get state
 	if (!vs) {
 		log_error("vertex shader not found");
@@ -134,7 +134,7 @@ bool unified_renderer::init(shared_ptr<compute_kernel> vs,
 	return true;
 }
 
-void unified_renderer::render(const vector<unique_ptr<animation>>& models,
+void unified_renderer::render(const std::vector<std::unique_ptr<animation>>& models,
 							  const bool cam_mode,
 							  const camera& cam) {
 	auto renderer = hlbvh_state.rctx->create_graphics_renderer(*hlbvh_state.rqueue, *render_pass, *render_pipeline, false);

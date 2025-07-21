@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,14 +16,14 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_CAMERA_HPP__
-#define __FLOOR_CAMERA_HPP__
+#pragma once
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/core/core.hpp>
 #include <floor/core/event.hpp>
 #include <floor/math/quaternion.hpp>
 #include <chrono>
+using namespace fl;
 
 //! floor camera functions
 class camera {
@@ -66,7 +66,7 @@ public:
 	static double3 get_direction(const double2 rotation);
 	
 	//! returns the rotation matrix for the current rotation
-	template <typename fp_type> requires is_floating_point_v<fp_type>
+	template <typename fp_type> requires std::is_floating_point_v<fp_type>
 	auto get_rotation_matrix() const {
 		return (matrix4d::rotation_deg_named<'y'>(rotation.y) *
 				matrix4d::rotation_deg_named<'x'>(rotation.x)).cast<fp_type>();
@@ -99,7 +99,7 @@ protected:
 		camera_state_t state GUARDED_BY(lock);
 	};
 	static constexpr const uint32_t camera_state_count { 3u };
-	atomic<uint32_t> current_camera_state;
+	std::atomic<uint32_t> current_camera_state;
 	concurrent_camera_state_t camera_states[camera_state_count];
 	
 	bool is_single_frame = false;
@@ -122,14 +122,12 @@ protected:
 	float2 last_delta;
 	
 	// [right, left, up, down]
-	atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };
+	std::atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };
 	
-	event::handler keyboard_handler;
-	bool key_handler(EVENT_TYPE type, shared_ptr<event_object> obj);
+	event::handler_f keyboard_handler;
+	bool key_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj);
 	
 	//
-	chrono::time_point<chrono::high_resolution_clock> time_keeper { chrono::high_resolution_clock::now() };
+	std::chrono::time_point<std::chrono::high_resolution_clock> time_keeper { std::chrono::high_resolution_clock::now() };
 	
 };
-
-#endif

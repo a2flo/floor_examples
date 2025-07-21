@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 90;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -45,14 +45,12 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		5C0071DB1A9200B200F4711D /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
 			dstPath = data;
-			dstSubfolderSpec = 7;
+			dstSubfolder = Resources;
 			files = (
 				5C5487801B608DE40088272A /* config.json in CopyFiles */,
 				5C5487811B608DE40088272A /* config.json.local in CopyFiles */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -99,7 +97,6 @@
 /* Begin PBXFrameworksBuildPhase section */
 		5C00718E1A91EF7E00F4711D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				5C0071CC1A91FFAA00F4711D /* AudioToolbox.framework in Frameworks */,
 				5C0071C81A91FF9000F4711D /* CoreAudio.framework in Frameworks */,
@@ -114,14 +111,11 @@
 				5C0071CE1A91FFB000F4711D /* QuartzCore.framework in Frameworks */,
 				5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5C8FD0911AD3366800215230 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -217,8 +211,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = hlbvh_ios;
 			productName = hlbvh_ios;
 			productReference = 5C0071911A91EF7E00F4711D /* hlbvhd.app */;
@@ -234,8 +226,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			name = hlbvh_osx;
 			productName = hlbvh_osx;
 			productReference = 5C8FD0941AD3366800215230 /* hlbvhd.app */;
@@ -248,7 +238,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 2600;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -260,7 +250,6 @@
 				};
 			};
 			buildConfigurationList = 5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "hlbvh" */;
-			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -268,6 +257,7 @@
 				Base,
 			);
 			mainGroup = 5CD2174419E924A20049D6AE;
+			preferredProjectObjectVersion = 90;
 			productRefGroup = 5CD2174419E924A20049D6AE;
 			projectDirPath = "";
 			projectRoot = "";
@@ -281,57 +271,66 @@
 /* Begin PBXResourcesBuildPhase section */
 		5C00718F1A91EF7E00F4711D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				5C0071BD1A91F1E800F4711D /* Base.lproj in Resources */,
 				5C0071BE1A91F1E800F4711D /* Images.xcassets in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5C8FD0921AD3366800215230 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				5C8FD0BD1AD3393700215230 /* Images.xcassets in Resources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		5C0071C01A91F1EF00F4711D /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# create entitlements file on the fly\nENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"\nENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"\n\n# need to create the necessary xml file with the correct application-identifier\n# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)\nprintf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}\nprintf \"${PRODUCT_BUNDLE_IDENTIFIER}\" >> ${ENTITLEMENTS_TMP}\nprintf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}\n# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)\nSIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")\n\n# write the 4-byte header + 4-byte size of this complete file\nprintf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}\n# dump the previously created xml file in the new one and remove the appended 8 bytes\ncat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}\n# cleanup\nrm ${ENTITLEMENTS_TMP}\n\n# code sign with entitlements\ncodesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"\n";
+			shellScript = (
+				"# create entitlements file on the fly",
+				"ENTITLEMENTS_TMP=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent.tmp\"",
+				"ENTITLEMENTS=\"${PROJECT_DIR}/${PRODUCT_NAME}.xcent\"",
+				"",
+				"# need to create the necessary xml file with the correct application-identifier",
+				"# (minor hack: append 8 dummy bytes at the end so that we don't have to do hex math later on)",
+				"printf \"\\x3C\\x3F\\x78\\x6D\\x6C\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x20\\x65\\x6E\\x63\\x6F\\x64\\x69\\x6E\\x67\\x3D\\x22\\x55\\x54\\x46\\x2D\\x38\\x22\\x3F\\x3E\\x0A\\x3C\\x21\\x44\\x4F\\x43\\x54\\x59\\x50\\x45\\x20\\x70\\x6C\\x69\\x73\\x74\\x20\\x50\\x55\\x42\\x4C\\x49\\x43\\x20\\x22\\x2D\\x2F\\x2F\\x41\\x70\\x70\\x6C\\x65\\x2F\\x2F\\x44\\x54\\x44\\x20\\x50\\x4C\\x49\\x53\\x54\\x20\\x31\\x2E\\x30\\x2F\\x2F\\x45\\x4E\\x22\\x20\\x22\\x68\\x74\\x74\\x70\\x3A\\x2F\\x2F\\x77\\x77\\x77\\x2E\\x61\\x70\\x70\\x6C\\x65\\x2E\\x63\\x6F\\x6D\\x2F\\x44\\x54\\x44\\x73\\x2F\\x50\\x72\\x6F\\x70\\x65\\x72\\x74\\x79\\x4C\\x69\\x73\\x74\\x2D\\x31\\x2E\\x30\\x2E\\x64\\x74\\x64\\x22\\x3E\\x0A\\x3C\\x70\\x6C\\x69\\x73\\x74\\x20\\x76\\x65\\x72\\x73\\x69\\x6F\\x6E\\x3D\\x22\\x31\\x2E\\x30\\x22\\x3E\\x0A\\x3C\\x64\\x69\\x63\\x74\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x61\\x70\\x70\\x6C\\x69\\x63\\x61\\x74\\x69\\x6F\\x6E\\x2D\\x69\\x64\\x65\\x6E\\x74\\x69\\x66\\x69\\x65\\x72\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\" > ${ENTITLEMENTS_TMP}",
+				"printf \"${PRODUCT_BUNDLE_IDENTIFIER}\" >> ${ENTITLEMENTS_TMP}",
+				"printf \"\\x3C\\x2F\\x73\\x74\\x72\\x69\\x6E\\x67\\x3E\\x0A\\x09\\x3C\\x6B\\x65\\x79\\x3E\\x67\\x65\\x74\\x2D\\x74\\x61\\x73\\x6B\\x2D\\x61\\x6C\\x6C\\x6F\\x77\\x3C\\x2F\\x6B\\x65\\x79\\x3E\\x0A\\x09\\x3C\\x74\\x72\\x75\\x65\\x2F\\x3E\\x0A\\x3C\\x2F\\x64\\x69\\x63\\x74\\x3E\\x0A\\x3C\\x2F\\x70\\x6C\\x69\\x73\\x74\\x3E\\x0A\\x45\\x56\\x49\\x4C\\x48\\x41\\x43\\x4B\" >> ${ENTITLEMENTS_TMP}",
+				"# get the size of the xml file in hex and format it to two hex characters printable by printf (e.g. \\x01\\x23)",
+				"SIZE=$(stat -f \"%Xz\" ${ENTITLEMENTS_TMP} | sed -E \"s/([0-9a-z]{1,2})([0-9a-z]{2})/\\\\\\\\x\\1\\\\\\\\x\\2/\")",
+				"",
+				"# write the 4-byte header + 4-byte size of this complete file",
+				"printf \"\\xFA\\xDE\\x71\\x71\\x00\\x00${SIZE}\" > ${ENTITLEMENTS}",
+				"# dump the previously created xml file in the new one and remove the appended 8 bytes",
+				"cat ${ENTITLEMENTS_TMP} | grep -v \"EVILHACK\" >> ${ENTITLEMENTS}",
+				"# cleanup",
+				"rm ${ENTITLEMENTS_TMP}",
+				"",
+				"# code sign with entitlements",
+				"codesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"",
+				"",
+			);
 		};
 		5C30CAA61AA7058D008986B1 /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
 			name = "Run Script";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "cd src\nocc --src hlbvh.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -Dhlbvh_TILE_SIZE=512 -Dhlbvh_SOFTENING=0.01f -Dhlbvh_DAMPING=0.999f\n${PLATFORM_DIR}/usr/bin/metal-as -o=hlbvh.air air_processed.ll\n${PLATFORM_DIR}/usr/bin/metal-ar r hlbvh.a hlbvh.air\n${PLATFORM_DIR}/usr/bin/metallib -o ../../data/hlbvh.metallib hlbvh.a\n";
+			shellScript = (
+				"cd src",
+				"occ --src hlbvh.cpp --target air --sub-target ios9 --out air_processed.ll --no-double -vv --config ../../../data/ -- -Dhlbvh_TILE_SIZE=512 -Dhlbvh_SOFTENING=0.01f -Dhlbvh_DAMPING=0.999f",
+				"${PLATFORM_DIR}/usr/bin/metal-as -o=hlbvh.air air_processed.ll",
+				"${PLATFORM_DIR}/usr/bin/metal-ar r hlbvh.a hlbvh.air",
+				"${PLATFORM_DIR}/usr/bin/metallib -o ../../data/hlbvh.metallib hlbvh.a",
+				"",
+			);
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		5C00718D1A91EF7E00F4711D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				5CF948991D2AB3D300FEA7AE /* obj_loader.cpp in Sources */,
 				5CF9489A1D2AB3D300FEA7AE /* camera.cpp in Sources */,
@@ -342,11 +341,9 @@
 				5CF11C271D237F2800AB7502 /* collider.cpp in Sources */,
 				5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 		5C8FD0901AD3366800215230 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 				5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */,
 				5C8FD0B61AD338A500215230 /* main.cpp in Sources */,
@@ -357,12 +354,11 @@
 				5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */,
 				5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		5C0071B11A91EF7E00F4711D /* Debug */ = {
+		5C0071B11A91EF7E00F4711D /* Debug configuration for PBXNativeTarget "hlbvh_ios" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -423,7 +419,7 @@
 			};
 			name = Debug;
 		};
-		5C0071B21A91EF7E00F4711D /* Release */ = {
+		5C0071B21A91EF7E00F4711D /* Release configuration for PBXNativeTarget "hlbvh_ios" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -481,7 +477,7 @@
 			};
 			name = Release;
 		};
-		5C8FD0AE1AD3366900215230 /* Debug */ = {
+		5C8FD0AE1AD3366900215230 /* Debug configuration for PBXNativeTarget "hlbvh_osx" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -548,7 +544,7 @@
 			};
 			name = Debug;
 		};
-		5C8FD0AF1AD3366900215230 /* Release */ = {
+		5C8FD0AF1AD3366900215230 /* Release configuration for PBXNativeTarget "hlbvh_osx" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -612,7 +608,7 @@
 			};
 			name = Release;
 		};
-		5CD2174A19E924A20049D6AE /* Debug */ = {
+		5CD2174A19E924A20049D6AE /* Debug configuration for PBXProject "hlbvh" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -689,8 +685,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = hlbvhd;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -740,11 +738,12 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Debug;
 		};
-		5CD2174B19E924A20049D6AE /* Release */ = {
+		5CD2174B19E924A20049D6AE /* Release configuration for PBXProject "hlbvh" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -815,8 +814,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = hlbvh;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -866,6 +867,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Release;
@@ -876,28 +878,25 @@
 		5C0071B51A91EF7E00F4711D /* Build configuration list for PBXNativeTarget "hlbvh_ios" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				5C0071B11A91EF7E00F4711D /* Debug */,
-				5C0071B21A91EF7E00F4711D /* Release */,
+				5C0071B11A91EF7E00F4711D /* Debug configuration for PBXNativeTarget "hlbvh_ios" */,
+				5C0071B21A91EF7E00F4711D /* Release configuration for PBXNativeTarget "hlbvh_ios" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		5C8FD0B21AD3366900215230 /* Build configuration list for PBXNativeTarget "hlbvh_osx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				5C8FD0AE1AD3366900215230 /* Debug */,
-				5C8FD0AF1AD3366900215230 /* Release */,
+				5C8FD0AE1AD3366900215230 /* Debug configuration for PBXNativeTarget "hlbvh_osx" */,
+				5C8FD0AF1AD3366900215230 /* Release configuration for PBXNativeTarget "hlbvh_osx" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		5CD2174819E924A20049D6AE /* Build configuration list for PBXProject "hlbvh" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				5CD2174A19E924A20049D6AE /* Debug */,
-				5CD2174B19E924A20049D6AE /* Release */,
+				5CD2174A19E924A20049D6AE /* Debug configuration for PBXProject "hlbvh" */,
+				5CD2174B19E924A20049D6AE /* Release configuration for PBXProject "hlbvh" */,
 			);
-			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */

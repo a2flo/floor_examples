@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,22 +16,20 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_HLBVH_UNIFIED_RENDERER_HPP__
-#define __FLOOR_HLBVH_UNIFIED_RENDERER_HPP__
+#pragma once
 
 #include <floor/core/essentials.hpp>
-#include <floor/floor/floor.hpp>
-#include <floor/compute/compute_context.hpp>
+#include <floor/floor.hpp>
+#include <floor/device/device_context.hpp>
 #include "animation.hpp"
 #include "camera.hpp"
+using namespace fl;
 
 struct unified_renderer {
-	static bool init(shared_ptr<compute_kernel> vs,
-					 shared_ptr<compute_kernel> fs);
+	static bool init(std::shared_ptr<device_function> vs,
+					 std::shared_ptr<device_function> fs);
 	static void destroy();
-	static void render(const vector<unique_ptr<animation>>& models,
+	static void render(const std::vector<std::unique_ptr<animation>>& models,
 					   const bool cam_mode,
 					   const camera& cam);
 };
-
-#endif

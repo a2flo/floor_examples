@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 #include "animation.hpp"
 #include <floor/threading/task.hpp>
 
-animation::animation(const string& file_prefix,
-					 const string& file_suffix,
+animation::animation(const std::string& file_prefix,
+					 const std::string& file_suffix,
 					 const uint32_t frame_count_,
 					 const bool loop_or_reset_,
 					 const float step_size_) :
@@ -35,15 +35,15 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	frames_triangles_buffer.resize(frame_count);
 	frames_centroids_buffer.resize(frame_count);
 	frames_indices.resize(frame_count);
-	atomic<uint32_t> done { frame_count };
-	atomic<uint32_t> load_valid { 1u };
-	atomic<uint32_t> max_vertex_count { 0 };
-	auto sharing_flags = COMPUTE_MEMORY_FLAG::NONE;
+	std::atomic<uint32_t> done { frame_count };
+	std::atomic<uint32_t> load_valid { 1u };
+	std::atomic<uint32_t> max_vertex_count { 0 };
+	auto sharing_flags = MEMORY_FLAG::NONE;
 	if (hlbvh_state.cctx != hlbvh_state.rctx && !hlbvh_state.benchmark) {
-		if (hlbvh_state.rctx->get_compute_type() == COMPUTE_TYPE::VULKAN) {
-			sharing_flags = COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
-		} else if (hlbvh_state.rctx->get_compute_type() == COMPUTE_TYPE::METAL) {
-			sharing_flags = COMPUTE_MEMORY_FLAG::METAL_SHARING;
+		if (hlbvh_state.rctx->get_platform_type() == PLATFORM_TYPE::VULKAN) {
+			sharing_flags = MEMORY_FLAG::VULKAN_SHARING;
+		} else if (hlbvh_state.rctx->get_platform_type() == PLATFORM_TYPE::METAL) {
+			sharing_flags = MEMORY_FLAG::METAL_SHARING;
 		}
 	}
 	for (uint32_t i = 0; i < frame_count; ++i) {
@@ -55,7 +55,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 					 &file_prefix, &file_suffix]() {
 #endif
 			// start with frame id suffix (width is always the same, so insert 0s where necessary, e.g. 00042)
-			string file_name = to_string(frame_id + 1);
+			std::string file_name = std::to_string(frame_id + 1);
 			file_name.insert(0, digits_width - uint32_t(file_name.size()), '0');
 			
 			// load
@@ -83,9 +83,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 				// linearize triangles + compute centroids for them
 				// -> transforms the "face/vertex-idxs -> vertices" model into a linear array of triangles
 				// TODO: reorder triangles based on morton code?
-				auto mdl_triangles = make_shared<vector<float3>>();
-				auto mdl_centroids = make_shared<vector<float3>>();
-				auto mdl_indices = make_shared<vector<uint3>>();
+				auto mdl_triangles = std::make_shared<std::vector<float3>>();
+				auto mdl_centroids = std::make_shared<std::vector<float3>>();
+				auto mdl_indices = std::make_shared<std::vector<uint3>>();
 				
 				uint32_t triangle_count = 0;
 				for(const auto& sub_obj : model->objects) {
@@ -135,7 +135,7 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	}
 	// wait until all loaded
 	while(done > 0) {
-		this_thread::yield();
+		std::this_thread::yield();
 	}
 	valid = (load_valid != 0);
 	if(!valid) return;
@@ -187,17 +187,17 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	
 	// for visualization purposes
 	log_debug("max vertex count: $", max_vertex_count.load());
-	auto sharing_sync_flags = COMPUTE_MEMORY_FLAG::NONE;
+	auto sharing_sync_flags = MEMORY_FLAG::NONE;
 	if (hlbvh_state.cctx != hlbvh_state.rctx) {
-		sharing_sync_flags |= (COMPUTE_MEMORY_FLAG::SHARING_SYNC |
+		sharing_sync_flags |= (MEMORY_FLAG::SHARING_SYNC |
 							   // render backend only reads data
-							   COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
+							   MEMORY_FLAG::SHARING_RENDER_READ |
 							   // compute backend only writes data
-							   COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
+							   MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 	}
 	colliding_vertices = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, max_vertex_count * sizeof(uint32_t),
-														 COMPUTE_MEMORY_FLAG::READ_WRITE |
-														 COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
+														 MEMORY_FLAG::READ_WRITE |
+														 MEMORY_FLAG::HOST_READ_WRITE |
 														 sharing_flags | sharing_sync_flags);
 	colliding_vertices->set_debug_label("colliding_vertices");
 	colliding_triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));

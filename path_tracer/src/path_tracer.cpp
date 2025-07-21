@@ -223,7 +223,7 @@ protected:
 		// else: rrr is 1.0f and the contribution is 0
 		
 		// we're done here
-		return radiance;
+		floor_return_no_nrvo(radiance);
 	}
 	
 	float3 compute_direct_illumination(const float3& eye_direction,

@@ -233,8 +233,8 @@ int main(int, char* argv[]) {
 	}
 	
 	// add event handlers
-	event::handler evt_handler_fnctr(&evt_handler);
-	floor::get_event()->add_internal_event_handler(evt_handler_fnctr, EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP);
+	event::handler_f evt_handler_fnctr(&evt_handler);
+	floor::get_event()->add_event_handler(evt_handler_fnctr, EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP);
 	
 	static constexpr const uint32_t iteration_count { 16384 };
 	for (iteration = 0; iteration < iteration_count; ++iteration) {

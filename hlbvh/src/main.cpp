@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,75 +16,76 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/core/timer.hpp>
 #include <floor/core/option_handler.hpp>
-#include <floor/compute/compute_kernel.hpp>
+#include <floor/device/device_function.hpp>
 #include "unified_renderer.hpp"
 #include "hlbvh_state.hpp"
 #include "animation.hpp"
 #include "collider.hpp"
 #include "camera.hpp"
+using namespace std::chrono_literals;
 
 hlbvh_state_struct hlbvh_state;
 
 struct hlbvh_option_context {
 	// unused
-	string additional_options { "" };
+	std::string additional_options { "" };
 };
 typedef option_handler<hlbvh_option_context> hlbvh_opt_handler;
 
 // camera (free cam mode)
-static unique_ptr<camera> cam;
+static std::unique_ptr<camera> cam;
 // camera speeds (modified by shift/ctrl)
 static const double3 cam_speeds { 25.0 /* default */, 150.0 /* faster */, 2.5 /* slower */ };
 
 //! option -> function map
-template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_handler::options {
+template<> std::vector<std::pair<std::string, hlbvh_opt_handler::option_function>> hlbvh_opt_handler::options {
 	{ "--help", [](hlbvh_option_context&, char**&) {
-		cout << "command line options:" << endl;
+		std::cout << "command line options:" << std::endl;
 #if defined(__APPLE__)
-		cout << "\t--no-metal: disables metal rendering" << endl;
+		std::cout << "\t--no-metal: disables metal rendering" << std::endl;
 #endif
-		cout << "\t--no-vulkan: disables vulkan rendering" << endl;
-		cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << endl;
-		cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << endl;
-		cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << endl;
+		std::cout << "\t--no-vulkan: disables vulkan rendering" << std::endl;
+		std::cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << std::endl;
+		std::cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << std::endl;
+		std::cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << std::endl;
 		hlbvh_state.done = true;
 		
-		cout << endl;
-		cout << "controls:" << endl;
-		cout << "\tq: quit" << endl;
-		cout << "\tspace: halt" << endl;
-		cout << "\tc: switch camera mode between free cam and locked/rotational camera" << endl;
-		cout << "\t* locked camera:" << endl;
-		cout << "\t\tw/s/right-mouse-drag: move camera forwards/backwards" << endl;
-		cout << "\t\tleft-mouse-drag: rotate camera" << endl;
-		cout << "\t* free camera:" << endl;
-		cout << "\t\tw/a/s/d/arrow-keys: move forward/left/backward/right" << endl;
-		cout << "\t\tmove mouse: rotate camera" << endl;
-		cout << "\tshift: faster camera movement" << endl;
-		cout << "\tctrl: slower camera movement" << endl;
-		cout << endl;
+		std::cout << std::endl;
+		std::cout << "controls:" << std::endl;
+		std::cout << "\tq: quit" << std::endl;
+		std::cout << "\tspace: halt" << std::endl;
+		std::cout << "\tc: switch camera mode between free cam and locked/rotational camera" << std::endl;
+		std::cout << "\t* locked camera:" << std::endl;
+		std::cout << "\t\tw/s/right-mouse-drag: move camera forwards/backwards" << std::endl;
+		std::cout << "\t\tleft-mouse-drag: rotate camera" << std::endl;
+		std::cout << "\t* free camera:" << std::endl;
+		std::cout << "\t\tw/a/s/d/arrow-keys: move forward/left/backward/right" << std::endl;
+		std::cout << "\t\tmove mouse: rotate camera" << std::endl;
+		std::cout << "\tshift: faster camera movement" << std::endl;
+		std::cout << "\tctrl: slower camera movement" << std::endl;
+		std::cout << std::endl;
 		
 		// TODO: performance stats
-		cout << endl;
+		std::cout << std::endl;
 	}},
 	{ "--no-metal", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true;
-		cout << "metal disabled" << endl;
+		std::cout << "metal disabled" << std::endl;
 	}},
 	{ "--no-vulkan", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_vulkan = true;
-		cout << "vulkan disabled" << endl;
+		std::cout << "vulkan disabled" << std::endl;
 	}},
 	{ "--no-unified", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.uni_renderer = false;
-		cout << "unified renderer disabled" << endl;
+		std::cout << "unified renderer disabled" << std::endl;
 	}},
 	{ "--no-triangle-vis", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.triangle_vis = false;
-		cout << "triangle collision visualization disabled" << endl;
+		std::cout << "triangle collision visualization disabled" << std::endl;
 	}},
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true; // also disable metal
@@ -92,24 +93,24 @@ template<> vector<pair<string, hlbvh_opt_handler::option_function>> hlbvh_opt_ha
 		hlbvh_state.triangle_vis = false; // triangle visualization is unnecessary here
 		hlbvh_state.uni_renderer = false;
 		hlbvh_state.benchmark = true;
-		cout << "benchmark mode enabled" << endl;
+		std::cout << "benchmark mode enabled" << std::endl;
 	}},
 	{ "--no-fubar", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_fubar = true;
-		cout << "FUBAR disabled" << endl;
+		std::cout << "FUBAR disabled" << std::endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](hlbvh_option_context&, char**&) {} },
 	{ "-ApplePersistenceIgnoreState", [](hlbvh_option_context&, char**&) {} },
 };
 
-static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
+static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 	if(type == EVENT_TYPE::QUIT) {
 		hlbvh_state.done = true;
 		return true;
 	}
 	else if(type == EVENT_TYPE::KEY_UP) {
-		switch(((shared_ptr<key_up_event>&)obj)->key) {
+		switch(((std::shared_ptr<key_up_event>&)obj)->key) {
 			case SDLK_Q:
 				hlbvh_state.done = true;
 				break;
@@ -139,7 +140,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		return true;
 	}
 	else if(type == EVENT_TYPE::KEY_DOWN) {
-		switch(((shared_ptr<key_up_event>&)obj)->key) {
+		switch(((std::shared_ptr<key_up_event>&)obj)->key) {
 			case SDLK_LSHIFT:
 			case SDLK_RSHIFT:
 				cam->set_cam_speed(cam_speeds.y);
@@ -195,7 +196,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 			}
 			
 #if !defined(FLOOR_IOS)
-			const auto& move_evt = (shared_ptr<mouse_move_event>&)obj;
+			const auto& move_evt = (std::shared_ptr<mouse_move_event>&)obj;
 			
 			// "normalize"/transform delta position according to screen size
 			float2 delta { float2(move_evt->move) / float2 { floor::get_width(), floor::get_height() } };
@@ -233,7 +234,6 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 }
 
 // embed the compiled hlbvh FUBAR files if they are available
-#if defined(__has_embed)
 #if __has_embed("../../data/hlbvh.fubar") && __has_embed("../../data/hlbvh_shaders.fubar")
 static constexpr const uint8_t hlbvh_fubar[] {
 #embed "../../data/hlbvh.fubar"
@@ -242,7 +242,6 @@ static constexpr const uint8_t hlbvh_shaders_fubar[] {
 #embed "../../data/hlbvh_shaders.fubar"
 };
 #define HAS_EMBEDDED_FUBAR 1
-#endif
 #endif
 
 int main(int, char* argv[]) {
@@ -278,7 +277,7 @@ int main(int, char* argv[]) {
 		.console_only = hlbvh_state.benchmark,
 		.renderer = wanted_renderer,
 		// disable resource tracking and enable non-blocking Vulkan execution
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
+		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
@@ -286,12 +285,12 @@ int main(int, char* argv[]) {
 	
 	// disable resp. other renderers when using opengl/metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
-							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_metal = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::METAL ||
+							floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
-	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_vulkan = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::VULKAN ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::CUDA ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (floor_renderer == floor::RENDERER::NONE && !hlbvh_state.benchmark) {
@@ -316,14 +315,14 @@ int main(int, char* argv[]) {
 	log_debug("using $", (hlbvh_state.uni_renderer ? "unified renderer" : "no renderer at all"));
 	
 	// add event handlers
-	event::handler evt_handler_fnctr(&evt_handler);
-	floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-												   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-												   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-												   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-												   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
+	event::handler_f evt_handler_fnctr(&evt_handler);
+	floor::get_event()->add_event_handler(evt_handler_fnctr,
+										  EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
+										  EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
+										  EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+										  EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE);
 	
-	cam = make_unique<camera>();
+	cam = std::make_unique<camera>();
 	cam->set_mouse_input(hlbvh_state.cam_mode);
 	cam->set_wasd_input(hlbvh_state.cam_mode);
 	cam->set_keyboard_input(hlbvh_state.cam_mode);
@@ -332,18 +331,18 @@ int main(int, char* argv[]) {
 	cam->set_rotation(28.0, 256.0);
 	
 	// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host, depending on the config)
-	hlbvh_state.cctx = floor::get_compute_context();
+	hlbvh_state.cctx = floor::get_device_context();
 	hlbvh_state.rctx = floor::get_render_context();
 	if (!hlbvh_state.rctx) {
 		hlbvh_state.rctx = hlbvh_state.cctx;
 	}
 	
 	// create a compute queue (aka command queue or stream) for the fastest device in the context
-	hlbvh_state.cdev = hlbvh_state.cctx->get_device(compute_device::TYPE::FASTEST);
+	hlbvh_state.cdev = hlbvh_state.cctx->get_device(device::TYPE::FASTEST);
 	hlbvh_state.cqueue = hlbvh_state.cctx->create_queue(*hlbvh_state.cdev);
 	if (hlbvh_state.cctx != hlbvh_state.rctx) {
 		// render context is not the same as the compute context -> also create dev and queue for the render context
-		hlbvh_state.rdev = hlbvh_state.rctx->get_device(compute_device::TYPE::FASTEST);
+		hlbvh_state.rdev = hlbvh_state.rctx->get_device(device::TYPE::FASTEST);
 		hlbvh_state.rqueue = hlbvh_state.rctx->create_queue(*hlbvh_state.rdev);
 	} else {
 		// otherwise: use the same as the compute context
@@ -352,20 +351,20 @@ int main(int, char* argv[]) {
 	}
 	
 	//
-	shared_ptr<compute_program> prog;
-	shared_ptr<compute_program> shader_prog;
+	std::shared_ptr<device_program> prog;
+	std::shared_ptr<device_program> shader_prog;
 	
 	// if embedded FUBAR data exists + it isn't disabled, try to load this first
 #if defined(HAS_EMBEDDED_FUBAR)
 	if (!hlbvh_state.no_fubar) {
 		// hlbvh kernels/shaders
-		const span<const uint8_t> fubar_data { hlbvh_fubar, std::size(hlbvh_fubar) };
+		const std::span<const uint8_t> fubar_data { hlbvh_fubar, std::size(hlbvh_fubar) };
 		prog = hlbvh_state.cctx->add_universal_binary(fubar_data);
 		if (prog) {
 			log_msg("using embedded hlbvh FUBAR");
 		}
 		if (hlbvh_state.uni_renderer) {
-			const span<const uint8_t> fubar_shader_data { hlbvh_shaders_fubar, std::size(hlbvh_shaders_fubar) };
+			const std::span<const uint8_t> fubar_shader_data { hlbvh_shaders_fubar, std::size(hlbvh_shaders_fubar) };
 			shader_prog = hlbvh_state.rctx->add_universal_binary(fubar_shader_data);
 			if (shader_prog) {
 				log_msg("using embedded hlbvh shaders FUBAR");
@@ -377,7 +376,7 @@ int main(int, char* argv[]) {
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
 	if (!prog) {
-		const llvm_toolchain::compile_options options {
+		const toolchain::compile_options options {
 			.enable_warnings = true,
 		};
 		prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
@@ -406,12 +405,12 @@ int main(int, char* argv[]) {
 		{ "indirect_radix_sort_stream_split", {} },
 	};
 	for (auto& kernel : hlbvh_state.kernels) {
-		kernel.second = prog->get_kernel(kernel.first);
+		kernel.second = prog->get_function(kernel.first);
 		if (kernel.second == nullptr) {
 			log_error("failed to retrieve kernel \"$\" from program", kernel.first);
 			return -1;
 		}
-		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_kernel_entry(*hlbvh_state.cdev)->max_total_local_size;
+		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
 		log_debug("max local size for \"$\": $", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
 	}
 	
@@ -426,23 +425,23 @@ int main(int, char* argv[]) {
 		}
 		
 		// setup renderer
-		if (!unified_renderer::init(shader_prog->get_kernel("hlbvh_vertex"),
-									shader_prog->get_kernel("hlbvh_fragment"))) {
+		if (!unified_renderer::init(shader_prog->get_function("hlbvh_vertex"),
+									shader_prog->get_function("hlbvh_fragment"))) {
 			log_error("error during unified renderer initialization!");
 			return -1;
 		}
 	}
 	
 	// load animated models
-	vector<unique_ptr<animation>> models;
-	models.emplace_back(make_unique<animation>("collision_models/gear/gear_0000", ".obj", 20, false, 0.1f));
-	models.emplace_back(make_unique<animation>("collision_models/gear2/gear2_0000", ".obj", 20, false, 0.1f));
-	models.emplace_back(make_unique<animation>("collision_models/sinbad/sinbad_0000", ".obj", 20, true));
-	models.emplace_back(make_unique<animation>("collision_models/golem/golem_0000", ".obj", 20, false, 0.125f));
-	models.emplace_back(make_unique<animation>("collision_models/plane/plane_00000", ".obj", 2));
+	std::vector<std::unique_ptr<animation>> models;
+	models.emplace_back(std::make_unique<animation>("collision_models/gear/gear_0000", ".obj", 20, false, 0.1f));
+	models.emplace_back(std::make_unique<animation>("collision_models/gear2/gear2_0000", ".obj", 20, false, 0.1f));
+	models.emplace_back(std::make_unique<animation>("collision_models/sinbad/sinbad_0000", ".obj", 20, true));
+	models.emplace_back(std::make_unique<animation>("collision_models/golem/golem_0000", ".obj", 20, false, 0.125f));
+	models.emplace_back(std::make_unique<animation>("collision_models/plane/plane_00000", ".obj", 2));
 	
 	// create collider
-	auto hlbvh_collider = make_unique<collider>();
+	auto hlbvh_collider = std::make_unique<collider>();
 	
 	// main loop
 	auto frame_time = core::unix_timestamp_us();
@@ -453,7 +452,7 @@ int main(int, char* argv[]) {
 		// stop drawing if window is inactive
 		if (!(SDL_GetWindowFlags(floor::get_window()) & SDL_WINDOW_INPUT_FOCUS) &&
 			!hlbvh_state.benchmark) {
-			this_thread::sleep_for(20ms);
+			std::this_thread::sleep_for(20ms);
 			continue;
 		}
 #endif
@@ -481,7 +480,7 @@ int main(int, char* argv[]) {
 		hlbvh_collider->collide(models);
 		
 		//
-		floor::set_caption("hlbvh | frame-time: " + to_string(frame_delta) + "ms");
+		floor::set_caption("hlbvh | frame-time: " + std::to_string(frame_delta) + "ms");
 		
 		if (hlbvh_state.uni_renderer) {
 			// Metal/Vulkan rendering

@@ -38,7 +38,7 @@ static shared_ptr<device_image> resolve_image;
 static unique_ptr<graphics_pass> blit_pass;
 static unique_ptr<graphics_pipeline> blit_pipeline;
 static bool is_vr_renderer { false };
-static event::handler resize_handler_fnctr = bind(&unified_renderer::resize_handler, placeholders::_1, placeholders::_2);
+static event::handler_f resize_handler_fnctr = bind(&unified_renderer::resize_handler, placeholders::_1, placeholders::_2);
 
 static const device_context* ctx_ptr { nullptr };
 static const device_queue* dev_queue_ptr { nullptr };
@@ -118,7 +118,7 @@ bool unified_renderer::init(const device_context& ctx, const device_queue& dev_q
 	dev_queue_ptr = &dev_queue;
 	ctx_ptr = &ctx;
 
-	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
+	floor::get_event()->add_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 
 	create_textures(ctx, dev_queue);
 

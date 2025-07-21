@@ -836,8 +836,8 @@ int main(int, char* argv[]) {
 	}
 
 	// add event handlers
-	event::handler evt_handler_fnctr(&evt_handler);
-	floor::get_event()->add_internal_event_handler(
+	event::handler_f evt_handler_fnctr(&evt_handler);
+	floor::get_event()->add_event_handler(
 		evt_handler_fnctr, EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::MOUSE_LEFT_DOWN,
 		EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE, EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
 		EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE, EVENT_TYPE::VR_THUMBSTICK_MOVE,

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,15 +16,16 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_HLBVH_HLBVH_STATE_HPP__
-#define __FLOOR_HLBVH_HLBVH_STATE_HPP__
+#pragma once
 
+#include <floor/core/essentials.hpp>
 #include <floor/math/quaternion.hpp>
-#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
-#include <floor/compute/compute_context.hpp>
-#include <floor/compute/compute_device.hpp>
-#include <floor/compute/compute_queue.hpp>
+#if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
+#include <floor/device/device_context.hpp>
+#include <floor/device/device.hpp>
+#include <floor/device/device_queue.hpp>
 #endif
+using namespace fl;
 
 struct hlbvh_state_struct {
 	bool cam_mode { true }; // false: rotate around origin, true: free cam
@@ -51,28 +52,28 @@ struct hlbvh_state_struct {
 	// if false: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
 	bool triangle_vis { true };
 	
-#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
+#if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
 	// main compute context
-	shared_ptr<compute_context> cctx;
+	std::shared_ptr<device_context> cctx;
 	// device compute/command queue
-	shared_ptr<compute_queue> cqueue;
+	std::shared_ptr<device_queue> cqueue;
 	// active compute device
-	const compute_device* cdev { nullptr };
+	const device* cdev { nullptr };
 	
 	//! render device context
-	shared_ptr<compute_context> rctx;
+	std::shared_ptr<device_context> rctx;
 	//! render device main queue
-	shared_ptr<compute_queue> rqueue;
+	std::shared_ptr<device_queue> rqueue;
 	//! render device
-	const compute_device* rdev { nullptr };
+	const device* rdev { nullptr };
 	
 	// collision/hlbvh kernels
-	unordered_map<string, shared_ptr<compute_kernel>> kernels;
-	unordered_map<string, uint32_t> kernel_max_local_size;
+	std::unordered_map<std::string, std::shared_ptr<device_function>> kernels;
+	std::unordered_map<std::string, uint32_t> kernel_max_local_size;
 #endif
 	
 };
-#if !defined(FLOOR_COMPUTE) || (defined(FLOOR_COMPUTE_HOST) && !defined(FLOOR_COMPUTE_HOST_DEVICE))
+#if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
 extern hlbvh_state_struct hlbvh_state;
 #endif
 
@@ -86,5 +87,3 @@ struct indirect_radix_sort_params_t {
 	uint32_t count;
 	uint32_t count_per_group; // == count / COMPACTION_GROUP_COUNT
 };
-
-#endif

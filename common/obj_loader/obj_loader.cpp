@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include <floor/constexpr/const_string.hpp>
 #include <floor/core/core.hpp>
 #include <floor/threading/task.hpp>
+#include <floor/threading/thread_helpers.hpp>
 
 #include <SDL3_image/SDL_image.h>
 
@@ -33,20 +34,22 @@
 #include <floor/darwin/darwin_helper.hpp>
 #endif
 
+using namespace std::chrono_literals;
+
 // -> floor (for use with metal/vulkan)
 #define __FLOOR_TEXTURE_FORMATS(F, src_surface, format_details, dst_image_type) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB8UI_NORM /* BGR converted to RGB */, 24, 16, 8, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 24) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
-F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA16UI_NORM, 64, 0, 16, 32, 48)
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::R8UI_NORM, 8, 0, 0, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RG8UI_NORM, 16, 0, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGB8UI_NORM, 24, 0, 8, 16, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGB8UI_NORM /* BGR converted to RGB */, 24, 16, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGBA8UI_NORM, 32, 0, 8, 16, 24) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGBA8UI_NORM /* BGRA converted to RGBA */, 32, 16, 8, 0, 24) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::R16UI_NORM, 16, 0, 0, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RG16UI_NORM, 32, 0, 16, 0, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGB16UI_NORM, 48, 0, 16, 32, 0) \
+F(src_surface, format_details, dst_image_type, IMAGE_TYPE::RGBA16UI_NORM, 64, 0, 16, 32, 48)
 
 #define __FLOOR_CHECK_FORMAT(src_surface, format_details, dst_image_type, floor_image_type, bpp, rshift, gshift, bshift, ashift) \
 	if (format_details->Rshift == rshift && format_details->Gshift == gshift && format_details->Bshift == bshift && \
@@ -54,11 +57,11 @@ F(src_surface, format_details, dst_image_type, COMPUTE_IMAGE_TYPE::RGBA16UI_NORM
 		dst_image_type = floor_image_type; \
 	}
 
-COMPUTE_IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
-	COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
+IMAGE_TYPE obj_loader::floor_image_type_format(const SDL_Surface* surface) {
+	IMAGE_TYPE image_type { IMAGE_TYPE::NONE };
 	const auto px_format_details = SDL_GetPixelFormatDetails(surface->format);
 	__FLOOR_TEXTURE_FORMATS(__FLOOR_CHECK_FORMAT, surface, px_format_details, image_type)
-	if (image_type == COMPUTE_IMAGE_TYPE::NONE) {
+	if (image_type == IMAGE_TYPE::NONE) {
 		log_error("unknown surface format: $, $, $, $, $",
 				  (uint32_t)px_format_details->bits_per_pixel,
 				  (uint32_t)px_format_details->Rshift,
@@ -95,7 +98,7 @@ protected:
 };
 
 //! contains all valid punctuators
-static const unordered_map<string, FLOOR_PUNCTUATOR> punctuator_tokens {
+static const std::unordered_map<std::string, FLOOR_PUNCTUATOR> punctuator_tokens {
 	{ "/", FLOOR_PUNCTUATOR::DIV },
 };
 
@@ -186,9 +189,9 @@ decimal_constant:
 				
 			// invalid char
 			default: {
-				const string invalid_char = (is_printable_char(char_iter) ? string(1, *char_iter) : "<unprintable>");
+				const std::string invalid_char = (is_printable_char(char_iter) ? std::string(1, *char_iter) : "<unprintable>");
 				handle_error(tu, char_iter, "invalid character \'" + invalid_char + "\' (" +
-							 to_string(0xFFu & (uint32_t)*char_iter) + ")");
+							 std::to_string(0xFFu & (uint32_t)*char_iter) + ")");
 				break;
 			}
 		}
@@ -309,15 +312,15 @@ struct mtl_grammar {
 #define FLOOR_MTL_GRAMMAR_OBJECTS(...) grammar_rule __VA_ARGS__; \
 	/* in debug mode, also set the debug name of each grammar rule object */ \
 	void set_debug_names() { \
-		string names { #__VA_ARGS__ }; \
+		std::string names { #__VA_ARGS__ }; \
 		set_debug_name(names, __VA_ARGS__); \
 	} \
-	void set_debug_name(string& names, grammar_rule& obj) { \
+	void set_debug_name(std::string& names, grammar_rule& obj) { \
 		const auto comma_pos = names.find(","); \
 		obj.debug_name = names.substr(0, comma_pos); \
 		names.erase(0, comma_pos + 1 + (comma_pos+1 < names.size() && names[comma_pos+1] == ' ' ? 1 : 0)); \
 	} \
-	template <typename... grammar_objects> void set_debug_name(string& names, grammar_rule& obj, grammar_objects&... objects) { \
+	template <typename... grammar_objects> void set_debug_name(std::string& names, grammar_rule& obj, grammar_objects&... objects) { \
 		set_debug_name(names, obj); \
 		set_debug_name(names, objects...); \
 	}
@@ -330,14 +333,14 @@ struct mtl_grammar {
 							  map_options)
 	
 	struct obj_material {
-		string ambient { "" };
-		string diffuse { "" };
-		string specular { "" };
-		string normal { "" };
-		string mask { "" };
-		string displacement { "" };
+		std::string ambient { "" };
+		std::string diffuse { "" };
+		std::string specular { "" };
+		std::string normal { "" };
+		std::string mask { "" };
+		std::string displacement { "" };
 	};
-	unordered_map<string, unique_ptr<obj_material>> materials;
+	std::unordered_map<std::string, std::unique_ptr<obj_material>> materials;
 	obj_material* cur_mtl { nullptr };
 	
 	mtl_grammar() {
@@ -380,7 +383,7 @@ struct mtl_grammar {
 		//
 		newmtl.on_match([this](auto& matches) -> parser_context::match_list {
 			const auto name = matches[1].token->second.to_string();
-			auto mtl = make_unique<obj_material>();
+			auto mtl = std::make_unique<obj_material>();
 			materials.emplace(name, std::move(mtl));
 			cur_mtl = materials[name].get();
 			return {};
@@ -414,7 +417,7 @@ struct mtl_grammar {
 		});
 	}
 	
-	unordered_map<string, unique_ptr<obj_material>> parse(parser_context& ctx, bool& success) {
+	std::unordered_map<std::string, std::unique_ptr<obj_material>> parse(parser_context& ctx, bool& success) {
 		// clear all
 		materials.clear();
 		success = false;
@@ -424,7 +427,7 @@ struct mtl_grammar {
 		
 		// if the end hasn't been reached, we have an error
 		if(ctx.iter != ctx.end) {
-			string error_msg = "parsing failed: ";
+			std::string error_msg = "parsing failed: ";
 			if(ctx.deepest_iter == ctx.tu.tokens.cend()) {
 				error_msg += "premature EOF after";
 				ctx.deepest_iter = ctx.end - 1; // set iter to token before EOF
@@ -450,10 +453,10 @@ struct mtl_grammar {
 };
 
 
-pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename) {
+std::pair<bool, obj_loader::texture> obj_loader::load_texture(const std::string& filename) {
 	texture ret;
 	
-	if(filename.find(".pvr") == string::npos) {
+	if(filename.find(".pvr") == std::string::npos) {
 		SDL_Surface* surface = IMG_Load(filename.c_str());
 		if(surface == nullptr) {
 			log_error("error loading texture file \"$\": $!", filename, SDL_GetError());
@@ -469,7 +472,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		
 		// check format, we always want RGB(A)
 		// NOTE: SDL uses reverse order ... RGBA is ABGR in SDL
-		optional<SDL_PixelFormat> conv_format;
+		std::optional<SDL_PixelFormat> conv_format;
 		switch (surface->format) {
 			default:
 				break;
@@ -546,7 +549,7 @@ pair<bool, obj_loader::texture> obj_loader::load_texture(const string& filename)
 		static constexpr const uint32_t pvrtc_header_size { 52 };
 		static_assert(sizeof(pvrtc_legacy_header) == pvrtc_header_size, "invalid header size");
 		
-		string img_data;
+		std::string img_data;
 		if(!file_io::file_to_string(filename, img_data)) {
 			log_error("error loading texture file \"$\"!", filename);
 			return { false, {} };
@@ -575,12 +578,12 @@ FLOOR_POP_WARNINGS()
 		}
 		
 		// fill ret data
-		ret.pvrtc = make_shared<pvrtc_texture>(pvrtc_texture {
+		ret.pvrtc = std::make_shared<pvrtc_texture>(pvrtc_texture {
 			.dim = { header->width, header->height },
 			.bpp = header->bpp,
 			.is_mipmapped = header->mip_map_count > 1,
 			.is_alpha = (header->flags & 0x8000u) != 0u,
-			.pixels = make_unique<uint8_t[]>(header->surface_size),
+			.pixels = std::make_unique<uint8_t[]>(header->surface_size),
 			.image_size = header->surface_size,
 		});
 		memcpy(ret.pvrtc->pixels.get(), img_data.data() + pvrtc_header_size, header->surface_size);
@@ -590,25 +593,25 @@ FLOOR_POP_WARNINGS()
 }
 
 static void load_textures(// file name -> <gl tex id, compute image ptr>
-						  unordered_map<string, pair<uint32_t, compute_image*>>& texture_filenames,
+						  std::unordered_map<std::string, std::pair<uint32_t, device_image*>>& texture_filenames,
 						  // metal/vulkan tex objects
-						  vector<shared_ptr<compute_image>>* model_floor_textures,
+						  std::vector<std::shared_ptr<device_image>>* model_floor_textures,
 						  // path prefix
-						  const string& prefix,
-						  const compute_context& ctx,
-						  const compute_queue& cqueue) {
+						  const std::string& prefix,
+						  const device_context& ctx,
+						  const device_queue& cqueue) {
 	// load textures
 	const auto filenames = core::keys(texture_filenames);
-	alignas(128) vector<obj_loader::texture> textures(filenames.size());
-	atomic<uint32_t> cur_tex { 0u }, active_workers { core::get_hw_thread_count() };
-	for(uint32_t worker_id = 0; worker_id < core::get_hw_thread_count(); ++worker_id) {
+	alignas(128) std::vector<obj_loader::texture> textures(filenames.size());
+	std::atomic<uint32_t> cur_tex { 0u }, active_workers { get_logical_core_count() };
+	for(uint32_t worker_id = 0; worker_id < get_logical_core_count(); ++worker_id) {
 		task::spawn([&active_workers, &filenames, &cur_tex, &textures, &prefix] {
 			for(;;) {
 				const auto id = cur_tex++;
 				if(id >= filenames.size()) break;
 				
 				// look for path
-				string filename = filenames[id]; // check path in .mtl first
+				std::string filename = filenames[id]; // check path in .mtl first
 				if(!file_io::is_file(filename)) {
 					filename = floor::data_path(filenames[id]); // then, check data_path root
 					if(!file_io::is_file(filename)) {
@@ -628,7 +631,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 		});
 	}
 	while(active_workers != 0) {
-		this_thread::sleep_for(10ms);
+		std::this_thread::sleep_for(10ms);
 	}
 #if defined(FLOOR_DEBUG)
 	log_debug("$ textures loaded to mem", textures.size());
@@ -636,7 +639,7 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 	// create metal/vulkan textures
 	model_floor_textures->resize(textures.size());
 	for (size_t i = 0, count = model_floor_textures->size(); i < count; ++i) {
-		COMPUTE_IMAGE_TYPE image_type { COMPUTE_IMAGE_TYPE::NONE };
+		IMAGE_TYPE image_type { IMAGE_TYPE::NONE };
 		
 		if (textures[i].surface == nullptr && textures[i].pvrtc == nullptr) {
 			log_debug("texture #$ invalid due to load failure - continuing ...", i);
@@ -664,34 +667,34 @@ static void load_textures(// file name -> <gl tex id, compute image ptr>
 			}
 			
 			if (tex->bpp == 2) {
-				image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA2 : COMPUTE_IMAGE_TYPE::PVRTC_RGB2);
+				image_type = (tex->is_alpha ? IMAGE_TYPE::PVRTC_RGBA2 : IMAGE_TYPE::PVRTC_RGB2);
 			} else {
-				image_type = (tex->is_alpha ? COMPUTE_IMAGE_TYPE::PVRTC_RGBA4 : COMPUTE_IMAGE_TYPE::PVRTC_RGB4);
+				image_type = (tex->is_alpha ? IMAGE_TYPE::PVRTC_RGBA4 : IMAGE_TYPE::PVRTC_RGB4);
 			}
 		}
 		
-		image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_2D |
-					   COMPUTE_IMAGE_TYPE::READ |
-					   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED);
+		image_type |= (IMAGE_TYPE::IMAGE_2D |
+					   IMAGE_TYPE::READ |
+					   IMAGE_TYPE::FLAG_MIPMAPPED);
 #if !defined(FLOOR_IOS) && defined(__APPLE__) // TODO: PVRTC+sRGB for iOS, 3ch sRGB for Vulkan
 		// load diffuse and specular maps as sRGB
 		if (floor::get_wide_gamut() || true) {
-			if (filenames[i].find("_diff.") != string::npos ||
-				filenames[i].find("_spec.") != string::npos) {
-				image_type |= COMPUTE_IMAGE_TYPE::FLAG_SRGB;
+			if (filenames[i].find("_diff.") != std::string::npos ||
+				filenames[i].find("_spec.") != std::string::npos) {
+				image_type |= IMAGE_TYPE::FLAG_SRGB;
 			}
 		}
 #endif
 		
-		//log_debug("tex $: $, $", filenames[i], dim, compute_image::image_type_to_string(image_type));
+		//log_debug("tex $: $, $", filenames[i], dim, device_image::image_type_to_string(image_type));
 		
 		(*model_floor_textures)[i] = ctx.create_image(cqueue,
 													  dim,
 													  image_type,
-													  span<uint8_t> { (uint8_t*)pixels, image_size },
-													  COMPUTE_MEMORY_FLAG::READ |
-													  COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-													  COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+													  std::span<uint8_t> { (uint8_t*)pixels, image_size },
+													  MEMORY_FLAG::READ |
+													  MEMORY_FLAG::HOST_READ_WRITE |
+													  MEMORY_FLAG::GENERATE_MIP_MAPS);
 		
 		// assign tex ptr to tex filename
 		texture_filenames[filenames[i]].second = (*model_floor_textures)[i].get();
@@ -718,15 +721,15 @@ struct obj_grammar {
 #define FLOOR_OBJ_GRAMMAR_OBJECTS(...) grammar_rule __VA_ARGS__; \
 	/* in debug mode, also set the debug name of each grammar rule object */ \
 	void set_debug_names() { \
-		string names { #__VA_ARGS__ }; \
+		std::string names { #__VA_ARGS__ }; \
 		set_debug_name(names, __VA_ARGS__); \
 	} \
-	void set_debug_name(string& names, grammar_rule& obj) { \
+	void set_debug_name(std::string& names, grammar_rule& obj) { \
 		const auto comma_pos = names.find(","); \
 		obj.debug_name = names.substr(0, comma_pos); \
 		names.erase(0, comma_pos + 1 + (comma_pos+1 < names.size() && names[comma_pos+1] == ' ' ? 1 : 0)); \
 	} \
-	template <typename... grammar_objects> void set_debug_name(string& names, grammar_rule& obj, grammar_objects&... objects) { \
+	template <typename... grammar_objects> void set_debug_name(std::string& names, grammar_rule& obj, grammar_objects&... objects) { \
 		set_debug_name(names, obj); \
 		set_debug_name(names, objects...); \
 	}
@@ -746,17 +749,17 @@ struct obj_grammar {
 	};
 	
 	struct obj_sub_object {
-		const string name;
-		string mat;
-		vector<obj_face> indices;
+		const std::string name;
+		std::string mat;
+		std::vector<obj_face> indices;
 	};
 	
-	vector<float4> vertices;
-	vector<float3> tex_coords;
-	vector<float3> normals;
-	vector<unique_ptr<obj_sub_object>> sub_objects;
+	std::vector<float4> vertices;
+	std::vector<float3> tex_coords;
+	std::vector<float3> normals;
+	std::vector<std::unique_ptr<obj_sub_object>> sub_objects;
 	obj_sub_object* cur_obj { nullptr };
-	string mat_filename { "" };
+	std::string mat_filename { "" };
 	
 	obj_grammar() {
 		// fixed token type matchers:
@@ -810,7 +813,7 @@ struct obj_grammar {
 			return stof(match.token->second.to_string());
 		};
 		static const auto match_to_uint = [](const parser_context::match& match) {
-			return stou(match.token->second.to_string());
+			return uint32_t(std::strtoull(match.token->second.to_string().c_str(), nullptr, 10));
 		};
 		static const auto push_to_parent = [](parser_context::match_list& matches) -> parser_context::match_list {
 			return std::move(matches);
@@ -849,19 +852,19 @@ struct obj_grammar {
 					return {};
 			}
 			
-			static constexpr const array<uint3, 4> v_offsets {{
+			static constexpr const std::array<uint3, 4> v_offsets {{
 				{ 1, 2, 3 },
 				{ 1, 4, 7 },
 				{ 1, 5, 9 },
 				{ 1, 6, 11 },
 			}};
-			static constexpr const array<uint3, 4> tc_offsets {{
+			static constexpr const std::array<uint3, 4> tc_offsets {{
 				{ 0, 0, 0 },
 				{ 3, 6, 9 },
 				{ 0, 0, 0 },
 				{ 3, 8, 13 },
 			}};
-			static constexpr const array<uint3, 4> n_offsets {{
+			static constexpr const std::array<uint3, 4> n_offsets {{
 				{ 0, 0, 0 },
 				{ 0, 0, 0 },
 				{ 4, 8, 12 },
@@ -907,19 +910,19 @@ struct obj_grammar {
 					return {};
 			}
 			
-			static constexpr const array<uint4, 4> v_offsets {{
+			static constexpr const std::array<uint4, 4> v_offsets {{
 				{ 1, 2, 3, 4 },
 				{ 1, 4, 7, 10 },
 				{ 1, 5, 9, 13 },
 				{ 1, 6, 11, 16 },
 			}};
-			static constexpr const array<uint4, 4> tc_offsets {{
+			static constexpr const std::array<uint4, 4> tc_offsets {{
 				{ 0, 0, 0, 0 },
 				{ 3, 6, 9, 12 },
 				{ 0, 0, 0, 0 },
 				{ 3, 8, 13, 18 },
 			}};
-			static constexpr const array<uint4, 4> n_offsets {{
+			static constexpr const std::array<uint4, 4> n_offsets {{
 				{ 0, 0, 0, 0 },
 				{ 0, 0, 0, 0 },
 				{ 4, 8, 12, 16 },
@@ -957,7 +960,7 @@ struct obj_grammar {
 		index_triplet2_vn.on_match(push_to_parent);
 		index_triplet3.on_match(push_to_parent);
 		sub_group.on_match([this](auto& matches) -> parser_context::match_list {
-			auto obj = make_unique<obj_sub_object>(obj_sub_object { .name = matches[1].token->second.to_string() });
+			auto obj = std::make_unique<obj_sub_object>(obj_sub_object { .name = matches[1].token->second.to_string() });
 			sub_objects.emplace_back(std::move(obj));
 			cur_obj = sub_objects.back().get();
 			return {};
@@ -976,7 +979,7 @@ struct obj_grammar {
 		usemtl.on_match([this](auto& matches) -> parser_context::match_list {
 			// if a material has already been assigned, a new sub-object must be created
 			if(cur_obj->mat != "") {
-				auto obj = make_unique<obj_sub_object>(obj_sub_object { .name = cur_obj->name + "#" });
+				auto obj = std::make_unique<obj_sub_object>(obj_sub_object { .name = cur_obj->name + "#" });
 				sub_objects.emplace_back(std::move(obj));
 				cur_obj = sub_objects.back().get();
 			}
@@ -985,8 +988,8 @@ struct obj_grammar {
 		});
 	}
 	
-	void parse(parser_context& ctx, bool& success, const bool is_load_textures, shared_ptr<obj_model> model,
-			   const compute_context& comp_ctx, const compute_queue& cqueue) {
+	void parse(parser_context& ctx, bool& success, const bool is_load_textures, std::shared_ptr<obj_model> model,
+			   const device_context& comp_ctx, const device_queue& cqueue) {
 		// clear all
 		vertices.clear();
 		tex_coords.clear();
@@ -1001,7 +1004,7 @@ struct obj_grammar {
 		
 		// if the end hasn't been reached, we have an error
 		if(ctx.iter != ctx.end) {
-			string error_msg = "parsing failed: ";
+			std::string error_msg = "parsing failed: ";
 			if(ctx.deepest_iter == ctx.tu.tokens.cend()) {
 				error_msg += "premature EOF after";
 				ctx.deepest_iter = ctx.end - 1; // set iter to token before EOF
@@ -1039,7 +1042,7 @@ struct obj_grammar {
 				uint32_t dst_idx { 0 };
 			};
 			uint32_t used { 0 };
-			vector<target> targets;
+			std::vector<target> targets;
 			
 			// start off with 4 everywhere (should be enough for most models, otherwise huge realloc will ensue ...)
 			reassign_entry() : targets(4) {}
@@ -1057,7 +1060,7 @@ struct obj_grammar {
 				++used;
 			}
 		};
-		vector<reassign_entry> index_reassign(vertices.size() + 1);
+		std::vector<reassign_entry> index_reassign(vertices.size() + 1);
 #if defined(FLOOR_DEBUG)
 		log_debug("alloc #1");
 #endif
@@ -1093,7 +1096,7 @@ struct obj_grammar {
 		
 		//
 		for(const auto& obj : sub_objects) {
-			auto sobj = make_unique<obj_model::sub_object>(obj_model::sub_object { .name = obj->name });
+			auto sobj = std::make_unique<obj_model::sub_object>(obj_model::sub_object { .name = obj->name });
 			
 			sobj->indices.reserve(obj->indices.size());
 			for(const auto& triplet : obj->indices) {
@@ -1164,15 +1167,15 @@ struct obj_grammar {
 		
 		// process material
 		if(mat_filename != "") {
-			string prefix = "";
+			std::string prefix = "";
 			const auto slash_pos = ctx.tu.file_name.rfind('/');
-			if(slash_pos != string::npos) {
+			if(slash_pos != std::string::npos) {
 				prefix = ctx.tu.file_name.substr(0, slash_pos + 1);
 			}
 #if defined(FLOOR_DEBUG)
 			log_debug("loading mat: $", mat_filename);
 #endif
-			string mat_data = "";
+			std::string mat_data = "";
 			if(!file_io::file_to_string(prefix + mat_filename, mat_data)) {
 				log_error("failed to load .mtl file: $", prefix + mat_filename);
 				return;
@@ -1202,14 +1205,14 @@ struct obj_grammar {
 			
 			// create a map of all texture file names
 			// value: at first use count, later: gl tex id
-			unordered_map<string, pair<uint32_t, compute_image*>> texture_filenames;
+			std::unordered_map<std::string, std::pair<uint32_t, device_image*>> texture_filenames;
 			for(const auto& mat : mats) {
-				texture_filenames.emplace(mat.second->ambient, pair<uint32_t, compute_image*> { 0, nullptr });
-				texture_filenames.emplace(mat.second->diffuse, pair<uint32_t, compute_image*> { 0, nullptr });
-				texture_filenames.emplace(mat.second->specular, pair<uint32_t, compute_image*> { 0, nullptr });
-				texture_filenames.emplace(mat.second->normal, pair<uint32_t, compute_image*> { 0, nullptr });
-				texture_filenames.emplace(mat.second->mask, pair<uint32_t, compute_image*> { 0, nullptr });
-				texture_filenames.emplace(mat.second->displacement, pair<uint32_t, compute_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->ambient, std::pair<uint32_t, device_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->diffuse, std::pair<uint32_t, device_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->specular, std::pair<uint32_t, device_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->normal, std::pair<uint32_t, device_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->mask, std::pair<uint32_t, device_image*> { 0, nullptr });
+				texture_filenames.emplace(mat.second->displacement, std::pair<uint32_t, device_image*> { 0, nullptr });
 			}
 			
 			// check use count
@@ -1243,10 +1246,10 @@ struct obj_grammar {
 			});
 			
 			// add dummy textures for later
-			texture_filenames.emplace("black.png", pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace("gray.png", pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace("white.png", pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace("up_normal.png", pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace("black.png", std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace("gray.png", std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace("white.png", std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace("up_normal.png", std::pair<uint32_t, device_image*> { 0, nullptr });
 			
 			//
 			floor_obj_model* floor_model = (floor_obj_model*)model.get();
@@ -1263,7 +1266,7 @@ struct obj_grammar {
 			}
 			
 			// assign textures/materials
-			unordered_map<string, uint32_t> mat_map; // mat name -> mat idx in model
+			std::unordered_map<std::string, uint32_t> mat_map; // mat name -> mat idx in model
 			uint32_t mat_counter { 0u };
 			for(const auto& mat : mats) {
 				mat_map[mat.first] = mat_counter++;
@@ -1301,23 +1304,23 @@ struct obj_grammar {
 	
 };
 
-shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
-									   const compute_context& ctx,
-									   const compute_queue& cqueue,
-									   const float scale,
-									   const bool cleanup_cpu_data,
-									   const bool is_load_textures,
-									   const bool create_gpu_buffers,
-									   const COMPUTE_MEMORY_FLAG add_mem_flags) {
+std::shared_ptr<obj_model> obj_loader::load(const std::string& file_name, bool& success,
+											const device_context& ctx,
+											const device_queue& cqueue,
+											const float scale,
+											const bool cleanup_cpu_data,
+											const bool is_load_textures,
+											const bool create_gpu_buffers,
+											const MEMORY_FLAG add_mem_flags) {
 	success = false;
 	
-	shared_ptr<floor_obj_model> floor_model = make_shared<floor_obj_model>();
-	shared_ptr<obj_model> model = (shared_ptr<obj_model>)floor_model;
+	std::shared_ptr<floor_obj_model> floor_model = std::make_shared<floor_obj_model>();
+	std::shared_ptr<obj_model> model = (std::shared_ptr<obj_model>)floor_model;
 	static constexpr const uint32_t bin_obj_version { 1 };
 	
 	// -> load .obj
 	if(!file_io::is_file(file_name + ".bin")) {
-		string obj_data = "";
+		std::string obj_data = "";
 		if(!file_io::file_to_string(file_name, obj_data)) {
 			log_error("failed to load .obj file: $", file_name);
 			return {};
@@ -1326,7 +1329,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		log_debug("loaded");
 #endif
 		
-		auto tu = make_unique<translation_unit>(file_name);
+		auto tu = std::make_unique<translation_unit>(file_name);
 		tu->source.insert(0, obj_data.c_str(), obj_data.size());
 		
 		obj_lexer::map_characters(*tu);
@@ -1430,9 +1433,9 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			return {};
 		}
 		
-		string prefix = "";
+		std::string prefix = "";
 		const auto slash_pos = file_name.rfind('/');
-		if(slash_pos != string::npos) {
+		if(slash_pos != std::string::npos) {
 			prefix = file_name.substr(0, slash_pos + 1);
 		}
 		
@@ -1471,17 +1474,17 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 			mat_info.normal_file_name = bin_file.get_terminated_block(0);
 			mat_info.mask_file_name = bin_file.get_terminated_block(0);
 			mat_info.displacement_file_name = bin_file.get_terminated_block(0);
-			mat_info.has_proper_displacement = (mat_info.displacement_file_name.find("gray.png") == string::npos ? 1u : 0u);
+			mat_info.has_proper_displacement = (mat_info.displacement_file_name.find("gray.png") == std::string::npos ? 1u : 0u);
 			model->material_infos.emplace_back(mat_info);
 		}
 		
-		unordered_map<string, pair<uint32_t, compute_image*>> texture_filenames;
+		std::unordered_map<std::string, std::pair<uint32_t, device_image*>> texture_filenames;
 		for(const auto& mat : model->material_infos) {
-			texture_filenames.emplace(mat.diffuse_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace(mat.specular_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace(mat.normal_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace(mat.mask_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
-			texture_filenames.emplace(mat.displacement_file_name, pair<uint32_t, compute_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.diffuse_file_name, std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.specular_file_name, std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.normal_file_name, std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.mask_file_name, std::pair<uint32_t, device_image*> { 0, nullptr });
+			texture_filenames.emplace(mat.displacement_file_name, std::pair<uint32_t, device_image*> { 0, nullptr });
 		}
 		if (is_load_textures) {
 			load_textures(texture_filenames,
@@ -1499,7 +1502,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		}
 		
 		for(uint32_t i = 0; i < sub_object_count; ++i) {
-			auto obj = make_unique<obj_model::sub_object>(obj_model::sub_object {
+			auto obj = std::make_unique<obj_model::sub_object>(obj_model::sub_object {
 				.name = bin_file.get_terminated_block(0)
 			});
 			const auto index_count = bin_file.get_uint();
@@ -1579,8 +1582,8 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		}
 		
 		// create buffers
-		const auto buffer_type = (COMPUTE_MEMORY_FLAG::READ |
-								  COMPUTE_MEMORY_FLAG::HOST_WRITE |
+		const auto buffer_type = (MEMORY_FLAG::READ |
+								  MEMORY_FLAG::HOST_WRITE |
 								  add_mem_flags);
 		floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
 		floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
@@ -1589,7 +1592,7 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		floor_model->tangents_buffer = ctx.create_buffer(cqueue, floor_model->tangents, buffer_type);
 		floor_model->materials_data_buffer = ctx.create_buffer(cqueue, floor_model->materials_data, buffer_type);
 		
-		vector<uint3> all_indices;
+		std::vector<uint3> all_indices;
 		for (auto& obj : floor_model->objects) {
 			obj->indices_floor_vbo = ctx.create_buffer(cqueue, obj->indices, buffer_type);
 			all_indices.insert(end(all_indices), begin(obj->indices), end(obj->indices));
@@ -1599,10 +1602,10 @@ shared_ptr<obj_model> obj_loader::load(const string& file_name, bool& success,
 		
 #if defined(FLOOR_DEBUG)
 		auto model_name = file_name;
-		if (const auto last_slash = model_name.rfind('/'); last_slash != string::npos) {
+		if (const auto last_slash = model_name.rfind('/'); last_slash != std::string::npos) {
 			model_name = model_name.substr(last_slash + 1);
 		}
-		if (const auto last_dot = model_name.rfind('.'); last_dot != string::npos) {
+		if (const auto last_dot = model_name.rfind('.'); last_dot != std::string::npos) {
 			model_name = model_name.substr(0, last_dot);
 		}
 		floor_model->vertices_buffer->set_debug_label(model_name + ":vertices");

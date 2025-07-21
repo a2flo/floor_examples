@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,12 +17,13 @@
  */
 
 #include <floor/core/essentials.hpp>
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
+#if defined(FLOOR_DEVICE_HOST_COMPUTE)
+#include <floor/device/backend/common.hpp>
 #endif
+using namespace fl;
 
 // graphics backends only
-#if defined(FLOOR_COMPUTE_METAL) || defined(FLOOR_COMPUTE_VULKAN) || defined(FLOOR_GRAPHICS_HOST)
+#if defined(FLOOR_DEVICE_METAL) || defined(FLOOR_DEVICE_VULKAN) || defined(FLOOR_GRAPHICS_HOST_COMPUTE)
 
 //////////////////////////////////////////
 // scene
@@ -71,8 +72,8 @@ fragment auto hlbvh_fragment(const scene_in_out in [[stage_input]],
 	const auto intensity = uniforms->light_dir.dot(in.normal);
 	float4 color;
 	if (in.collision > 0.0f) {
-		color = { 1.0f, 1.0f - clamp(in.collision * 0.3333f, 0.0f, 1.0f), 0.0f, 1.0f };
-		color.xyz *= max(intensity, 0.6f);
+		color = { 1.0f, 1.0f - math::clamp(in.collision * 0.3333f, 0.0f, 1.0f), 0.0f, 1.0f };
+		color.xyz *= math::max(intensity, 0.6f);
 	} else {
 		if (intensity > 0.95f) {
 			color = { in.color.xyz * 1.2f, in.color.w };

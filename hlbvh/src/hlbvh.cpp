@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2025 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,10 +18,10 @@
 
 #include "hlbvh_state.hpp"
 
-#if defined(FLOOR_COMPUTE)
+#if defined(FLOOR_DEVICE)
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
+#if defined(FLOOR_DEVICE_HOST_COMPUTE)
+#include <floor/device/backend/common.hpp>
 #endif
 
 #include "triangle_intersection.hpp"
@@ -109,12 +109,12 @@ kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_
 	}
 	
 	// min/max reduce
-	local_buffer<float3, compute_algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE>()> lmem_aabbs;
-	aabb_min = compute_algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs,
-															   [](const auto& lhs, const auto& rhs) { return lhs.minned(rhs); });
+	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE>()> lmem_aabbs;
+	aabb_min = algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs,
+													   [](const auto& lhs, const auto& rhs) { return lhs.minned(rhs); });
 	local_barrier();
-	aabb_max = compute_algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs,
-															   [](const auto& lhs, const auto& rhs) { return lhs.maxed(rhs); });
+	aabb_max = algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs,
+													   [](const auto& lhs, const auto& rhs) { return lhs.maxed(rhs); });
 	if (local_id.x == 0) {
 		atomic_min(&aabbs[mesh_idx * 6 + 0], aabb_min.x);
 		atomic_min(&aabbs[mesh_idx * 6 + 1], aabb_min.y);
@@ -575,7 +575,7 @@ kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,
 	if(id >= total_aabb_checks) return;
 	
 	// reverse cantor (map 1D linear index onto "half triangle" of a square -> all unique combinations of (i, j), with i != j)
-	const auto q = (uint32_t)fma(const_math::EPSILON<float> + sqrt(1.0f + 8.0f * float(id)), 0.5f, -0.5f);
+	const auto q = (uint32_t)math::fma(const_math::EPSILON<float> + math::sqrt(1.0f + 8.0f * float(id)), 0.5f, -0.5f);
 	const auto i = id - (q * (q + 1u)) / 2u;
 	const auto j = mesh_count - q + i - 1u;
 	
@@ -627,8 +627,8 @@ kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_count(buffer<const uint2> data,
 	}
 	
 	// reduce + write final result (group sum)
-	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
-	const auto reduced_value = compute_algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
+	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	const auto reduced_value = algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
 	if(lid == 0) {
 		valid_counts[gid] = reduced_value;
 	}
@@ -639,8 +639,8 @@ kernel_1d(PREFIX_SUM_GROUP_SIZE) void radix_sort_prefix_sum(buffer<uint32_t> in_
 	uint32_t val = (idx < COMPACTION_GROUP_COUNT ? in_out[idx] : 0);
 	
 	// work-group scan
-	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<PREFIX_SUM_GROUP_SIZE>()> lmem;
-	const auto result = compute_algorithm::inclusive_scan_add<PREFIX_SUM_GROUP_SIZE>(val, lmem);
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<PREFIX_SUM_GROUP_SIZE>()> lmem;
+	const auto result = algorithm::inclusive_scan_add<PREFIX_SUM_GROUP_SIZE>(val, lmem);
 	
 	if (idx < COMPACTION_GROUP_COUNT) {
 		in_out[idx] = result;
@@ -660,7 +660,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_stream_split(buffer<const uint2
 	
 	// since we're using barriers in here, all work-items must always execute this
 	// -> only abort once the base id is out of range
-	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
 	for (uint32_t base_id = gid * count_per_group;
 		 base_id < ((gid + 1u) * count_per_group) && base_id < count;
 		 base_id += COMPACTION_GROUP_SIZE) {
@@ -672,7 +672,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_stream_split(buffer<const uint2
 		const auto valid = (is_active && (current.x & mask_op_bit) == 0u ? 1u : 0u);
 		
 		local_barrier();
-		const auto result = compute_algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
+		const auto result = algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
 		
 		if(is_active) {
 			out[valid ?
@@ -712,8 +712,8 @@ kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_count(buffer<const uin
 	}
 	
 	// reduce + write final result (group sum)
-	local_buffer<uint32_t, compute_algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
-	const auto reduced_value = compute_algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
+	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	const auto reduced_value = algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
 	if (lid == 0) {
 		valid_counts[gid] = reduced_value;
 	}
@@ -733,7 +733,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_stream_split(buffer<co
 	
 	// since we're using barriers in here, all work-items must always execute this
 	// -> only abort once the base id is out of range
-	local_buffer<uint32_t, compute_algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
 	for (uint32_t base_id = gid * params->count_per_group;
 		 base_id < ((gid + 1u) * params->count_per_group) && base_id < params->count;
 		 base_id += COMPACTION_GROUP_SIZE) {
@@ -745,7 +745,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_stream_split(buffer<co
 		const auto valid = (is_active && (current.x & *mask_op_bit) == 0u ? 1u : 0u);
 		
 		local_barrier();
-		const auto result = compute_algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
+		const auto result = algorithm::inclusive_scan_add<COMPACTION_GROUP_SIZE>(valid, lmem);
 		
 		if (is_active) {
 			out[valid ?
