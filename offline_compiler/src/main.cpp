@@ -1120,7 +1120,7 @@ static int run_normal_build(option_context& option_ctx) {
 				//       a pipeline (however, this can only be done for compute right now)
 				vulkan_program::program_map_type prog_map;
 				prog_map.insert_or_assign((const vulkan_device*)dev,
-										  ctx->create_vulkan_program(*dev, program));
+										  ctx->create_vulkan_program(program));
 				ctx->add_program(std::move(prog_map)); // will have already printed an error (if sth was wrong)
 #else
 				log_error("Vulkan testing not supported on this platform (or disabled during floor compilation)");
@@ -1158,6 +1158,7 @@ int main(int, char* argv[]) {
 		.data_path = "data/",
 #endif
 		.console_only = true,
+		.context_flags = DEVICE_CONTEXT_FLAGS::DISABLE_HEAP
 	})) {
 		return -1;
 	}
