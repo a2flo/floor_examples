@@ -627,7 +627,7 @@ int main(int, char* argv[]) {
 #endif
 					 // Vulkan/Metal are disabled
 					 floor::RENDERER::NONE),
-		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING | DEVICE_CONTEXT_FLAGS::__EXP_INTERNAL_HEAP,
+		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}

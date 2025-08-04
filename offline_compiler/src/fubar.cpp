@@ -487,6 +487,20 @@ namespace fl::fubar {
 					.version = universal_binary::target_format_version,
 					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 8,
+					.sm_minor = 8,
+					.sm_aa = 0,
+					.ptx_isa_major = 9,
+					.ptx_isa_minor = 0,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = PLATFORM_TYPE::CUDA,
+					.sm_major = 8,
 					.sm_minor = 9,
 					.sm_aa = 0,
 					.ptx_isa_major = 8,
@@ -547,6 +561,20 @@ namespace fl::fubar {
 					.sm_aa = 1,
 					.ptx_isa_major = 8,
 					.ptx_isa_minor = 8,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = PLATFORM_TYPE::CUDA,
+					.sm_major = 11,
+					.sm_minor = 0,
+					.sm_aa = 1,
+					.ptx_isa_major = 9,
+					.ptx_isa_minor = 0,
 					.is_ptx = 1,
 					.image_depth_compare_support = 0,
 					._unused = 0,
