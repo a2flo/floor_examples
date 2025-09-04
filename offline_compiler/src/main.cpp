@@ -97,6 +97,9 @@ struct option_context {
 	bool native_cl { false };
 	optional<bool> soft_printf;
 	bool barycentric_coord_support { false };
+	bool vulkan_subgroup_uniform_cf_support { true };
+	bool vulkan_low_iub_count { false };
+	bool vulkan_low_desc_set_count { false };
 	optional<bool> assert_support;
 	
 	bool is_fubar_build { false };
@@ -155,6 +158,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--spirv-opt [opt-overrides]: runs spirv-opt after toolchain compilation (only Vulkan), with optional options override (CSV)\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
 				 "\t--barycentric-coord: enables barycentric coordinate support (only Metal and Vulkan)\n"
+				 "\t--no-vulkan-subgroup-uniform-cf: disables Vulkan/SPIR-V subgroup uniform control flow (only Vulkan)\n"
+				 "\t--vulkan-low-iub: enables low inline uniform block count functionality, i.e. only assumes 4 rather than 16 IUBs are available (only Vulkan)\n"
+				 "\t--vulkan-low-ds: enables low descriptor set count functionality, i.e. only assumes 7 rather than 16 descriptor sets are available (only Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--fubar-compress: compress all binary data in the built FUBAR\n"
@@ -464,6 +470,15 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--barycentric-coord", [](option_context& ctx, char**&) {
 		ctx.barycentric_coord_support = true;
 	}},
+	{ "--no-vulkan-subgroup-uniform-cf", [](option_context& ctx, char**&) {
+		ctx.vulkan_subgroup_uniform_cf_support = false;
+	}},
+	{ "--vulkan-low-iub", [](option_context& ctx, char**&) {
+		ctx.vulkan_low_iub_count = true;
+	}},
+	{ "--vulkan-low-ds", [](option_context& ctx, char**&) {
+		ctx.vulkan_low_desc_set_count = true;
+	}},
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
 	}},
@@ -684,6 +699,16 @@ static int run_normal_build(option_context& option_ctx) {
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
 				}
+				
+				dev->subgroup_uniform_cf_support = option_ctx.vulkan_subgroup_uniform_cf_support;
+				
+				dev->max_inline_uniform_block_count = (option_ctx.vulkan_low_iub_count ?
+													   vulkan_device::min_required_inline_uniform_block_count :
+													   vulkan_device::min_required_high_inline_uniform_block_count);
+				
+				dev->max_descriptor_set_count = (option_ctx.vulkan_low_desc_set_count ?
+												 vulkan_device::min_required_bound_descriptor_sets :
+												 vulkan_device::min_required_high_bound_descriptor_sets);
 				
 				// handle version
 				dev->vulkan_version = option_ctx.vulkan_std;
