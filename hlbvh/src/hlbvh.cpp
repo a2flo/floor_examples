@@ -109,7 +109,7 @@ kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_
 	}
 	
 	// min/max reduce
-	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE>()> lmem_aabbs;
+	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE, float3>()> lmem_aabbs;
 	aabb_min = algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs,
 													   [](const auto& lhs, const auto& rhs) { return lhs.minned(rhs); });
 	local_barrier();
@@ -627,7 +627,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_count(buffer<const uint2> data,
 	}
 	
 	// reduce + write final result (group sum)
-	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE, uint32_t>()> lmem;
 	const auto reduced_value = algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
 	if(lid == 0) {
 		valid_counts[gid] = reduced_value;
@@ -639,7 +639,7 @@ kernel_1d(PREFIX_SUM_GROUP_SIZE) void radix_sort_prefix_sum(buffer<uint32_t> in_
 	uint32_t val = (idx < COMPACTION_GROUP_COUNT ? in_out[idx] : 0);
 	
 	// work-group scan
-	local_buffer<uint32_t, algorithm::scan_local_memory_elements<PREFIX_SUM_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<PREFIX_SUM_GROUP_SIZE, uint32_t>()> lmem;
 	const auto result = algorithm::inclusive_scan_add<PREFIX_SUM_GROUP_SIZE>(val, lmem);
 	
 	if (idx < COMPACTION_GROUP_COUNT) {
@@ -660,7 +660,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void radix_sort_stream_split(buffer<const uint2
 	
 	// since we're using barriers in here, all work-items must always execute this
 	// -> only abort once the base id is out of range
-	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE, uint32_t>()> lmem;
 	for (uint32_t base_id = gid * count_per_group;
 		 base_id < ((gid + 1u) * count_per_group) && base_id < count;
 		 base_id += COMPACTION_GROUP_SIZE) {
@@ -712,7 +712,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_count(buffer<const uin
 	}
 	
 	// reduce + write final result (group sum)
-	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::reduce_local_memory_elements<COMPACTION_GROUP_SIZE, uint32_t>()> lmem;
 	const auto reduced_value = algorithm::reduce_add<COMPACTION_GROUP_SIZE>(uint32_t(counter), lmem);
 	if (lid == 0) {
 		valid_counts[gid] = reduced_value;
@@ -733,7 +733,7 @@ kernel_1d(COMPACTION_GROUP_SIZE) void indirect_radix_sort_stream_split(buffer<co
 	
 	// since we're using barriers in here, all work-items must always execute this
 	// -> only abort once the base id is out of range
-	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE>()> lmem;
+	local_buffer<uint32_t, algorithm::scan_local_memory_elements<COMPACTION_GROUP_SIZE, uint32_t>()> lmem;
 	for (uint32_t base_id = gid * params->count_per_group;
 		 base_id < ((gid + 1u) * params->count_per_group) && base_id < params->count;
 		 base_id += COMPACTION_GROUP_SIZE) {
