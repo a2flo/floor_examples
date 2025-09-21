@@ -110,11 +110,9 @@ kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_
 	
 	// min/max reduce
 	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE, float3>()> lmem_aabbs;
-	aabb_min = algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs,
-													   [](const auto& lhs, const auto& rhs) { return lhs.minned(rhs); });
+	aabb_min = algorithm::reduce_min<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs);
 	local_barrier();
-	aabb_max = algorithm::reduce<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs,
-													   [](const auto& lhs, const auto& rhs) { return lhs.maxed(rhs); });
+	aabb_max = algorithm::reduce_max<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs);
 	if (local_id.x == 0) {
 		atomic_min(&aabbs[mesh_idx * 6 + 0], aabb_min.x);
 		atomic_min(&aabbs[mesh_idx * 6 + 1], aabb_min.y);
