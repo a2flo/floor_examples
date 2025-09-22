@@ -112,6 +112,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tbasic-64-bit-atomics-support: $", cl.basic_64_bit_atomics_support ? "yes" : "no");
 				log_undecorated("\t\textended-64-bit-atomics-support: $", cl.extended_64_bit_atomics_support ? "yes" : "no");
 				log_undecorated("\t\tsub-group-support: $", cl.sub_group_support ? "yes" : "no");
+				log_undecorated("\t\tsub-group-ballot-support: $", cl.sub_group_ballot_support ? "yes" : "no");
 				log_undecorated("\t\tSIMD width: $", cl.simd_width);
 				break;
 			}

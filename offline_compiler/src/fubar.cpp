@@ -241,6 +241,7 @@ namespace fl::fubar {
 				.extended_64_bit_atomics_support = target_obj.at("extended_64_bit_atomics_support").get_or_throw<bool>(),
 				.sub_group_support = target_obj.at("sub_group_support").get_or_throw<bool>(),
 				.simd_width = simd_width,
+				.sub_group_ballot_support = target_obj.at("sub_group_ballot_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -803,6 +804,7 @@ namespace fl::fubar {
 					.extended_64_bit_atomics_support = 0,
 					.sub_group_support = 0,
 					.simd_width = 0,
+					.sub_group_ballot_support = 0,
 					._unused = 0,
 				}
 			},
@@ -824,6 +826,7 @@ namespace fl::fubar {
 					.extended_64_bit_atomics_support = 0,
 					.sub_group_support = 0,
 					.simd_width = 0,
+					.sub_group_ballot_support = 0,
 					._unused = 0,
 				}
 			},
