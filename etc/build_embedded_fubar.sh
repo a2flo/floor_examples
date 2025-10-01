@@ -7,6 +7,8 @@ if [[ $# < 2 ]]; then
 fi
 src_file="$1"
 out_file="$2"
+shift
+shift
 
 # get occ binary
 OCC=
@@ -26,7 +28,7 @@ fi
 # build
 rm "${out_file}" 2>/dev/null
 targets_json=$(dirname "$0")"/targets.json"
-${OCC} --src "${src_file}" --fubar "${targets_json}" --out "${out_file}" --fubar-compress --no-double -vv --warnings -- -fdiscard-value-names
+${OCC} --src "${src_file}" --fubar "${targets_json}" --out "${out_file}" --fubar-compress --no-double -vv --warnings "$@" -- -fdiscard-value-names
 if [ ! -f "${out_file}" ]; then
 	echo "failed to build ${src_file}"
 	exit -3
