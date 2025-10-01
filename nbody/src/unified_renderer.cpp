@@ -38,7 +38,6 @@ static shared_ptr<device_image> resolve_image;
 static unique_ptr<graphics_pass> blit_pass;
 static unique_ptr<graphics_pipeline> blit_pipeline;
 static bool is_vr_renderer { false };
-static event::handler_f resize_handler_fnctr = bind(&unified_renderer::resize_handler, placeholders::_1, placeholders::_2);
 
 static const device_context* ctx_ptr { nullptr };
 static const device_queue* dev_queue_ptr { nullptr };
@@ -81,31 +80,6 @@ static void create_textures(const device_context& ctx, const device_queue& dev_q
 	}
 }
 
-bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
-	if (type == EVENT_TYPE::WINDOW_RESIZE) {
-		// intermediate render output image
-		const auto frame_dim = ctx_ptr->get_renderer_image_dim();
-		render_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
-											 render_format |
-											 (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
-											 (enable_msaa ? msaa_flags : IMAGE_TYPE::READ) |
-											 IMAGE_TYPE::FLAG_RENDER_TARGET,
-											 MEMORY_FLAG::READ_WRITE);
-		render_image->set_debug_label("render_image");
-		if (enable_msaa) {
-			resolve_image = ctx_ptr->create_image(*dev_queue_ptr, frame_dim,
-												  render_format |
-												  (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
-												  IMAGE_TYPE::READ |
-												  IMAGE_TYPE::FLAG_RENDER_TARGET,
-												  MEMORY_FLAG::READ_WRITE);
-			resolve_image->set_debug_label("resolve_image");
-		}
-		return true;
-	}
-	return false;
-}
-
 bool unified_renderer::init(const device_context& ctx, const device_queue& dev_queue, const bool enable_msaa_,
 							const device_function& vs, const device_function& fs,
 							const device_function* blit_vs, const device_function* blit_fs, const device_function* blit_fs_layered) {
@@ -117,8 +91,6 @@ bool unified_renderer::init(const device_context& ctx, const device_queue& dev_q
 	enable_msaa = enable_msaa_;
 	dev_queue_ptr = &dev_queue;
 	ctx_ptr = &ctx;
-
-	floor::get_event()->add_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 
 	create_textures(ctx, dev_queue);
 
@@ -173,9 +145,6 @@ bool unified_renderer::init(const device_context& ctx, const device_queue& dev_q
 		return false;
 	}
 
-	// trigger resize to create the output image
-	resize_handler(EVENT_TYPE::WINDOW_RESIZE, nullptr);
-
 	// blit pipeline/pass
 	const auto screen_format = ctx.get_renderer_image_type();
 
@@ -214,8 +183,6 @@ bool unified_renderer::init(const device_context& ctx, const device_queue& dev_q
 }
 
 void unified_renderer::destroy(const device_context& ctx floor_unused) {
-	floor::get_event()->remove_event_handler(resize_handler_fnctr);
-
 	for (auto& tex : body_textures) {
 		tex = nullptr;
 	}
@@ -230,6 +197,29 @@ void unified_renderer::destroy(const device_context& ctx floor_unused) {
 }
 
 void unified_renderer::render(const device_context& ctx, const device_queue& dev_queue, const device_buffer& position_buffer) {
+	const auto screen_size = ctx_ptr->get_renderer_image_dim();
+
+	// (re)create render images if necessary
+	if (!render_image || (screen_size != render_image->get_image_dim().xy).any()) {
+		// intermediate render output image
+		render_image = ctx_ptr->create_image(*dev_queue_ptr, screen_size,
+											 render_format |
+											 (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
+											 (enable_msaa ? msaa_flags : IMAGE_TYPE::READ) |
+											 IMAGE_TYPE::FLAG_RENDER_TARGET,
+											 MEMORY_FLAG::READ_WRITE);
+		render_image->set_debug_label("render_image");
+		if (enable_msaa) {
+			resolve_image = ctx_ptr->create_image(*dev_queue_ptr, screen_size,
+												  render_format |
+												  (!is_vr_renderer ? IMAGE_TYPE::IMAGE_2D : IMAGE_TYPE::IMAGE_2D_ARRAY) |
+												  IMAGE_TYPE::READ |
+												  IMAGE_TYPE::FLAG_RENDER_TARGET,
+												  MEMORY_FLAG::READ_WRITE);
+			resolve_image->set_debug_label("resolve_image");
+		}
+	}
+
 	// render scene
 	{
 		// create the renderer for this frame

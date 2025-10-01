@@ -76,6 +76,10 @@ static size_t iteration { 0 };
 static double sim_time_sum { 0.0 };
 // initializes (or resets) the current nbody system
 static void init_system();
+// exports the current nbody system to a file
+static void export_nbody_system();
+// set to true when the nbody system should be exported after the next run
+static atomic<bool> export_next_run { false };
 // the amount of nbody compute iterations that will be performed for the benchmark
 static constexpr const uint32_t benchmark_iterations { 100 };
 // when using indirect command pipelines: this contains the full 100 iterations of the nbody benchmark
@@ -333,6 +337,9 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 				nbody_setup = NBODY_SETUP::STAR_COLLAPSE;
 				init_system();
 				break;
+			case SDLK_E:
+				export_next_run = true;
+				break;
 			default: break;
 		}
 		return true;
@@ -583,6 +590,23 @@ void init_system() {
 	sim_time_sum = 0.0L;
 }
 
+void export_nbody_system() {
+	log_msg("exporting nbody system ...");
+	
+	dev_queue->finish();
+	
+	const auto& cur_pos_buffer = position_buffers[buffer_flip_flop];
+	auto positions = make_unique<float4[]>(nbody_state.body_count);
+	std::span positions_span { positions.get(), nbody_state.body_count };
+	cur_pos_buffer->read(*dev_queue, positions_span.data(), positions_span.size_bytes());
+	if (!file_io::buffer_to_file("nbody_positions_" + to_string(nbody_state.body_count) + ".bin",
+								 (const char*)positions_span.data(), positions_span.size_bytes())) {
+		log_error("failed to export nbody system");
+	} else {
+		log_msg("exported nbody system!");
+	}
+}
+
 // embed the compiled nbody FUBAR file if it is available
 #if __has_embed("../../data/nbody.fubar")
 static constexpr const uint8_t nbody_fubar[] {
@@ -806,8 +830,7 @@ int main(int, char* argv[]) {
 	init_system();
 
 	// create the indirect command pipeline for benchmarking
-	if (nbody_state.benchmark && !nbody_state.no_indirect && compute_dev->indirect_command_support &&
-		compute_dev->indirect_compute_command_support) {
+	if (nbody_state.benchmark && !nbody_state.no_indirect) {
 		do {
 			indirect_command_description desc{ .command_type = indirect_command_description::COMMAND_TYPE::COMPUTE,
 											   .max_command_count = benchmark_iterations,
@@ -936,6 +959,11 @@ int main(int, char* argv[]) {
 			}
 		}
 		//break;
+		
+		// export if this was triggered
+		if (export_next_run.exchange(false)) {
+			export_nbody_system();
+		}
 		
 		// s/w rendering
 		if (floor_renderer == floor::RENDERER::NONE && !nbody_state.benchmark) {

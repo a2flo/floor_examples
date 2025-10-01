@@ -30,7 +30,7 @@
 #endif
 
 #if !defined(NBODY_TILE_SIZE)
-#define NBODY_TILE_SIZE 512u
+#define NBODY_TILE_SIZE 256u
 #endif
 
 using namespace fl;

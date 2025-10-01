@@ -29,7 +29,6 @@ struct unified_renderer {
 					 const device_function* blit_vs, const device_function* blit_fs, const device_function* blit_fs_layered);
 	static void destroy(const device_context& ctx);
 	static void render(const device_context& ctx, const device_queue& dev_queue, const device_buffer& position_buffer);
-	static bool resize_handler(EVENT_TYPE type, std::shared_ptr<event_object> evt);
 };
 
 #endif

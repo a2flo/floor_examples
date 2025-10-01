@@ -215,7 +215,13 @@ vertex auto lighting_vertex(buffer<const float4> vertex_array,
 
 fragment auto lighting_fragment(stage_in_out in [[stage_input]],
 								const_image_2d<float> tex) {
+#if 1
 	return tex.read_linear(point_coord) * in.color;
+#else // identical, but dynamically computed
+	const auto val = 1.0f - const_math::clamp((point_coord * 2.0f - 1.0f).dot(), 0.0f, 1.0f);
+	const auto alpha = (val > 0.25f ? 1.0f : val);
+	return float4 { val, val, val, alpha } * in.color;
+#endif
 }
 
 struct blit_in_out {
