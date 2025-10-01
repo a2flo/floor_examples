@@ -37,11 +37,24 @@ protected:
 	std::vector<uint32_t> collision_flags_host;
 	
 	std::unique_ptr<indirect_command_pipeline> radix_sort_pipeline;
-	uint32_t radix_sort_pipeline_max_bit = 0u;
+	uint32_t radix_sort_pipeline_max_bit { 0u };
 	
-	void radix_sort(std::shared_ptr<device_buffer> buffer,
-					std::shared_ptr<device_buffer> ping_buffer,
-					const uint32_t size,
-					const uint32_t max_bit = 32u);
+	void radix_sort(device_buffer* inout_buffer,
+					device_buffer* ping_buffer,
+					device_buffer* values_inout_buffer,
+					device_buffer* values_ping_buffer,
+					const uint32_t count);
+	
+	void radix_sort_legacy(device_buffer* inout_buffer,
+						   device_buffer* ping_buffer,
+						   device_buffer* values_inout_buffer,
+						   device_buffer* values_ping_buffer,
+						   const uint32_t count);
+	
+	void radix_sort_improved(device_buffer* inout_buffer,
+							 device_buffer* ping_buffer,
+							 device_buffer* values_inout_buffer,
+							 device_buffer* values_ping_buffer,
+							 const uint32_t count);
 	
 };

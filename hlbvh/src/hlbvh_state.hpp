@@ -24,6 +24,7 @@
 #include <floor/device/device_context.hpp>
 #include <floor/device/device.hpp>
 #include <floor/device/device_queue.hpp>
+#include <floor/device/indirect_command.hpp>
 #endif
 using namespace fl;
 
@@ -44,13 +45,14 @@ struct hlbvh_state_struct {
 	bool benchmark { false };
 	bool no_fubar { false };
 	
-	bool uni_renderer { true };
-	
 	// if true:  draw collided triangles red (note that this is slower than
 	//           "just doing collision detection" due the necessity to copy/transform
 	//           data so that it can be used by the renderer), also still some inaccuracies
 	// if false: draw collided models red (fast-ish, not as fast as console/benchmark-only mode)
 	bool triangle_vis { true };
+	
+	// use improved radix sort?
+	bool improved_radix_sort { true };
 	
 #if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
 	// main compute context
@@ -67,9 +69,49 @@ struct hlbvh_state_struct {
 	//! render device
 	const device* rdev { nullptr };
 	
+	PLATFORM_TYPE default_platform { PLATFORM_TYPE::NONE };
+	
 	// collision/hlbvh kernels
-	std::unordered_map<std::string, std::shared_ptr<device_function>> kernels;
-	std::unordered_map<std::string, uint32_t> kernel_max_local_size;
+	const device_function* kernel_build_aabbs { nullptr };
+	const device_function* kernel_collide_root_aabbs { nullptr };
+	const device_function* kernel_compute_morton_codes { nullptr };
+	const device_function* kernel_build_bvh { nullptr };
+	const device_function* kernel_build_bvh_aabbs_leaves { nullptr };
+	const device_function* kernel_build_bvh_aabbs { nullptr };
+	const device_function* kernel_collide_bvhs_no_tri_vis { nullptr };
+	const device_function* kernel_collide_bvhs_tri_vis { nullptr };
+	const device_function* kernel_map_collided_triangles { nullptr };
+	
+	const device_function* kernel_indirect_radix_sort_count { nullptr };
+	const device_function* kernel_radix_sort_prefix_sum { nullptr };
+	const device_function* kernel_indirect_radix_sort_stream_split { nullptr };
+	
+	const device_function* kernel_indirect_radix_zero { nullptr };
+	const device_function* kernel_indirect_radix_upsweep_init { nullptr };
+	const device_function* kernel_indirect_radix_upsweep_pass_only { nullptr };
+	const device_function* kernel_indirect_radix_scan_small { nullptr };
+	const device_function* kernel_indirect_radix_scan { nullptr };
+	const device_function* kernel_indirect_radix_downsweep_keys { nullptr };
+	const device_function* kernel_indirect_radix_downsweep_kv16 { nullptr };
+	std::shared_ptr<indirect_command_pipeline> radix_sort_pipeline;
+	std::array<std::shared_ptr<device_buffer>, 4u> radix_shift_param_buffers;
+	std::shared_ptr<device_buffer> radix_sort_param_buffer;
+	std::shared_ptr<device_buffer> radix_sort_global_histogram;
+	std::shared_ptr<device_buffer> radix_sort_pass_histogram;
+	
+	uint32_t max_local_size_build_aabbs { 0u };
+	uint32_t max_local_size_collide_root_aabbs { 0u };
+	uint32_t max_local_size_compute_morton_codes { 0u };
+	uint32_t max_local_size_build_bvh { 0u };
+	uint32_t max_local_size_build_bvh_aabbs_leaves { 0u };
+	uint32_t max_local_size_build_bvh_aabbs { 0u };
+	uint32_t max_local_size_collide_bvhs_no_tri_vis { 0u };
+	uint32_t max_local_size_collide_bvhs_tri_vis { 0u };
+	uint32_t max_local_size_map_collided_triangles { 0u };
+	
+	uint32_t max_local_size_indirect_radix_sort_count { 0u };
+	uint32_t max_local_size_radix_sort_prefix_sum { 0u };
+	uint32_t max_local_size_indirect_radix_sort_stream_split { 0u };
 #endif
 	
 };

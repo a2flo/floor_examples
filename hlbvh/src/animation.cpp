@@ -17,6 +17,7 @@
  */
 
 #include "animation.hpp"
+#include "radix_sort.hpp"
 #include <floor/threading/task.hpp>
 
 animation::animation(const std::string& file_prefix,
@@ -152,24 +153,36 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 			return;
 		}
 	}
-	if (tri_count >= 65536) {
-		log_error("triangle count is too large: $' - only up to 65535 triangles are supported", tri_count);
+	if (tri_count > max_triangle_count) {
+		log_error("triangle count is too large: $' - only up to $' triangles are supported", tri_count, max_triangle_count);
 		return;
 	}
 	log_debug("$ #triangles: $", file_prefix, tri_count);
 	
-	// now that we have the max triangle count, allocate the morton codes + ping buffer with this max size.
-	// note that radix sort requires a multiple of 8192 (32 * 256) elements to function.
-	static const size_t rs_alignment = 32u * COMPACTION_GROUP_SIZE * sizeof(uint2);
-	auto morton_codes_size = tri_count * sizeof(uint2);
-	if (morton_codes_size % rs_alignment != 0) {
-		morton_codes_size = ((morton_codes_size / rs_alignment) + 1) * rs_alignment;
+	// now that we have the max triangle count, allocate the morton codes + ping buffer with this max size
+	auto morton_codes_keys_size = tri_count * sizeof(uint32_t);
+	auto morton_codes_values_size = tri_count * sizeof(uint16_t);
+	if (!hlbvh_state.improved_radix_sort) {
+		// NOTE: legacy radix sort requires a multiple of 8192 (32 * 256) elements to function.
+		static constexpr const size_t rs_legacy_alignment_keys { 32u * COMPACTION_GROUP_SIZE * sizeof(uint32_t) };
+		static constexpr const size_t rs_legacy_alignment_values { 32u * COMPACTION_GROUP_SIZE * sizeof(uint16_t) };
+		if ((morton_codes_keys_size % rs_legacy_alignment_keys) != 0) {
+			morton_codes_keys_size = ((morton_codes_keys_size / rs_legacy_alignment_keys) + 1) * rs_legacy_alignment_keys;
+		}
+		if ((morton_codes_values_size % rs_legacy_alignment_values) != 0) {
+			morton_codes_values_size = ((morton_codes_values_size / rs_legacy_alignment_values) + 1) * rs_legacy_alignment_values;
+		}
 	}
 	
-	morton_codes = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_size);
-	morton_codes->set_debug_label("morton_codes");
-	morton_codes_ping = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_size);
-	morton_codes_ping->set_debug_label("morton_codes_ping");
+	morton_codes_keys = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_keys_size);
+	morton_codes_keys->set_debug_label("morton_codes_keys");
+	morton_codes_keys_ping = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_keys_size);
+	morton_codes_keys_ping->set_debug_label("morton_codes_keys_ping");
+	morton_codes_values = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_values_size);
+	morton_codes_values->set_debug_label("morton_codes_values");
+	morton_codes_values_ping = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, morton_codes_values_size);
+	morton_codes_values_ping->set_debug_label("morton_codes_values_ping");
+	
 	triangles = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(float3) * 3u);
 	triangles->set_debug_label("triangles");
 	

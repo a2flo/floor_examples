@@ -25,6 +25,7 @@
 #include "animation.hpp"
 #include "collider.hpp"
 #include "camera.hpp"
+#include "radix_sort.hpp"
 using namespace std::chrono_literals;
 
 hlbvh_state_struct hlbvh_state;
@@ -44,13 +45,18 @@ static const double3 cam_speeds { 25.0 /* default */, 150.0 /* faster */, 2.5 /*
 template<> std::vector<std::pair<std::string, hlbvh_opt_handler::option_function>> hlbvh_opt_handler::options {
 	{ "--help", [](hlbvh_option_context&, char**&) {
 		std::cout << "command line options:" << std::endl;
+		std::cout << "\t--cuda: set default compute backend to CUDA" << std::endl;
+		std::cout << "\t--host: set default compute backend to Host-Compute" << std::endl;
+		std::cout << "\t--metal: set default compute backend to Metal" << std::endl;
+		std::cout << "\t--opencl: set default compute backend to OpenCL" << std::endl;
+		std::cout << "\t--vulkan: set default compute backend to Vulkan" << std::endl;
 #if defined(__APPLE__)
-		std::cout << "\t--no-metal: disables metal rendering" << std::endl;
+		std::cout << "\t--no-metal: disables Metal rendering" << std::endl;
 #endif
-		std::cout << "\t--no-vulkan: disables vulkan rendering" << std::endl;
-		std::cout << "\t--no-unified: do not use the unified renderer (uses the OpenGL renderer instead)" << std::endl;
+		std::cout << "\t--no-vulkan: disables Vulkan rendering" << std::endl;
 		std::cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << std::endl;
 		std::cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << std::endl;
+		std::cout << "\t--legacy-radix-sort: force the use of the legacy radix sort" << std::endl;
 		hlbvh_state.done = true;
 		
 		std::cout << std::endl;
@@ -71,27 +77,46 @@ template<> std::vector<std::pair<std::string, hlbvh_opt_handler::option_function
 		// TODO: performance stats
 		std::cout << std::endl;
 	}},
+	{ "--cuda", [](hlbvh_option_context&, char**&) {
+		std::cout << "using CUDA" << std::endl;
+		hlbvh_state.default_platform = PLATFORM_TYPE::CUDA;
+	}},
+	{ "--host", [](hlbvh_option_context&, char**&) {
+		std::cout << "using Host-Compute" << std::endl;
+		hlbvh_state.default_platform = PLATFORM_TYPE::HOST;
+	}},
+	{ "--metal", [](hlbvh_option_context&, char**&) {
+		std::cout << "using Metal" << std::endl;
+		hlbvh_state.default_platform = PLATFORM_TYPE::METAL;
+	}},
+	{ "--opencl", [](hlbvh_option_context&, char**&) {
+		std::cout << "using OpenCL" << std::endl;
+		hlbvh_state.default_platform = PLATFORM_TYPE::OPENCL;
+	}},
+	{ "--vulkan", [](hlbvh_option_context&, char**&) {
+		std::cout << "using Vulkan" << std::endl;
+		hlbvh_state.default_platform = PLATFORM_TYPE::VULKAN;
+	}},
 	{ "--no-metal", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true;
-		std::cout << "metal disabled" << std::endl;
+		std::cout << "Metal rendering disabled" << std::endl;
 	}},
 	{ "--no-vulkan", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_vulkan = true;
-		std::cout << "vulkan disabled" << std::endl;
-	}},
-	{ "--no-unified", [](hlbvh_option_context&, char**&) {
-		hlbvh_state.uni_renderer = false;
-		std::cout << "unified renderer disabled" << std::endl;
+		std::cout << "Vulkan rendering disabled" << std::endl;
 	}},
 	{ "--no-triangle-vis", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.triangle_vis = false;
 		std::cout << "triangle collision visualization disabled" << std::endl;
 	}},
+	{ "--legacy-radix-sort", [](hlbvh_option_context&, char**&) {
+		hlbvh_state.improved_radix_sort = false;
+		std::cout << "improved radix sort disabled" << std::endl;
+	}},
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true; // also disable metal
 		hlbvh_state.no_vulkan = true; // also disable vulkan
 		hlbvh_state.triangle_vis = false; // triangle visualization is unnecessary here
-		hlbvh_state.uni_renderer = false;
 		hlbvh_state.benchmark = true;
 		std::cout << "benchmark mode enabled" << std::endl;
 	}},
@@ -234,9 +259,12 @@ static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 }
 
 // embed the compiled hlbvh FUBAR files if they are available
-#if __has_embed("../../data/hlbvh.fubar") && __has_embed("../../data/hlbvh_shaders.fubar")
+#if __has_embed("../../data/hlbvh.fubar") && __has_embed("../../data/hlbvh_radix_sort.fubar") && __has_embed("../../data/hlbvh_shaders.fubar")
 static constexpr const uint8_t hlbvh_fubar[] {
 #embed "../../data/hlbvh.fubar"
+};
+static constexpr const uint8_t hlbvh_radix_sort_fubar[] {
+#embed "../../data/hlbvh_radix_sort.fubar"
 };
 static constexpr const uint8_t hlbvh_shaders_fubar[] {
 #embed "../../data/hlbvh_shaders.fubar"
@@ -275,6 +303,7 @@ int main(int, char* argv[]) {
 #endif
 		.app_name = "hlbvh",
 		.console_only = hlbvh_state.benchmark,
+		.default_platform = hlbvh_state.default_platform,
 		.renderer = wanted_renderer,
 		// disable resource tracking and enable non-blocking Vulkan execution
 		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
@@ -311,8 +340,6 @@ int main(int, char* argv[]) {
 	} else {
 		hlbvh_state.no_vulkan = true;
 	}
-	
-	log_debug("using $", (hlbvh_state.uni_renderer ? "unified renderer" : "no renderer at all"));
 	
 	// add event handlers
 	event::handler_f evt_handler_fnctr(&evt_handler);
@@ -352,6 +379,7 @@ int main(int, char* argv[]) {
 	
 	//
 	std::shared_ptr<device_program> prog;
+	std::shared_ptr<device_program> radix_sort_prog;
 	std::shared_ptr<device_program> shader_prog;
 	
 	// if embedded FUBAR data exists + it isn't disabled, try to load this first
@@ -363,7 +391,14 @@ int main(int, char* argv[]) {
 		if (prog) {
 			log_msg("using embedded hlbvh FUBAR");
 		}
-		if (hlbvh_state.uni_renderer) {
+		
+		const std::span<const uint8_t> fubar_rs_data { hlbvh_radix_sort_fubar, std::size(hlbvh_radix_sort_fubar) };
+		radix_sort_prog = hlbvh_state.cctx->add_universal_binary(fubar_rs_data);
+		if (radix_sort_prog) {
+			log_msg("using embedded hlbvh radix sort FUBAR");
+		}
+		
+		if (!hlbvh_state.benchmark) {
 			const std::span<const uint8_t> fubar_shader_data { hlbvh_shaders_fubar, std::size(hlbvh_shaders_fubar) };
 			shader_prog = hlbvh_state.rctx->add_universal_binary(fubar_shader_data);
 			if (shader_prog) {
@@ -376,10 +411,13 @@ int main(int, char* argv[]) {
 	// compile the program and get the kernel function
 #if !defined(FLOOR_IOS)
 	if (!prog) {
-		const toolchain::compile_options options {
+		toolchain::compile_options options {
 			.enable_warnings = true,
 		};
 		prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh.cpp"), options);
+		
+		options.metal.restrictive_vectorization = true;
+		radix_sort_prog = hlbvh_state.cctx->add_program_file(floor::data_path("../hlbvh/src/radix_sort.cpp"), options);
 	}
 #endif
 	if (!prog) {
@@ -388,34 +426,142 @@ int main(int, char* argv[]) {
 	}
 	
 	// get all kernels
-	hlbvh_state.kernels = {
-		{ "build_aabbs", {} },
-		{ "collide_root_aabbs", {} },
-		{ "compute_morton_codes", {} },
-		{ "build_bvh", {} },
-		{ "build_bvh_aabbs_leaves", {} },
-		{ "build_bvh_aabbs", {} },
-		{ "collide_bvhs_no_tri_vis", {} },
-		{ "collide_bvhs_tri_vis", {} },
-		{ "map_collided_triangles", {} },
-		{ "radix_sort_count", {} },
-		{ "radix_sort_prefix_sum", {} },
-		{ "radix_sort_stream_split", {} },
-		{ "indirect_radix_sort_count", {} },
-		{ "indirect_radix_sort_stream_split", {} },
-	};
-	for (auto& kernel : hlbvh_state.kernels) {
-		kernel.second = prog->get_function(kernel.first);
-		if (kernel.second == nullptr) {
-			log_error("failed to retrieve kernel \"$\" from program", kernel.first);
-			return -1;
+	hlbvh_state.kernel_build_aabbs = prog->get_function("build_aabbs").get();
+	hlbvh_state.kernel_collide_root_aabbs = prog->get_function("collide_root_aabbs").get();
+	hlbvh_state.kernel_compute_morton_codes = prog->get_function("compute_morton_codes").get();
+	hlbvh_state.kernel_build_bvh = prog->get_function("build_bvh").get();
+	hlbvh_state.kernel_build_bvh_aabbs_leaves = prog->get_function("build_bvh_aabbs_leaves").get();
+	hlbvh_state.kernel_build_bvh_aabbs = prog->get_function("build_bvh_aabbs").get();
+	hlbvh_state.kernel_collide_bvhs_no_tri_vis = prog->get_function("collide_bvhs_no_tri_vis").get();
+	hlbvh_state.kernel_collide_bvhs_tri_vis = prog->get_function("collide_bvhs_tri_vis").get();
+	hlbvh_state.kernel_map_collided_triangles = prog->get_function("map_collided_triangles").get();
+	hlbvh_state.kernel_indirect_radix_sort_count = prog->get_function("indirect_radix_sort_count").get();
+	hlbvh_state.kernel_radix_sort_prefix_sum = prog->get_function("radix_sort_prefix_sum").get();
+	hlbvh_state.kernel_indirect_radix_sort_stream_split = prog->get_function("indirect_radix_sort_stream_split").get();
+	if (!hlbvh_state.kernel_build_aabbs ||
+		!hlbvh_state.kernel_collide_root_aabbs ||
+		!hlbvh_state.kernel_compute_morton_codes ||
+		!hlbvh_state.kernel_build_bvh ||
+		!hlbvh_state.kernel_build_bvh_aabbs_leaves ||
+		!hlbvh_state.kernel_build_bvh_aabbs ||
+		!hlbvh_state.kernel_collide_bvhs_no_tri_vis ||
+		!hlbvh_state.kernel_collide_bvhs_tri_vis ||
+		!hlbvh_state.kernel_map_collided_triangles ||
+		!hlbvh_state.kernel_indirect_radix_sort_count ||
+		!hlbvh_state.kernel_radix_sort_prefix_sum ||
+		!hlbvh_state.kernel_indirect_radix_sort_stream_split) {
+		log_error("missing HLBVH kernel(s)");
+		return -1;
+	}
+	
+	hlbvh_state.max_local_size_build_aabbs = hlbvh_state.kernel_build_aabbs->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_collide_root_aabbs = hlbvh_state.kernel_collide_root_aabbs->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_compute_morton_codes = hlbvh_state.kernel_compute_morton_codes->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_build_bvh = hlbvh_state.kernel_build_bvh->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_build_bvh_aabbs_leaves = hlbvh_state.kernel_build_bvh_aabbs_leaves->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_build_bvh_aabbs = hlbvh_state.kernel_build_bvh_aabbs->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_collide_bvhs_no_tri_vis = hlbvh_state.kernel_collide_bvhs_no_tri_vis->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_collide_bvhs_tri_vis = hlbvh_state.kernel_collide_bvhs_tri_vis->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_map_collided_triangles = hlbvh_state.kernel_map_collided_triangles->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_indirect_radix_sort_count = hlbvh_state.kernel_indirect_radix_sort_count->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_radix_sort_prefix_sum = hlbvh_state.kernel_radix_sort_prefix_sum->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_indirect_radix_sort_stream_split = hlbvh_state.kernel_indirect_radix_sort_stream_split->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	
+	// improved radix sort is optional and dependent on device support
+	if (hlbvh_state.cdev->simd_width != 32u ||
+		!hlbvh_state.cdev->sub_group_support ||
+		!hlbvh_state.cdev->sub_group_ballot_support ||
+		!hlbvh_state.cdev->sub_group_shuffle_support ||
+		hlbvh_state.cctx->get_platform_type() == PLATFORM_TYPE::OPENCL) {
+		hlbvh_state.improved_radix_sort = false;
+	}
+	if (hlbvh_state.improved_radix_sort) {
+		hlbvh_state.kernel_indirect_radix_zero = radix_sort_prog->get_function("indirect_radix_zero").get();
+		hlbvh_state.kernel_indirect_radix_upsweep_init = radix_sort_prog->get_function("indirect_radix_upsweep_init").get();
+		hlbvh_state.kernel_indirect_radix_upsweep_pass_only = radix_sort_prog->get_function("indirect_radix_upsweep_pass_only").get();
+		hlbvh_state.kernel_indirect_radix_scan_small = radix_sort_prog->get_function("indirect_radix_scan_small").get();
+		hlbvh_state.kernel_indirect_radix_scan = radix_sort_prog->get_function("indirect_radix_scan").get();
+		hlbvh_state.kernel_indirect_radix_downsweep_keys = radix_sort_prog->get_function("indirect_radix_downsweep_keys").get();
+		hlbvh_state.kernel_indirect_radix_downsweep_kv16 = radix_sort_prog->get_function("indirect_radix_downsweep_kv16").get();
+		if (!hlbvh_state.kernel_indirect_radix_zero ||
+			!hlbvh_state.kernel_indirect_radix_upsweep_init ||
+			!hlbvh_state.kernel_indirect_radix_upsweep_pass_only ||
+			!hlbvh_state.kernel_indirect_radix_scan_small ||
+			!hlbvh_state.kernel_indirect_radix_scan ||
+			!hlbvh_state.kernel_indirect_radix_downsweep_keys ||
+			!hlbvh_state.kernel_indirect_radix_downsweep_kv16) {
+			log_warn("missing improved radix sort kernel(s)");
+			hlbvh_state.improved_radix_sort = false;
+		} else {
+			indirect_command_description desc {
+				.command_type = indirect_command_description::COMMAND_TYPE::COMPUTE,
+				.max_command_count = 4u * 3u + 1, // 4 passes with 3 kernels each + 1 init
+				.debug_label = "radix_sort_pipeline"
+			};
+			desc.compute_buffer_counts_from_functions(*hlbvh_state.cdev, {
+				hlbvh_state.kernel_indirect_radix_zero,
+				hlbvh_state.kernel_indirect_radix_upsweep_init,
+				hlbvh_state.kernel_indirect_radix_upsweep_pass_only,
+				hlbvh_state.kernel_indirect_radix_scan_small,
+				hlbvh_state.kernel_indirect_radix_scan,
+				hlbvh_state.kernel_indirect_radix_downsweep_keys,
+				hlbvh_state.kernel_indirect_radix_downsweep_kv16,
+			});
+			hlbvh_state.radix_sort_pipeline = hlbvh_state.cctx->create_indirect_command_pipeline(desc);
+			if (!hlbvh_state.radix_sort_pipeline->is_valid()) {
+				hlbvh_state.improved_radix_sort = false;
+				log_error("failed to create indirect radix sort pipeline");
+			} else {
+				const std::array<radix_sort::indirect_radix_shift_t, radix_sort::sort_passes> radix_shift_params {{
+					{
+						.radix_shift = 0u,
+					},
+					{
+						.radix_shift = 8u,
+					},
+					{
+						.radix_shift = 16u,
+					},
+					{
+						.radix_shift = 24u,
+					},
+				}};
+				static_assert(hlbvh_state.radix_shift_param_buffers.size() == radix_sort::sort_passes);
+				hlbvh_state.radix_shift_param_buffers = {
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[0], sizeof(radix_sort::indirect_params_t) },
+													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[1], sizeof(radix_sort::indirect_params_t) },
+													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[2], sizeof(radix_sort::indirect_params_t) },
+													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[3], sizeof(radix_sort::indirect_params_t) },
+													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
+				};
+				
+				hlbvh_state.radix_sort_param_buffer = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, sizeof(radix_sort::indirect_params_t),
+																					  MEMORY_FLAG::READ | MEMORY_FLAG::HOST_WRITE |
+																					  MEMORY_FLAG::HEAP_ALLOCATION |
+																					  MEMORY_FLAG::VULKAN_HOST_COHERENT);
+				
+				hlbvh_state.radix_sort_global_histogram = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue,
+																						  sizeof(uint32_t) * radix_sort::radix * radix_sort::sort_passes,
+																						  MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HEAP_ALLOCATION);
+				
+				const auto max_group_count = (animation::max_triangle_count + radix_sort::partition_size - 1u) / radix_sort::partition_size;
+				hlbvh_state.radix_sort_pass_histogram = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue,
+																						sizeof(uint32_t) * max_group_count * radix_sort::radix,
+																						MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HEAP_ALLOCATION);
+			}
 		}
-		hlbvh_state.kernel_max_local_size[kernel.first] = (uint32_t)kernel.second->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
-		log_debug("max local size for \"$\": $", kernel.first, hlbvh_state.kernel_max_local_size[kernel.first]);
+	}
+	if (hlbvh_state.improved_radix_sort) {
+		log_msg("using improved radix sort");
+	} else {
+		log_msg("using legacy radix sort");
 	}
 	
 	// init unified renderer (need compiled prog first)
-	if (hlbvh_state.uni_renderer) {
+	if (!hlbvh_state.benchmark) {
 		if (!shader_prog) {
 			shader_prog = hlbvh_state.rctx->add_program_file(floor::data_path("../hlbvh/src/hlbvh_shaders.cpp"));
 			if (!shader_prog) {
@@ -482,7 +628,7 @@ int main(int, char* argv[]) {
 		//
 		floor::set_caption("hlbvh | frame-time: " + std::to_string(frame_delta) + "ms");
 		
-		if (hlbvh_state.uni_renderer) {
+		if (!hlbvh_state.benchmark) {
 			// Metal/Vulkan rendering
 			unified_renderer::render(models, hlbvh_state.cam_mode, *cam.get());
 		}
@@ -495,14 +641,19 @@ int main(int, char* argv[]) {
 	// cleanup
 	models.clear();
 	
-	if (hlbvh_state.uni_renderer) {
+	if (!hlbvh_state.benchmark) {
 		unified_renderer::destroy();
 	}
 	
 	hlbvh_collider = nullptr;
 	prog = nullptr;
+	radix_sort_prog = nullptr;
 	shader_prog = nullptr;
-	hlbvh_state.kernels.clear();
+	hlbvh_state.radix_sort_pipeline = nullptr;
+	hlbvh_state.radix_shift_param_buffers.fill(nullptr);
+	hlbvh_state.radix_sort_param_buffer = nullptr;
+	hlbvh_state.radix_sort_global_histogram = nullptr;
+	hlbvh_state.radix_sort_pass_histogram = nullptr;
 	hlbvh_state.cqueue = nullptr;
 	hlbvh_state.cctx = nullptr;
 	hlbvh_state.rqueue = nullptr;

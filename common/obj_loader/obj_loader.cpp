@@ -1635,5 +1635,5 @@ std::shared_ptr<obj_model> obj_loader::load(const std::string& file_name, bool& 
 		}
 	}
 	
-	return model;
+	floor_return_no_nrvo(model);
 }

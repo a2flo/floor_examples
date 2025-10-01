@@ -41,6 +41,8 @@ struct animation {
 	uint32_t next_frame { 1 };
 	float step { 0.0f };
 	
+	static constexpr const uint32_t max_triangle_count { 65535u };
+	
 	uint32_t tri_count { 0 };
 	std::vector<std::shared_ptr<obj_model>> frames;
 	std::vector<std::shared_ptr<std::vector<float3>>> frames_triangles;
@@ -54,8 +56,10 @@ struct animation {
 	std::shared_ptr<device_buffer> triangles;
 	
 	// morton code buffer (+ping buffer for radix sort) used by all frames
-	std::shared_ptr<device_buffer> morton_codes;
-	std::shared_ptr<device_buffer> morton_codes_ping;
+	std::shared_ptr<device_buffer> morton_codes_keys;
+	std::shared_ptr<device_buffer> morton_codes_keys_ping;
+	std::shared_ptr<device_buffer> morton_codes_values;
+	std::shared_ptr<device_buffer> morton_codes_values_ping;
 	
 	// bvh buffers (leaf nodes + internal nodes)
 	std::shared_ptr<device_buffer> bvh_leaves;

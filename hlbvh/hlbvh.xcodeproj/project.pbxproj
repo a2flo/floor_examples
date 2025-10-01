@@ -23,6 +23,8 @@
 		5C0071D61A91FFD600F4711D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D51A91FFD600F4711D /* UIKit.framework */; };
 		5C0071D81A91FFE600F4711D /* libxml2.2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D71A91FFE600F4711D /* libxml2.2.dylib */; };
 		5C0071DA1A91FFF400F4711D /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C0071D91A91FFF400F4711D /* CoreMotion.framework */; };
+		5C1A79312E8A0528008B434C /* radix_sort.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C1A79302E8A0528008B434C /* radix_sort.cpp */; };
+		5C1A79322E8A0528008B434C /* radix_sort.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C1A79302E8A0528008B434C /* radix_sort.cpp */; };
 		5C5487801B608DE40088272A /* config.json in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877E1B608CF50088272A /* config.json */; };
 		5C5487811B608DE40088272A /* config.json.local in CopyFiles */ = {isa = PBXBuildFile; fileRef = 5C54877F1B608CF50088272A /* config.json.local */; };
 		5C5E1A812558E00C00BF84CF /* hlbvh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5C7467131A5828D000999E78 /* hlbvh.cpp */; };
@@ -71,6 +73,8 @@
 		5C0071D51A91FFD600F4711D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/UIKit.framework; sourceTree = DEVELOPER_DIR; };
 		5C0071D71A91FFE600F4711D /* libxml2.2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.2.dylib; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/usr/lib/libxml2.2.dylib; sourceTree = DEVELOPER_DIR; };
 		5C0071D91A91FFF400F4711D /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS8.3.sdk/System/Library/Frameworks/CoreMotion.framework; sourceTree = DEVELOPER_DIR; };
+		5C1A792F2E8A0528008B434C /* radix_sort.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = radix_sort.hpp; sourceTree = "<group>"; };
+		5C1A79302E8A0528008B434C /* radix_sort.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = radix_sort.cpp; sourceTree = "<group>"; };
 		5C54877E1B608CF50088272A /* config.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = config.json; path = ../data/config.json; sourceTree = "<group>"; };
 		5C54877F1B608CF50088272A /* config.json.local */ = {isa = PBXFileReference; lastKnownFileType = text; name = config.json.local; path = ../data/config.json.local; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.javascript; };
 		5C7467131A5828D000999E78 /* hlbvh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = hlbvh.cpp; sourceTree = "<group>"; };
@@ -182,6 +186,8 @@
 				5CF11C241D237F2800AB7502 /* collider.hpp */,
 				5C7467131A5828D000999E78 /* hlbvh.cpp */,
 				5CE8AEC91D1F97EF00369136 /* hlbvh_shaders.cpp */,
+				5C1A79302E8A0528008B434C /* radix_sort.cpp */,
+				5C1A792F2E8A0528008B434C /* radix_sort.hpp */,
 				5CE8AEBF1D1D029200369136 /* triangle_intersection.hpp */,
 				5CCCE9C22B9BDC9400EDD2F7 /* unified_renderer.cpp */,
 				5CCCE9C12B9BDC9300EDD2F7 /* unified_renderer.hpp */,
@@ -311,6 +317,7 @@
 				"# code sign with entitlements",
 				"codesign -fs \"iPhone Developer\" --entitlements ${ENTITLEMENTS} \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/${PRODUCT_NAME}\"",
 				"",
+				"",
 			);
 		};
 		5C30CAA61AA7058D008986B1 /* Run Script */ = {
@@ -323,6 +330,7 @@
 				"${PLATFORM_DIR}/usr/bin/metal-as -o=hlbvh.air air_processed.ll",
 				"${PLATFORM_DIR}/usr/bin/metal-ar r hlbvh.a hlbvh.air",
 				"${PLATFORM_DIR}/usr/bin/metallib -o ../../data/hlbvh.metallib hlbvh.a",
+				"",
 				"",
 			);
 		};
@@ -340,6 +348,7 @@
 				5CE8AECB1D1F97F000369136 /* hlbvh_shaders.cpp in Sources */,
 				5CF11C271D237F2800AB7502 /* collider.cpp in Sources */,
 				5CCCE9C42B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
+				5C1A79322E8A0528008B434C /* radix_sort.cpp in Sources */,
 			);
 		};
 		5C8FD0901AD3366800215230 /* Sources */ = {
@@ -353,6 +362,7 @@
 				5CE8AECF1D1F9CCD00369136 /* animation.cpp in Sources */,
 				5CE8AEC81D1F373100369136 /* obj_loader.cpp in Sources */,
 				5CCCE9C32B9BDC9400EDD2F7 /* unified_renderer.cpp in Sources */,
+				5C1A79312E8A0528008B434C /* radix_sort.cpp in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
