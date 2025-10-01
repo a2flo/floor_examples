@@ -86,6 +86,7 @@ struct option_context {
 	string cuda_sass_filename;
 	optional<uint32_t> cuda_max_registers;
 	optional<bool> cuda_no_short_ptr;
+	optional<bool> metal_restrictive_vectorization;
 	string spirv_text_filename;
 	string test_bin_filename;
 	string ffi_filename;
@@ -154,6 +155,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--cuda-sass <output-file>: assembles a final device binary using ptxas and then disassembles it using cuobjdump (only PTX)\n"
 				 "\t--cuda-max-registers <#registers>: restricts/specifies how many registers can be used when jitting the PTX code (default: 0/unlimited)\n"
 				 "\t--cuda-no-short-ptr: disables use of short/32-bit pointers for non-global memory\n"
+				 "\t--metal-restrictive-vectorization: restricts rather than enables various scalar->vector transformations (only Metal)\n"
 				 "\t--spirv-text <output-file>: outputs human-readable SPIR-V assembly\n"
 				 "\t--spirv-opt [opt-overrides]: runs spirv-opt after toolchain compilation (only Vulkan), with optional options override (CSV)\n"
 				 "\t--soft-printf: enables soft-print support (Metal and Vulkan)\n"
@@ -434,6 +436,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--cuda-no-short-ptr", [](option_context& ctx, char**&) {
 		ctx.cuda_no_short_ptr = true;
 	}},
+	{ "--metal-restrictive-vectorization", [](option_context& ctx, char**&) {
+		ctx.metal_restrictive_vectorization = true;
+	}},
 	{ "--spirv-text", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr) {
@@ -692,9 +697,7 @@ static int run_normal_build(option_context& option_ctx) {
 				// we always have descriptor buffer support -> we also have full argument buffer support and indirect render/compute support
 				dev->argument_buffer_support = true;
 				dev->argument_buffer_image_support = true;
-				dev->indirect_command_support = true;
 				dev->indirect_render_command_support = true;
-				dev->indirect_compute_command_support = true;
 				
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
@@ -822,6 +825,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.cuda.max_registers = option_ctx.cuda_max_registers.value_or(0u),
 			.cuda.short_ptr = !option_ctx.cuda_no_short_ptr.value_or(false),
 			.metal.soft_printf = option_ctx.soft_printf.value_or(false),
+			.metal.restrictive_vectorization = option_ctx.metal_restrictive_vectorization.value_or(false),
 			.vulkan.soft_printf = option_ctx.soft_printf.value_or(false),
 			.vulkan.run_opt = option_ctx.spirv_opt,
 			.vulkan.opt_overrides = option_ctx.spirv_opt_override,
@@ -1224,6 +1228,9 @@ int main(int, char* argv[]) {
 		}
 		if (option_ctx.cuda_no_short_ptr) {
 			options.cuda_short_ptr = !*option_ctx.cuda_no_short_ptr;
+		}
+		if (option_ctx.metal_restrictive_vectorization) {
+			options.metal_restrictive_vectorization = *option_ctx.metal_restrictive_vectorization;
 		}
 		if (option_ctx.emit_debug_info) {
 			options.emit_debug_info = option_ctx.emit_debug_info;

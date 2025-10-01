@@ -1227,6 +1227,15 @@ namespace fl::fubar {
 							log_warn("ignoring unknown CUDA option: $", cuda_entry.first);
 						}
 					}
+				} else if (opt_entry.first == "metal") {
+					auto metal_obj = opt_entry.second.get_or_throw<json_object>();
+					for (auto&& metal_entry : metal_obj) {
+						if (metal_entry.first == "restrictive_vectorization") {
+							options.metal.restrictive_vectorization = metal_entry.second.get_or_throw<bool>();
+						} else {
+							log_warn("ignoring unknown Metal option: $", metal_entry.first);
+						}
+					}
 				} else if (opt_entry.first == "vulkan") {
 					auto vulkan_obj = opt_entry.second.get_or_throw<json_object>();
 					for (auto&& vulkan_entry : vulkan_obj) {
@@ -1284,6 +1293,9 @@ namespace fl::fubar {
 		}
 		if (options.cuda_short_ptr) {
 			toolchain_options.cuda.short_ptr = *options.cuda_short_ptr;
+		}
+		if (options.metal_restrictive_vectorization) {
+			toolchain_options.metal.restrictive_vectorization = *options.metal_restrictive_vectorization;
 		}
 		if (options.emit_debug_info) {
 			toolchain_options.debug.emit_debug_info = *options.emit_debug_info;

@@ -42,6 +42,8 @@ struct options_t {
 	std::optional<uint32_t> cuda_max_registers;
 	std::optional<bool> cuda_short_ptr;
 	
+	std::optional<bool> metal_restrictive_vectorization;
+	
 	std::optional<bool> emit_debug_info;
 	std::optional<bool> preprocess_condense;
 	std::optional<bool> preprocess_preserve_comments;
