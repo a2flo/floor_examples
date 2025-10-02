@@ -27,6 +27,7 @@
 #include <floor/core/core.hpp>
 #include <floor/threading/task.hpp>
 #include <floor/threading/thread_helpers.hpp>
+#include <chrono>
 
 #include <SDL3_image/SDL_image.h>
 
