@@ -53,6 +53,8 @@ struct hlbvh_state_struct {
 	
 	// use improved radix sort?
 	bool improved_radix_sort { true };
+	// if enabled, uses kernels that don't use local memory atomics
+	bool no_local_atomics { false };
 	
 #if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
 	// main compute context
@@ -89,6 +91,7 @@ struct hlbvh_state_struct {
 	const device_function* kernel_indirect_radix_zero { nullptr };
 	const device_function* kernel_indirect_radix_upsweep_init { nullptr };
 	const device_function* kernel_indirect_radix_upsweep_pass_only { nullptr };
+	const device_function* kernel_indirect_radix_upsweep { nullptr };
 	const device_function* kernel_indirect_radix_scan_small { nullptr };
 	const device_function* kernel_indirect_radix_scan { nullptr };
 	const device_function* kernel_indirect_radix_downsweep_keys { nullptr };
@@ -128,4 +131,11 @@ extern hlbvh_state_struct hlbvh_state;
 struct indirect_radix_sort_params_t {
 	uint32_t count;
 	uint32_t count_per_group; // == count / COMPACTION_GROUP_COUNT
+};
+
+struct collide_params_t {
+	uint32_t leaf_count_a;
+	uint32_t internal_node_count_b;
+	uint32_t mesh_idx_a;
+	uint32_t mesh_idx_b;
 };

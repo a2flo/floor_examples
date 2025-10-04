@@ -57,6 +57,7 @@ template<> std::vector<std::pair<std::string, hlbvh_opt_handler::option_function
 		std::cout << "\t--benchmark: runs the simulation in benchmark mode, without rendering" << std::endl;
 		std::cout << "\t--no-triangle-vis: disables triangle collision visualization and uses per-model visualization instead (faster)" << std::endl;
 		std::cout << "\t--legacy-radix-sort: force the use of the legacy radix sort" << std::endl;
+		std::cout << "\t--no-local-atomics: uses kernels that don't use local memory atomics" << std::endl;
 		hlbvh_state.done = true;
 		
 		std::cout << std::endl;
@@ -112,6 +113,10 @@ template<> std::vector<std::pair<std::string, hlbvh_opt_handler::option_function
 	{ "--legacy-radix-sort", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.improved_radix_sort = false;
 		std::cout << "improved radix sort disabled" << std::endl;
+	}},
+	{ "--no-local-atomics", [](hlbvh_option_context&, char**&) {
+		hlbvh_state.no_local_atomics = true;
+		std::cout << "not using kernels with local memory atomics" << std::endl;
 	}},
 	{ "--benchmark", [](hlbvh_option_context&, char**&) {
 		hlbvh_state.no_metal = true; // also disable metal
@@ -479,6 +484,7 @@ int main(int, char* argv[]) {
 		hlbvh_state.kernel_indirect_radix_zero = radix_sort_prog->get_function("indirect_radix_zero").get();
 		hlbvh_state.kernel_indirect_radix_upsweep_init = radix_sort_prog->get_function("indirect_radix_upsweep_init").get();
 		hlbvh_state.kernel_indirect_radix_upsweep_pass_only = radix_sort_prog->get_function("indirect_radix_upsweep_pass_only").get();
+		hlbvh_state.kernel_indirect_radix_upsweep = radix_sort_prog->get_function("indirect_radix_upsweep").get();
 		hlbvh_state.kernel_indirect_radix_scan_small = radix_sort_prog->get_function("indirect_radix_scan_small").get();
 		hlbvh_state.kernel_indirect_radix_scan = radix_sort_prog->get_function("indirect_radix_scan").get();
 		hlbvh_state.kernel_indirect_radix_downsweep_keys = radix_sort_prog->get_function("indirect_radix_downsweep_keys").get();
@@ -486,6 +492,7 @@ int main(int, char* argv[]) {
 		if (!hlbvh_state.kernel_indirect_radix_zero ||
 			!hlbvh_state.kernel_indirect_radix_upsweep_init ||
 			!hlbvh_state.kernel_indirect_radix_upsweep_pass_only ||
+			!hlbvh_state.kernel_indirect_radix_upsweep ||
 			!hlbvh_state.kernel_indirect_radix_scan_small ||
 			!hlbvh_state.kernel_indirect_radix_scan ||
 			!hlbvh_state.kernel_indirect_radix_downsweep_keys ||
@@ -502,6 +509,7 @@ int main(int, char* argv[]) {
 				hlbvh_state.kernel_indirect_radix_zero,
 				hlbvh_state.kernel_indirect_radix_upsweep_init,
 				hlbvh_state.kernel_indirect_radix_upsweep_pass_only,
+				hlbvh_state.kernel_indirect_radix_upsweep,
 				hlbvh_state.kernel_indirect_radix_scan_small,
 				hlbvh_state.kernel_indirect_radix_scan,
 				hlbvh_state.kernel_indirect_radix_downsweep_keys,

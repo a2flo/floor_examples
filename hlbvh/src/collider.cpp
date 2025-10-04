@@ -201,55 +201,54 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 		const auto& j = col_pair.y;
 		const auto& mdl_i = models[i];
 		const auto& mdl_j = models[j];
-		log_if_debug("collide: $ $", i, j);
-		
 		const auto leaf_count_i = mdl_i->tri_count;
 		const auto leaf_count_j = mdl_j->tri_count;
+		log_if_debug("collide: $ $ (#leafs: $)", i, j, leaf_count_i);
 		
+		const collide_params_t collide_params {
+			.leaf_count_a = leaf_count_i,
+			.internal_node_count_b = leaf_count_j - 1u,
+			.mesh_idx_a = i,
+			.mesh_idx_b = j,
+		};
 		if (hlbvh_state.triangle_vis) {
 			hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernel_collide_bvhs_tri_vis,
 											 uint1 { leaf_count_i },
 											 uint1 { hlbvh_state.max_local_size_collide_bvhs_tri_vis },
 											 // the leaves of bvh A that we want to collide with bvh B
-											 leaf_count_i,
 											 mdl_i->bvh_aabbs_leaves,
 											 mdl_i->triangles,
 											 mdl_i->morton_codes_values,
 											 // the complete bvh B
-											 leaf_count_j - 1u,
 											 mdl_j->bvh_internal,
 											 mdl_j->bvh_aabbs,
 											 mdl_j->bvh_aabbs_leaves,
 											 mdl_j->triangles,
 											 mdl_j->morton_codes_values,
-											 // mesh indices of A and B
-											 i, j,
 											 // flags if resp. mesh A/B collides with anything
 											 // also (ab)used as an abort condition here
 											 collision_flags,
 											 mdl_i->colliding_triangles,
-											 mdl_j->colliding_triangles);
+											 mdl_j->colliding_triangles,
+											 collide_params);
 		} else {
 			hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernel_collide_bvhs_no_tri_vis,
 											 uint1 { leaf_count_i },
 											 uint1 { hlbvh_state.max_local_size_collide_bvhs_no_tri_vis },
 											 // the leaves of bvh A that we want to collide with bvh B
-											 leaf_count_i,
 											 mdl_i->bvh_aabbs_leaves,
 											 mdl_i->triangles,
 											 mdl_i->morton_codes_values,
 											 // the complete bvh B
-											 leaf_count_j - 1u,
 											 mdl_j->bvh_internal,
 											 mdl_j->bvh_aabbs,
 											 mdl_j->bvh_aabbs_leaves,
 											 mdl_j->triangles,
 											 mdl_j->morton_codes_values,
-											 // mesh indices of A and B
-											 i, j,
 											 // flags if resp. mesh A/B collides with anything
 											 // also (ab)used as an abort condition here
-											 collision_flags);
+											 collision_flags,
+											 collide_params);
 		}
 	}
 	
@@ -427,14 +426,23 @@ void collider::radix_sort_improved(device_buffer* inout_buffer,
 		.set_arguments(global_histogram)
 		.execute(radix_sort::upsweep_dim * radix_sort::sort_passes, radix_sort::upsweep_dim)
 		.barrier();
-	hlbvh_state.radix_sort_pipeline->add_compute_command(*hlbvh_state.cdev, *hlbvh_state.kernel_indirect_radix_upsweep_init)
-		.set_arguments(src, global_histogram, pass_histogram, param_buffer)
-		.execute(radix_sort::upsweep_dim * group_count, radix_sort::upsweep_dim)
-		.barrier();
+	if (!hlbvh_state.no_local_atomics) [[likely]] {
+		hlbvh_state.radix_sort_pipeline->add_compute_command(*hlbvh_state.cdev, *hlbvh_state.kernel_indirect_radix_upsweep_init)
+			.set_arguments(src, global_histogram, pass_histogram, param_buffer)
+			.execute(radix_sort::upsweep_dim * group_count, radix_sort::upsweep_dim)
+			.barrier();
+	}
 	for (uint32_t k = 0u; k < radix_sort::sort_passes; ++k) {
-		if (k > 0) {
-			hlbvh_state.radix_sort_pipeline->add_compute_command(*hlbvh_state.cdev, *hlbvh_state.kernel_indirect_radix_upsweep_pass_only)
-				.set_arguments(src, pass_histogram, param_buffer, hlbvh_state.radix_shift_param_buffers[k].get())
+		if (!hlbvh_state.no_local_atomics) [[likely]] {
+			if (k > 0) {
+				hlbvh_state.radix_sort_pipeline->add_compute_command(*hlbvh_state.cdev, *hlbvh_state.kernel_indirect_radix_upsweep_pass_only)
+					.set_arguments(src, pass_histogram, param_buffer, hlbvh_state.radix_shift_param_buffers[k].get())
+					.execute(radix_sort::upsweep_dim * group_count, radix_sort::upsweep_dim)
+					.barrier();
+			}
+		} else {
+			hlbvh_state.radix_sort_pipeline->add_compute_command(*hlbvh_state.cdev, *hlbvh_state.kernel_indirect_radix_upsweep)
+				.set_arguments(src, pass_histogram, global_histogram, param_buffer, hlbvh_state.radix_shift_param_buffers[k].get())
 				.execute(radix_sort::upsweep_dim * group_count, radix_sort::upsweep_dim)
 				.barrier();
 		}

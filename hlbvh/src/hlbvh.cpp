@@ -470,7 +470,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 					const auto overlap_triangle_idx = morton_codes_values_b[masked_idx];
 					const auto ov = read_triangle(triangles_b, overlap_triangle_idx);
 					
-					// read triangle for querry node (leaf triangle)
+					// read triangle for query node (leaf triangle)
 					// NOTE: this is faster / uses less registers than reading the triangle outside/before the traversal loop!
 					const auto triangle_idx = morton_codes_values_a[idx];
 					const auto v = read_triangle(triangles_a, triangle_idx);
@@ -527,44 +527,38 @@ static constexpr uint32_t compute_collide_max_local_size() {
 }
 
 // NOTE: this also demonstrates that we can use a constexpr function to specify the required local size
-kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(param<uint32_t> leaf_count_a,
-																		 buffer<const float3> bvh_aabbs_leaves_a,
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(buffer<const float3> bvh_aabbs_leaves_a,
 																		 buffer<const float3> triangles_a,
 																		 buffer<const uint16_t> morton_codes_values_a,
-																		 param<uint32_t> internal_node_count_b,
 																		 buffer<const uint3> bvh_internal_b,
 																		 buffer<const float3> bvh_aabbs_b,
 																		 buffer<const float3> bvh_aabbs_leaves_b,
 																		 buffer<const float3> triangles_b,
 																		 buffer<const uint16_t> morton_codes_values_b,
-																		 param<uint32_t> mesh_idx_a,
-																		 param<uint32_t> mesh_idx_b,
-																		 buffer<uint32_t> collision_flags) {
-	collide_bvhs<false, compute_collide_max_local_size()>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_values_a,
-														  internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b,
+																		 buffer<uint32_t> collision_flags,
+																		 param<collide_params_t> params) {
+	collide_bvhs<false, compute_collide_max_local_size()>(params.leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_values_a,
+														  params.internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b,
 														  triangles_b, morton_codes_values_b,
-														  mesh_idx_a, mesh_idx_b, collision_flags, 0, 0);
+														  params.mesh_idx_a, params.mesh_idx_b, collision_flags, 0, 0);
 }
 
-kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(param<uint32_t> leaf_count_a,
-																	  buffer<const float3> bvh_aabbs_leaves_a,
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(buffer<const float3> bvh_aabbs_leaves_a,
 																	  buffer<const float3> triangles_a,
 																	  buffer<const uint16_t> morton_codes_values_a,
-																	  param<uint32_t> internal_node_count_b,
 																	  buffer<const uint3> bvh_internal_b,
 																	  buffer<const float3> bvh_aabbs_b,
 																	  buffer<const float3> bvh_aabbs_leaves_b,
 																	  buffer<const float3> triangles_b,
 																	  buffer<const uint16_t> morton_codes_values_b,
-																	  param<uint32_t> mesh_idx_a,
-																	  param<uint32_t> mesh_idx_b,
 																	  buffer<uint32_t> collision_flags,
 																	  buffer<uint32_t> colliding_triangles_a,
-																	  buffer<uint32_t> colliding_triangles_b) {
-	collide_bvhs<true, compute_collide_max_local_size()>(leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_values_a,
-														 internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b,
+																	  buffer<uint32_t> colliding_triangles_b,
+																	  param<collide_params_t> params) {
+	collide_bvhs<true, compute_collide_max_local_size()>(params.leaf_count_a, bvh_aabbs_leaves_a, triangles_a, morton_codes_values_a,
+														 params.internal_node_count_b, bvh_internal_b, bvh_aabbs_b, bvh_aabbs_leaves_b,
 														 triangles_b, morton_codes_values_b,
-														 mesh_idx_a, mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
+														 params.mesh_idx_a, params.mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
 }
 
 kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,

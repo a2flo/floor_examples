@@ -26,6 +26,10 @@ using namespace fl;
 
 #if defined(FLOOR_DEVICE) && !defined(FLOOR_DEVICE_OPENCL)
 
+#if defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE)
+FLOOR_IGNORE_WARNING(pass-failed) // ignore unroll warnings in non-device Host-Compute
+#endif
+
 // memory zero'ing in an indirect pipeline is faster than a manual zero call on the host side (especially for small sizes)
 kernel_1d_simd(radix_sort::lane_count, radix_sort::upsweep_dim) void indirect_radix_zero(buffer<uint32_t> global_histogram) {
 	global_histogram[global_id.x] = 0u;
@@ -109,6 +113,63 @@ kernel_1d_simd(radix_sort::lane_count, radix_sort::upsweep_dim) void indirect_ra
 	
 	const auto scan_value = bins[local_id.x];
 	pass_histogram[group_id.x + local_id.x * group_count] = scan_value;
+}
+
+// combined upsweep pass computing the pass histogram and global histogram necessary for the current pass
+// NOTE: only used when local memory atomics are not wanted or otherwise broken
+kernel_1d_simd(radix_sort::lane_count, radix_sort::upsweep_dim) void indirect_radix_upsweep(buffer<const uint32_t> src,
+																							buffer<uint32_t> pass_histogram,
+																							buffer<uint32_t> global_histogram,
+																							buffer<const radix_sort::indirect_params_t> params,
+																							buffer<const radix_sort::indirect_radix_shift_t> radix_shift_params) {
+	const auto count = params->count;
+	const auto group_count = params->group_count;
+	const auto radix_shift = radix_shift_params->radix_shift;
+	
+	static_assert(radix_sort::upsweep_dim == radix_sort::radix);
+	static_assert(radix_sort::keys_per_thread <= 15u); // 4 bits per value
+	static constexpr const uint32_t bin_bitness { 4u };
+	static constexpr const uint32_t bins_per_value { (sizeof(uint32_t) * 8u) / bin_bitness }; // 8 bins
+	static constexpr const uint32_t bin_value_mask { (1u << bin_bitness) - 1u };
+	static constexpr const uint32_t bins_per_item { radix_sort::radix / bins_per_value }; // 8 bins per uint32_t * 32 for 256 in total
+	static constexpr const uint32_t lmem_elem_count { bins_per_item * radix_sort::upsweep_dim };
+	static_assert(lmem_elem_count == 8192u);
+	local_buffer<uint32_t, lmem_elem_count> bins;
+#pragma unroll
+	for (uint32_t i = 0u; i < bins_per_item; ++i) {
+		bins[local_id.x + i * radix_sort::upsweep_dim] = 0u;
+	}
+	
+	for (uint32_t block_idx = group_id.x * radix_sort::keys_per_thread,
+		 block_end = math::min(block_idx + radix_sort::keys_per_thread, group_count * radix_sort::keys_per_thread);
+		 block_idx < block_end; ++block_idx) {
+		const auto item_index = block_idx * radix_sort::upsweep_dim + local_id.x;
+		if (item_index < count) {
+			const auto item = src[item_index];
+			const auto digit = (item >> radix_shift) & radix_sort::radix_mask;
+			const auto item_bin = digit / bins_per_value;
+			const auto item_intra_bin = digit % bins_per_value;
+			const auto item_intra_bin_one = 1u << (4u * item_intra_bin);
+			bins[local_id.x + item_bin * radix_sort::upsweep_dim] += item_intra_bin_one;
+		}
+	}
+	local_barrier();
+	
+	uint32_t digit_total = 0u;
+	{
+		const auto digit = local_id.x;
+		const auto item_bin = digit / bins_per_value;
+		const auto item_intra_bin = digit % bins_per_value;
+		const auto item_intra_bin_shift = (4u * item_intra_bin);
+		for (uint32_t i = 0u; i < radix_sort::upsweep_dim; ++i) {
+			digit_total += (bins[i + item_bin * radix_sort::upsweep_dim] >> item_intra_bin_shift) & bin_value_mask;
+		}
+		pass_histogram[group_id.x + digit * group_count] = digit_total;
+	}
+	local_barrier();
+	
+	const auto scan_result = algorithm::exclusive_scan_add<radix_sort::upsweep_dim>(digit_total, bins);
+	atomic_add(&global_histogram[radix_shift * (radix_sort::radix / 8u) + local_id.x], scan_result);
 }
 
 // this handles up to 256 groups
