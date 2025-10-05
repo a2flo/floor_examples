@@ -35,6 +35,7 @@ protected:
 	std::vector<std::shared_ptr<device_buffer>> bit_buffers;
 	std::shared_ptr<device_buffer> rs_params_buffer;
 	std::vector<uint32_t> collision_flags_host;
+	std::vector<uint32_t> aabb_collision_flags_host;
 	
 	std::unique_ptr<indirect_command_pipeline> radix_sort_pipeline;
 	uint32_t radix_sort_pipeline_max_bit { 0u };

@@ -82,9 +82,8 @@ static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 	return x | (y << 1u) | (z << 2u);
 }
 
-// computes all interpolated triangles for this frame, stores these in a global buffer
+// computes all interpolated triangles for this frame, stores them in a global buffer,
 // and continues to build the root aabb of the mesh (which will be needed later on)
-// TODO: directly combine with build_bvh_aabbs_leaves?
 kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_cur,
 												 buffer<const float3> triangles_next,
 												 param<uint32_t> triangle_count,
@@ -93,7 +92,7 @@ kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_
 												 buffer<float> aabbs,
 												 buffer<float3> triangles) {
 	const auto id = global_id.x;
-	float3 aabb_min, aabb_max;
+	bboxf aabb; // defaults to invalid extent
 	if (id < triangle_count) {
 		const auto v0 = triangles_cur[id * 3].interpolated(triangles_next[id * 3], interp);
 		const auto v1 = triangles_cur[id * 3 + 1].interpolated(triangles_next[id * 3 + 1], interp);
@@ -101,29 +100,26 @@ kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_
 		triangles[id * 3] = v0;
 		triangles[id * 3 + 1] = v1;
 		triangles[id * 3 + 2] = v2;
-		aabb_min = v0.minned(v1).minned(v2);
-		aabb_max = v0.maxed(v1).maxed(v2);
-	} else {
-		aabb_min = __FLT_MAX__;
-		aabb_max = -__FLT_MAX__;
+		aabb.min = v0.minned(v1).minned(v2);
+		aabb.max = v0.maxed(v1).maxed(v2);
 	}
 	
 	// min/max reduce
-	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE, float3>()> lmem_aabbs;
-	aabb_min = algorithm::reduce_min<ROOT_AABB_GROUP_SIZE>(aabb_min, lmem_aabbs);
+	local_buffer<float3, algorithm::reduce_local_memory_elements<ROOT_AABB_GROUP_SIZE, float3, algorithm::group::OP::MIN>()> lmem_aabbs;
+	aabb.min = algorithm::reduce_min<ROOT_AABB_GROUP_SIZE>(aabb.min, lmem_aabbs);
 	local_barrier();
-	aabb_max = algorithm::reduce_max<ROOT_AABB_GROUP_SIZE>(aabb_max, lmem_aabbs);
+	aabb.max = algorithm::reduce_max<ROOT_AABB_GROUP_SIZE>(aabb.max, lmem_aabbs);
 	if (local_id.x == 0) {
-		atomic_min(&aabbs[mesh_idx * 6 + 0], aabb_min.x);
-		atomic_min(&aabbs[mesh_idx * 6 + 1], aabb_min.y);
-		atomic_min(&aabbs[mesh_idx * 6 + 2], aabb_min.z);
-		atomic_max(&aabbs[mesh_idx * 6 + 3], aabb_max.x);
-		atomic_max(&aabbs[mesh_idx * 6 + 4], aabb_max.y);
-		atomic_max(&aabbs[mesh_idx * 6 + 5], aabb_max.z);
+		atomic_min(&aabbs[mesh_idx * 6 + 0], aabb.min.x);
+		atomic_min(&aabbs[mesh_idx * 6 + 1], aabb.min.y);
+		atomic_min(&aabbs[mesh_idx * 6 + 2], aabb.min.z);
+		atomic_max(&aabbs[mesh_idx * 6 + 3], aabb.max.x);
+		atomic_max(&aabbs[mesh_idx * 6 + 4], aabb.max.y);
+		atomic_max(&aabbs[mesh_idx * 6 + 5], aabb.max.z);
 	}
 }
 
-kernel_1d() void compute_morton_codes(buffer<const float3> aabbs,
+kernel_1d() void compute_morton_codes(buffer<const bboxf> aabbs,
 									  buffer<const float3> centroids_cur,
 									  buffer<const float3> centroids_next,
 									  param<uint32_t> triangle_count,
@@ -137,14 +133,13 @@ kernel_1d() void compute_morton_codes(buffer<const float3> aabbs,
 	}
 	
 	// get the bounding box of the resp. mesh
-	const auto bbox_min = aabbs[mesh_idx * 2];
-	const auto bbox_max = aabbs[mesh_idx * 2 + 1];
+	const auto mesh_bbox = aabbs[mesh_idx];
 	
 	// compute the centroid for this id
 	auto coord = centroids_cur[idx].interpolated(centroids_next[idx], interp);
 	
 	// scale to [0, 1]
-	coord = (coord - bbox_min).abs() / (bbox_max - bbox_min);
+	coord = (coord - mesh_bbox.min).abs() / (mesh_bbox.max - mesh_bbox.min);
 	// scale to [0, 1024[ or [0, 1023] as integer (so it fits into 10-bit)
 	const auto scaled_coord = uint3(coord * 1024.0f).min(1023u);
 	// compute the morton code for this (x, y, z)
@@ -158,31 +153,26 @@ kernel_1d() void compute_morton_codes(buffer<const float3> aabbs,
 // NOTE: prefix = clz(morton code ^ morton code)
 // this is getting to ugly ...
 #define prefix_checked(a, b, c) prefix_checked_int_(a, b, c, morton_codes_keys, internal_node_count)
-static int32_t prefix_checked_int_(const uint32_t& mc_i,
-								   const uint32_t& i,
-								   const int32_t& j,
+static int32_t prefix_checked_int_(const uint32_t mc_i,
+								   const uint32_t i,
+								   const int32_t j,
 								   global const uint32_t* morton_codes_keys,
-								   const uint32_t& internal_node_count) {
-	// out of range check (i)
-	if(mc_i > 0x3FFFFFFFu) {
-		return -1;
-	}
-	// out of range check (j)
-	if(j < 0 || uint32_t(j) > internal_node_count) {
+								   const uint32_t internal_node_count) {
+	// out of range check (i) and (j)
+	if (mc_i > 0x3FFF'FFFFu || j < 0 || uint32_t(j) > internal_node_count) {
 		return -1;
 	}
 	// get morton code for j
 	const uint32_t mc_j = morton_codes_keys[j];
 	// check for identical morton codes
-	if(mc_i == mc_j) {
-		// "simply use i and j as a fallback if k_i = k_j when evaluating delta(i, j)"
-		// also: since both morton codes match, add 32 to the matched prefix length
-		return 32 + math::clz(i ^ uint32_t(j));
-	}
-	// else: use the actual morton codes (the general case)
-	return math::clz(mc_i ^ mc_j);
+	return (mc_i == mc_j ?
+			// "simply use i and j as a fallback if k_i = k_j when evaluating delta(i, j)"
+			// also: since both morton codes match, add 32 to the matched prefix length
+			32 + math::clz(i ^ uint32_t(j)) :
+			// else: use the actual morton codes (the general case)
+			math::clz(mc_i ^ mc_j));
 }
-static int32_t prefix_unchecked(const uint32_t& mc_i, const uint32_t& mc_j) {
+static int32_t prefix_unchecked(const uint32_t mc_i, const uint32_t mc_j) {
 	return math::clz(mc_i ^ mc_j);
 }
 
@@ -244,9 +234,7 @@ kernel_1d() void build_bvh(buffer<const uint32_t> morton_codes_keys,
 			if (new_split < range.y) {
 				const auto split_code = morton_codes_keys[new_split];
 				const auto split_prefix = prefix_unchecked(mc_begin, split_code);
-				if (split_prefix > common_prefix) {
-					split = new_split;
-				}
+				split = (split_prefix > common_prefix ? new_split : split);
 			}
 		} while(step > 1u);
 	} else {
@@ -264,9 +252,7 @@ kernel_1d() void build_bvh(buffer<const uint32_t> morton_codes_keys,
 			
 			if (new_split < range.y) {
 				const auto split_prefix = prefix_checked(mc_begin, range.x, int(new_split));
-				if (split_prefix > common_prefix) {
-					split = new_split;
-				}
+				split = (split_prefix > common_prefix ? new_split : split);
 			}
 		} while(step > 1u);
 	}
@@ -276,19 +262,18 @@ kernel_1d() void build_bvh(buffer<const uint32_t> morton_codes_keys,
 	const auto left_idx = split;
 	const auto right_idx = split + 1u;
 	
+	bvh_internal[idx].x = (range.x == left_idx ? LEAF_FLAG(left_idx) : left_idx);
+	bvh_internal[idx].y = (range.y == right_idx ? LEAF_FLAG(right_idx) : right_idx);
+	
 	if (range.x == left_idx) {
-		bvh_internal[idx].x = LEAF_FLAG(left_idx);
 		bvh_leaves[left_idx] = idx;
 	} else {
-		bvh_internal[idx].x = left_idx;
 		bvh_internal[left_idx].z = uint32_t(idx);
 	}
 	
 	if (range.y == right_idx) {
-		bvh_internal[idx].y = LEAF_FLAG(right_idx);
 		bvh_leaves[right_idx] = idx;
 	} else {
-		bvh_internal[idx].y = right_idx;
 		bvh_internal[right_idx].z = uint32_t(idx);
 	}
 }
@@ -296,7 +281,7 @@ kernel_1d() void build_bvh(buffer<const uint32_t> morton_codes_keys,
 kernel_1d() void build_bvh_aabbs_leaves(buffer<const uint16_t> morton_codes_values,
 										param<uint32_t> leaf_count,
 										buffer<const float3> triangles,
-										buffer<float3> bvh_aabbs_leaves) {
+										buffer<bboxf> bvh_aabbs_leaves) {
 	const auto idx = global_id.x;
 	if (idx >= leaf_count) {
 		return;
@@ -309,15 +294,14 @@ kernel_1d() void build_bvh_aabbs_leaves(buffer<const uint16_t> morton_codes_valu
 	const auto v2 = triangles[tri_id * 3 + 2];
 	
 	// compute aabb for this leaf
-	bvh_aabbs_leaves[idx * 2] = v0.minned(v1).minned(v2);
-	bvh_aabbs_leaves[idx * 2 + 1] = v0.maxed(v1).maxed(v2);
+	bvh_aabbs_leaves[idx] = { v0.minned(v1).minned(v2), v0.maxed(v1).maxed(v2) };
 }
 
 kernel_1d() void build_bvh_aabbs(buffer<const uint3> bvh_internal,
 								 buffer<const uint32_t> bvh_leaves,
 								 param<uint32_t> leaf_count,
-								 buffer<float3> bvh_aabbs,
-								 buffer<const float3> bvh_aabbs_leaves,
+								 buffer<bboxf> bvh_aabbs,
+								 buffer<const bboxf> bvh_aabbs_leaves,
 								 buffer<uint32_t> counters) {
 	const auto idx = global_id.x;
 	if (idx >= leaf_count) {
@@ -334,63 +318,47 @@ kernel_1d() void build_bvh_aabbs(buffer<const uint3> bvh_internal,
 		
 		// straightforward: grab left and right aabb, compute their min/max, store it in the current node
 		const auto node = bvh_internal[parent];
-		float3 b_min_left, b_max_left, b_min_right, b_max_right;
-		const auto masked_left_idx = node.x & LEAF_INV_MASK; // leaf node if highest bit set
-		const auto masked_right_idx = node.y & LEAF_INV_MASK;
+		const auto masked_left_idx = (node.x & LEAF_INV_MASK); // leaf node if highest bit set
+		const auto masked_right_idx = (node.y & LEAF_INV_MASK);
 		
-		if (masked_left_idx != node.x) {
-			b_min_left = bvh_aabbs_leaves[masked_left_idx * 2];
-			b_max_left = bvh_aabbs_leaves[masked_left_idx * 2 + 1];
-		} else {
-			b_min_left = bvh_aabbs[masked_left_idx * 2];
-			b_max_left = bvh_aabbs[masked_left_idx * 2 + 1];
-		}
+		const auto b_left = (masked_left_idx != node.x ? bvh_aabbs_leaves[masked_left_idx] : bvh_aabbs[masked_left_idx]);
+		const auto b_right = (masked_right_idx != node.y ? bvh_aabbs_leaves[masked_right_idx] : bvh_aabbs[masked_right_idx]);
 		
-		if (masked_right_idx != node.y) {
-			b_min_right = bvh_aabbs_leaves[masked_right_idx * 2];
-			b_max_right = bvh_aabbs_leaves[masked_right_idx * 2 + 1];
-		} else {
-			b_min_right = bvh_aabbs[masked_right_idx * 2];
-			b_max_right = bvh_aabbs[masked_right_idx * 2 + 1];
-		}
-		
-		bvh_aabbs[parent * 2] = b_min_left.min(b_min_right);
-		bvh_aabbs[parent * 2 + 1] = b_max_left.max(b_max_right);
+		bvh_aabbs[parent] = b_left.extended(b_right);
 		
 		// unless we're at the root, onto the next parent node
-		if (parent == 0) {
+		if (parent == 0) [[unlikely]] {
 			break;
 		}
 		parent = node.z;
 	}
 }
 
-static bool check_overlap(const float3& min_a, const float3& max_a,
-						  const float3& min_b, const float3& max_b) {
+static inline bool check_overlap(const bboxf lhs, const bboxf rhs) {
 #if 1
-	if(min_a.x > max_b.x ||
-	   min_b.x > max_a.x ||
-	   min_a.y > max_b.y ||
-	   min_b.y > max_a.y ||
-	   min_a.z > max_b.z ||
-	   min_b.z > max_a.z) {
+	if (lhs.min.x > rhs.max.x ||
+		rhs.min.x > lhs.max.x ||
+		lhs.min.y > rhs.max.y ||
+		rhs.min.y > lhs.max.y ||
+		lhs.min.z > rhs.max.z ||
+		rhs.min.z > lhs.max.z) {
 		return false;
 	}
 	return true;
 #else
-	if(min_a.x <= max_b.x &&
-	   min_a.y <= max_b.y &&
-	   min_a.z <= max_b.z &&
-	   max_a.x >= min_b.x &&
-	   max_a.y >= min_b.y &&
-	   max_a.z >= min_b.z) {
+	if (min_a.x <= max_b.x &&
+		min_a.y <= max_b.y &&
+		min_a.z <= max_b.z &&
+		max_a.x >= min_b.x &&
+		max_a.y >= min_b.y &&
+		max_a.z >= min_b.z) {
 		return true;
 	}
 	return false;
 #endif
 }
 
-static const_array<float3, 3> read_triangle(buffer<const float3> triangles, const uint32_t& triangle_idx) {
+static const_array<float3, 3> read_triangle(buffer<const float3>& triangles, const uint32_t triangle_idx) {
 	return {{
 		triangles[triangle_idx * 3u],
 		triangles[triangle_idx * 3u + 1u],
@@ -407,14 +375,14 @@ using collsion_stack_data_type = uint16_t;
 template <bool triangle_vis, uint32_t tile_size>
 floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want to collide with bvh B
 											 const uint32_t leaf_count_a,
-											 buffer<const float3>& bvh_aabbs_leaves_a,
+											 buffer<const bboxf>& bvh_aabbs_leaves_a,
 											 buffer<const float3>& triangles_a,
 											 buffer<const uint16_t>& morton_codes_values_a,
 											 // the complete bvh B
 											 const uint32_t internal_node_count_b floor_unused,
 											 buffer<const uint3>& bvh_internal_b,
-											 buffer<const float3>& bvh_aabbs_b,
-											 buffer<const float3>& bvh_aabbs_leaves_b,
+											 buffer<const bboxf>& bvh_aabbs_b,
+											 buffer<const bboxf>& bvh_aabbs_leaves_b,
 											 buffer<const float3>& triangles_b,
 											 buffer<const uint16_t>& morton_codes_values_b,
 											 // mesh indices of A and B
@@ -431,8 +399,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 	}
 	
 	// leaf aabb
-	const float3 b_min = bvh_aabbs_leaves_a[idx * 2];
-	const float3 b_max = bvh_aabbs_leaves_a[idx * 2 + 1];
+	const auto leaf_bbox = bvh_aabbs_leaves_a[idx];
 	
 	//
 	local_buffer<collsion_stack_data_type, collision_stack_size_per_item * tile_size> stack;
@@ -456,15 +423,14 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 		for (uint32_t i = 0; i < 2; ++i) {
 			// check child node for overlap
 			const auto child = (i == 0 ? bvh_internal_b[node].x : bvh_internal_b[node].y);
-			const auto masked_idx = child & LEAF_INV_MASK; // leaf node if highest bit set
+			const auto masked_idx = (child & LEAF_INV_MASK); // leaf node if highest bit set
 			const bool is_leaf = (child != masked_idx);
 			
 			// get aabb for the left and right child and check for overlap
-			const auto child_min = (is_leaf ? bvh_aabbs_leaves_b[masked_idx * 2] : bvh_aabbs_b[masked_idx * 2]);
-			const auto child_max = (is_leaf ? bvh_aabbs_leaves_b[masked_idx * 2 + 1] : bvh_aabbs_b[masked_idx * 2 + 1]);
+			const auto child_bbox = (is_leaf ? bvh_aabbs_leaves_b[masked_idx] : bvh_aabbs_b[masked_idx]);
 			
 			// query overlaps a leaf node
-			if (check_overlap(b_min, b_max, child_min, child_max)) {
+			if (check_overlap(leaf_bbox, child_bbox)) {
 				if (is_leaf) {
 					// read triangle for this leaf node
 					const auto overlap_triangle_idx = morton_codes_values_b[masked_idx];
@@ -486,9 +452,7 @@ floor_inline_always static void collide_bvhs(// the leaves of bvh A that we want
 				} else {
 					// query overlaps an internal node => traverse
 					// -> set next node to left child (i == 0) or right child (if not traversing left child)
-					if (i == 0 || !traverse) {
-						node = (uint16_t)child;
-					}
+					node = (i == 0 || !traverse ? (uint16_t)child : node);
 					// -> at right child and traversing left child: push right child onto the stack
 					if (i == 1 && traverse) {
 						*stack_ptr++ = (uint16_t)child; // push
@@ -527,12 +491,12 @@ static constexpr uint32_t compute_collide_max_local_size() {
 }
 
 // NOTE: this also demonstrates that we can use a constexpr function to specify the required local size
-kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(buffer<const float3> bvh_aabbs_leaves_a,
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(buffer<const bboxf> bvh_aabbs_leaves_a,
 																		 buffer<const float3> triangles_a,
 																		 buffer<const uint16_t> morton_codes_values_a,
 																		 buffer<const uint3> bvh_internal_b,
-																		 buffer<const float3> bvh_aabbs_b,
-																		 buffer<const float3> bvh_aabbs_leaves_b,
+																		 buffer<const bboxf> bvh_aabbs_b,
+																		 buffer<const bboxf> bvh_aabbs_leaves_b,
 																		 buffer<const float3> triangles_b,
 																		 buffer<const uint16_t> morton_codes_values_b,
 																		 buffer<uint32_t> collision_flags,
@@ -543,12 +507,12 @@ kernel_1d(compute_collide_max_local_size()) void collide_bvhs_no_tri_vis(buffer<
 														  params.mesh_idx_a, params.mesh_idx_b, collision_flags, 0, 0);
 }
 
-kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(buffer<const float3> bvh_aabbs_leaves_a,
+kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(buffer<const bboxf> bvh_aabbs_leaves_a,
 																	  buffer<const float3> triangles_a,
 																	  buffer<const uint16_t> morton_codes_values_a,
 																	  buffer<const uint3> bvh_internal_b,
-																	  buffer<const float3> bvh_aabbs_b,
-																	  buffer<const float3> bvh_aabbs_leaves_b,
+																	  buffer<const bboxf> bvh_aabbs_b,
+																	  buffer<const bboxf> bvh_aabbs_leaves_b,
 																	  buffer<const float3> triangles_b,
 																	  buffer<const uint16_t> morton_codes_values_b,
 																	  buffer<uint32_t> collision_flags,
@@ -561,7 +525,7 @@ kernel_1d(compute_collide_max_local_size()) void collide_bvhs_tri_vis(buffer<con
 														 params.mesh_idx_a, params.mesh_idx_b, collision_flags, colliding_triangles_a, colliding_triangles_b);
 }
 
-kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,
+kernel_1d() void collide_root_aabbs(buffer<const bboxf> aabbs,
 									param<uint32_t> total_aabb_checks,
 									param<uint32_t> mesh_count,
 									buffer<uint32_t> aabb_collision_flags) {
@@ -574,12 +538,10 @@ kernel_1d() void collide_root_aabbs(buffer<const float3> aabbs,
 	const auto j = mesh_count - q + i - 1u;
 	
 	// get i and j aabb and check for overlap
-	const auto b_min_i = aabbs[i * 2];
-	const auto b_max_i = aabbs[i * 2 + 1];
-	const auto b_min_j = aabbs[j * 2];
-	const auto b_max_j = aabbs[j * 2 + 1];
+	const auto bbox_lhs = aabbs[i];
+	const auto bbox_rhs = aabbs[j];
 	
-	if(check_overlap(b_min_i, b_max_i, b_min_j, b_max_j)) {
+	if (check_overlap(bbox_lhs, bbox_rhs)) {
 		atomic_inc(&aabb_collision_flags[id]);
 	}
 }

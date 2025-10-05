@@ -20,6 +20,7 @@
 
 #include <floor/core/essentials.hpp>
 #include <floor/math/quaternion.hpp>
+#include <floor/math/bbox.hpp>
 #if !defined(FLOOR_DEVICE) || (defined(FLOOR_DEVICE_HOST_COMPUTE) && !defined(FLOOR_DEVICE_HOST_COMPUTE_IS_DEVICE))
 #include <floor/device/device_context.hpp>
 #include <floor/device/device.hpp>

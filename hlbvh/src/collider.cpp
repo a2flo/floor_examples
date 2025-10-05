@@ -54,11 +54,13 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 		collision_flags->set_debug_label("collision_flags");
 		collision_flags_host.resize(model_count);
 		
+		aabb_collision_flags_host.resize(total_aabb_checks);
+		
 		aabb_collision_flags = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, total_aabb_checks * sizeof(uint32_t),
 															   MEMORY_FLAG::WRITE | MEMORY_FLAG::HOST_READ_WRITE);
 		aabb_collision_flags->set_debug_label("aabb_collision_flags");
 		
-		aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, model_count * sizeof(float3) * 2,
+		aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, model_count * sizeof(bboxf),
 												MEMORY_FLAG::READ_WRITE | MEMORY_FLAG::HOST_READ_WRITE);
 		aabbs->set_debug_label("aabbs");
 	}
@@ -77,11 +79,8 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 		mdl->bvh_aabbs_counters->zero(*hlbvh_state.cqueue);
 	}
 	
-	std::vector<float3> init_aabbs(model_count * 2);
-	for (size_t i = 0; i < model_count; ++i) {
-		init_aabbs[i * 2] = float3(__FLT_MAX__);
-		init_aabbs[i * 2 + 1] = float3(-__FLT_MAX__);
-	}
+	// NOTE: default init makes these have an invalid extent (what we want)
+	std::vector<bboxf> init_aabbs(model_count);
 	aabbs->write(*hlbvh_state.cqueue, init_aabbs);
 	hlbvh_state.cqueue->finish();
 	
@@ -110,7 +109,6 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 	std::vector<uint2> potential_pairs;
 	{
 		log_if_debug("collide_root_aabbs");
-		auto aabb_collision_flags_host = std::make_unique<uint32_t[]>(total_aabb_checks);
 		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernel_collide_root_aabbs,
 										 uint1 { total_aabb_checks },
 										 uint1 { hlbvh_state.max_local_size_collide_root_aabbs },
@@ -120,7 +118,7 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 										 aabb_collision_flags);
 		
 		// read back aabb collision flags
-		aabb_collision_flags->read(*hlbvh_state.cqueue, aabb_collision_flags_host.get());
+		aabb_collision_flags->read(*hlbvh_state.cqueue, aabb_collision_flags_host.data());
 		
 		// we're only interested in further constructing+colliding bvhs for meshes whose root aabbs collide with something
 		// and also only the resp. collision pairs

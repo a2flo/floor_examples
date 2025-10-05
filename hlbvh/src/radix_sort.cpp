@@ -44,7 +44,7 @@ kernel_1d_simd(radix_sort::lane_count, radix_sort::upsweep_dim) void indirect_ra
 	const auto group_count = params->group_count;
 	
 	static constexpr const uint32_t lmem_elem_count {
-		std::max(algorithm::scan_local_memory_elements<radix_sort::upsweep_dim, uint4>(), radix_sort::radix)
+		std::max(algorithm::scan_local_memory_elements<radix_sort::upsweep_dim, uint4, algorithm::group::OP::ADD>(), radix_sort::radix)
 	};
 	local_buffer<uint4, lmem_elem_count> bins;
 	
@@ -90,7 +90,7 @@ kernel_1d_simd(radix_sort::lane_count, radix_sort::upsweep_dim) void indirect_ra
 	const auto radix_shift = radix_shift_params->radix_shift;
 	
 	static constexpr const uint32_t lmem_elem_count {
-		std::max(algorithm::scan_local_memory_elements<radix_sort::upsweep_dim, uint32_t>(), radix_sort::radix)
+		std::max(algorithm::scan_local_memory_elements<radix_sort::upsweep_dim, uint32_t, algorithm::group::OP::ADD>(), radix_sort::radix)
 	};
 	local_buffer<uint32_t, lmem_elem_count> bins;
 	

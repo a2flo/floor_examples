@@ -191,9 +191,9 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	bvh_leaves->set_debug_label("bvh_leaves");
 	bvh_internal = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint3));
 	bvh_internal->set_debug_label("bvh_internal");
-	bvh_aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(float3) * 2u);
+	bvh_aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(bboxf));
 	bvh_aabbs->set_debug_label("bvh_aabbs");
-	bvh_aabbs_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(float3) * 2u);
+	bvh_aabbs_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(bboxf));
 	bvh_aabbs_leaves->set_debug_label("bvh_aabbs_leaves");
 	bvh_aabbs_counters = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint32_t));
 	bvh_aabbs_counters->set_debug_label("bvh_aabbs_counters");
