@@ -1248,6 +1248,8 @@ namespace fl::fubar {
 							if (!opt_overrides.empty()) {
 								options.vulkan.opt_overrides = opt_overrides;
 							}
+						} else if (vulkan_entry.first == "pointer_workarounds") {
+							options.vulkan.pointer_workarounds = vulkan_entry.second.get_or_throw<bool>();
 						} else {
 							log_warn("ignoring unknown Vulkan option: $", vulkan_entry.first);
 						}
@@ -1296,6 +1298,9 @@ namespace fl::fubar {
 		}
 		if (options.metal_restrictive_vectorization) {
 			toolchain_options.metal.restrictive_vectorization = *options.metal_restrictive_vectorization;
+		}
+		if (options.vulkan_pointer_workarounds) {
+			toolchain_options.vulkan.pointer_workarounds = *options.vulkan_pointer_workarounds;
 		}
 		if (options.emit_debug_info) {
 			toolchain_options.debug.emit_debug_info = *options.emit_debug_info;

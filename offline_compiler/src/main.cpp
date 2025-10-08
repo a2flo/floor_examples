@@ -87,6 +87,7 @@ struct option_context {
 	optional<uint32_t> cuda_max_registers;
 	optional<bool> cuda_no_short_ptr;
 	optional<bool> metal_restrictive_vectorization;
+	optional<bool> vulkan_pointer_workarounds;
 	string spirv_text_filename;
 	string test_bin_filename;
 	string ffi_filename;
@@ -163,6 +164,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--no-vulkan-subgroup-uniform-cf: disables Vulkan/SPIR-V subgroup uniform control flow (only Vulkan)\n"
 				 "\t--vulkan-low-iub: enables low inline uniform block count functionality, i.e. only assumes 4 rather than 16 IUBs are available (only Vulkan)\n"
 				 "\t--vulkan-low-ds: enables low descriptor set count functionality, i.e. only assumes 7 rather than 16 descriptor sets are available (only Vulkan)\n"
+				 "\t--vulkan-ptr-workarounds: enables workarounds for certain pointer uses in SPIR-V (only Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--fubar-compress: compress all binary data in the built FUBAR\n"
@@ -483,6 +485,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	}},
 	{ "--vulkan-low-ds", [](option_context& ctx, char**&) {
 		ctx.vulkan_low_desc_set_count = true;
+	}},
+	{ "--vulkan-ptr-workarounds", [](option_context& ctx, char**&) {
+		ctx.vulkan_pointer_workarounds = true;
 	}},
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
@@ -1231,6 +1236,9 @@ int main(int, char* argv[]) {
 		}
 		if (option_ctx.metal_restrictive_vectorization) {
 			options.metal_restrictive_vectorization = *option_ctx.metal_restrictive_vectorization;
+		}
+		if (option_ctx.vulkan_pointer_workarounds) {
+			options.vulkan_pointer_workarounds = *option_ctx.vulkan_pointer_workarounds;
 		}
 		if (option_ctx.emit_debug_info) {
 			options.emit_debug_info = option_ctx.emit_debug_info;

@@ -9,6 +9,15 @@
 		"image_depth_compare_support": false,
 		"max_registers": 0
 	},
+	{
+		"type": "CUDA",
+		"sm": [ 7, 0 ],
+		"sm_aa": false,
+		"ptx": [ 8, 0 ],
+		"is_ptx": true,
+		"image_depth_compare_support": false,
+		"max_registers": 0
+	},
 	// OpenCL SPIR
 	{
 		"type": "OpenCL",
@@ -98,7 +107,7 @@
 		"tessellation_support": false,
 		"simd_width": 0,
 		"max_mip_levels": 16,
-		"subgroup_uniform_cf_support": false,
+		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true
 	},
@@ -117,7 +126,7 @@
 		"tessellation_support": false,
 		"simd_width": 32,
 		"max_mip_levels": 16,
-		"subgroup_uniform_cf_support": false,
+		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true
 	},
@@ -136,7 +145,7 @@
 		"tessellation_support": false,
 		"simd_width": 32,
 		"max_mip_levels": 16,
-		"subgroup_uniform_cf_support": false,
+		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true
 	},

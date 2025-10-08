@@ -44,6 +44,8 @@ struct options_t {
 	
 	std::optional<bool> metal_restrictive_vectorization;
 	
+	std::optional<bool> vulkan_pointer_workarounds;
+	
 	std::optional<bool> emit_debug_info;
 	std::optional<bool> preprocess_condense;
 	std::optional<bool> preprocess_preserve_comments;
