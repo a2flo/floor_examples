@@ -189,13 +189,16 @@ loop_or_reset(loop_or_reset_), frame_count(frame_count_), step_size(step_size_) 
 	// N leaves + (N-1) internal nodes, allocating enough for max triangle count
 	bvh_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
 	bvh_leaves->set_debug_label("bvh_leaves");
-	bvh_internal = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint3));
+	// NOTE: technically only needs "tri_count - 1" elements, but this simplifies bounds checking
+	bvh_internal = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint3));
 	bvh_internal->set_debug_label("bvh_internal");
-	bvh_aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(bboxf));
+	// NOTE: technically only needs "tri_count - 1" elements, but this simplifies bounds checking
+	bvh_aabbs = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(bboxf));
 	bvh_aabbs->set_debug_label("bvh_aabbs");
 	bvh_aabbs_leaves = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(bboxf));
 	bvh_aabbs_leaves->set_debug_label("bvh_aabbs_leaves");
-	bvh_aabbs_counters = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, (tri_count - 1u) * sizeof(uint32_t));
+	// NOTE: technically only needs "tri_count - 1" elements, but this simplifies bounds checking
+	bvh_aabbs_counters = hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, tri_count * sizeof(uint32_t));
 	bvh_aabbs_counters->set_debug_label("bvh_aabbs_counters");
 	
 	// for visualization purposes

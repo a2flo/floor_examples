@@ -91,7 +91,7 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 		const auto triangle_count = mdl->tri_count;
 		
 		log_if_debug("build_aabbs: $ ($)", mdl_idx, triangle_count);
-		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernel_build_aabbs,
+		hlbvh_state.cqueue->execute_sync(*hlbvh_state.kernel_build_aabbs_and_init_bvh,
 										 uint1 { triangle_count },
 										 uint1 { ROOT_AABB_GROUP_SIZE },
 										 mdl->frames_triangles_buffer[cur_frame],
@@ -100,7 +100,8 @@ void collider::collide(const std::vector<std::unique_ptr<animation>>& models) {
 										 mdl_idx,
 										 mdl->step,
 										 aabbs,
-										 mdl->triangles);
+										 mdl->triangles,
+										 mdl->bvh_internal);
 		++mdl_idx;
 	}
 	

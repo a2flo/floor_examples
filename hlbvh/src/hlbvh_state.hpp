@@ -75,7 +75,7 @@ struct hlbvh_state_struct {
 	PLATFORM_TYPE default_platform { PLATFORM_TYPE::NONE };
 	
 	// collision/hlbvh kernels
-	const device_function* kernel_build_aabbs { nullptr };
+	const device_function* kernel_build_aabbs_and_init_bvh { nullptr };
 	const device_function* kernel_collide_root_aabbs { nullptr };
 	const device_function* kernel_compute_morton_codes { nullptr };
 	const device_function* kernel_build_bvh { nullptr };
@@ -103,7 +103,7 @@ struct hlbvh_state_struct {
 	std::shared_ptr<device_buffer> radix_sort_global_histogram;
 	std::shared_ptr<device_buffer> radix_sort_pass_histogram;
 	
-	uint32_t max_local_size_build_aabbs { 0u };
+	uint32_t max_local_size_build_aabbs_and_init_bvh { 0u };
 	uint32_t max_local_size_collide_root_aabbs { 0u };
 	uint32_t max_local_size_compute_morton_codes { 0u };
 	uint32_t max_local_size_build_bvh { 0u };

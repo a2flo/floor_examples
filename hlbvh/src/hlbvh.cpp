@@ -84,24 +84,28 @@ static uint32_t morton(uint32_t x, uint32_t y, uint32_t z) {
 
 // computes all interpolated triangles for this frame, stores them in a global buffer,
 // and continues to build the root aabb of the mesh (which will be needed later on)
-kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs(buffer<const float3> triangles_cur,
-												 buffer<const float3> triangles_next,
-												 param<uint32_t> triangle_count,
-												 param<uint32_t> mesh_idx,
-												 param<float> interp,
-												 buffer<float> aabbs,
-												 buffer<float3> triangles) {
-	const auto id = global_id.x;
+kernel_1d(ROOT_AABB_GROUP_SIZE) void build_aabbs_and_init_bvh(buffer<const float3> triangles_cur,
+															  buffer<const float3> triangles_next,
+															  param<uint32_t> triangle_count,
+															  param<uint32_t> mesh_idx,
+															  param<float> interp,
+															  buffer<float> aabbs,
+															  buffer<float3> triangles,
+															  buffer<uint3> bvh_internal) {
+	const auto idx = global_id.x;
 	bboxf aabb; // defaults to invalid extent
-	if (id < triangle_count) {
-		const auto v0 = triangles_cur[id * 3].interpolated(triangles_next[id * 3], interp);
-		const auto v1 = triangles_cur[id * 3 + 1].interpolated(triangles_next[id * 3 + 1], interp);
-		const auto v2 = triangles_cur[id * 3 + 2].interpolated(triangles_next[id * 3 + 2], interp);
-		triangles[id * 3] = v0;
-		triangles[id * 3 + 1] = v1;
-		triangles[id * 3 + 2] = v2;
+	if (idx < triangle_count) {
+		const auto v0 = triangles_cur[idx * 3].interpolated(triangles_next[idx * 3], interp);
+		const auto v1 = triangles_cur[idx * 3 + 1].interpolated(triangles_next[idx * 3 + 1], interp);
+		const auto v2 = triangles_cur[idx * 3 + 2].interpolated(triangles_next[idx * 3 + 2], interp);
+		triangles[idx * 3] = v0;
+		triangles[idx * 3 + 1] = v1;
+		triangles[idx * 3 + 2] = v2;
 		aabb.min = v0.minned(v1).minned(v2);
 		aabb.max = v0.maxed(v1).maxed(v2);
+		if (idx == 0) {
+			bvh_internal[0].z = 0u;
+		}
 	}
 	
 	// min/max reduce

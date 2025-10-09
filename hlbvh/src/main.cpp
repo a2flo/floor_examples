@@ -431,7 +431,7 @@ int main(int, char* argv[]) {
 	}
 	
 	// get all kernels
-	hlbvh_state.kernel_build_aabbs = prog->get_function("build_aabbs").get();
+	hlbvh_state.kernel_build_aabbs_and_init_bvh = prog->get_function("build_aabbs_and_init_bvh").get();
 	hlbvh_state.kernel_collide_root_aabbs = prog->get_function("collide_root_aabbs").get();
 	hlbvh_state.kernel_compute_morton_codes = prog->get_function("compute_morton_codes").get();
 	hlbvh_state.kernel_build_bvh = prog->get_function("build_bvh").get();
@@ -443,7 +443,7 @@ int main(int, char* argv[]) {
 	hlbvh_state.kernel_indirect_radix_sort_count = prog->get_function("indirect_radix_sort_count").get();
 	hlbvh_state.kernel_radix_sort_prefix_sum = prog->get_function("radix_sort_prefix_sum").get();
 	hlbvh_state.kernel_indirect_radix_sort_stream_split = prog->get_function("indirect_radix_sort_stream_split").get();
-	if (!hlbvh_state.kernel_build_aabbs ||
+	if (!hlbvh_state.kernel_build_aabbs_and_init_bvh ||
 		!hlbvh_state.kernel_collide_root_aabbs ||
 		!hlbvh_state.kernel_compute_morton_codes ||
 		!hlbvh_state.kernel_build_bvh ||
@@ -459,7 +459,7 @@ int main(int, char* argv[]) {
 		return -1;
 	}
 	
-	hlbvh_state.max_local_size_build_aabbs = hlbvh_state.kernel_build_aabbs->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
+	hlbvh_state.max_local_size_build_aabbs_and_init_bvh = hlbvh_state.kernel_build_aabbs_and_init_bvh->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
 	hlbvh_state.max_local_size_collide_root_aabbs = hlbvh_state.kernel_collide_root_aabbs->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
 	hlbvh_state.max_local_size_compute_morton_codes = hlbvh_state.kernel_compute_morton_codes->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
 	hlbvh_state.max_local_size_build_bvh = hlbvh_state.kernel_build_bvh->get_function_entry(*hlbvh_state.cdev)->max_total_local_size;
@@ -536,13 +536,13 @@ int main(int, char* argv[]) {
 				}};
 				static_assert(hlbvh_state.radix_shift_param_buffers.size() == radix_sort::sort_passes);
 				hlbvh_state.radix_shift_param_buffers = {
-					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[0], sizeof(radix_sort::indirect_params_t) },
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[0], sizeof(radix_sort::indirect_radix_shift_t) },
 													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
-					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[1], sizeof(radix_sort::indirect_params_t) },
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[1], sizeof(radix_sort::indirect_radix_shift_t) },
 													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
-					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[2], sizeof(radix_sort::indirect_params_t) },
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[2], sizeof(radix_sort::indirect_radix_shift_t) },
 													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
-					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[3], sizeof(radix_sort::indirect_params_t) },
+					hlbvh_state.cctx->create_buffer(*hlbvh_state.cqueue, std::span { &radix_shift_params[3], sizeof(radix_sort::indirect_radix_shift_t) },
 													MEMORY_FLAG::READ | MEMORY_FLAG::HEAP_ALLOCATION),
 				};
 				
