@@ -304,7 +304,7 @@ kernel_1d() void build_bvh_aabbs_leaves(buffer<const uint16_t> morton_codes_valu
 kernel_1d() void build_bvh_aabbs(buffer<const uint3> bvh_internal,
 								 buffer<const uint32_t> bvh_leaves,
 								 param<uint32_t> leaf_count,
-								 buffer<bboxf> bvh_aabbs,
+								 coherent_buffer<bboxf> bvh_aabbs,
 								 buffer<const bboxf> bvh_aabbs_leaves,
 								 buffer<uint32_t> counters) {
 	const auto idx = global_id.x;

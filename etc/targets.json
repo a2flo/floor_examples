@@ -1,5 +1,5 @@
 [
-	// CUDA 12.0+ for Maxwell+
+	// CUDA 12.0+ for Maxwell+ and Turing+
 	{
 		"type": "CUDA",
 		"sm": [ 5, 0 ],
@@ -67,15 +67,6 @@
 	{
 		"type": "Metal",
 		"version": [ 3, 0 ],
-		"platform": "ios",
-		"target": "generic",
-		"simd_width": 0,
-		"soft_printf": false,
-		"barycentric_coord_support": false
-	},
-	{
-		"type": "Metal",
-		"version": [ 3, 0 ],
 		"platform": "macos",
 		"target": "generic",
 		"simd_width": 32,
@@ -86,7 +77,35 @@
 		"type": "Metal",
 		"version": [ 3, 0 ],
 		"platform": "ios",
+		"target": "apple",
+		"simd_width": 32,
+		"soft_printf": false,
+		"barycentric_coord_support": false
+	},
+	// Metal 3.2+ macOS + iOS
+	{
+		"type": "Metal",
+		"version": [ 3, 2 ],
+		"platform": "macos",
 		"target": "generic",
+		"simd_width": 0,
+		"soft_printf": false,
+		"barycentric_coord_support": false
+	},
+	{
+		"type": "Metal",
+		"version": [ 3, 2 ],
+		"platform": "macos",
+		"target": "generic",
+		"simd_width": 32,
+		"soft_printf": false,
+		"barycentric_coord_support": false
+	},
+	{
+		"type": "Metal",
+		"version": [ 3, 2 ],
+		"platform": "ios",
+		"target": "apple",
 		"simd_width": 32,
 		"soft_printf": false,
 		"barycentric_coord_support": false
