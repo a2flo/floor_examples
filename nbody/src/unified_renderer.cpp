@@ -51,32 +51,30 @@ static void create_textures(const device_context& ctx, const device_queue& dev_q
 		// create texture
 		static constexpr uint2 texture_size { 64, 64 };
 		static constexpr float2 texture_sizef { texture_size };
-		vector<ushort4> pixel_data(texture_size.x * texture_size.y);
+		vector<half4> pixel_data(texture_size.x * texture_size.y);
 		for (uint32_t y = 0; y < texture_size.y; ++y) {
 			for (uint32_t x = 0; x < texture_size.x; ++x) {
 				float2 dir = (uint2(x, y).cast<float>() / texture_sizef) * 2.0f - 1.0f;
 #if 1 // smoother, less of a center point
-				float fval = dir.dot();
+				const auto fval = dir.dot();
 #else
-				float fval = dir.length();
+				const auto fval = dir.length();
 #endif
 				const auto val = 1.0f - const_math::clamp(fval, 0.0f, 1.0f);
 				const auto alpha_val = (val > 0.25f ? 1.0f : val);
-				const auto half_val = soft_f16::float_to_half(val);
-				const auto half_alpha_val = soft_f16::float_to_half(alpha_val);
+				const auto half_val = half(val);
+				const auto half_alpha_val = half(alpha_val);
 				pixel_data[y * texture_size.x + x] = { half_val, half_val, half_val, half_alpha_val };
 			}
 		}
-
+		
 		body_texture = ctx.create_image(dev_queue, texture_size,
-										(IMAGE_TYPE::IMAGE_2D |
-										 IMAGE_TYPE::RGBA16F |
-										 IMAGE_TYPE::FLAG_MIPMAPPED |
-										 IMAGE_TYPE::READ),
-										{ (uint8_t*)pixel_data.data(), pixel_data.size() * sizeof(ushort4) },
-										(MEMORY_FLAG::READ |
-										 MEMORY_FLAG::HOST_WRITE |
-										 MEMORY_FLAG::GENERATE_MIP_MAPS));
+										IMAGE_TYPE::IMAGE_2D |
+										IMAGE_TYPE::RGBA16F |
+										IMAGE_TYPE::FLAG_MIPMAPPED |
+										IMAGE_TYPE::READ,
+										{ (uint8_t*)pixel_data.data(), pixel_data.size() * sizeof(half4) },
+										MEMORY_FLAG::READ | MEMORY_FLAG::GENERATE_MIP_MAPS);
 	}
 }
 

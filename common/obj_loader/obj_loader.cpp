@@ -1583,9 +1583,7 @@ std::shared_ptr<obj_model> obj_loader::load(const std::string& file_name, bool& 
 		}
 		
 		// create buffers
-		const auto buffer_type = (MEMORY_FLAG::READ |
-								  MEMORY_FLAG::HOST_WRITE |
-								  add_mem_flags);
+		const auto buffer_type = (MEMORY_FLAG::READ | add_mem_flags);
 		floor_model->vertices_buffer = ctx.create_buffer(cqueue, floor_model->vertices, buffer_type);
 		floor_model->tex_coords_buffer = ctx.create_buffer(cqueue, floor_model->tex_coords, buffer_type);
 		floor_model->normals_buffer = ctx.create_buffer(cqueue, floor_model->normals, buffer_type);
