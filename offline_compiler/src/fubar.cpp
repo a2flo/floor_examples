@@ -309,6 +309,7 @@ namespace fl::fubar {
 				.subgroup_uniform_cf_support = target_obj.at("subgroup_uniform_cf_support").get_or_throw<bool>(),
 				.low_iub_count = target_obj.at("low_iub_count").get_or_throw<bool>(),
 				.low_desc_set_count = target_obj.at("low_desc_set_count").get_or_throw<bool>(),
+				.untyped_pointers_support = target_obj.at("untyped_pointers_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -620,90 +621,6 @@ namespace fl::fubar {
 					.version = universal_binary::target_format_version,
 					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 1,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 1,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
 					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
@@ -855,6 +772,7 @@ namespace fl::fubar {
 					.subgroup_uniform_cf_support = 1,
 					.low_iub_count = 0,
 					.low_desc_set_count = 0,
+					.untyped_pointers_support = 0,
 					._unused = 0,
 				}
 			},
@@ -968,90 +886,6 @@ namespace fl::fubar {
 					.version = universal_binary::target_format_version,
 					.type = PLATFORM_TYPE::METAL,
 					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::VISIONOS_SIMULATOR,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 1,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 0,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 1,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
-					.minor = 1,
-					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::IOS,
-					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
-					.simd_width = 32,
-					.soft_printf = 0,
-					.barycentric_coord_support = 0,
-					._unused = 0,
-				}
-			},
-			{
-				.metal = {
-					.version = universal_binary::target_format_version,
-					.type = PLATFORM_TYPE::METAL,
-					.major = 3,
 					.minor = 2,
 					.platform_target = decltype(universal_binary::target_v7::metal)::PLATFORM_TARGET::MACOS,
 					.device_target = decltype(universal_binary::target_v7::metal)::GENERIC,
@@ -1156,6 +990,7 @@ namespace fl::fubar {
 					.subgroup_uniform_cf_support = 1,
 					.low_iub_count = 0,
 					.low_desc_set_count = 0,
+					.untyped_pointers_support = 0,
 					._unused = 0,
 				}
 			},
@@ -1175,7 +1010,7 @@ namespace fl::fubar {
 			}
 		}
 		
-		return ret_targets;
+		floor_return_no_nrvo(ret_targets);
 	}
 	
 	static toolchain::compile_options get_compile_options(const string& options_json_file_name) {

@@ -212,6 +212,7 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 				log_undecorated("\t\tsubgroup-uniform-control-flow-support: $", vk.subgroup_uniform_cf_support ? "yes" : "no");
 				log_undecorated("\t\tlow-IUB-count: $", vk.low_iub_count ? "yes" : "no");
 				log_undecorated("\t\tlow-descriptor-set-count: $", vk.low_desc_set_count ? "yes" : "no");
+				log_undecorated("\t\tuntyped-pointers-support: $", vk.untyped_pointers_support ? "yes" : "no");
 				break;
 			}
 			default:

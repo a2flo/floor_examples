@@ -63,7 +63,7 @@ struct option_context {
 	toolchain::TARGET target { toolchain::TARGET::SPIR };
 	string sub_target;
 	OPENCL_VERSION cl_std { OPENCL_VERSION::OPENCL_1_2 };
-	METAL_VERSION metal_std { METAL_VERSION::METAL_3_1 };
+	METAL_VERSION metal_std { METAL_VERSION::METAL_3_2 };
 	uint32_t ptx_version { 80 };
 	VULKAN_VERSION vulkan_std { VULKAN_VERSION::VULKAN_1_3 };
 	optional<bool> warnings;
@@ -88,6 +88,7 @@ struct option_context {
 	optional<bool> cuda_no_short_ptr;
 	optional<bool> metal_restrictive_vectorization;
 	optional<bool> vulkan_pointer_workarounds;
+	optional<bool> vulkan_untyped_pointers;
 	string spirv_text_filename;
 	string test_bin_filename;
 	string ffi_filename;
@@ -138,7 +139,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
-				 "\t--metal-std <3.0|3.1|3.2|4.0>: sets the supported Metal version (defaults to 3.1 on iOS/macOS, 3.2 on visionOS)\n"
+				 "\t--metal-std <3.2|4.0>: sets the supported Metal version (defaults to 3.2)\n"
 				 "\t--ptx-version <80|81|82|83|84|85|86|87|88|90>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
 				 "\t--vulkan-std <1.3|1.4>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
@@ -165,6 +166,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--vulkan-low-iub: enables low inline uniform block count functionality, i.e. only assumes 4 rather than 16 IUBs are available (only Vulkan)\n"
 				 "\t--vulkan-low-ds: enables low descriptor set count functionality, i.e. only assumes 7 rather than 16 descriptor sets are available (only Vulkan)\n"
 				 "\t--vulkan-ptr-workarounds: enables workarounds for certain pointer uses in SPIR-V (only Vulkan)\n"
+				 "\t--vulkan-untyped-pointers: enables support for untyped pointers in SPIR-V (only Vulkan)\n"
 				 "\t--fubar-pch: use/build pre-compiled headers when building a FUBAR\n"
 				 "\t--fubar-options: reads compile options (-> toolchain) from a .json input file (can be overriden by command line)\n"
 				 "\t--fubar-compress: compress all binary data in the built FUBAR\n"
@@ -292,9 +294,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		const string mtl_version_str = *arg_ptr;
-		if (mtl_version_str == "3.0") { ctx.metal_std = METAL_VERSION::METAL_3_0; }
-		else if (mtl_version_str == "3.1") { ctx.metal_std = METAL_VERSION::METAL_3_1; }
-		else if (mtl_version_str == "3.2") { ctx.metal_std = METAL_VERSION::METAL_3_2; }
+		if (mtl_version_str == "3.2") { ctx.metal_std = METAL_VERSION::METAL_3_2; }
 		else if (mtl_version_str == "4.0") { ctx.metal_std = METAL_VERSION::METAL_4_0; }
 		else {
 			cerr << "invalid --metal-std argument" << endl;
@@ -489,6 +489,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--vulkan-ptr-workarounds", [](option_context& ctx, char**&) {
 		ctx.vulkan_pointer_workarounds = true;
 	}},
+	{ "--vulkan-untyped-pointers", [](option_context& ctx, char**&) {
+		ctx.vulkan_untyped_pointers = true;
+	}},
 	{ "--fubar-pch", [](option_context& ctx, char**&) {
 		ctx.fubar_pch = true;
 	}},
@@ -657,10 +660,6 @@ static int run_normal_build(option_context& option_ctx) {
 					dev->family_tier = 8;
 					dev->platform_type = (option_ctx.sub_target.starts_with("visionos_sim") ?
 										  metal_device::PLATFORM_TYPE::VISIONOS_SIMULATOR : metal_device::PLATFORM_TYPE::VISIONOS);
-					if (option_ctx.metal_std < METAL_VERSION::METAL_3_2) {
-						// must at least be 3.2
-						option_ctx.metal_std = METAL_VERSION::METAL_3_2;
-					}
 				} else if (option_ctx.sub_target.starts_with("macos")) {
 					dev->family_type = metal_device::FAMILY_TYPE::MAC;
 					dev->family_tier = 2;
@@ -717,6 +716,8 @@ static int run_normal_build(option_context& option_ctx) {
 				dev->max_descriptor_set_count = (option_ctx.vulkan_low_desc_set_count ?
 												 vulkan_device::min_required_bound_descriptor_sets :
 												 vulkan_device::min_required_high_bound_descriptor_sets);
+				
+				dev->untyped_pointers_support = option_ctx.vulkan_untyped_pointers.value_or(false);
 				
 				// handle version
 				dev->vulkan_version = option_ctx.vulkan_std;
