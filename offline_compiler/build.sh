@@ -64,14 +64,14 @@ if expr "${CXX_VERSION}" : ".*clang" >/dev/null; then
 	# also check the clang version
 	eval $(${CXX} -E -dM - < /dev/null 2>&1 | grep -E "clang_major|clang_minor|clang_patchlevel" | tr [:lower:] [:upper:] | sed -E "s/.*DEFINE __(.*)__ [\"]*([^ \"]*)[\"]*/export \1=\2/g")
 	if expr "${CXX_VERSION}" : "Apple.*" >/dev/null; then
-		# apple xcode/llvm/clang versioning scheme -> at least 15.0 is required (ships with Xcode / CLI tools 15.0)
-		if [ $CLANG_MAJOR -lt 15 ] || [ $CLANG_MAJOR -eq 15 -a $CLANG_MINOR -lt 0 -a $CLANG_PATCHLEVEL -lt 0 ]; then
-			error "at least Xcode 15.0 / Apple clang/LLVM 15.0.0 is required to compile this project!"
+		# Apple Xcode/LLVM/clang versioning scheme -> at least 17.0 is required (ships with Xcode / CLI tools 26.0)
+		if [ $CLANG_MAJOR -lt 17 ] || [ $CLANG_MAJOR -eq 17 -a $CLANG_MINOR -lt 0 -a $CLANG_PATCHLEVEL -lt 0 ]; then
+			error "at least Xcode 26.0 / Apple clang/LLVM 17.0.0 is required to compile this project!"
 		fi
 	else
-		# standard clang versioning scheme -> at least 16.0 is required
-		if [ $CLANG_MAJOR -lt 16 ] || [ $CLANG_MAJOR -eq 16 -a $CLANG_MINOR -lt 0 ]; then
-			error "at least clang 16.0 is required to compile this project!"
+		# standard clang versioning scheme -> at least 19.0 is required
+		if [ $CLANG_MAJOR -lt 19 ] || [ $CLANG_MAJOR -eq 19 -a $CLANG_MINOR -lt 0 ]; then
+			error "at least clang 19.0 is required to compile this project!"
 		fi
 	fi
 else
@@ -566,7 +566,7 @@ LDFLAGS="${LDFLAGS} -L/usr/lib -L/usr/local/lib -L/opt/floor/lib"
 # flags
 
 # set up initial c++ and c flags
-CXXFLAGS="${CXXFLAGS} -std=gnu++2b"
+CXXFLAGS="${CXXFLAGS} -std=gnu++26"
 if [ ${BUILD_CONF_LIBSTDCXX} -gt 0 ]; then
 	CXXFLAGS="${CXXFLAGS} -stdlib=libstdc++"
 else
@@ -585,10 +585,12 @@ if [ $BUILD_OS == "mingw" ]; then
 fi
 
 # arch handling (use -arch on macOS/iOS and -m64 everywhere else, except for mingw)
+BUILD_IS_ARM=0
 if [ $BUILD_OS == "macos" -o $BUILD_OS == "ios" ]; then
 	case $BUILD_ARCH in
 		"arm"*)
 			COMMON_FLAGS="${COMMON_FLAGS} -arch arm64"
+			BUILD_IS_ARM=1
 			;;
 		*)
 			COMMON_FLAGS="${COMMON_FLAGS} -arch x86_64"
@@ -605,6 +607,10 @@ COMMON_FLAGS="${COMMON_FLAGS} -ffast-math -fstrict-aliasing"
 # set flags when building for the native/host cpu
 if [ $BUILD_CONF_NATIVE -gt 0 ]; then
 	COMMON_FLAGS="${COMMON_FLAGS} -march=native -mtune=native"
+else
+	if [ $BUILD_IS_ARM -eq 0 ]; then
+		COMMON_FLAGS="${COMMON_FLAGS} -march=corei7-avx -mf16c"
+	fi
 fi
 
 # debug flags, only used in the debug target
@@ -657,13 +663,14 @@ fi
 WARNINGS="-Weverything ${WARNINGS}"
 # in case we're using warning options that aren't supported by other clang versions
 WARNINGS="${WARNINGS} -Wno-unknown-warning-option"
-# remove std compat warnings (C++23 with gnu and clang extensions is required)
+# remove std compat warnings (C++26 with gnu and clang extensions is required)
 WARNINGS="${WARNINGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++11-compat -Wno-c++11-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++14-compat -Wno-c++14-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++17-compat -Wno-c++17-compat-pedantic"
 WARNINGS="${WARNINGS} -Wno-c++20-compat -Wno-c++20-compat-pedantic -Wno-c++20-extensions"
 WARNINGS="${WARNINGS} -Wno-c++23-compat -Wno-c++23-compat-pedantic -Wno-c++23-extensions"
+WARNINGS="${WARNINGS} -Wno-c++26-compat -Wno-c++26-compat-pedantic -Wno-c++26-extensions"
 WARNINGS="${WARNINGS} -Wno-c99-extensions -Wno-c11-extensions"
 WARNINGS="${WARNINGS} -Wno-gnu -Wno-gcc-compat"
 WARNINGS="${WARNINGS} -Wno-nullability-extension"
