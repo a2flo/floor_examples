@@ -1047,6 +1047,10 @@ namespace fl::fubar {
 							options.debug.preprocess_condense = dbg_entry.second.get_or_throw<bool>();
 						} else if (dbg_entry.first == "preprocess_preserve_comments") {
 							options.debug.preprocess_preserve_comments = dbg_entry.second.get_or_throw<bool>();
+						} else if (dbg_entry.first == "error_on_alloca") {
+							options.debug.error_on_alloca = dbg_entry.second.get_or_throw<bool>();
+						} else if (dbg_entry.first == "error_on_ptr_type_alloca") {
+							options.debug.error_on_ptr_type_alloca = dbg_entry.second.get_or_throw<bool>();
 						} else {
 							log_warn("ignoring unknown debug option: $", dbg_entry.first);
 						}

@@ -103,6 +103,8 @@ struct option_context {
 	bool vulkan_subgroup_uniform_cf_support { true };
 	bool vulkan_low_iub_count { false };
 	bool vulkan_low_desc_set_count { false };
+	bool error_on_alloca { false };
+	bool error_on_ptr_type_alloca { false };
 	optional<bool> assert_support;
 	
 	bool is_fubar_build { false };
@@ -175,6 +177,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--emit-debug-info: enables emission of target dependent debug info\n"
 				 "\t--debug-preprocess-condense: preprocesses the input into a single .ii file before compiling it to the target format (only Metal)\n"
 				 "\t--debug-preprocess-preserve-comments: when '--debug-preprocess-condense' is set, disable stripping of comments (only Metal)\n"
+				 "\t--error-on-alloca: emit an error when there still is an alloca at the end of all optimizations\n"
+				 "\t--error-on-ptr-type-alloca: emit an error when there still is an alloca with a pointer type at the end of all optimizations\n"
 				 "\t--assert: enables assert support\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
@@ -515,6 +519,12 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--debug-preprocess-preserve-comments", [](option_context& ctx, char**&) {
 		ctx.preprocess_preserve_comments = true;
 	}},
+	{ "--error-on-alloca", [](option_context& ctx, char**&) {
+		ctx.error_on_alloca = true;
+	}},
+	{ "--error-on-ptr-type-alloca", [](option_context& ctx, char**&) {
+		ctx.error_on_ptr_type_alloca = true;
+	}},
 	{ "--assert", [](option_context& ctx, char**&) {
 		ctx.assert_support = true;
 	}},
@@ -827,6 +837,8 @@ static int run_normal_build(option_context& option_ctx) {
 			.debug.emit_debug_info = option_ctx.emit_debug_info.value_or(false),
 			.debug.preprocess_condense = option_ctx.preprocess_condense.value_or(false),
 			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
+			.debug.error_on_alloca = option_ctx.error_on_alloca,
+			.debug.error_on_ptr_type_alloca = option_ctx.error_on_ptr_type_alloca,
 			.cuda.ptx_version = option_ctx.ptx_version,
 			.cuda.max_registers = option_ctx.cuda_max_registers.value_or(0u),
 			.cuda.short_ptr = !option_ctx.cuda_no_short_ptr.value_or(false),
