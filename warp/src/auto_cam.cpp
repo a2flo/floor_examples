@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -56,15 +56,15 @@ void auto_cam::run(camera& cam) {
 	static constexpr const float step_size { 20.0f };
 	
 	float total_dist { 0.0f }; // TODO: make cexpr
-	for(size_t i = 0, count = size(cam_points); i < count; ++i) {
+	for (size_t i = 0, count = std::size(cam_points); i < count; ++i) {
 		total_dist += cam_points[i].pos.distance(cam_points[(i + 1) % count].pos);
 		cam_points[i].dist = total_dist;
 	}
 	
 	// time keeping
-	static constexpr const long double time_den { 1.0L / (long double)chrono::high_resolution_clock::time_point::duration::period::den };
-	static auto time_keeper = chrono::high_resolution_clock::now();
-	auto now = chrono::high_resolution_clock::now();
+	static constexpr const long double time_den { 1.0L / (long double)std::chrono::high_resolution_clock::time_point::duration::period::den };
+	static auto time_keeper = std::chrono::high_resolution_clock::now();
+	auto now = std::chrono::high_resolution_clock::now();
 	auto delta = now - time_keeper;
 	time_keeper = now;
 	const float step = float((long double)delta.count() * time_den);
@@ -75,17 +75,17 @@ void auto_cam::run(camera& cam) {
 	}
 	
 	//
-	const auto cur_iter = lower_bound(cbegin(cam_points), cend(cam_points), cur_dist, [](const auto& p, const float& dist) {
+	const auto cur_iter = std::lower_bound(std::cbegin(cam_points), std::cend(cam_points), cur_dist, [](const auto& p, const float& dist) {
 		return p.dist < dist;
 	});
-	auto next_iter = next(cur_iter);
-	if(next_iter == cend(cam_points)) next_iter = cbegin(cam_points);
+	auto next_iter = std::next(cur_iter);
+	if(next_iter == std::cend(cam_points)) next_iter = std::cbegin(cam_points);
 	
-	auto prev_iter = prev(cur_iter != cbegin(cam_points) ? cur_iter : cend(cam_points));
-	auto next_next_iter = next(next_iter);
-	if(next_next_iter == cend(cam_points)) next_next_iter = cbegin(cam_points);
+	auto prev_iter = std::prev(cur_iter != std::cbegin(cam_points) ? cur_iter : std::cend(cam_points));
+	auto next_next_iter = std::next(next_iter);
+	if(next_next_iter == std::cend(cam_points)) next_next_iter = std::cbegin(cam_points);
 	
-	const auto prev_dist = (cur_iter != cbegin(cam_points) ? prev(cur_iter)->dist : 0.0f);
+	const auto prev_dist = (cur_iter != std::cbegin(cam_points) ? std::prev(cur_iter)->dist : 0.0f);
 	const auto interp = (cur_dist - prev_dist) / (cur_iter->dist - prev_dist);
 	//cur_pos = cur_iter->pos.interpolated(next_iter->pos, interp);
 	//cur_rot = cur_iter->rot.interpolated(next_iter->rot, interp);

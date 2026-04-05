@@ -83,17 +83,17 @@
 	"memory": {
 		// heap allocation settings for backends that support it
 		"heap": {
-			// wanted size for the device private storage mode heap: [0, 1] * available global memory size
-			// NOTE: for Metal, this won't allocate anything if memory.metal.shared_only_with_unified_memory is true
-			"private_size": 0.25,
-			// wanted size for the device shared storage mode heap: [0, 1] * available global memory size
-			// NOTE: won't allocate anything if the device doesn't have unified memory that is shared with the CPU
-			"shared_size": 0.25
 		},
 		// Metal specific settings
 		"metal": {
 			// if enabled and the device has unified memory, only uses the shared storage mode for memory allocations
-			"shared_only_with_unified_memory": true
+			"shared_only_with_unified_memory": true,
+			// wanted size for the device private storage mode heap: [0, 1] * available global memory size
+			// NOTE: for Metal, this won't allocate anything if memory.metal.shared_only_with_unified_memory is true
+			"heap_private_size": 0.25,
+			// wanted size for the device shared storage mode heap: [0, 1] * available global memory size
+			// NOTE: won't allocate anything if the device doesn't have unified memory that is shared with the CPU
+			"heap_shared_size": 0.25
 		}
 	},
 
@@ -194,10 +194,14 @@
 		
 		// metal backend settings
 		"metal": {
+			// if true and if Metal 4 is supported, still use the Metal 3 backend
+			"use_metal3": false,
+			// if true, uses the software fallback implementation for indirect compute/rendering
+			//"soft_indirect": true,
 			// we need a different disassembler, because metallib is a container format
 			"metallib_dis": "metallib-dis",
 			// forces the compiler to generate code for the specified Metal version, instead of the one supported by the OS
-			// 0 = ignore this option, 30 = Metal 3.0, 31 = Metal 3.1, ...
+			// 0 = ignore this option, 32 = Metal 3.2, 40 = Metal 4.0, ...
 			"force_version": 0,
 			// if true, enables software printf in functions
 			// NOTE: this does come at a big performance cost and should only be enabled for debugging/development purposes

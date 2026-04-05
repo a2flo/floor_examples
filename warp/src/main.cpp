@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,9 +16,9 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include <floor/core/option_handler.hpp>
-#include <floor/compute/vulkan/vulkan_device.hpp>
+#include <floor/device/vulkan/vulkan_device.hpp>
 #include <libwarp/libwarp.h>
 #include "unified_renderer.hpp"
 #include "obj_loader.hpp"
@@ -26,99 +26,89 @@
 #include "warp_state.hpp"
 warp_state_struct warp_state;
 
+using namespace std::chrono_literals;
+
 struct warp_option_context {
 	// unused
-	string additional_options { "" };
+	std::string additional_options { "" };
 };
 typedef option_handler<warp_option_context> warp_opt_handler;
 
-static unique_ptr<camera> cam;
+static std::unique_ptr<camera> cam;
 static const double3 cam_speeds { 75.0 /* default */, 150.0 /* faster */, 10.0 /* slower */ };
 
-static shared_ptr<unified_renderer> uni_renderer;
+static std::shared_ptr<unified_renderer> uni_renderer;
 
 //! option -> function map
-template<> vector<pair<string, warp_opt_handler::option_function>> warp_opt_handler::options {
+template<> std::vector<std::pair<std::string, warp_opt_handler::option_function>> warp_opt_handler::options {
 	{ "--help", [](warp_option_context&, char**&) {
-		cout << "command line options:" << endl;
-		cout << "\t--scatter: warp in scatter mode" << endl;
-		cout << "\t--gather: warp in gather mode" << endl;
-		cout << "\t--gather-forward: warp in gather forward-only mode" << endl;
-		cout << "\t--no-warp: disables warping at the start (enable at run-time by pressing '1')" << endl;
-		cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via metal/vulkan)" << endl;
-		cout << "\t                  NOTE: obviously an upper limit" << endl;
-		cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << endl;
-		cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << endl;
-		cout << "\t--always-render: always perform full scene rendering (warping is disabled), not that --frames/--target will be ignored if enabled" << endl;
-		cout << "\t--no-arg-buffer: disables use of argument buffers in the unified renderer (also disables tessellation and indirect)" << endl;
-		cout << "\t--no-tessellation: disables tessellation in the unified renderer" << endl;
-		cout << "\t--no-indirect: disables indirect render/compute commands/pipelines in the unified renderer" << endl;
+		std::cout << "command line options:" << std::endl;
+		std::cout << "\t--scatter: warp in scatter mode" << std::endl;
+		std::cout << "\t--gather: warp in gather mode" << std::endl;
+		std::cout << "\t--gather-forward: warp in gather forward-only mode" << std::endl;
+		std::cout << "\t--no-warp: disables warping at the start (enable at run-time by pressing '1')" << std::endl;
+		std::cout << "\t--frames <count>: input frame rate, amount of frames per second that will actually be rendered (via metal/vulkan)" << std::endl;
+		std::cout << "\t                  NOTE: obviously an upper limit" << std::endl;
+		std::cout << "\t--target <count>: target frame rate (will use a constant time delta for each compute frame instead of a variable delta)" << std::endl;
+		std::cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << std::endl;
+		std::cout << "\t--always-render: always perform full scene rendering (warping is disabled), not that --frames/--target will be ignored if enabled" << std::endl;
+		std::cout << "\t--no-tessellation: disables tessellation in the unified renderer" << std::endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			cerr << "invalid argument after --frames!" << endl;
+			std::cerr << "invalid argument after --frames!" << std::endl;
 			warp_state.done = true;
 			return;
 		}
 		warp_state.render_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
-		cout << "render frame count set to: " << warp_state.render_frame_count << endl;
+		std::cout << "render frame count set to: " << warp_state.render_frame_count << std::endl;
 	}},
 	{ "--target", [](warp_option_context&, char**& arg_ptr) {
 		++arg_ptr;
 		if(*arg_ptr == nullptr || **arg_ptr == '-') {
-			cerr << "invalid argument after --target!" << endl;
+			std::cerr << "invalid argument after --target!" << std::endl;
 			warp_state.done = true;
 			return;
 		}
 		warp_state.target_frame_count = (uint32_t)strtoul(*arg_ptr, nullptr, 10);
-		cout << "target frame count set to: " << warp_state.target_frame_count << endl;
+		std::cout << "target frame count set to: " << warp_state.target_frame_count << std::endl;
 	}},
 	{ "--scatter", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = true;
 		warp_state.is_gather_forward = false;
-		cout << "using scatter" << endl;
+		std::cout << "using scatter" << std::endl;
 	}},
 	{ "--gather", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = false;
 		warp_state.is_gather_forward = false;
-		cout << "using gather" << endl;
+		std::cout << "using gather" << std::endl;
 	}},
 	{ "--gather-forward", [](warp_option_context&, char**&) {
 		warp_state.is_scatter = false;
 		warp_state.is_gather_forward = true;
-		cout << "using gather-forward" << endl;
+		std::cout << "using gather-forward" << std::endl;
 	}},
 	{ "--no-warp", [](warp_option_context&, char**&) {
 		warp_state.is_warping = false;
-		cout << "warping disabled" << endl;
+		std::cout << "warping disabled" << std::endl;
 	}},
 	{ "--always-render", [](warp_option_context&, char**&) {
 		warp_state.is_always_render = true;
-		cout << "always rendering (warping fully disabled)" << endl;
+		std::cout << "always rendering (warping fully disabled)" << std::endl;
 	}},
 	{ "--no-metal", [](warp_option_context&, char**&) {
 		warp_state.no_metal = true;
-		cout << "metal disabled" << endl;
+		std::cout << "metal disabled" << std::endl;
 	}},
 	{ "--no-vulkan", [](warp_option_context&, char**&) {
 		warp_state.no_vulkan = true;
-		cout << "vulkan disabled" << endl;
-	}},
-	{ "--no-arg-buffer", [](warp_option_context&, char**&) {
-		warp_state.use_argument_buffer = false;
-		warp_state.use_tessellation = false;
-		warp_state.use_indirect_commands = false;
-		cout << "arg-buffer + tessellation + indirect disabled" << endl;
+		std::cout << "vulkan disabled" << std::endl;
 	}},
 	{ "--no-tessellation", [](warp_option_context&, char**&) {
 		warp_state.use_tessellation = false;
-		cout << "tessellation disabled" << endl;
-	}},
-	{ "--no-indirect", [](warp_option_context&, char**&) {
-		warp_state.use_indirect_commands = false;
-		cout << "indirect disabled" << endl;
+		std::cout << "tessellation disabled" << std::endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -143,7 +133,7 @@ static bool compile_program() {
 	return true;
 }
 
-static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
+static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 	static constexpr const float eps1_step_size { 0.0005f };
 	static constexpr const float eps2_step_size { 0.001f };
 	static constexpr const uint32_t gather_max_dbg { 8 };
@@ -153,7 +143,7 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		return true;
 	}
 	else if(type == EVENT_TYPE::KEY_DOWN) {
-		switch(static_pointer_cast<key_down_event>(obj)->key) {
+		switch(std::static_pointer_cast<key_down_event>(obj)->key) {
 			case SDLK_LSHIFT:
 			case SDLK_RSHIFT:
 				cam->set_cam_speed(cam_speeds.y);
@@ -287,7 +277,8 @@ static bool evt_handler(EVENT_TYPE type, shared_ptr<event_object> obj) {
 		}
 		return true;
 	}
-	else if(type == EVENT_TYPE::MOUSE_RIGHT_UP) {
+	else if(type == EVENT_TYPE::MOUSE_RIGHT_UP ||
+			type == EVENT_TYPE::MOUSE_LEFT_UP) {
 		if(cam != nullptr) {
 			cam->set_mouse_input(cam->get_mouse_input() ^ true);
 		}
@@ -331,19 +322,19 @@ int main(int, char* argv[]) {
 		.app_name = "warp",
 		.renderer = wanted_renderer,
 		// disable resource tracking and enable non-blocking Vulkan execution
-		.context_flags = COMPUTE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | COMPUTE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
+		.context_flags = DEVICE_CONTEXT_FLAGS::NO_RESOURCE_TRACKING | DEVICE_CONTEXT_FLAGS::VULKAN_NO_BLOCKING,
 	})) {
 		return -1;
 	}
 	
 	// disable resp. other renderers when using metal/vulkan
 	const auto floor_renderer = floor::get_renderer();
-	const bool is_metal = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::METAL ||
-							floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_metal = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::METAL ||
+							floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 						   floor_renderer == floor::RENDERER::METAL);
-	const bool is_vulkan = ((floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::VULKAN ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::CUDA ||
-							 floor::get_compute_context()->get_compute_type() == COMPUTE_TYPE::HOST) &&
+	const bool is_vulkan = ((floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::VULKAN ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::CUDA ||
+							 floor::get_device_context()->get_platform_type() == PLATFORM_TYPE::HOST) &&
 							floor_renderer == floor::RENDERER::VULKAN);
 	
 	if (floor_renderer == floor::RENDERER::NONE) {
@@ -370,21 +361,20 @@ int main(int, char* argv[]) {
 		return -3;
 	}
 	
-	event::handler evt_handler_fnctr(&evt_handler);
-	shared_ptr<obj_model> model;
+	event::handler_f evt_handler_fnctr(&evt_handler);
+	std::shared_ptr<obj_model> model;
 	{
 		// add event handlers
-		floor::get_event()->add_internal_event_handler(evt_handler_fnctr,
-													   EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
-													   EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
-													   EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
-													   EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
-													   EVENT_TYPE::WINDOW_RESIZE);
+		floor::get_event()->add_inline_event_handler(evt_handler_fnctr,
+													 EVENT_TYPE::QUIT, EVENT_TYPE::KEY_UP, EVENT_TYPE::KEY_DOWN,
+													 EVENT_TYPE::MOUSE_LEFT_DOWN, EVENT_TYPE::MOUSE_LEFT_UP, EVENT_TYPE::MOUSE_MOVE,
+													 EVENT_TYPE::MOUSE_RIGHT_DOWN, EVENT_TYPE::MOUSE_RIGHT_UP,
+													 EVENT_TYPE::FINGER_DOWN, EVENT_TYPE::FINGER_UP, EVENT_TYPE::FINGER_MOVE,
+													 EVENT_TYPE::WINDOW_RESIZE);
 		
-		cam = make_unique<camera>();
+		cam = std::make_unique<camera>();
 		
 		if (!warp_state.is_auto_cam) {
-			cam->set_mouse_input(true);
 			cam->set_wasd_input(true);
 			cam->set_rotation_wrapping(false);
 		} else {
@@ -397,18 +387,18 @@ int main(int, char* argv[]) {
 		last_cam_pos = cam->get_position();
 		
 		// get the compute and render contexts that has been automatically created (opencl/cuda/metal/vulkan/host)
-		warp_state.cctx = floor::get_compute_context();
+		warp_state.cctx = floor::get_device_context();
 		warp_state.rctx = floor::get_render_context();
 		if (!warp_state.rctx) {
 			warp_state.rctx = warp_state.cctx;
 		}
 		
 		// create a compute queue (aka command queue or stream) for the fastest device in the context
-		warp_state.cdev = warp_state.cctx->get_device(compute_device::TYPE::FASTEST);
+		warp_state.cdev = warp_state.cctx->get_device(device::TYPE::FASTEST);
 		warp_state.cqueue = warp_state.cctx->create_queue(*warp_state.cdev);
 		if (warp_state.cctx != warp_state.rctx) {
 			// render context is not the same as the compute context -> also create dev and queue for the render context
-			warp_state.rdev = warp_state.rctx->get_device(compute_device::TYPE::FASTEST);
+			warp_state.rdev = warp_state.rctx->get_device(device::TYPE::FASTEST);
 			warp_state.rqueue = warp_state.rctx->create_queue(*warp_state.rdev);
 		} else {
 			// otherwise: use the same as the compute context
@@ -416,31 +406,22 @@ int main(int, char* argv[]) {
 			warp_state.rqueue = warp_state.cqueue;
 		}
 		
-		// disable argument_buffer use when argument buffers with images are not supported by the device
-		warp_state.use_argument_buffer &= warp_state.rdev->argument_buffer_image_support;
-		// tessellation requires argument_buffer support
-		warp_state.use_tessellation &= warp_state.rdev->tessellation_support & warp_state.use_argument_buffer;
-		
-		// if there isn't full argument buffer support or there isn't full indirect command support, disable indirect command use
-		if (!warp_state.use_argument_buffer ||
-			!warp_state.rdev->indirect_command_support ||
-			!warp_state.rdev->indirect_render_command_support ||
-			!warp_state.rdev->indirect_compute_command_support) {
-			warp_state.use_indirect_commands = false;
+		// argument buffers with images + indirect render command support is required now (this is the case for all Metal/Vulkan devices)
+		if (!warp_state.rdev->argument_buffer_image_support) {
+			log_error("device doesn't have image in argument buffer support");
+			return -1;
 		}
-		
-		// tessellation requires argument buffer support
-		if (warp_state.use_tessellation && !warp_state.use_argument_buffer) {
-			log_error("argument buffer support is required when using tessellation");
+		if (!warp_state.rdev->indirect_render_command_support) {
+			log_error("device doesn't have image in indirect render command support");
 			return -1;
 		}
 		
-		log_debug("arg-buffers: $, tessellation: $, indirect: $",
-				  warp_state.use_argument_buffer, warp_state.use_tessellation, warp_state.use_indirect_commands);
+		warp_state.use_tessellation &= warp_state.rdev->tessellation_support;
+		log_debug("tessellation: $", warp_state.use_tessellation);
 		
 		// if vsync is enabled and the target frame rate isn't set,
 		// compute the appropriate value according to the render/input frame rate and display refresh rate
-		if ((floor::get_vsync() || warp_state.rctx->get_compute_type() == COMPUTE_TYPE::METAL) &&
+		if ((floor::get_vsync() || warp_state.rctx->get_platform_type() == PLATFORM_TYPE::METAL) &&
 			warp_state.target_frame_count == 0) {
 			warp_state.target_frame_count = floor::get_window_refresh_rate();
 			if (warp_state.target_frame_count == 0) {
@@ -459,7 +440,7 @@ int main(int, char* argv[]) {
 		}
 		
 		// init renderers (need compiled prog first)
-		uni_renderer = make_shared<unified_renderer>();
+		uni_renderer = std::make_shared<unified_renderer>();
 		if (!uni_renderer->init()) {
 			log_error("error during unified renderer initialization!");
 			return -1;
@@ -486,10 +467,10 @@ int main(int, char* argv[]) {
 	while (!warp_state.done) {
 		if (uni_renderer) {
 			// throttle main loop when rendering and render queueing is off-loaded
-			this_thread::sleep_for(500us);
+			std::this_thread::sleep_for(500us);
 			{
-				static auto last_sec_frame = chrono::steady_clock::now();
-				const auto cur_time = chrono::steady_clock::now();
+				static auto last_sec_frame = std::chrono::steady_clock::now();
+				const auto cur_time = std::chrono::steady_clock::now();
 				if (cur_time - last_sec_frame > 1s) {
 					// update stats
 					last_sec_frame = cur_time;
@@ -499,10 +480,10 @@ int main(int, char* argv[]) {
 		
 		floor::get_event()->handle_events();
 		
-#if !defined(FLOOR_IOS)
+#if !defined(FLOOR_IOS) && defined(__APPLE__)
 		// stop drawing if window is inactive
 		if (!(SDL_GetWindowFlags(floor::get_window()) & SDL_WINDOW_INPUT_FOCUS)) {
-			this_thread::sleep_for(20ms);
+			std::this_thread::sleep_for(20ms);
 			continue;
 		}
 #endif
@@ -515,13 +496,13 @@ int main(int, char* argv[]) {
 		if (uni_renderer) {
 			if (uni_renderer->is_new_fps_count()) {
 				const auto& cam_state = cam->get_current_state();
-				floor::set_caption("warp | FPS: " + to_string(uni_renderer->get_fps()) +
+				floor::set_caption("warp | FPS: " + std::to_string(uni_renderer->get_fps()) +
 								   " | Pos: " + cam_state.position.to_string() +
 								   " | Rot: " + cam_state.rotation.to_string());
 			}
 		} else {
 			if (floor::is_new_fps_count()) {
-				floor::set_caption("warp | FPS: " + to_string(floor::get_fps()) +
+				floor::set_caption("warp | FPS: " + std::to_string(floor::get_fps()) +
 								   " | Pos: " + cam->get_position().to_string() +
 								   " | Rot: " + cam->get_rotation().to_string());
 			}
@@ -534,7 +515,7 @@ int main(int, char* argv[]) {
 	log_msg("done!");
 	
 	// unregister event handler (we really don't want to react to events when destructing everything)
-	floor::get_event()->remove_event_handler(evt_handler_fnctr);
+	floor::get_event()->remove_inline_event_handler(evt_handler_fnctr);
 	uni_renderer = nullptr;
 	libwarp_destroy();
 	cam = nullptr;

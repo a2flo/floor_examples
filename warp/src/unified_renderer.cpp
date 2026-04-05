@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,13 @@
 
 #include <floor/core/timer.hpp>
 #include <floor/core/file_io.hpp>
-#include <floor/graphics/graphics_renderer.hpp>
-#include <floor/graphics/graphics_pipeline.hpp>
-#include <floor/graphics/graphics_pass.hpp>
-#include <floor/compute/device/common.hpp>
+#include <floor/device/graphics_renderer.hpp>
+#include <floor/device/graphics_pipeline.hpp>
+#include <floor/device/graphics_pass.hpp>
+#include <floor/device/backend/common.hpp>
 #include <condition_variable>
+
+using namespace std::chrono_literals;
 
 #if 0
 #define warp_log_wip(...) log_warn(__VA_ARGS__)
@@ -38,7 +40,7 @@
 //! this performs the rendering and screen-blitting/present of a single frame
 class render_thread final : public thread_base {
 public:
-	render_thread(const string name, unified_renderer& renderer_, const uint32_t frame_idx_) :
+	render_thread(const std::string name, unified_renderer& renderer_, const uint32_t frame_idx_) :
 	thread_base(name), renderer(renderer_), frame_idx(frame_idx_) {
 		// never sleep or yield, will wait on "render_cv" in run()
 		set_thread_delay(0u);
@@ -62,18 +64,18 @@ protected:
 	//! associated frame index
 	const uint32_t frame_idx { ~0u };
 	//! required lock for "render_cv"
-	mutex render_cv_lock;
+	std::mutex render_cv_lock;
 	//! will be signaled once the frame should be rendered
-	condition_variable render_cv;
+	std::condition_variable render_cv;
 };
 
 unified_renderer::unified_renderer() :
-resize_handler_fnctr(bind(&unified_renderer::resize_handler, this, placeholders::_1, placeholders::_2)) {
-	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
+resize_handler_fnctr(std::bind(&unified_renderer::resize_handler, this, std::placeholders::_1, std::placeholders::_2)) {
+	floor::get_event()->add_inline_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 }
 
 unified_renderer::~unified_renderer() {
-	floor::get_event()->remove_event_handler(resize_handler_fnctr);
+	floor::get_event()->remove_inline_event_handler(resize_handler_fnctr);
 	
 	// signal renderer halt and shut down all render threads
 	halt_renderer = true;
@@ -85,7 +87,7 @@ unified_renderer::~unified_renderer() {
 	destroy_skybox();
 }
 
-void unified_renderer::create_frame_buffer_images(const COMPUTE_IMAGE_TYPE color_format) {
+void unified_renderer::create_frame_buffer_images(const IMAGE_TYPE color_format) {
 	const auto frame_dim = floor::get_physical_screen_size();
 	// kernel work-group size is { 32, 16 } -> round global size to a multiple of it
 	const auto frame_dim_multiple = frame_dim.rounded_next_multiple(warp_state.tile_size);
@@ -103,20 +105,20 @@ void unified_renderer::create_frame_buffer_images(const COMPUTE_IMAGE_TYPE color
 	
 	// since certain frame buffers need to be accessed by the compute backend, which may be different to the render backend,
 	// we need to create these frame buffers via the compute context and set appropriate sharing flags
-	COMPUTE_MEMORY_FLAG sharing_flags {};
-	COMPUTE_MEMORY_FLAG sharing_fbo_flags {};
+	MEMORY_FLAG sharing_flags {};
+	MEMORY_FLAG sharing_fbo_flags {};
 	if (warp_state.cctx != warp_state.rctx) {
-		sharing_flags = COMPUTE_MEMORY_FLAG::SHARING_SYNC;
-		if (warp_state.rctx->get_compute_type() == COMPUTE_TYPE::VULKAN) {
-			sharing_flags |= COMPUTE_MEMORY_FLAG::VULKAN_SHARING;
-		} else if (warp_state.rctx->get_compute_type() == COMPUTE_TYPE::METAL) {
-			sharing_flags |= COMPUTE_MEMORY_FLAG::METAL_SHARING;
+		sharing_flags = MEMORY_FLAG::SHARING_SYNC;
+		if (warp_state.rctx->get_platform_type() == PLATFORM_TYPE::VULKAN) {
+			sharing_flags |= MEMORY_FLAG::VULKAN_SHARING;
+		} else if (warp_state.rctx->get_platform_type() == PLATFORM_TYPE::METAL) {
+			sharing_flags |= MEMORY_FLAG::METAL_SHARING;
 		} else {
 			log_error("unknown graphics backend");
 		}
 		
 		// render backend only writes FBOs for read-only use in the compute backend
-		sharing_fbo_flags = COMPUTE_MEMORY_FLAG::SHARING_RENDER_WRITE | COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_READ;
+		sharing_fbo_flags = MEMORY_FLAG::SHARING_RENDER_WRITE | MEMORY_FLAG::SHARING_COMPUTE_READ;
 	}
 	
 	uint32_t frame_counter = 0;
@@ -124,61 +126,61 @@ void unified_renderer::create_frame_buffer_images(const COMPUTE_IMAGE_TYPE color
 		frame.scene_fbo.dim = frame_dim;
 		frame.scene_fbo.dim_multiple = frame_dim_multiple;
 		
-		const auto frame_str = to_string(frame_counter++);
+		const auto frame_str = std::to_string(frame_counter++);
 		
 		frame.scene_fbo.color = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
 															  color_format |
-															  COMPUTE_IMAGE_TYPE::IMAGE_2D |
-															  COMPUTE_IMAGE_TYPE::READ_WRITE |
-															  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-															  COMPUTE_MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+															  IMAGE_TYPE::IMAGE_2D |
+															  IMAGE_TYPE::READ_WRITE |
+															  IMAGE_TYPE::FLAG_RENDER_TARGET,
+															  MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
 		frame.scene_fbo.color->set_debug_label("scene_color#" + frame_str);
 		
 		frame.scene_fbo.depth = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
-															  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
-															  COMPUTE_IMAGE_TYPE::D32F |
-															  COMPUTE_IMAGE_TYPE::READ |
-															  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-															  COMPUTE_MEMORY_FLAG::READ | sharing_flags | sharing_fbo_flags);
+															  IMAGE_TYPE::IMAGE_DEPTH |
+															  IMAGE_TYPE::D32F |
+															  IMAGE_TYPE::READ |
+															  IMAGE_TYPE::FLAG_RENDER_TARGET,
+															  MEMORY_FLAG::READ | sharing_flags | sharing_fbo_flags);
 		frame.scene_fbo.depth->set_debug_label("scene_depth#" + frame_str);
 		
 		for (size_t j = 0; j < 2; ++j) {
 			frame.scene_fbo.motion[j] = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
-																	  COMPUTE_IMAGE_TYPE::IMAGE_2D |
-																	  COMPUTE_IMAGE_TYPE::R32UI |
-																	  COMPUTE_IMAGE_TYPE::READ_WRITE |
-																	  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-																	  COMPUTE_MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+																	  IMAGE_TYPE::IMAGE_2D |
+																	  IMAGE_TYPE::R32UI |
+																	  IMAGE_TYPE::READ_WRITE |
+																	  IMAGE_TYPE::FLAG_RENDER_TARGET,
+																	  MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
 		}
 		frame.scene_fbo.motion[0]->set_debug_label("scene_motion_0#" + frame_str);
 		frame.scene_fbo.motion[1]->set_debug_label("scene_motion_1#" + frame_str);
 		
 		frame.scene_fbo.motion_depth = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
-																	 COMPUTE_IMAGE_TYPE::IMAGE_2D |
-																	 COMPUTE_IMAGE_TYPE::RG16F |
-																	 COMPUTE_IMAGE_TYPE::READ |
-																	 COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-																	 COMPUTE_MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+																	 IMAGE_TYPE::IMAGE_2D |
+																	 IMAGE_TYPE::RG16F |
+																	 IMAGE_TYPE::READ |
+																	 IMAGE_TYPE::FLAG_RENDER_TARGET,
+																	 MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
 		frame.scene_fbo.motion_depth->set_debug_label("scene_motion_depth#" + frame_str);
 		
 		frame.scene_fbo.compute_color = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
 																	  color_format |
-																	  COMPUTE_IMAGE_TYPE::IMAGE_2D |
-																	  COMPUTE_IMAGE_TYPE::READ_WRITE,
-																	  COMPUTE_MEMORY_FLAG::READ_WRITE | sharing_flags |
+																	  IMAGE_TYPE::IMAGE_2D |
+																	  IMAGE_TYPE::READ_WRITE,
+																	  MEMORY_FLAG::READ_WRITE | sharing_flags |
 																	  // here: render backend only reads data, compute writes
-																	  COMPUTE_MEMORY_FLAG::SHARING_RENDER_READ |
-																	  COMPUTE_MEMORY_FLAG::SHARING_COMPUTE_WRITE);
+																	  MEMORY_FLAG::SHARING_RENDER_READ |
+																	  MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 		frame.scene_fbo.compute_color->set_debug_label("scene_compute_color");
 		
 		if (!frame.shadow_map.shadow_image) {
 			// shadow map (only created once)
 			frame.shadow_map.shadow_image = warp_state.rctx->create_image(*frame.dev_queue, frame.shadow_map.dim,
-																		  COMPUTE_IMAGE_TYPE::IMAGE_DEPTH |
-																		  COMPUTE_IMAGE_TYPE::D32F |
-																		  COMPUTE_IMAGE_TYPE::READ |
-																		  COMPUTE_IMAGE_TYPE::FLAG_RENDER_TARGET,
-																		  COMPUTE_MEMORY_FLAG::READ);
+																		  IMAGE_TYPE::IMAGE_DEPTH |
+																		  IMAGE_TYPE::D32F |
+																		  IMAGE_TYPE::READ |
+																		  IMAGE_TYPE::FLAG_RENDER_TARGET,
+																		  MEMORY_FLAG::READ);
 			frame.shadow_map.shadow_image->set_debug_label("shadow_map");
 		}
 	}
@@ -211,7 +213,7 @@ void unified_renderer::create_skybox() {
 		"skybox/negz.png",
 	};
 	
-	array<SDL_Surface*, size(skybox_filenames)> skybox_surfaces;
+	std::array<SDL_Surface*, std::size(skybox_filenames)> skybox_surfaces;
 	auto surf_iter = begin(skybox_surfaces);
 	for(const auto& filename : skybox_filenames) {
 		const auto tex = obj_loader::load_texture(floor::data_path(filename));
@@ -223,16 +225,16 @@ void unified_renderer::create_skybox() {
 	}
 	
 	//
-	COMPUTE_IMAGE_TYPE image_type = obj_loader::floor_image_type_format(skybox_surfaces[0]);
-	image_type |= (COMPUTE_IMAGE_TYPE::IMAGE_CUBE |
-				   COMPUTE_IMAGE_TYPE::FLAG_MIPMAPPED |
-				   COMPUTE_IMAGE_TYPE::READ);
+	IMAGE_TYPE image_type = obj_loader::floor_image_type_format(skybox_surfaces[0]);
+	image_type |= (IMAGE_TYPE::IMAGE_CUBE |
+				   IMAGE_TYPE::FLAG_MIPMAPPED |
+				   IMAGE_TYPE::READ);
 	
 	// need to copy the data to a continuous array
 	const uint2 skybox_dim { uint32_t(skybox_surfaces[0]->w), uint32_t(skybox_surfaces[0]->h) };
 	const auto skybox_size = image_data_size_from_types(skybox_dim, image_type);
 	const auto slice_size = image_slice_data_size_from_types(skybox_dim, image_type);
-	auto skybox_pixels = make_unique<uint8_t[]>(skybox_size);
+	auto skybox_pixels = std::make_unique<uint8_t[]>(skybox_size);
 	for(size_t i = 0, count = size(skybox_surfaces); i < count; ++i) {
 		memcpy(skybox_pixels.get() + i * slice_size, skybox_surfaces[i]->pixels, slice_size);
 	}
@@ -241,9 +243,9 @@ void unified_renderer::create_skybox() {
 											   skybox_dim,
 											   image_type,
 											   { skybox_pixels.get(), skybox_size },
-											   COMPUTE_MEMORY_FLAG::READ |
-											   COMPUTE_MEMORY_FLAG::HOST_READ_WRITE |
-											   COMPUTE_MEMORY_FLAG::GENERATE_MIP_MAPS);
+											   MEMORY_FLAG::READ |
+											   MEMORY_FLAG::HOST_READ_WRITE |
+											   MEMORY_FLAG::GENERATE_MIP_MAPS);
 	skybox_tex->set_debug_label("skybox_tex");
 }
 
@@ -251,7 +253,7 @@ void unified_renderer::destroy_skybox() {
 	skybox_tex = nullptr;
 }
 
-bool unified_renderer::resize_handler(EVENT_TYPE type, shared_ptr<event_object>) {
+bool unified_renderer::resize_handler(EVENT_TYPE type, std::shared_ptr<event_object>) {
 	if (type == EVENT_TYPE::WINDOW_RESIZE) {
 		WARP_FLUSH_RENDERER(*this);
 		destroy_frame_buffer_images(true);
@@ -287,20 +289,18 @@ bool unified_renderer::init() {
 	// init initial per-frame objects
 	uint32_t frame_counter = 0;
 	for (auto& frame : frame_objects) {
-		const auto frame_idx_str = to_string(frame_counter);
+		const auto frame_idx_str = std::to_string(frame_counter);
 		frame.dev_queue = warp_state.rctx->create_queue(*warp_state.rdev);
 		frame.rthread = make_unique<render_thread>("render_thrd#" + frame_idx_str, *this, frame_counter);
 		frame.frame_uniforms_buffer = warp_state.rctx->create_buffer(*frame.dev_queue, sizeof(warp_shaders::frame_uniforms_t),
-																	 COMPUTE_MEMORY_FLAG::READ |
-																	 COMPUTE_MEMORY_FLAG::HOST_WRITE |
-																	 COMPUTE_MEMORY_FLAG::VULKAN_HOST_COHERENT);
+																	 MEMORY_FLAG::READ |
+																	 MEMORY_FLAG::HOST_WRITE |
+																	 MEMORY_FLAG::VULKAN_HOST_COHERENT);
 		frame.frame_uniforms_buffer->set_debug_label("frame_uniforms#" + frame_idx_str);
 		++frame_counter;
 	}
 	
 	create_frame_buffer_images(warp_state.rctx->get_renderer_image_type());
-	
-	floor::get_event()->add_internal_event_handler(resize_handler_fnctr, EVENT_TYPE::WINDOW_RESIZE);
 	
 	// sky box
 	create_skybox();
@@ -495,7 +495,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = warp_state.use_indirect_commands,
+			.support_indirect_rendering = true,
 			.debug_label = "scatter_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -549,7 +549,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_depth_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = warp_state.use_indirect_commands,
+			.support_indirect_rendering = true,
 			.debug_label = "gather_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -602,7 +602,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = warp_state.use_indirect_commands,
+			.support_indirect_rendering = true,
 			.debug_label = "gather_fwd_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -653,7 +653,7 @@ bool unified_renderer::create_pipelines() {
 				.compare = DEPTH_COMPARE::LESS,
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = warp_state.use_indirect_commands,
+			.support_indirect_rendering = true,
 			.debug_label = "shadow_pipeline",
 		};
 		shadow_pipeline = warp_state.rctx->create_graphics_pipeline(pipeline_desc);
@@ -734,80 +734,78 @@ bool unified_renderer::create_pipelines() {
 	}
 	
 	// create indirect pipelines
-	if (warp_state.use_indirect_commands) {
-		uint32_t frame_counter = 0;
-		for (auto& frame : frame_objects) {
-			const auto frame_str = "#" + to_string(frame_counter++);
+	uint32_t frame_counter = 0;
+	for (auto& frame : frame_objects) {
+		const auto frame_str = "#" + std::to_string(frame_counter++);
+		
+		{
+			indirect_command_description desc {
+				.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
+				.max_command_count = 1,
+				.debug_label = "indirect_shadow_pipeline" + frame_str
+			};
+			desc.compute_buffer_counts_from_functions(*warp_state.rdev, {
+				shaders[SHADOW_VS]
+			});
+			frame.indirect_shadow_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
+			if (!frame.indirect_shadow_pipeline->is_valid()) {
+				log_error("failed to create indirect_shadow_pipeline");
+				return false;
+			}
+		}
+		{
+			indirect_command_description desc {
+				.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
+				.max_command_count = 1,
+				.debug_label = "indirect_scene_scatter_pipeline" + frame_str
+			};
+			std::vector<const device_function*> functions {
+				shaders[SCENE_SCATTER_VS], shaders[SCENE_SCATTER_FS],
+				shaders[SCENE_GATHER_VS], shaders[SCENE_GATHER_FS],
+				shaders[SCENE_GATHER_FWD_VS], shaders[SCENE_GATHER_FWD_FS],
+			};
+			if (warp_state.use_tessellation) {
+				functions.emplace_back(shaders[SCENE_SCATTER_TES]);
+				functions.emplace_back(shaders[SCENE_GATHER_TES]);
+				functions.emplace_back(shaders[SCENE_GATHER_FWD_TES]);
+			}
+			desc.compute_buffer_counts_from_functions(*warp_state.rdev, functions);
 			
-			{
-				indirect_command_description desc {
-					.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
-					.max_command_count = 1,
-					.debug_label = "indirect_shadow_pipeline" + frame_str
-				};
-				desc.compute_buffer_counts_from_functions(*warp_state.rdev, {
-					shaders[SHADOW_VS]
-				});
-				frame.indirect_shadow_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
-				if (!frame.indirect_shadow_pipeline->is_valid()) {
-					log_error("failed to create indirect_shadow_pipeline");
-					return false;
-				}
+			frame.indirect_scene_scatter_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
+			if (!frame.indirect_scene_scatter_pipeline->is_valid()) {
+				log_error("failed to create indirect_scene_scatter_pipeline");
+				return false;
 			}
-			{
-				indirect_command_description desc {
-					.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
-					.max_command_count = 1,
-					.debug_label = "indirect_scene_scatter_pipeline" + frame_str
-				};
-				vector<const compute_kernel*> functions {
-					shaders[SCENE_SCATTER_VS], shaders[SCENE_SCATTER_FS],
-					shaders[SCENE_GATHER_VS], shaders[SCENE_GATHER_FS],
-					shaders[SCENE_GATHER_FWD_VS], shaders[SCENE_GATHER_FWD_FS],
-				};
-				if (warp_state.use_tessellation) {
-					functions.emplace_back(shaders[SCENE_SCATTER_TES]);
-					functions.emplace_back(shaders[SCENE_GATHER_TES]);
-					functions.emplace_back(shaders[SCENE_GATHER_FWD_TES]);
-				}
-				desc.compute_buffer_counts_from_functions(*warp_state.rdev, functions);
-				
-				frame.indirect_scene_scatter_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
-				if (!frame.indirect_scene_scatter_pipeline->is_valid()) {
-					log_error("failed to create indirect_scene_scatter_pipeline");
-					return false;
-				}
-				
-				desc.debug_label = "indirect_scene_gather_pipeline" + frame_str;
-				frame.indirect_scene_gather_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
-				if (!frame.indirect_scene_gather_pipeline->is_valid()) {
-					log_error("failed to create indirect_scene_gather_pipeline");
-					return false;
-				}
+			
+			desc.debug_label = "indirect_scene_gather_pipeline" + frame_str;
+			frame.indirect_scene_gather_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
+			if (!frame.indirect_scene_gather_pipeline->is_valid()) {
+				log_error("failed to create indirect_scene_gather_pipeline");
+				return false;
 			}
-			{
-				indirect_command_description desc {
-					.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
-					.max_command_count = 1,
-					.debug_label = "indirect_skybox_scatter_pipeline" + frame_str
-				};
-				desc.compute_buffer_counts_from_functions(*warp_state.rdev, {
-					shaders[SKYBOX_SCATTER_VS], shaders[SKYBOX_SCATTER_FS],
-					shaders[SKYBOX_GATHER_VS], shaders[SKYBOX_GATHER_FS],
-					shaders[SKYBOX_GATHER_FWD_VS], shaders[SKYBOX_GATHER_FWD_FS],
-				});
-				frame.indirect_skybox_scatter_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
-				if (!frame.indirect_skybox_scatter_pipeline->is_valid()) {
-					log_error("failed to create indirect_skybox_scatter_pipeline");
-					return false;
-				}
-				
-				desc.debug_label = "indirect_skybox_gather_pipeline" + frame_str;
-				frame.indirect_skybox_gather_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
-				if (!frame.indirect_skybox_gather_pipeline->is_valid()) {
-					log_error("failed to create indirect_skybox_gather_pipeline");
-					return false;
-				}
+		}
+		{
+			indirect_command_description desc {
+				.command_type = indirect_command_description::COMMAND_TYPE::RENDER,
+				.max_command_count = 1,
+				.debug_label = "indirect_skybox_scatter_pipeline" + frame_str
+			};
+			desc.compute_buffer_counts_from_functions(*warp_state.rdev, {
+				shaders[SKYBOX_SCATTER_VS], shaders[SKYBOX_SCATTER_FS],
+				shaders[SKYBOX_GATHER_VS], shaders[SKYBOX_GATHER_FS],
+				shaders[SKYBOX_GATHER_FWD_VS], shaders[SKYBOX_GATHER_FWD_FS],
+			});
+			frame.indirect_skybox_scatter_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
+			if (!frame.indirect_skybox_scatter_pipeline->is_valid()) {
+				log_error("failed to create indirect_skybox_scatter_pipeline");
+				return false;
+			}
+			
+			desc.debug_label = "indirect_skybox_gather_pipeline" + frame_str;
+			frame.indirect_skybox_gather_pipeline = warp_state.rctx->create_indirect_command_pipeline(desc);
+			if (!frame.indirect_skybox_gather_pipeline->is_valid()) {
+				log_error("failed to create indirect_skybox_gather_pipeline");
+				return false;
 			}
 		}
 	}
@@ -816,9 +814,6 @@ bool unified_renderer::create_pipelines() {
 }
 
 void unified_renderer::encode_indirect_pipelines(const uint32_t frame_idx) {
-	if (!warp_state.use_indirect_commands) {
-		return;
-	}
 	auto& frame = frame_objects[frame_idx];
 	if (!frame.indirect_shadow_pipeline ||
 		!frame.indirect_scene_scatter_pipeline ||
@@ -843,7 +838,7 @@ void unified_renderer::encode_indirect_pipelines(const uint32_t frame_idx) {
 	// -> only need one pipeline for gather
 	const auto& scene_gather_pipeline = (warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline);
 	if (warp_state.use_tessellation) {
-		vector<const compute_buffer*> vbuffers {
+		std::vector<const device_buffer*> vbuffers {
 			model->vertices_buffer.get(),
 			model->tex_coords_buffer.get(),
 			model->normals_buffer.get(),
@@ -930,12 +925,12 @@ void unified_renderer::render() {
 		bool run_warping = false;
 		{
 			// time keeping
-			static constexpr const long double time_den { chrono::high_resolution_clock::time_point::duration::period::den };
+			static constexpr const long double time_den { std::chrono::high_resolution_clock::time_point::duration::period::den };
 			static const float frame_limit { 1.0f / float(warp_state.render_frame_count) };
 			static auto render_delta = 0.0f;
-			static auto time_keeper = chrono::high_resolution_clock::now();
+			static auto time_keeper = std::chrono::high_resolution_clock::now();
 			static auto warp_frame_num = 0u;
-			const auto now = chrono::high_resolution_clock::now();
+			const auto now = std::chrono::high_resolution_clock::now();
 			const auto delta = now - time_keeper;
 			const auto deltaf = float(((long double)delta.count()) / time_den);
 			
@@ -988,7 +983,7 @@ void unified_renderer::render() {
 			// only advance frame index if we're not warping
 			next_frame_idx = (next_frame_idx + 1u) % max_frames_in_flight;
 		}
-	} catch (exception& exc) {
+	} catch (std::exception& exc) {
 		log_error("render abort: $", exc.what());
 	}
 }
@@ -1008,8 +1003,8 @@ void render_thread::run() {
 	try {
 		// wait until we should render a new frame,
 		// time out after 500ms in case the renderer is being shut down or halted
-		unique_lock<mutex> render_lock_guard(render_cv_lock);
-		if (render_cv.wait_for(render_lock_guard, 500ms) == cv_status::timeout) {
+		std::unique_lock<std::mutex> render_lock_guard(render_cv_lock);
+		if (render_cv.wait_for(render_lock_guard, 500ms) == std::cv_status::timeout) {
 			return;
 		}
 		warp_log_wip("############################## start frame $", frame_idx);
@@ -1058,7 +1053,7 @@ void render_thread::run() {
 			// create the blit renderer
 			const auto blit_mode = renderer.debug_blit_mode.load();
 			graphics_pipeline* blit_pipe = nullptr;
-			compute_image* blit_image = nullptr;
+			device_image* blit_image = nullptr;
 			switch (blit_mode) {
 				case 0:
 				default:
@@ -1127,7 +1122,7 @@ void render_thread::run() {
 			renderer.warp_active = false; // signal next warping may run
 			renderer.finish_frame(frame_idx);
 		}
-	} catch (exception& exc) {
+	} catch (std::exception& exc) {
 		log_error("exception during frame #$ render: $", frame_idx, exc.what());
 	}
 }
@@ -1142,7 +1137,7 @@ void unified_renderer::finish_frame(const uint32_t rendered_frame_idx) {
 		GUARD(fps_state_lock);
 		
 		// time when this frame finished
-		const auto cur_time = chrono::steady_clock::now();
+		const auto cur_time = std::chrono::steady_clock::now();
 		
 		// finished a frame
 		++fps_state.fps_count;
@@ -1321,25 +1316,9 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 		frame_uniforms.gather.sky_prev_mvpm = prev_mvpm;
 	}
 	
-	// write uniforms on the GPU side (indirect pipeline) or write host-side structs (direct pipeline)
-	if (warp_state.use_indirect_commands) {
-		frame.frame_uniforms_buffer->write(*frame.dev_queue, &frame_uniforms);
-	} else {
-		scene_uniforms = {
-			.mvpm = frame_uniforms.mvpm,
-			.light_bias_mvpm = frame_uniforms.light_bias_mvpm,
-			.cam_pos = frame_uniforms.cam_pos,
-			.light_pos = frame_uniforms.light_pos,
-			.m0 = (warp_state.is_scatter ? frame_uniforms.scatter.scene_mvm : frame_uniforms.gather.scene_next_mvpm),
-			.m1 = (warp_state.is_scatter ? frame_uniforms.scatter.scene_prev_mvm : frame_uniforms.gather.scene_prev_mvpm),
-		};
-		skybox_uniforms = {
-			.imvpm = frame_uniforms.sky_imvpm,
-			.m0 = (warp_state.is_scatter ? frame_uniforms.scatter.sky_prev_imvpm : frame_uniforms.gather.sky_next_mvpm),
-			.m1 = (warp_state.is_scatter ? matrix4f() : frame_uniforms.gather.sky_prev_mvpm),
-		};
-	}
-	
+	// write uniforms on the GPU side (indirect pipeline)
+	frame.frame_uniforms_buffer->write(*frame.dev_queue, &frame_uniforms);
+
 	// remember t-2 and t-1 mvms
 	prev_prev_mvm = prev_mvm;
 	prev_prev_rmvm = prev_rmvm;
@@ -1352,11 +1331,6 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 	auto& frame = frame_objects[frame_idx];
 	warp_log_wip("render (fr $, ep $; delta: $ / $ms)", frame_idx, frame.get_epoch(), time_delta, time_delta * 1000.0f);
 	
-	// when using direct rendering (-> uploading uniforms in each draw call), we must already update all uniforms here
-	if (!warp_state.use_indirect_commands) {
-		update_uniforms(frame_idx, time_delta);
-	}
-	
 	// check if pipelines need to be rebuilt/reencoded
 	if (frame.rebuild_pipelines.exchange(false)) {
 		encode_indirect_pipelines(frame_idx);
@@ -1365,33 +1339,9 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 	//////////////////////////////////////////
 	// create and encode all renderers
 	
-	unique_ptr<graphics_renderer> shadow_map_renderer;
-	unique_ptr<graphics_renderer> scene_renderer;
-	unique_ptr<graphics_renderer> sky_box_renderer;
-	
-	// our draw info is static, so only create it once
-	static const graphics_renderer::multi_draw_indexed_entry scene_draw_info {
-		.index_buffer = model->indices_buffer.get(),
-		.index_count = model->index_count
-	};
-	static const graphics_renderer::patch_draw_indexed_entry scene_draw_patch_info {
-		.control_point_buffers = {
-			model->vertices_buffer.get(),
-			model->tex_coords_buffer.get(),
-			model->normals_buffer.get(),
-			model->binormals_buffer.get(),
-			model->tangents_buffer.get(),
-			model->materials_data_buffer.get(),
-		},
-		.control_point_index_buffer = model->indices_buffer.get(),
-		.patch_control_point_count = 3u,
-		.first_index = 0u,
-		.patch_count = model->index_count / 3u,
-		.first_patch = 0u,
-	};
-	static const graphics_renderer::multi_draw_entry skybox_draw_info {
-		.vertex_count = 3
-	};
+	std::unique_ptr<graphics_renderer> shadow_map_renderer;
+	std::unique_ptr<graphics_renderer> scene_renderer;
+	std::unique_ptr<graphics_renderer> sky_box_renderer;
 	
 	// shadow map
 	{
@@ -1405,11 +1355,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		if (warp_state.use_tessellation) {
 			shadow_map_renderer->wait_for_fence(*frame.render_post_tess_update_fence);
 		}
-		if (!warp_state.use_indirect_commands) {
-			shadow_map_renderer->draw_indexed(scene_draw_info, model->vertices_buffer, frame_uniforms.light_mvpm);
-		} else {
-			shadow_map_renderer->execute_indirect(*frame.indirect_shadow_pipeline);
-		}
+		shadow_map_renderer->execute_indirect(*frame.indirect_shadow_pipeline);
 		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, SYNC_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
 		
 		shadow_map_renderer->end();
@@ -1440,69 +1386,8 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		// scene
 		scene_renderer->begin();
 		scene_renderer->wait_for_fence(*frame.render_post_shadow_fence);
-		if (!warp_state.use_indirect_commands) {
-			// -> direct rendering
-			if (warp_state.use_tessellation) {
-				scene_renderer->set_tessellation_factors(*frame.tess_factors_buffer);
-				if (!warp_state.use_argument_buffer) {
-					scene_renderer->draw_patches_indexed(scene_draw_patch_info,
-														 // vertex shader
-														 model->displacement_textures,
-														 warp_state.displacement_mode,
-														 scene_uniforms,
-														 // fragment shader
-														 warp_state.displacement_mode,
-														 model->diffuse_textures,
-														 model->specular_textures,
-														 model->normal_textures,
-														 model->mask_textures,
-														 model->displacement_textures,
-														 frame.shadow_map.shadow_image);
-				} else {
-					scene_renderer->draw_patches_indexed(scene_draw_patch_info,
-														 // vertex shader
-														 model->displacement_textures,
-														 warp_state.displacement_mode,
-														 scene_uniforms,
-														 // fragment shader
-														 warp_state.displacement_mode,
-														 model->materials_arg_buffer,
-														 frame.shadow_map.shadow_image);
-				}
-			} else {
-				if (!warp_state.use_argument_buffer) {
-					scene_renderer->draw_indexed(scene_draw_info,
-												 // vertex shader
-												 model->vertices_buffer,
-												 model->tex_coords_buffer,
-												 model->normals_buffer,
-												 model->binormals_buffer,
-												 model->tangents_buffer,
-												 model->materials_data_buffer,
-												 scene_uniforms,
-												 // fragment shader
-												 warp_state.displacement_mode,
-												 model->diffuse_textures,
-												 model->specular_textures,
-												 model->normal_textures,
-												 model->mask_textures,
-												 model->displacement_textures,
-												 frame.shadow_map.shadow_image);
-				} else {
-					scene_renderer->draw_indexed(scene_draw_info,
-												 // vertex shader
-												 model->model_data_arg_buffer,
-												 scene_uniforms,
-												 // fragment shader
-												 warp_state.displacement_mode,
-												 model->materials_arg_buffer,
-												 frame.shadow_map.shadow_image);
-				}
-			}
-		} else {
-			// -> indirect rendering
-			scene_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_scene_scatter_pipeline : *frame.indirect_scene_gather_pipeline);
-		}
+		// -> indirect rendering
+		scene_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_scene_scatter_pipeline : *frame.indirect_scene_gather_pipeline);
 		scene_renderer->signal_fence(*frame.render_post_scene_fence, SYNC_STAGE::FRAGMENT);
 		scene_renderer->end();
 	}
@@ -1531,25 +1416,19 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		// skybox
 		sky_box_renderer->begin();
 		sky_box_renderer->wait_for_fence(*frame.render_post_scene_fence);
-		if (!warp_state.use_indirect_commands) {
-			sky_box_renderer->draw(skybox_draw_info, skybox_uniforms, skybox_tex);
-		} else {
-			sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline : *frame.indirect_skybox_gather_pipeline);
-		}
+		sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline : *frame.indirect_skybox_gather_pipeline);
 		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence, SYNC_STAGE::FRAGMENT);
 		sky_box_renderer->end();
 	}
 	
 	// when using indirect rendering (-> uniforms are located in one global buffer), we can delay the uniform update until this point
 	// NOTE: this allows us to use a more current camera state!
-	if (warp_state.use_indirect_commands) {
-		update_uniforms(frame_idx, time_delta);
-	}
+	update_uniforms(frame_idx, time_delta);
 	
 	//////////////////////////////////////////
 	// update tessellation factors
 	if (warp_state.use_tessellation) {
-		compute_queue::execution_parameters_t exec_params {
+		device_queue::execution_parameters_t exec_params {
 			.global_work_size = uint1 { model->index_count / 3u },
 			.local_work_size = uint1 { 1024u },
 			.args = {
@@ -1592,19 +1471,17 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 	// end
 }
 
-bool unified_renderer::compile_shaders(const string add_cli_options) {
-	shared_ptr<compute_program> new_shader_prog;
-	array<compute_kernel*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shaders;
-	array<const compute_kernel::kernel_entry*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shader_entries;
+bool unified_renderer::compile_shaders(const std::string add_cli_options) {
+	std::shared_ptr<device_program> new_shader_prog;
+	std::array<device_function*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shaders;
+	std::array<const device_function::function_entry*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shader_entries;
 	
 	new_shader_prog = warp_state.rctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
 														"-I" + floor::data_path("../warp/src") +
-														" -DWARP_NEAR_PLANE=" + to_string(warp_state.near_far_plane.x) + "f" +
-														" -DWARP_FAR_PLANE=" + to_string(warp_state.near_far_plane.y) + "f" +
-														" -DWARP_SHADOW_FAR_PLANE=" + to_string(warp_state.shadow_near_far_plane.y) + "f" +
+														" -DWARP_NEAR_PLANE=" + std::to_string(warp_state.near_far_plane.x) + "f" +
+														" -DWARP_FAR_PLANE=" + std::to_string(warp_state.near_far_plane.y) + "f" +
+														" -DWARP_SHADOW_FAR_PLANE=" + std::to_string(warp_state.shadow_near_far_plane.y) + "f" +
 														(floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
-														(warp_state.use_argument_buffer ? " -DWARP_USE_ARGUMENT_BUFFER=1" : "") +
-														(warp_state.use_indirect_commands ? " -DWARP_USE_INDIRECT_COMMANDS=1" : "") +
 														add_cli_options);
 	
 	if (new_shader_prog == nullptr) {
@@ -1642,12 +1519,12 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	};
 	
 	for (size_t i = 0; i < warp_shader_count(); ++i) {
-		new_shaders[i] = (compute_kernel*)new_shader_prog->get_kernel(shader_names[i]).get();
+		new_shaders[i] = (device_function*)new_shader_prog->get_function(shader_names[i]).get();
 		if (new_shaders[i] == nullptr) {
 			log_error("failed to retrieve shader \"$\" from program", shader_names[i]);
 			return false;
 		}
-		new_shader_entries[i] = (const compute_kernel::kernel_entry*)new_shaders[i]->get_kernel_entry(*warp_state.rdev);
+		new_shader_entries[i] = (const device_function::function_entry*)new_shaders[i]->get_function_entry(*warp_state.rdev);
 		if (new_shader_entries[i] == nullptr) {
 			log_error("failed to retrieve shader entry \"$\" for the current device", shader_names[i]);
 			return false;
@@ -1661,65 +1538,61 @@ bool unified_renderer::compile_shaders(const string add_cli_options) {
 	return true;
 }
 
-void unified_renderer::post_init(const compute_queue& dev_queue, floor_obj_model& model_, const camera& cam_) {
+void unified_renderer::post_init(const device_queue& dev_queue, floor_obj_model& model_, const camera& cam_) {
 	model = &model_;
 	cam = &cam_;
 	
-	if (warp_state.use_argument_buffer) {
-		// NOTE: scene_scatter_fs/scene_gather_fs/scene_gather_fwd_fs have the same function signature -> doesn't matter which one we take
-		model->materials_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(dev_queue, 2);
-		if (!model->materials_arg_buffer) {
-			throw runtime_error("failed to create materials argument buffer");
-		}
-		model->materials_arg_buffer->set_arguments(dev_queue,
-												   model->diffuse_textures,
-												   model->specular_textures,
-												   model->normal_textures,
-												   model->mask_textures,
-												   model->displacement_textures);
+	// NOTE: scene_scatter_fs/scene_gather_fs/scene_gather_fwd_fs have the same function signature -> doesn't matter which one we take
+	model->materials_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(dev_queue, 2);
+	if (!model->materials_arg_buffer) {
+		throw std::runtime_error("failed to create materials argument buffer");
+	}
+	model->materials_arg_buffer->set_arguments(dev_queue,
+											   model->diffuse_textures,
+											   model->specular_textures,
+											   model->normal_textures,
+											   model->mask_textures,
+											   model->displacement_textures);
+	
+	// model arg buffer has the same signature everywhere -> doesn't matter which one we take (use scene_gather_vs)
+	model->model_data_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_VS]->create_argument_buffer(dev_queue, 0);
+	if (!model->model_data_arg_buffer) {
+		throw std::runtime_error("failed to create model data argument buffer");
+	}
+	model->model_data_arg_buffer->set_arguments(dev_queue,
+												std::vector { model->vertices_buffer, model->normals_buffer, model->binormals_buffer, model->tangents_buffer },
+												model->tex_coords_buffer,
+												model->materials_data_buffer,
+												model->indices_buffer,
+												model->index_count / 3u);
+	
+	for (uint32_t frame_idx = 0; frame_idx < max_frames_in_flight; ++frame_idx) {
+		auto& frame = frame_objects[frame_idx];
 		
-		// model arg buffer has the same signature everywhere -> doesn't matter which one we take (use scene_gather_vs)
-		model->model_data_arg_buffer = shaders[WARP_SHADER::SCENE_GATHER_VS]->create_argument_buffer(dev_queue, 0);
-		if (!model->model_data_arg_buffer) {
-			throw runtime_error("failed to create model data argument buffer");
+		// tessellation factors buffer
+		if (warp_state.use_tessellation) {
+			const auto tess_factors_size = sizeof(triangle_tessellation_levels_t) * (model->index_count / 3u);
+			frame.tess_factors_buffer = warp_state.rctx->create_buffer(*frame.dev_queue, tess_factors_size);
+			frame.tess_factors_buffer->set_debug_label("tess_factors#" + std::to_string(frame_idx));
 		}
-		model->model_data_arg_buffer->set_arguments(dev_queue,
-													vector { model->vertices_buffer, model->normals_buffer, model->binormals_buffer, model->tangents_buffer },
-													model->tex_coords_buffer,
-													model->materials_data_buffer,
-													model->indices_buffer,
-													model->index_count / 3u);
 		
-		for (uint32_t frame_idx = 0; frame_idx < max_frames_in_flight; ++frame_idx) {
-			auto& frame = frame_objects[frame_idx];
-			
-			// tessellation factors buffer
-			if (warp_state.use_tessellation) {
-				const auto tess_factors_size = sizeof(triangle_tessellation_levels_t) * (model->index_count / 3u);
-				frame.tess_factors_buffer = warp_state.rctx->create_buffer(*frame.dev_queue, tess_factors_size);
-				frame.tess_factors_buffer->set_debug_label("tess_factors#" + to_string(frame_idx));
-			}
-			
-			// initial indirect pipelines encode + required argument buffer creation
-			if (warp_state.use_indirect_commands) {
-				// argument buffers
-				frame.indirect_scene_fs_data = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(*frame.dev_queue, 3);
-				if (!frame.indirect_scene_fs_data) {
-					throw runtime_error("failed to create scene-fragment-shader-data argument buffer");
-				}
-				
-				frame.indirect_sky_fs_data = shaders[WARP_SHADER::SKYBOX_GATHER_FS]->create_argument_buffer(*frame.dev_queue, 1);
-				if (!frame.indirect_sky_fs_data) {
-					throw runtime_error("failed to create scene-fragment-shader-data argument buffer");
-				}
-				
-				frame.indirect_scene_fs_data->set_arguments(*frame.dev_queue, frame.shadow_map.shadow_image);
-				frame.indirect_sky_fs_data->set_arguments(*frame.dev_queue, skybox_tex);
-				
-				// encode
-				encode_indirect_pipelines(frame_idx);
-			}
+		// initial indirect pipelines encode + required argument buffer creation
+		// argument buffers
+		frame.indirect_scene_fs_data = shaders[WARP_SHADER::SCENE_GATHER_FS]->create_argument_buffer(*frame.dev_queue, 3);
+		if (!frame.indirect_scene_fs_data) {
+			throw std::runtime_error("failed to create scene-fragment-shader-data argument buffer");
 		}
+		
+		frame.indirect_sky_fs_data = shaders[WARP_SHADER::SKYBOX_GATHER_FS]->create_argument_buffer(*frame.dev_queue, 1);
+		if (!frame.indirect_sky_fs_data) {
+			throw std::runtime_error("failed to create scene-fragment-shader-data argument buffer");
+		}
+		
+		frame.indirect_scene_fs_data->set_arguments(*frame.dev_queue, frame.shadow_map.shadow_image);
+		frame.indirect_sky_fs_data->set_arguments(*frame.dev_queue, skybox_tex);
+		
+		// encode
+		encode_indirect_pipelines(frame_idx);
 	}
 }
 
@@ -1737,11 +1610,11 @@ void unified_renderer::flush_renderer_begin() {
 	for (uint32_t i = 0; i < max_frames_in_flight; ++i) {
 		auto& frame = frame_objects[i];
 		while (!frame.present_done && !frame.render_done) {
-			this_thread::sleep_for(100us);
+			std::this_thread::sleep_for(100us);
 		}
 	}
 	while (in_flight_frames > 0u) {
-		this_thread::sleep_for(100us);
+		std::this_thread::sleep_for(100us);
 	}
 }
 

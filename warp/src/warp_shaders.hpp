@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,17 +16,17 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_WARP_SHADERS_HPP__
-#define __FLOOR_WARP_WARP_SHADERS_HPP__
+#pragma once
 
 #include <floor/core/essentials.hpp>
 #include <floor/math/vector_lib.hpp>
 
-#if defined(FLOOR_COMPUTE_HOST)
-#include <floor/compute/device/common.hpp>
+#if defined(FLOOR_DEVICE_HOST_COMPUTE)
+#include <floor/device/backend/common.hpp>
 #endif
 
 namespace warp_shaders {
+using namespace fl;
 
 //! Sponza scene consists of 25 different materials
 static constexpr constant const uint32_t material_count { 25u };
@@ -92,7 +92,7 @@ struct frame_uniforms_t {
 struct __attribute__((packed)) model_data_t {
 	enum : uint32_t { POSITION, NORMAL, BINORMAL, TANGENT };
 	// [position, normal, binormal, tangent]
-	array<buffer<const float3>, 4> pnbt;
+	std::array<buffer<const float3>, 4> pnbt;
 	// textcure coordinates
 	buffer<const float2> tc;
 	// per-vertex material indices
@@ -105,11 +105,11 @@ struct __attribute__((packed)) model_data_t {
 
 //! material images struct for argument buffer use
 struct materials_t {
-	array<const_image_2d<float>, material_count> diff_tex;
-	array<const_image_2d<float>, material_count> spec_tex;
-	array<const_image_2d<float>, material_count> norm_tex;
-	array<const_image_2d<float1>, material_count> mask_tex;
-	array<const_image_2d<float1>, material_count> disp_tex;
+	std::array<const_image_2d<float>, material_count> diff_tex;
+	std::array<const_image_2d<float>, material_count> spec_tex;
+	std::array<const_image_2d<float>, material_count> norm_tex;
+	std::array<const_image_2d<float1>, material_count> mask_tex;
+	std::array<const_image_2d<float1>, material_count> disp_tex;
 };
 
 //! scene fragment shader data for argument buffer use
@@ -123,5 +123,3 @@ struct sky_fs_data_t {
 };
 
 } // namespace warp_shaders
-
-#endif

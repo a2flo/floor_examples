@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2025 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -472,8 +472,9 @@ std::pair<bool, obj_loader::texture> obj_loader::load_texture(const std::string&
 		};
 		
 		// check format, we always want RGB(A)
-		// NOTE: SDL uses reverse order ... RGBA is ABGR in SDL
+		// NOTE: SDL uses reverse order ... RGBA is ABGR in SDL (on Apple platforms only?)
 		std::optional<SDL_PixelFormat> conv_format;
+#if defined(__APPLE__)
 		switch (surface->format) {
 			default:
 				break;
@@ -514,6 +515,7 @@ std::pair<bool, obj_loader::texture> obj_loader::load_texture(const std::string&
 				conv_format = SDL_PIXELFORMAT_ABGR64;
 				break;
 		}
+#endif
 		
 		if (conv_format) {
 			SDL_Surface* new_surface = SDL_ConvertSurface(surface, *conv_format);

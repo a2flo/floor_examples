@@ -711,7 +711,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2640;
 				ORGANIZATIONNAME = libfloor;
 				TargetAttributes = {
 					5C0071901A91EF7E00F4711D = {
@@ -1117,7 +1117,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++26";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -1144,7 +1144,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_C_LANGUAGE_STANDARD = gnu23;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1167,7 +1167,7 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1178,7 +1178,7 @@
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
@@ -1188,8 +1188,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warpd;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -1239,6 +1241,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Debug;
@@ -1247,7 +1250,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++23";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++26";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
@@ -1275,7 +1278,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_C_LANGUAGE_STANDARD = gnu23;
 				GCC_FAST_MATH = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 3;
@@ -1292,7 +1295,7 @@
 					/opt/floor/include,
 					/opt/libwarp/include,
 				);
-				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@loader_path/../Resources",
 					"@loader_path/../Frameworks",
@@ -1303,7 +1306,7 @@
 					/opt/floor/lib,
 					/opt/libwarp/lib,
 				);
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
 					"$(OTHER_CFLAGS)",
@@ -1313,8 +1316,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.libfloor.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = warp;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
+					"-Wframe-larger-than=16384",
 					"-Wthread-safety",
 					"-Wthread-safety-negative",
 					"-Wthread-safety-beta",
@@ -1364,6 +1369,7 @@
 					"-Wno-unsafe-buffer-usage-in-container",
 					"-Wno-missing-include-dirs",
 					"-Wno-missing-designated-field-initializers",
+					"-Wno-reserved-identifier",
 				);
 			};
 			name = Release;

@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2025 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -117,9 +117,15 @@ protected:
 	bool rotation_wrapping = true;
 	unsigned int ignore_next_rotation = 0;
 	
-	// hack for mice on os x 10.12+ that don't have proper warp support
-	bool delta_hack { false };
-	float2 last_delta;
+	//! determines whether we use absolute or relative mouse positioning/deltas when computing camera rotation
+	//! NOTE: on Apple platforms this is always on, on Linux this is on-by-default on Wayland, otherwise false
+	bool relative_mouse_input {
+#if defined(__APPLE__)
+		true
+#else
+		false
+#endif
+	};
 	
 	// [right, left, up, down]
 	std::atomic<bool> key_state[4] { { false }, { false }, { false }, { false } };

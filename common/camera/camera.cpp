@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2025 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,13 @@
 camera::camera() : evt(floor::get_event()),
 keyboard_handler(bind(&camera::key_handler, this, std::placeholders::_1, std::placeholders::_2)) {
 	evt->add_event_handler(keyboard_handler, EVENT_TYPE::KEY_DOWN, EVENT_TYPE::KEY_UP);
+	
+#if defined(__linux__)
+	if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0) {
+		relative_mouse_input = true;
+	}
+#endif
+	log_msg("using $ mouse handling", relative_mouse_input ? "relative" : "absolute");
 }
 
 camera::~camera() {
@@ -37,9 +44,6 @@ camera::camera_state_t camera::get_current_state() const {
  */
 void camera::run() {
 	prev_position = position;
-	
-FLOOR_PUSH_WARNINGS()
-FLOOR_IGNORE_WARNING(float-equal)
 	
 	// make camera speed dependent on the time between the last update and now (scale with delta)
 	static const long double time_den { std::chrono::high_resolution_clock::time_point::duration::period::den };
@@ -76,60 +80,38 @@ FLOOR_IGNORE_WARNING(float-equal)
 			// calculate the rotation via the current mouse cursor position
 			float2 cursor_pos;
 			
-			const auto screen_size = floor::get_screen_size();
+			// ensure screen size used in here is always an even size
+			const auto screen_size = (floor::get_screen_size() / 2u) * 2u;
+			const auto fscreen_size = screen_size.cast<double>();
 			const auto center_point = (screen_size / 2u).cast<float>();
 			
-////////////////////////////////
-// linux/windows version
-#if !defined(__APPLE__)
-			SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
-			
-			double xpos = (1.0 / (double)floor::get_width()) * (double)cursor_pos.x;
-			double ypos = (1.0 / (double)floor::get_height()) * (double)cursor_pos.y;
-			
-			if (xpos != 0.5 || ypos != 0.5) {
-				rotation.x -= (0.5 - ypos) * rotation_speed;
-				rotation.y -= (0.5 - xpos) * rotation_speed;
-				
-				SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
-			}
-////////////////////////////////
-// os x version
-#else
-			if (delta_hack) {
+FLOOR_PUSH_AND_IGNORE_WARNING(float-equal)
+			if (!relative_mouse_input) {
 				SDL_GetMouseState(&cursor_pos.x, &cursor_pos.y);
+				if (cursor_pos.x != 0.0f || cursor_pos.y != 0.0f) {
+					const auto xy_delta = 0.5 - cursor_pos.cast<double>() / fscreen_size;
+					if (!xy_delta.is_null()) {
+						rotation.x -= (0.5 - xy_delta.y) * rotation_speed;
+						rotation.y -= (0.5 - xy_delta.x) * rotation_speed;
+					}
+					SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
+				}
 			} else {
 				SDL_GetRelativeMouseState(&cursor_pos.x, &cursor_pos.y);
-			}
-			
-			if (!delta_hack || (cursor_pos.x != last_delta.x || cursor_pos.y != last_delta.y)) {
-				if (delta_hack) {
-					if (cursor_pos.x != center_point.x || cursor_pos.y != center_point.y) {
-						const auto actual_diff = cursor_pos - last_delta;
-						last_delta = cursor_pos;
-						cursor_pos = actual_diff;
-					} else {
-						// ignore center reset
-						cursor_pos = 0;
-					}
-				}
-				
-				double xpos = (1.0 / (double)floor::get_width()) * (double)-cursor_pos.x;
-				double ypos = (1.0 / (double)floor::get_height()) * (double)-cursor_pos.y;
-				
-				if (xpos != 0.0 || ypos != 0.0) {
+				if (cursor_pos.x != 0.0f || cursor_pos.y != 0.0f) {
 					if (!ignore_next_rotation) {
-						rotation.x -= ypos * rotation_speed;
-						rotation.y -= xpos * rotation_speed;
+						const auto xy_delta = -cursor_pos.cast<double>() / fscreen_size;
+						if (!xy_delta.is_null()) {
+							rotation.x -= xy_delta.y * rotation_speed;
+							rotation.y -= xy_delta.x * rotation_speed;
+						}
 					} else {
 						--ignore_next_rotation;
 					}
-					
 					SDL_WarpMouseInWindow(floor::get_window(), center_point.x, center_point.y);
 				}
 			}
-#endif
-////////////////////////////////
+FLOOR_POP_WARNINGS()
 		}
 		
 		if(rotation_wrapping) {
@@ -166,8 +148,6 @@ FLOOR_IGNORE_WARNING(float-equal)
 			SDL_WarpMouseInWindow(floor::get_window(), round(center_point.x), round(center_point.y));
 		}
 	}
-	
-FLOOR_POP_WARNINGS()
 	
 	// update state
 	update_state();
@@ -275,21 +255,19 @@ void camera::set_mouse_input(const bool& state) {
 	const auto wnd = floor::get_window();
 	SDL_SetWindowMouseGrab(wnd, state);
 	
-#if defined(__APPLE__)
-	// this effictively calls CGAssociateMouseAndMouseCursorPosition (which will lock the cursor to the window)
-	// and subsequently handles all mouse moves in relative/delta mode
-	if (!delta_hack) {
+	if (relative_mouse_input) {
+		// this effictively calls CGAssociateMouseAndMouseCursorPosition (which will lock the cursor to the window)
+		// and subsequently handles all mouse moves in relative/delta mode
 		SDL_SetWindowRelativeMouseMode(wnd, state);
+		
+		// this fixes some weird mouse positioning when switching from grab to non-grab mode
+		if (mouse_input && !state) {
+			const auto center_point = (floor::get_screen_size() / 2u).cast<float>();
+			SDL_WarpMouseInWindow(wnd, center_point.x, center_point.y);
+		}
+		
+		ignore_next_rotation = 2;
 	}
-	
-	// this fixes some weird mouse positioning when switching from grab to non-grab mode
-	if (mouse_input && !state) {
-		const auto center_point = (floor::get_screen_size().cast<double>() * 0.5).cast<int32_t>();
-		SDL_WarpMouseInWindow(wnd, center_point.x, center_point.y);
-	}
-#endif
-	
-	ignore_next_rotation = 2;
 	
 	mouse_input = state;
 }

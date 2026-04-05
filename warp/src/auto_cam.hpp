@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,10 +16,9 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_AUTO_CAM_HPP__
-#define __FLOOR_AUTO_CAM_HPP__
+#pragma once
 
-#include <floor/floor/floor.hpp>
+#include <floor/floor.hpp>
 #include "camera.hpp"
 
 class auto_cam {
@@ -33,5 +32,3 @@ protected:
 	auto_cam& operator=(const auto_cam&) = delete;
 	
 };
-
-#endif

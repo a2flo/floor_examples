@@ -1,6 +1,6 @@
 /*
  *  Flo's Open libRary (floor)
- *  Copyright (C) 2004 - 2024 Florian Ziesche
+ *  Copyright (C) 2004 - 2026 Florian Ziesche
  *  
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,23 +16,22 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __FLOOR_WARP_WARP_STATE_HPP__
-#define __FLOOR_WARP_WARP_STATE_HPP__
+#pragma once
 
 struct warp_state_struct {
 	//! compute device context
-	shared_ptr<compute_context> cctx;
+	std::shared_ptr<device_context> cctx;
 	//! compute device main queue
-	shared_ptr<compute_queue> cqueue;
+	std::shared_ptr<device_queue> cqueue;
 	//! compute device
-	const compute_device* cdev { nullptr };
+	const device* cdev { nullptr };
 	
 	//! render device context
-	shared_ptr<compute_context> rctx;
+	std::shared_ptr<device_context> rctx;
 	//! render device main queue
-	shared_ptr<compute_queue> rqueue;
+	std::shared_ptr<device_queue> rqueue;
 	//! render device
-	const compute_device* rdev { nullptr };
+	const device* rdev { nullptr };
 	
 	//
 	bool done { false };
@@ -66,12 +65,6 @@ struct warp_state_struct {
 	// use tessellation for displacement?
 	bool use_tessellation { true };
 	
-	// use an argument buffers? (for all materials/textures, model data)
-	bool use_argument_buffer { true };
-	
-	// use indirect render/compute commands/pipelines?
-	bool use_indirect_commands { true };
-	
 	float gather_eps_1 { 0.0025f };
 	float gather_eps_2 { 2.0f };
 	uint32_t gather_dbg { 0 };
@@ -90,5 +83,3 @@ struct warp_state_struct {
 	
 };
 extern warp_state_struct warp_state;
-
-#endif
