@@ -99,7 +99,7 @@ void unified_renderer::create_frame_buffer_images(const IMAGE_TYPE color_format)
 		.field_of_view = warp_state.fov,
 		.near_plane = warp_state.near_far_plane.x,
 		.far_plane = warp_state.near_far_plane.y,
-		.depth_type = LIBWARP_DEPTH_NORMALIZED,
+		.depth_type = WARP_RENDER_REVERSE_Z ? LIBWARP_DEPTH_REVERSE_NORMALIZED : LIBWARP_DEPTH_NORMALIZED,
 		.is_screen_origin_top_left = true,
 	};
 	
@@ -121,12 +121,14 @@ void unified_renderer::create_frame_buffer_images(const IMAGE_TYPE color_format)
 		sharing_fbo_flags = MEMORY_FLAG::SHARING_RENDER_WRITE | MEMORY_FLAG::SHARING_COMPUTE_READ;
 	}
 	
-	uint32_t frame_counter = 0;
-	for (auto& frame : frame_objects) {
+	const auto ao_frame_dim = (warp_state.is_ao_half_res ? frame_dim / 2u : frame_dim);
+	for (uint32_t frame_idx = 0u; auto& frame : frame_objects) {
+		frame.frame_idx = frame_idx;
 		frame.scene_fbo.dim = frame_dim;
 		frame.scene_fbo.dim_multiple = frame_dim_multiple;
+		frame.scene_fbo.ao_dim = ao_frame_dim;
 		
-		const auto frame_str = std::to_string(frame_counter++);
+		const auto frame_str = std::to_string(frame_idx++);
 		
 		frame.scene_fbo.color = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
 															  color_format |
@@ -135,6 +137,14 @@ void unified_renderer::create_frame_buffer_images(const IMAGE_TYPE color_format)
 															  IMAGE_TYPE::FLAG_RENDER_TARGET,
 															  MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
 		frame.scene_fbo.color->set_debug_label("scene_color#" + frame_str);
+		
+		frame.scene_fbo.normals = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
+																IMAGE_TYPE::RG16F |
+																IMAGE_TYPE::IMAGE_2D |
+																IMAGE_TYPE::READ_WRITE |
+																IMAGE_TYPE::FLAG_RENDER_TARGET,
+																MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+		frame.scene_fbo.normals->set_debug_label("scene_normals#" + frame_str);
 		
 		frame.scene_fbo.depth = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.dim,
 															  IMAGE_TYPE::IMAGE_DEPTH |
@@ -173,6 +183,39 @@ void unified_renderer::create_frame_buffer_images(const IMAGE_TYPE color_format)
 																	  MEMORY_FLAG::SHARING_COMPUTE_WRITE);
 		frame.scene_fbo.compute_color->set_debug_label("scene_compute_color");
 		
+		frame.scene_fbo.ao = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.ao_dim,
+														   IMAGE_TYPE::R16F |
+														   IMAGE_TYPE::IMAGE_2D |
+														   IMAGE_TYPE::READ_WRITE,
+														   MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+		frame.scene_fbo.ao->set_debug_label("ao#" + frame_str);
+		frame.scene_fbo.ao->zero(*warp_state.cqueue);
+		
+		frame.scene_fbo.ao_tmp = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.ao_dim,
+															   IMAGE_TYPE::R16F |
+															   IMAGE_TYPE::IMAGE_2D |
+															   IMAGE_TYPE::READ_WRITE,
+															   MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+		frame.scene_fbo.ao_tmp->set_debug_label("ao_tmp#" + frame_str);
+		frame.scene_fbo.ao_tmp->zero(*warp_state.cqueue);
+		
+		if (warp_state.is_ao_half_res) {
+			// NOTE: we're not using these as render targets
+			frame.scene_fbo.normals_ds = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.ao_dim,
+																	   IMAGE_TYPE::RG16F |
+																	   IMAGE_TYPE::IMAGE_2D |
+																	   IMAGE_TYPE::READ_WRITE,
+																	   MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+			frame.scene_fbo.normals_ds->set_debug_label("scene_normals_ds#" + frame_str);
+			
+			frame.scene_fbo.depth_ds = warp_state.cctx->create_image(*warp_state.cqueue, frame.scene_fbo.ao_dim,
+																	 IMAGE_TYPE::R32F |
+																	 IMAGE_TYPE::IMAGE_2D |
+																	 IMAGE_TYPE::READ_WRITE,
+																	 MEMORY_FLAG::READ_WRITE | sharing_flags | sharing_fbo_flags);
+			frame.scene_fbo.depth_ds->set_debug_label("scene_depth_ds#" + frame_str);
+		}
+		
 		if (!frame.shadow_map.shadow_image) {
 			// shadow map (only created once)
 			frame.shadow_map.shadow_image = warp_state.rctx->create_image(*frame.dev_queue, frame.shadow_map.dim,
@@ -190,7 +233,10 @@ void unified_renderer::destroy_frame_buffer_images(bool is_resize) {
 	for (auto& frame : frame_objects) {
 		frame.scene_fbo.compute_color = nullptr;
 		frame.scene_fbo.color = nullptr;
+		frame.scene_fbo.normals = nullptr;
 		frame.scene_fbo.depth = nullptr;
+		frame.scene_fbo.ao = nullptr;
+		frame.scene_fbo.ao_tmp = nullptr;
 		for (auto& img : frame.scene_fbo.motion) {
 			img = nullptr;
 		}
@@ -325,6 +371,7 @@ bool unified_renderer::init() {
 
 void unified_renderer::create_passes() {
 	const auto color_format = frame_objects[0].scene_fbo.color->get_image_type();
+	const auto normals_format = frame_objects[0].scene_fbo.normals->get_image_type();
 	const auto motion_format = frame_objects[0].scene_fbo.motion[0]->get_image_type();
 	const auto depth_format = frame_objects[0].scene_fbo.depth->get_image_type();
 	const auto motion_depth_format = frame_objects[0].scene_fbo.motion_depth->get_image_type();
@@ -345,6 +392,13 @@ void unified_renderer::create_passes() {
 					.store_op = STORE_OP::STORE,
 					.clear.color = clear_color,
 				},
+				// normals
+				{
+					.format = normals_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = {},
+				},
 				// motion
 				{
 					.format = motion_format,
@@ -357,7 +411,7 @@ void unified_renderer::create_passes() {
 					.format = depth_format,
 					.load_op = LOAD_OP::CLEAR,
 					.store_op = STORE_OP::STORE,
-					.clear.depth = 1.0f,
+					.clear.depth = WARP_CLEAR_DEPTH,
 				},
 			}
 		};
@@ -375,6 +429,13 @@ void unified_renderer::create_passes() {
 					.load_op = LOAD_OP::CLEAR,
 					.store_op = STORE_OP::STORE,
 					.clear.color = clear_color,
+				},
+				// normals
+				{
+					.format = normals_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = {},
 				},
 				// motion fwd
 				{
@@ -402,7 +463,7 @@ void unified_renderer::create_passes() {
 					.format = depth_format,
 					.load_op = LOAD_OP::CLEAR,
 					.store_op = STORE_OP::STORE,
-					.clear.depth = 1.0f,
+					.clear.depth = WARP_CLEAR_DEPTH,
 				},
 			}
 		};
@@ -421,6 +482,13 @@ void unified_renderer::create_passes() {
 					.store_op = STORE_OP::STORE,
 					.clear.color = clear_color,
 				},
+				// normals
+				{
+					.format = normals_format,
+					.load_op = LOAD_OP::CLEAR,
+					.store_op = STORE_OP::STORE,
+					.clear.color = {},
+				},
 				// motion
 				{
 					.format = motion_format,
@@ -433,7 +501,7 @@ void unified_renderer::create_passes() {
 					.format = depth_format,
 					.load_op = LOAD_OP::CLEAR,
 					.store_op = STORE_OP::STORE,
-					.clear.depth = 1.0f,
+					.clear.depth = WARP_CLEAR_DEPTH,
 				},
 			}
 		};
@@ -450,7 +518,7 @@ void unified_renderer::create_passes() {
 					.format = depth_format,
 					.load_op = LOAD_OP::CLEAR,
 					.store_op = STORE_OP::STORE,
-					.clear.depth = 1.0f,
+					.clear.depth = WARP_CLEAR_DEPTH,
 				},
 			}
 		};
@@ -475,6 +543,7 @@ void unified_renderer::create_passes() {
 
 bool unified_renderer::create_pipelines() {
 	const auto color_format = frame_objects[0].scene_fbo.color->get_image_type();
+	const auto normals_format = frame_objects[0].scene_fbo.normals->get_image_type();
 	const auto motion_format = frame_objects[0].scene_fbo.motion[0]->get_image_type();
 	const auto depth_format = frame_objects[0].scene_fbo.depth->get_image_type();
 	const auto motion_depth_format = frame_objects[0].scene_fbo.motion_depth->get_image_type();
@@ -488,10 +557,11 @@ bool unified_renderer::create_pipelines() {
 			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
 			.depth = {
 				.write = true,
-				.compare = DEPTH_COMPARE::LESS,
+				.compare = WARP_DEPTH_COMPARE,
 			},
 			.color_attachments = {
 				{ .format = color_format, },
+				{ .format = normals_format, },
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
@@ -523,7 +593,8 @@ bool unified_renderer::create_pipelines() {
 		auto skybox_desc = pipeline_desc;
 		skybox_desc.vertex_shader = shaders[SKYBOX_SCATTER_VS];
 		skybox_desc.fragment_shader = shaders[SKYBOX_SCATTER_FS];
-		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_desc.depth.compare = WARP_DEPTH_COMPARE_OR_EQ;
+		skybox_desc.tessellation.max_factor = 0u; // we don't want any tessellation here
 		skybox_desc.debug_label = "skybox_scatter_pipeline";
 		skybox_scatter_pipeline = warp_state.rctx->create_graphics_pipeline(skybox_desc);
 		if (!skybox_scatter_pipeline) {
@@ -540,10 +611,11 @@ bool unified_renderer::create_pipelines() {
 			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
 			.depth = {
 				.write = true,
-				.compare = DEPTH_COMPARE::LESS,
+				.compare = WARP_DEPTH_COMPARE,
 			},
 			.color_attachments = {
 				{ .format = color_format, },
+				{ .format = normals_format, },
 				{ .format = motion_format, },
 				{ .format = motion_format, },
 				{ .format = motion_depth_format, },
@@ -577,7 +649,7 @@ bool unified_renderer::create_pipelines() {
 		auto skybox_desc = pipeline_desc;
 		skybox_desc.vertex_shader = shaders[SKYBOX_GATHER_VS];
 		skybox_desc.fragment_shader = shaders[SKYBOX_GATHER_FS];
-		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_desc.depth.compare = WARP_DEPTH_COMPARE_OR_EQ;
 		skybox_desc.tessellation = render_pipeline_description::tessellation_t {}; // reset tessellation
 		skybox_desc.debug_label = "skybox_gather_pipeline";
 		skybox_gather_pipeline = warp_state.rctx->create_graphics_pipeline(skybox_desc);
@@ -595,10 +667,11 @@ bool unified_renderer::create_pipelines() {
 			.front_face = FRONT_FACE::COUNTER_CLOCKWISE,
 			.depth = {
 				.write = true,
-				.compare = DEPTH_COMPARE::LESS,
+				.compare = WARP_DEPTH_COMPARE,
 			},
 			.color_attachments = {
 				{ .format = color_format, },
+				{ .format = normals_format, },
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
@@ -630,7 +703,7 @@ bool unified_renderer::create_pipelines() {
 		auto skybox_desc = pipeline_desc;
 		skybox_desc.vertex_shader = shaders[SKYBOX_GATHER_FWD_VS];
 		skybox_desc.fragment_shader = shaders[SKYBOX_GATHER_FWD_FS];
-		skybox_desc.depth.compare = DEPTH_COMPARE::LESS_OR_EQUAL;
+		skybox_desc.depth.compare = WARP_DEPTH_COMPARE_OR_EQ;
 		skybox_desc.tessellation = render_pipeline_description::tessellation_t {}; // reset tessellation
 		skybox_desc.debug_label = "skybox_gather_fwd_pipeline";
 		skybox_gather_fwd_pipeline = warp_state.rctx->create_graphics_pipeline(skybox_desc);
@@ -650,7 +723,7 @@ bool unified_renderer::create_pipelines() {
 			.viewport = frame_objects[0].shadow_map.dim,
 			.depth = {
 				.write = true,
-				.compare = DEPTH_COMPARE::LESS,
+				.compare = WARP_DEPTH_COMPARE,
 			},
 			.depth_attachment = { .format = depth_format },
 			.support_indirect_rendering = true,
@@ -724,10 +797,18 @@ bool unified_renderer::create_pipelines() {
 		frame.render_post_shadow_fence = warp_state.rctx->create_fence(*frame.dev_queue);
 		frame.render_post_scene_fence = warp_state.rctx->create_fence(*frame.dev_queue);
 		frame.render_post_skybox_fence = warp_state.rctx->create_fence(*frame.dev_queue);
+		frame.render_ao_downsample_fence = warp_state.rctx->create_fence(*frame.dev_queue);
+		for (auto& ao_fence : frame.render_ao_fences) {
+			ao_fence = warp_state.rctx->create_fence(*frame.dev_queue);
+		}
+		frame.render_post_ao_fence = warp_state.rctx->create_fence(*frame.dev_queue);
 		if (!frame.render_post_tess_update_fence ||
 			!frame.render_post_shadow_fence ||
 			!frame.render_post_scene_fence ||
-			!frame.render_post_skybox_fence) {
+			!frame.render_post_skybox_fence ||
+			!frame.render_ao_downsample_fence ||
+			std::find(frame.render_ao_fences.begin(), frame.render_ao_fences.end(), nullptr) != frame.render_ao_fences.end() ||
+			!frame.render_post_ao_fence) {
 			log_error("failed to create render fences");
 			return false;
 		}
@@ -831,7 +912,7 @@ void unified_renderer::encode_indirect_pipelines(const uint32_t frame_idx) {
 	frame.indirect_skybox_gather_pipeline->reset();
 	
 	frame.indirect_shadow_pipeline->add_render_command(*warp_state.rdev, *shadow_pipeline)
-		.set_arguments(model->vertices_buffer, frame.frame_uniforms_buffer)
+		.set_arguments(model->vertices_buffer, model->normals_buffer, frame.frame_uniforms_buffer)
 		.draw_indexed(*model->indices_buffer, model->index_count);
 	
 	// NOTE: signatures are identical for scatter/gather-fwd/gather + we can only select between scatter and gather at run-time
@@ -1061,7 +1142,7 @@ void render_thread::run() {
 					// if gather render blit: this is the previous frame (i.e. if we are at time t and have just rendered I_t, this blits I_t-1)
 					// otherwise: use the current active frame
 					blit_image = (blit_rendered_frame ?
-								  (warp_state.is_scatter || warp_state.is_gather_forward ?
+								  (warp_state.is_scatter || warp_state.is_gather_forward || !warp_state.is_warping ?
 								   active_frame->scene_fbo.color.get() : prev_frame.scene_fbo.color.get()) :
 								  active_frame->scene_fbo.compute_color.get());
 					break;
@@ -1085,6 +1166,10 @@ void render_thread::run() {
 					blit_pipe = renderer.blit_debug_motion_depth_pipeline.get();
 					blit_image = active_frame->scene_fbo.motion_depth.get();
 					break;
+				case 6:
+					blit_pipe = renderer.blit_debug_depth_pipeline.get();
+					blit_image = active_frame->shadow_map.shadow_image.get();
+					break;
 			}
 			auto present_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue, *renderer.blit_pass, *blit_pipe);
 			if (!present_renderer->is_valid()) {
@@ -1105,7 +1190,7 @@ void render_thread::run() {
 			present_renderer->set_attachments(drawable);
 			present_renderer->begin();
 			if (!is_warping) {
-				present_renderer->wait_for_fence(*frame.render_post_skybox_fence);
+				present_renderer->wait_for_fence(*frame.final_fence_for_blit, SYNC_STAGE::FRAGMENT);
 			}
 			
 			static const graphics_renderer::multi_draw_entry blit_draw_info {
@@ -1239,12 +1324,11 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 	
 	warp_log_wip("update uniforms: $", frame_idx);
 	
-	// light handling (TODO: proper light)
+	// light handling
 	{
 		static const float3 light_min { -80.0f, 250.0f, 0.0f }, light_max { 80.0f, 250.0f, 0.0f };
-		//static const float3 light_min { -115.0f, 300.0f, 0.0f }, light_max { 115.0f, 0.0f, 0.0f };
 		static float light_interp { 0.5f }, light_interp_dir { 1.0f };
-		static constexpr const float light_slow_down { 0.01f };
+		static constexpr const float light_slow_down { 1.0f / 128.0f };
 		
 		// TODO: should really compute time delta in here (for most current value)
 		light_interp += (time_delta * light_slow_down) * light_interp_dir;
@@ -1256,33 +1340,53 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 			light_interp_dir *= -1.0f;
 		}
 		light_pos = light_min.interpolated(light_max, light_interp);
+		// discretize to reduce shimmering
+		light_pos.x = math::round(light_pos.x * 16.0f) * (1.0f / 16.0f);
 	}
 	
-	frame_uniforms = warp_shaders::frame_uniforms_t {
+	static uint32_t frame_counter = 0u;
+	frame_counter = (++frame_counter % 64u);
+	frame.uniforms = warp_shaders::frame_uniforms_t {
 		.cam_pos = frame.cam_state.position * float3 { -1.0f, 1.0f, -1.0f },
 		.light_pos = light_pos,
+		.ao_screen_dim = frame.scene_fbo.ao->get_image_dim().xy,
 		.displacement_mode = warp_state.displacement_mode,
+		.frame_idx = frame_counter,
 	};
 	
 	// update shadow map uniforms
 	{
 		const matrix4f light_pm = matrix4f::perspective(110.0f, 1.0f,
-														warp_state.shadow_near_far_plane.x,
-														warp_state.shadow_near_far_plane.y);
+#if WARP_RENDER_REVERSE_Z
+														warp_state.shadow_near_far_plane.y, warp_state.shadow_near_far_plane.x
+#else
+														warp_state.shadow_near_far_plane.x, warp_state.shadow_near_far_plane.y
+#endif
+														);
 		const matrix4f light_mvm {
 			matrix4f::translation(-light_pos) *
 			matrix4f::rotation_deg_named<'x'>(90.0f) // rotate downwards
 		};
-		frame_uniforms.light_mvpm = light_mvm * light_pm;
-		frame_uniforms.light_bias_mvpm = {
-			frame_uniforms.light_mvpm * matrix4f().scale(0.5f, 0.5f, 0.5f).translate(0.5f, 0.5f, 0.5f)
+		frame.uniforms.light_mvpm = light_mvm * light_pm;
+		frame.uniforms.light_bias_mvpm = {
+#if WARP_RENDER_REVERSE_Z
+			// NOTE: with reverse-Z Z scale and offset are 1.0 and 0.0 resp., otherwise they would be 0.5 and 0.5 as well
+			frame.uniforms.light_mvpm * matrix4f().scale(0.5f, 0.5f, 1.0f).translate(0.5f, 0.5f, 0.0f)
+#else
+			frame.uniforms.light_mvpm * matrix4f().scale(0.5f, 0.5f, 0.5f).translate(0.5f, 0.5f, 0.5f)
+#endif
 		};
 	}
 	
 	// update scene uniforms
 	{
 		pm = matrix4f::perspective(warp_state.fov, float(floor::get_width()) / float(floor::get_height()),
-								   warp_state.near_far_plane.x, warp_state.near_far_plane.y);
+#if WARP_RENDER_REVERSE_Z
+								   warp_state.near_far_plane.y, warp_state.near_far_plane.x
+#else
+								   warp_state.near_far_plane.x, warp_state.near_far_plane.y
+#endif
+								   );
 		rmvm = (matrix4f::rotation_deg_named<'y'>(float(frame.cam_state.rotation.y)) *
 				matrix4f::rotation_deg_named<'x'>(float(frame.cam_state.rotation.x)));
 		mvm = matrix4f::translation(frame.cam_state.position * float3 { 1.0f, -1.0f, 1.0f }) * rmvm;
@@ -1293,11 +1397,12 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 		};
 		const matrix4f next_mvpm { mvm * pm }; // gather
 		const matrix4f prev_mvpm { prev_prev_mvm * pm }; // gather
-		frame_uniforms.mvpm = mvpm;
-		frame_uniforms.scatter.scene_mvm = mvm;
-		frame_uniforms.scatter.scene_prev_mvm = prev_mvm;
-		frame_uniforms.gather.scene_next_mvpm = next_mvpm;
-		frame_uniforms.gather.scene_prev_mvpm = prev_mvpm;
+		frame.uniforms.mvpm = mvpm;
+		frame.uniforms.scatter.scene_mvm = mvm;
+		frame.uniforms.scatter.scene_prev_mvm = prev_mvm;
+		frame.uniforms.gather.scene_next_mvpm = next_mvpm;
+		frame.uniforms.gather.scene_prev_mvpm = prev_mvpm;
+		frame.uniforms.rmvm = rmvm;
 	}
 	
 	// update skybox uniforms
@@ -1310,14 +1415,14 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 		const auto prev_imvpm = (prev_rmvm * pm).inverted(); // scatter
 		const matrix4f next_mvpm { rmvm * pm }; // gather
 		const matrix4f prev_mvpm { prev_prev_rmvm * pm }; // gather
-		frame_uniforms.sky_imvpm = imvpm;
-		frame_uniforms.scatter.sky_prev_imvpm = prev_imvpm;
-		frame_uniforms.gather.sky_next_mvpm = next_mvpm;
-		frame_uniforms.gather.sky_prev_mvpm = prev_mvpm;
+		frame.uniforms.sky_imvpm = imvpm;
+		frame.uniforms.scatter.sky_prev_imvpm = prev_imvpm;
+		frame.uniforms.gather.sky_next_mvpm = next_mvpm;
+		frame.uniforms.gather.sky_prev_mvpm = prev_mvpm;
 	}
 	
 	// write uniforms on the GPU side (indirect pipeline)
-	frame.frame_uniforms_buffer->write(*frame.dev_queue, &frame_uniforms);
+	frame.frame_uniforms_buffer->write(*frame.dev_queue, &frame.uniforms);
 
 	// remember t-2 and t-1 mvms
 	prev_prev_mvm = prev_mvm;
@@ -1326,26 +1431,29 @@ void unified_renderer::update_uniforms(const uint32_t frame_idx, const float tim
 	prev_rmvm = rmvm;
 }
 
+#define WARP_PREFER_LATENCY_OVER_BANDWIDTH 1
+
 void unified_renderer::render_full_scene(const uint32_t frame_idx, const float time_delta) {
 	// frame object that is used to render this frame
 	auto& frame = frame_objects[frame_idx];
 	warp_log_wip("render (fr $, ep $; delta: $ / $ms)", frame_idx, frame.get_epoch(), time_delta, time_delta * 1000.0f);
+	
+	//////////////////////////////////////////
+	// frame setup
 	
 	// check if pipelines need to be rebuilt/reencoded
 	if (frame.rebuild_pipelines.exchange(false)) {
 		encode_indirect_pipelines(frame_idx);
 	}
 	
+	update_uniforms(frame_idx, time_delta);
+	
 	//////////////////////////////////////////
 	// create and encode all renderers
 	
-	std::unique_ptr<graphics_renderer> shadow_map_renderer;
-	std::unique_ptr<graphics_renderer> scene_renderer;
-	std::unique_ptr<graphics_renderer> sky_box_renderer;
-	
 	// shadow map
 	{
-		shadow_map_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue, *shadow_pass, *shadow_pipeline);
+		auto shadow_map_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue, *shadow_pass, *shadow_pipeline);
 		if (!shadow_map_renderer->is_valid()) {
 			return;
 		}
@@ -1359,24 +1467,26 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		shadow_map_renderer->signal_fence(*frame.render_post_shadow_fence, SYNC_STAGE::FRAGMENT /* must be fragment, b/c we write a depth buffer */);
 		
 		shadow_map_renderer->end();
+		shadow_map_renderer->commit_and_release(std::move(shadow_map_renderer));
 	}
 	
 	// actual scene
 	{
-		scene_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue,
-																   (warp_state.is_scatter ? *scatter_passes[0] :
-																	(warp_state.is_gather_forward ? *gather_fwd_passes[0] : *gather_passes[0])),
-																   (warp_state.is_scatter ? *scatter_pipeline :
-																	(warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline)));
+		auto scene_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue,
+																		(warp_state.is_scatter ? *scatter_passes[0] :
+																		 (warp_state.is_gather_forward ? *gather_fwd_passes[0] : *gather_passes[0])),
+																		(warp_state.is_scatter ? *scatter_pipeline :
+																		 (warp_state.is_gather_forward ? *gather_fwd_pipeline : *gather_pipeline)));
 		if (!scene_renderer->is_valid()) {
 			return;
 		}
 		
 		if (warp_state.is_scatter || warp_state.is_gather_forward) {
-			scene_renderer->set_attachments(frame.scene_fbo.color, frame.scene_fbo.motion[0], frame.scene_fbo.depth);
+			scene_renderer->set_attachments(frame.scene_fbo.color, frame.scene_fbo.normals, frame.scene_fbo.motion[0], frame.scene_fbo.depth);
 		} else { // gather
 			// for bidirectional gather rendering, this switches every frame
 			scene_renderer->set_attachments(frame.scene_fbo.color,
+											frame.scene_fbo.normals,
 											frame.scene_fbo.motion[0],
 											frame.scene_fbo.motion[1],
 											frame.scene_fbo.motion_depth,
@@ -1385,28 +1495,39 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		
 		// scene
 		scene_renderer->begin();
-		scene_renderer->wait_for_fence(*frame.render_post_shadow_fence);
+		scene_renderer->wait_for_fence(*frame.render_post_shadow_fence, SYNC_STAGE::FRAGMENT);
 		// -> indirect rendering
 		scene_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_scene_scatter_pipeline : *frame.indirect_scene_gather_pipeline);
 		scene_renderer->signal_fence(*frame.render_post_scene_fence, SYNC_STAGE::FRAGMENT);
 		scene_renderer->end();
+#if WARP_PREFER_LATENCY_OVER_BANDWIDTH
+		scene_renderer->commit_and_release(std::move(scene_renderer));
+#else
+		scene_renderer->commit([this, frame_idx]() {
+			// only start new frame once this is done
+			warp_log_wip("> allow render (from $)", frame_idx);
+			frame_render_state.store(1u);
+		});
+#endif
 	}
 	
 	// sky box
 	{
-		sky_box_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue,
-																	 (warp_state.is_scatter ? *scatter_passes[1] :
-																	  (warp_state.is_gather_forward ? *gather_fwd_passes[1] : *gather_passes[1])),
-																	 (warp_state.is_scatter ? *skybox_scatter_pipeline :
-																	  (warp_state.is_gather_forward ? *skybox_gather_fwd_pipeline : *skybox_gather_pipeline)));
+		auto sky_box_renderer = warp_state.rctx->create_graphics_renderer(*frame.dev_queue,
+																		  (warp_state.is_scatter ? *scatter_passes[1] :
+																		   (warp_state.is_gather_forward ? *gather_fwd_passes[1] : *gather_passes[1])),
+																		  (warp_state.is_scatter ? *skybox_scatter_pipeline :
+																		   (warp_state.is_gather_forward ? *skybox_gather_fwd_pipeline :
+																			*skybox_gather_pipeline)));
 		if (!sky_box_renderer->is_valid()) {
 			return;
 		}
 		
 		if (warp_state.is_scatter || warp_state.is_gather_forward) {
-			sky_box_renderer->set_attachments(frame.scene_fbo.color, frame.scene_fbo.motion[0], frame.scene_fbo.depth);
+			sky_box_renderer->set_attachments(frame.scene_fbo.color, frame.scene_fbo.normals, frame.scene_fbo.motion[0], frame.scene_fbo.depth);
 		} else { // gather
 			sky_box_renderer->set_attachments(frame.scene_fbo.color,
+											  frame.scene_fbo.normals,
 											  frame.scene_fbo.motion[0],
 											  frame.scene_fbo.motion[1],
 											  frame.scene_fbo.motion_depth,
@@ -1415,15 +1536,135 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 		
 		// skybox
 		sky_box_renderer->begin();
-		sky_box_renderer->wait_for_fence(*frame.render_post_scene_fence);
-		sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline : *frame.indirect_skybox_gather_pipeline);
+		sky_box_renderer->wait_for_fence(*frame.render_post_scene_fence, SYNC_STAGE::FRAGMENT);
+		sky_box_renderer->execute_indirect(warp_state.is_scatter ? *frame.indirect_skybox_scatter_pipeline :
+										   *frame.indirect_skybox_gather_pipeline);
 		sky_box_renderer->signal_fence(*frame.render_post_skybox_fence, SYNC_STAGE::FRAGMENT);
 		sky_box_renderer->end();
+#if WARP_PREFER_LATENCY_OVER_BANDWIDTH
+		sky_box_renderer->commit_and_release(std::move(sky_box_renderer), [this, frame_idx]() {
+			// only start new frame once this is done
+			(void)frame_idx;
+			warp_log_wip("> allow render (from $)", frame_idx);
+			frame_render_state.store(1u);
+		});
+#else
+		sky_box_renderer->commit();
+#endif
 	}
 	
-	// when using indirect rendering (-> uniforms are located in one global buffer), we can delay the uniform update until this point
-	// NOTE: this allows us to use a more current camera state!
-	update_uniforms(frame_idx, time_delta);
+	// scene ambient occlusion
+	if (warp_state.is_ao_added) {
+		static constexpr const uint32_t group_width { 16u };
+		
+		device_image* normals_image = frame.scene_fbo.normals.get();
+		device_image* depth_image = frame.scene_fbo.depth.get();
+		device_fence* ao_init_wait_fence = frame.render_post_skybox_fence.get();
+		if (warp_state.is_ao_half_res) {
+			const device_queue::execution_parameters_t downsample_params {
+				.execution_dim = 2u,
+				.global_work_size = uint2 { frame.scene_fbo.ao_dim },
+				.local_work_size = uint2 { group_width, group_width },
+				.args = {
+					frame.scene_fbo.normals.get(), frame.scene_fbo.depth.get(),
+					frame.scene_fbo.normals_ds.get(), frame.scene_fbo.depth_ds.get(),
+				},
+				.wait_fences = { ao_init_wait_fence },
+				.signal_fences = { frame.render_ao_downsample_fence.get() },
+				.debug_label = "downsample_framebuffers",
+			};
+			frame.dev_queue->execute_with_parameters(*shaders[DOWNSAMPLE_FRAMEBUFFERS], downsample_params);
+			
+			normals_image = frame.scene_fbo.normals_ds.get();
+			depth_image = frame.scene_fbo.depth_ds.get();
+			ao_init_wait_fence = frame.render_ao_downsample_fence.get();
+		}
+		
+		device_queue::execution_parameters_t ao_params {
+			.execution_dim = 2u,
+			.global_work_size = uint2 { frame.scene_fbo.ao_dim },
+			.local_work_size = uint2 { group_width, group_width },
+			.args = {},
+			.wait_fences = { ao_init_wait_fence },
+			.debug_label = "scene_ao",
+		};
+		
+		if (warp_state.is_raw_ao) {
+			ao_params.args = {
+				frame.scene_fbo.color.get(), normals_image, depth_image,
+				frame.frame_uniforms_buffer
+			};
+			ao_params.signal_fences = { frame.render_post_ao_fence.get() };
+			frame.dev_queue->execute_with_parameters(*shaders[SCENE_AO_RAW], ao_params);
+		} else {
+			ao_params.args = {
+				normals_image, depth_image, frame.scene_fbo.ao_tmp.get(),
+				frame.frame_uniforms_buffer
+			};
+			ao_params.signal_fences = { frame.render_ao_fences[0].get() };
+			frame.dev_queue->execute_with_parameters(*shaders[SCENE_AO], ao_params);
+			
+			// denoise
+			auto ao_in = frame.scene_fbo.ao_tmp.get();
+			auto ao_out = frame.scene_fbo.ao.get();
+			for (uint32_t denoise_iter = 0u; denoise_iter < denoise_iteration_count; ++denoise_iter) {
+				const auto group_window_size = (group_width << denoise_iter);
+				// since the screen dim won't always be a multiple of the window size (especially later ones),
+				// we need to account for it by adding more groups at the end
+				const auto group_count = ((((frame.scene_fbo.ao_dim + group_window_size - 1u) / group_window_size) * group_window_size) /
+										  group_width);
+				const auto global_work_size = group_count * group_width;
+				
+				device_queue::execution_parameters_t ao_denoise_params {
+					.execution_dim = 2u,
+					.global_work_size = global_work_size,
+					.local_work_size = uint2 { group_width, group_width },
+					.args = {},
+					.wait_fences = { frame.render_ao_fences[denoise_iter].get() },
+					.signal_fences = {
+						(denoise_iter + 1u < denoise_iteration_count || warp_state.is_ao_half_res ?
+						 frame.render_ao_fences[denoise_iter + 1u].get() : frame.render_post_ao_fence.get())
+					},
+					.debug_label = "scene_ao_denoise",
+				};
+				if (denoise_iter + 1u < denoise_iteration_count || warp_state.is_ao_half_res) {
+					ao_denoise_params.args = {
+						normals_image, depth_image,
+						ao_in, ao_out, frame.frame_uniforms_buffer
+					};
+				} else {
+					ao_denoise_params.args = {
+						frame.scene_fbo.color.get(), normals_image, depth_image,
+						ao_in, frame.frame_uniforms_buffer
+					};
+				}
+				const auto shader_idx = (denoise_iter + 1u < denoise_iteration_count || warp_state.is_ao_half_res ?
+										 SCENE_AO_DENOISE_0 + denoise_iter : SCENE_AO_DENOISE_FINAL);
+				frame.dev_queue->execute_with_parameters(*shaders[shader_idx], ao_denoise_params);
+				std::swap(ao_in, ao_out);
+			}
+			
+			if (warp_state.is_ao_half_res) {
+				const device_queue::execution_parameters_t upsample_params {
+					.execution_dim = 2u,
+					.global_work_size = uint2 { frame.scene_fbo.dim },
+					.local_work_size = uint2 { group_width, group_width },
+					.args = {
+						frame.scene_fbo.color.get(), frame.scene_fbo.ao.get(), frame.scene_fbo.depth.get(), frame.scene_fbo.depth_ds.get(),
+						frame.scene_fbo.normals.get(), frame.scene_fbo.normals_ds.get(), frame.frame_uniforms_buffer
+					},
+					.wait_fences = { frame.render_ao_fences[frame.render_ao_fences.size() - 1u].get() },
+					.signal_fences = { frame.render_post_ao_fence.get() },
+					.debug_label = "upsample_ao",
+				};
+				frame.dev_queue->execute_with_parameters(*shaders[UPSAMPLE_AND_BLIT_AO], upsample_params);
+			}
+		}
+		
+		frame.final_fence_for_blit = frame.render_post_ao_fence.get();
+	} else {
+		frame.final_fence_for_blit = frame.render_post_skybox_fence.get();
+	}
 	
 	//////////////////////////////////////////
 	// update tessellation factors
@@ -1434,7 +1675,7 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 			.args = {
 				model->model_data_arg_buffer,
 				frame.tess_factors_buffer,
-				frame_uniforms.cam_pos,
+				frame.uniforms.cam_pos,
 				float(gather_pipeline->get_description(false).tessellation.max_factor),
 			},
 			.wait_fences = { frame.render_post_scene_fence.get() /* from previous frame */ },
@@ -1445,29 +1686,6 @@ void unified_renderer::render_full_scene(const uint32_t frame_idx, const float t
 	}
 	
 	//////////////////////////////////////////
-	// commit & run renderers
-	shadow_map_renderer->commit_and_release(std::move(shadow_map_renderer));
-#if 1
-	scene_renderer->commit_and_release(std::move(scene_renderer));
-#else // -> "bandwidth"
-	scene_renderer->commit([this, frame_idx]() {
-		// only start new frame once this is done
-		warp_log_wip("> allow render (from $)", frame_idx);
-		frame_render_state.store(1u);
-	});
-#endif
-#if 0
-	sky_box_renderer->commit();
-#else // -> "latency"
-	sky_box_renderer->commit_and_release(std::move(sky_box_renderer), [this, frame_idx]() {
-		// only start new frame once this is done
-		(void)frame_idx;
-		warp_log_wip("> allow render (from $)", frame_idx);
-		frame_render_state.store(1u);
-	});
-#endif
-	
-	//////////////////////////////////////////
 	// end
 }
 
@@ -1476,13 +1694,25 @@ bool unified_renderer::compile_shaders(const std::string add_cli_options) {
 	std::array<device_function*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shaders;
 	std::array<const device_function::function_entry*, size_t(WARP_SHADER::__MAX_WARP_SHADER)> new_shader_entries;
 	
-	new_shader_prog = warp_state.rctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"),
-														"-I" + floor::data_path("../warp/src") +
-														" -DWARP_NEAR_PLANE=" + std::to_string(warp_state.near_far_plane.x) + "f" +
-														" -DWARP_FAR_PLANE=" + std::to_string(warp_state.near_far_plane.y) + "f" +
-														" -DWARP_SHADOW_FAR_PLANE=" + std::to_string(warp_state.shadow_near_far_plane.y) + "f" +
-														(floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
-														add_cli_options);
+	const auto frame_dim = floor::get_physical_screen_size();
+	const toolchain::compile_options options {
+		.metal.restrictive_vectorization = true, // not really a difference in perf, but stops strange 5D vector emission
+		.cli = {
+			"-I" + floor::data_path("../warp/src") +
+			" -DWARP_NEAR_PLANE=" + std::to_string(warp_state.near_far_plane.x) + "f" +
+			" -DWARP_FAR_PLANE=" + std::to_string(warp_state.near_far_plane.y) + "f" +
+			" -DWARP_SHADOW_FAR_PLANE=" + std::to_string(warp_state.shadow_near_far_plane.y) + "f" +
+			" -DWARP_REVERSE_Z=" + std::to_string(WARP_RENDER_REVERSE_Z) +
+			" -DWARP_SCREEN_WIDTH=" + std::to_string(frame_dim.x) +
+			" -DWARP_SCREEN_HEIGHT=" + std::to_string(frame_dim.y) +
+			" -DWARP_SCREEN_FOV=" + std::to_string(warp_state.fov) +
+			" -DWARP_AO_HALF_RES=" + (warp_state.is_ao_half_res ? "1" : "0") +
+			" -DWARP_AO_RES_SCALER=" + (warp_state.is_ao_half_res ? "2" : "1") +
+			(floor::get_wide_gamut() && floor::get_hdr() ? "" : " -DWARP_APPLY_GAMMA") +
+			add_cli_options
+		},
+	};
+	new_shader_prog = warp_state.rctx->add_program_file(floor::data_path("../warp/src/warp_shaders.cpp"), options);
 	
 	if (new_shader_prog == nullptr) {
 		log_error("shader compilation failed");
@@ -1516,6 +1746,16 @@ bool unified_renderer::compile_shaders(const std::string add_cli_options) {
 		"blit_debug_motion_3d_fs",
 		"blit_debug_motion_depth_fs",
 		"tess_update_factors",
+		"scene_ao",
+		"scene_ao_raw",
+		"scene_ao_denoise_0",
+		"scene_ao_denoise_1",
+		"scene_ao_denoise_2",
+		"scene_ao_denoise_3",
+		"scene_ao_denoise_4",
+		"scene_ao_denoise_final",
+		"downsample_framebuffers",
+		"upsample_and_blit_ao",
 	};
 	
 	for (size_t i = 0; i < warp_shader_count(); ++i) {

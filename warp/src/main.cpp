@@ -35,7 +35,7 @@ struct warp_option_context {
 typedef option_handler<warp_option_context> warp_opt_handler;
 
 static std::unique_ptr<camera> cam;
-static const double3 cam_speeds { 75.0 /* default */, 150.0 /* faster */, 10.0 /* slower */ };
+static const double3 cam_speeds { 75.0 /* default */, 150.0 /* faster */, 1.0 /* slower */ };
 
 static std::shared_ptr<unified_renderer> uni_renderer;
 
@@ -53,6 +53,7 @@ template<> std::vector<std::pair<std::string, warp_opt_handler::option_function>
 		std::cout << "\t                  NOTE: if vsync is enabled, this will automatically be set to the appropriate value" << std::endl;
 		std::cout << "\t--always-render: always perform full scene rendering (warping is disabled), not that --frames/--target will be ignored if enabled" << std::endl;
 		std::cout << "\t--no-tessellation: disables tessellation in the unified renderer" << std::endl;
+		std::cout << "\t--full-res-ao: always use full resolution ambient occlusion" << std::endl;
 		warp_state.done = true;
 	}},
 	{ "--frames", [](warp_option_context&, char**& arg_ptr) {
@@ -109,6 +110,10 @@ template<> std::vector<std::pair<std::string, warp_opt_handler::option_function>
 	{ "--no-tessellation", [](warp_option_context&, char**&) {
 		warp_state.use_tessellation = false;
 		std::cout << "tessellation disabled" << std::endl;
+	}},
+	{ "--full-res-ao", [](warp_option_context&, char**&) {
+		warp_state.is_ao_half_res = false;
+		std::cout << "using full resolution AO" << std::endl;
 	}},
 	// ignore xcode debug arg
 	{ "-NSDocumentRevisionsDebugMode", [](warp_option_context&, char**&) {} },
@@ -226,6 +231,14 @@ static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 				warp_state.is_bidir_scatter ^= true;
 				log_debug("bidirectional scatter? $", warp_state.is_bidir_scatter);
 				break;
+			case SDLK_6:
+				warp_state.is_ao_added ^= true;
+				log_debug("add AO: $", warp_state.is_ao_added);
+				break;
+			case SDLK_7:
+				warp_state.is_raw_ao ^= true;
+				log_debug("raw AO: $", warp_state.is_raw_ao);
+				break;
 			case SDLK_G:
 				warp_state.is_scatter ^= true;
 				log_debug("scatter/gather? $", (warp_state.is_scatter ? "scatter" : "gather"));
@@ -273,6 +286,9 @@ static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 			case SDLK_KP_5:
 				uni_renderer->set_debug_blit_mode(5);
 				break;
+			case SDLK_KP_6:
+				uni_renderer->set_debug_blit_mode(6);
+				break;
 			default: break;
 		}
 		return true;
@@ -284,7 +300,11 @@ static bool evt_handler(EVENT_TYPE type, std::shared_ptr<event_object> obj) {
 		}
 	}
 	else if(type == EVENT_TYPE::WINDOW_RESIZE) {
-		compile_program();
+		// only rebuild/recompile when the window size actually changed (and we have a renderer to begin with)
+		if (uni_renderer &&
+			(uni_renderer->get_renderer_dim() != std::static_pointer_cast<window_resize_event>(obj)->size).any()) {
+			compile_program();
+		}
 		return true;
 	}
 	return false;
@@ -376,7 +396,7 @@ int main(int, char* argv[]) {
 		
 		if (!warp_state.is_auto_cam) {
 			cam->set_wasd_input(true);
-			cam->set_rotation_wrapping(false);
+			//cam->set_rotation_wrapping(false);
 		} else {
 			cam->set_mouse_input(false);
 			cam->set_wasd_input(false);
@@ -480,7 +500,7 @@ int main(int, char* argv[]) {
 		
 		floor::get_event()->handle_events();
 		
-#if !defined(FLOOR_IOS) && defined(__APPLE__)
+#if !defined(FLOOR_IOS) && defined(__APPLE__) && 0
 		// stop drawing if window is inactive
 		if (!(SDL_GetWindowFlags(floor::get_window()) & SDL_WINDOW_INPUT_FOCUS)) {
 			std::this_thread::sleep_for(20ms);

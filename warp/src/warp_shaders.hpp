@@ -72,6 +72,7 @@ struct frame_uniforms_t {
 	matrix4f light_bias_mvpm;
 	matrix4f light_mvpm;
 	matrix4f sky_imvpm;
+	matrix4f rmvm;
 	struct {
 		matrix4f scene_mvm;
 		matrix4f scene_prev_mvm;
@@ -85,7 +86,9 @@ struct frame_uniforms_t {
 	} gather;
 	float3 cam_pos;
 	float3 light_pos;
+	uint2 ao_screen_dim;
 	uint32_t displacement_mode;
+	uint32_t frame_idx;
 };
 
 //! model data struct for argument buffer use

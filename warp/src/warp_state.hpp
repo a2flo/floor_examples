@@ -57,6 +57,9 @@ struct warp_state_struct {
 	bool is_clear_frame { false };
 	bool is_fixup { false };
 	bool is_bidir_scatter { false };
+	bool is_ao_added { true };
+	bool is_raw_ao { false };
+	bool is_ao_half_res { true };
 	bool is_always_render { false };
 	
 	// 0 = off, 1 = parallax mapping, 2 = tessellation
@@ -71,7 +74,7 @@ struct warp_state_struct {
 	
 	//
 	const float fov { 72.0f };
-	const float2 near_far_plane { 0.5f, 500.0f };
+	const float2 near_far_plane { 0.1f, 500.0f };
 	const float2 shadow_near_far_plane { 1.0f, 260.0f };
 	uint2 tile_size { 32, 16 };
 	

@@ -28,6 +28,20 @@
 #include "warp_shaders.hpp"
 #include <libwarp/libwarp.h>
 
+//! 0: uses normal Z rendering, with 0 = near, 1 = far
+//! 1: uses reverse Z rendering, with 1 = near, 0 = far
+#define WARP_RENDER_REVERSE_Z 0
+
+#if WARP_RENDER_REVERSE_Z
+#define WARP_CLEAR_DEPTH 0.0f
+#define WARP_DEPTH_COMPARE DEPTH_COMPARE::GREATER
+#define WARP_DEPTH_COMPARE_OR_EQ DEPTH_COMPARE::GREATER_OR_EQUAL
+#else
+#define WARP_CLEAR_DEPTH 1.0f
+#define WARP_DEPTH_COMPARE DEPTH_COMPARE::LESS
+#define WARP_DEPTH_COMPARE_OR_EQ DEPTH_COMPARE::LESS_OR_EQUAL
+#endif
+
 class render_thread;
 
 // unified Metal/Vulkan renderer
@@ -85,6 +99,16 @@ public:
 		BLIT_DEBUG_MOTION_3D_FS,
 		BLIT_DEBUG_MOTION_DEPTH_FS,
 		TESS_UPDATE_FACTORS,
+		SCENE_AO,
+		SCENE_AO_RAW,
+		SCENE_AO_DENOISE_0,
+		SCENE_AO_DENOISE_1,
+		SCENE_AO_DENOISE_2,
+		SCENE_AO_DENOISE_3,
+		SCENE_AO_DENOISE_4, //!< only used when upsampling
+		SCENE_AO_DENOISE_FINAL, //!< only used with full-res AO
+		DOWNSAMPLE_FRAMEBUFFERS,
+		UPSAMPLE_AND_BLIT_AO,
 		__MAX_WARP_SHADER
 	};
 	static constexpr size_t warp_shader_count() {
@@ -115,6 +139,10 @@ public:
 	//! for debugging purposes: blits different computed/rendered framebuffers
 	void set_debug_blit_mode(const uint32_t mode) {
 		debug_blit_mode = mode;
+	}
+	
+	uint2 get_renderer_dim() const {
+		return frame_objects[0].scene_fbo.dim;
 	}
 	
 protected:
@@ -168,6 +196,9 @@ protected:
 	//! is warping active in any frame right now?
 	std::atomic<bool> warp_active { false };
 	
+	//! amount of denoising iterations that are performed (must not be changed)
+	static constexpr const uint32_t denoise_iteration_count { 5u };
+	
 	// we'll try to render multiple frames at once -> need separate objects to make that work
 	static constexpr const uint32_t max_frames_in_flight { 2u };
 	struct frame_object_t {
@@ -185,6 +216,10 @@ protected:
 		std::unique_ptr<device_fence> render_post_shadow_fence;
 		std::unique_ptr<device_fence> render_post_scene_fence;
 		std::unique_ptr<device_fence> render_post_skybox_fence;
+		std::unique_ptr<device_fence> render_ao_downsample_fence;
+		std::array<std::unique_ptr<device_fence>, (1u + denoise_iteration_count)> render_ao_fences;
+		std::unique_ptr<device_fence> render_post_ao_fence;
+		device_fence* final_fence_for_blit { nullptr };
 		
 		// indirect rendering (if supported)
 		std::unique_ptr<indirect_command_pipeline> indirect_shadow_pipeline;
@@ -198,6 +233,8 @@ protected:
 		// other per-frame data
 		std::shared_ptr<device_buffer> frame_uniforms_buffer;
 		std::shared_ptr<device_buffer> tess_factors_buffer;
+		
+		warp_shaders::frame_uniforms_t uniforms;
 		
 		//! signals that the frame has finished rendering and can now be blitted to the screen
 		std::atomic_bool render_done { false };
@@ -220,13 +257,21 @@ protected:
 		// frame buffer images
 		struct {
 			std::shared_ptr<device_image> color;
+			std::shared_ptr<device_image> normals;
 			std::shared_ptr<device_image> depth;
 			std::shared_ptr<device_image> motion[2];
 			std::shared_ptr<device_image> motion_depth;
 			std::shared_ptr<device_image> compute_color;
 			
+			std::shared_ptr<device_image> ao;
+			std::shared_ptr<device_image> ao_tmp;
+			// only available when using downsampled/half-res AO
+			std::shared_ptr<device_image> normals_ds;
+			std::shared_ptr<device_image> depth_ds;
+			
 			uint2 dim;
 			uint2 dim_multiple;
+			uint2 ao_dim;
 		} scene_fbo;
 		
 		struct {
@@ -255,6 +300,8 @@ protected:
 		uint64_t get_epoch() const {
 			return current_epoch.load();
 		}
+		
+		uint32_t frame_idx { 0u };
 	};
 	frame_object_t frame_objects[max_frames_in_flight];
 	
@@ -300,8 +347,6 @@ protected:
 		matrix4f m0; // prev_imvpm (scatter), next_mvpm (gather)
 		matrix4f m1; // unused (scatter), prev_mvpm (gather)
 	} skybox_uniforms;
-	
-	warp_shaders::frame_uniforms_t frame_uniforms;
 	
 	libwarp_camera_setup cam_setup {};
 	

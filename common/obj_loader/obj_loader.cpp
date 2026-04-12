@@ -1135,22 +1135,28 @@ struct obj_grammar {
 #endif
 		
 		//
-		for(const auto& obj : model->objects) {
-			for(const auto& face : obj->indices) {
+		for (const auto& obj : model->objects) {
+			for (const auto& face : obj->indices) {
 				const auto delta_1 = model->tex_coords[face.y] - model->tex_coords[face.x];
 				const auto delta_2 = model->tex_coords[face.z] - model->tex_coords[face.x];
 				const float3 edge1 = model->vertices[face.y] - model->vertices[face.x];
 				const float3 edge2 = model->vertices[face.z] - model->vertices[face.x];
+				const float3 norm = edge1.crossed(edge2);
 				
-				float3 norm = edge1.crossed(edge2);
+				// skip triangle if degenerate
+				if (norm.dot() <= 0.0001f || norm.is_nan() || norm.is_inf()) {
+					continue;
+				}
+				
 				float3 binormal = (edge1 * delta_2.x) - (edge2 * delta_1.x);
 				float3 tangent = (edge1 * delta_2.y) - (edge2 * delta_1.y);
 				
 				// adjust
-				if(norm.dot(tangent.crossed(binormal)) > 0.0f) {
+				if (norm.dot(tangent.crossed(binormal)) > 0.0f) {
 					tangent *= -1.0f;
+				} else {
+					binormal *= -1.0f;
 				}
-				else binormal *= -1.0f;
 				
 				model->normals[face.x] += norm;
 				model->normals[face.y] += norm;
@@ -1164,9 +1170,27 @@ struct obj_grammar {
 			}
 		}
 		
-		for(auto& norm : model->normals) { norm.normalize(); }
-		for(auto& binormal : model->binormals) { binormal.normalize(); }
-		for(auto& tangent : model->tangents) { tangent.normalize(); }
+		for (auto& norm : model->normals) {
+			if (!norm.is_null()) [[likely]] {
+				norm.normalize();
+			} else {
+				norm = { 0.0f, 1.0f, 0.0f };
+			}
+		}
+		for (auto& binormal : model->binormals) {
+			if (!binormal.is_null()) [[likely]] {
+				binormal.normalize();
+			} else {
+				binormal = { 1.0f, 0.0f, 0.0f };
+			}
+		}
+		for (auto& tangent : model->tangents) {
+			if (!tangent.is_null()) [[likely]] {
+				tangent.normalize();
+			} else {
+				tangent = { 0.0f, 0.0f, 1.0f };
+			}
+		}
 		
 		// process material
 		if(mat_filename != "") {
