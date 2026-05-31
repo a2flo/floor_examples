@@ -37,7 +37,8 @@
 		"target": "generic",
 		"simd_width": 0,
 		"soft_printf": false,
-		"barycentric_coord_support": false
+		"barycentric_coord_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Vulkan",
@@ -58,7 +59,8 @@
 		"subgroup_uniform_cf_support": false,
 		"low_iub_count": true,
 		"low_desc_set_count": true,
-		"untyped_pointers_support": false
+		"untyped_pointers_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Host",

@@ -62,7 +62,8 @@
 		"target": "generic",
 		"simd_width": 0,
 		"soft_printf": false,
-		"barycentric_coord_support": false
+		"barycentric_coord_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Metal",
@@ -71,7 +72,8 @@
 		"target": "apple",
 		"simd_width": 32,
 		"soft_printf": false,
-		"barycentric_coord_support": false
+		"barycentric_coord_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Metal",
@@ -80,7 +82,8 @@
 		"target": "apple",
 		"simd_width": 32,
 		"soft_printf": false,
-		"barycentric_coord_support": false
+		"barycentric_coord_support": false,
+		"mesh_shading_support": false
 	},
 	// Vulkan 1.3+
 	{
@@ -101,7 +104,8 @@
 		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true,
-		"untyped_pointers_support": false
+		"untyped_pointers_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Vulkan",
@@ -121,7 +125,8 @@
 		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true,
-		"untyped_pointers_support": false
+		"untyped_pointers_support": false,
+		"mesh_shading_support": false
 	},
 	{
 		"type": "Vulkan",
@@ -141,7 +146,8 @@
 		"subgroup_uniform_cf_support": true,
 		"low_iub_count": true,
 		"low_desc_set_count": true,
-		"untyped_pointers_support": false
+		"untyped_pointers_support": false,
+		"mesh_shading_support": false
 	},
 	// Host-Compute x86 + ARM
 	{

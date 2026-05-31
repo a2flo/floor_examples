@@ -60,6 +60,12 @@ void dump_function_info(const toolchain::function_info& function_info, const too
 				case toolchain::ARG_ADDRESS_SPACE::IMAGE:
 					info_str += "image ";
 					break;
+				case toolchain::ARG_ADDRESS_SPACE::TASK_PAYLOAD:
+					info_str += "task-payload ";
+					break;
+				case toolchain::ARG_ADDRESS_SPACE::MESH:
+					info_str += "mesh ";
+					break;
 				default: break;
 			}
 			
@@ -77,6 +83,21 @@ void dump_function_info(const toolchain::function_info& function_info, const too
 			}
 			if (has_flag<toolchain::ARG_FLAG::IUB>(info.args[i].flags)) {
 				info_str += "iub ";
+			}
+			if (has_flag<toolchain::ARG_FLAG::TASK_PAYLOAD>(info.args[i].flags)) {
+				// don't print it twice if already in task-payload address space
+				if (info.args[i].address_space != toolchain::ARG_ADDRESS_SPACE::TASK_PAYLOAD) {
+					info_str += "task-payload ";
+				}
+			}
+			if (has_flag<toolchain::ARG_FLAG::MESH>(info.args[i].flags)) {
+				// don't print it twice if already in mesh address space
+				if (info.args[i].address_space != toolchain::ARG_ADDRESS_SPACE::MESH) {
+					info_str += "mesh ";
+				}
+			}
+			if (has_flag<toolchain::ARG_FLAG::MESH_GRID_PROPERTIES>(info.args[i].flags)) {
+				info_str += "mesh-grid-properties ";
 			}
 			
 			if (info.args[i].is_array()) {
@@ -176,6 +197,8 @@ void dump_function_info(const toolchain::function_info& function_info, const too
 			case toolchain::FUNCTION_TYPE::FRAGMENT:
 			case toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL:
 			case toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION:
+			case toolchain::FUNCTION_TYPE::TASK:
+			case toolchain::FUNCTION_TYPE::MESH:
 				func_type_name = "shader";
 				break;
 			case toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT:
@@ -193,6 +216,8 @@ void dump_function_info(const toolchain::function_info& function_info, const too
 					  info.type == toolchain::FUNCTION_TYPE::FRAGMENT ? "fragment" :
 					  info.type == toolchain::FUNCTION_TYPE::TESSELLATION_CONTROL ? "tessellation-control" :
 					  info.type == toolchain::FUNCTION_TYPE::TESSELLATION_EVALUATION ? "tessellation-evaluation" :
+					  info.type == toolchain::FUNCTION_TYPE::TASK ? "task" :
+					  info.type == toolchain::FUNCTION_TYPE::MESH ? "mesh" :
 					  info.type == toolchain::FUNCTION_TYPE::ARGUMENT_BUFFER_STRUCT ? "argument_buffer" : "unknown",
 					  func_type_name, info.name, info_str, info.args.size(),
 					  suffix);

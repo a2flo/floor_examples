@@ -74,6 +74,7 @@ struct option_context {
 	bool basic_32_bit_float_atomics { false };
 	bool sub_groups { false };
 	uint32_t simd_width { 0 };
+	bool mesh_shading { false };
 	bool sw_depth_compare { true };
 	uint32_t image_rw_support { 0 }; // 0 = undefined/default, 1 = enabled, 2 = disabled
 	bool test { false };
@@ -105,6 +106,7 @@ struct option_context {
 	bool vulkan_low_desc_set_count { false };
 	bool error_on_alloca { false };
 	bool error_on_ptr_type_alloca { false };
+	bool error_on_ptr_int_casts { false };
 	optional<bool> assert_support;
 	
 	bool is_fubar_build { false };
@@ -115,6 +117,8 @@ struct option_context {
 	optional<bool> fubar_pch;
 	string fubar_dis_file_name;
 	optional<string> fubar_dis_filter;
+	optional<uint32_t> fubar_dis_index;
+	optional<PLATFORM_TYPE> fubar_dis_backend;
 	bool fubar_dis_load { false };
 	bool fubar_compress_binaries { false };
 	
@@ -135,14 +139,14 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--fubar-dis <archive.fubar>: disassembles a FUBAR file, printing the archive info and disassembled contents to console\n"
 				 "\t--target [spir|ptx|air|spirv|host]: sets the compile target to OpenCL SPIR, CUDA PTX, Metal Apple-IR, Vulkan/OpenCL SPIR-V or Host-Compute\n"
 				 "\t--sub-target <name>: sets the target specific sub-target\n"
-				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90|sm_90a|sm_100|sm_100a|sm_101|sm_101a|sm_103|sm_103a|sm_110|sm_110a|sm_120|sm_120a|sm_121|sm_121a], defaults to sm_50\n"
+				 "\t    PTX:           [sm_50|sm_52|sm_53|sm_60|sm_61|sm_62|sm_70|sm_72|sm_73|sm_75|sm_80|sm_82|sm_86|sm_87|sm_88|sm89|sm_90|sm_90a|sm_100|sm_100a|sm_101|sm_101a|sm_103|sm_103a|sm_107|sm_107a|sm_110|sm_110a|sm_120|sm_120a|sm_121|sm_121a], defaults to sm_50\n"
 				 "\t    SPIR:          [gpu|cpu|opencl-gpu|opencl-cpu], defaults to gpu\n"
 				 "\t    Metal/AIR:     [ios|macos|visionos|ios_sim|visionos_sim], defaults to ios\n"
 				 "\t    SPIR-V:        [vulkan|opencl|opencl-gpu|opencl-cpu], defaults to vulkan, when set to opencl, defaults to opencl-gpu\n"
 				 "\t    Host-Compute:  [x86-1|x86-2|x86-3|x86-4|x86-5|arm-1|arm-2|arm-3|arm-4|arm-5|arm-6|arm-7], defaults to x86-1\n"
 				 "\t--cl-std <1.2|2.0|2.1|2.2|3.0>: sets the supported OpenCL version (must be 1.2 for SPIR, can be any for OpenCL SPIR-V)\n"
 				 "\t--metal-std <3.2|4.0>: sets the supported Metal version (defaults to 3.2)\n"
-				 "\t--ptx-version <80|81|82|83|84|85|86|87|88|90|91|92>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
+				 "\t--ptx-version <80|81|82|83|84|85|86|87|88|90|91|92|93>: sets/overwrites the PTX version that should be used/emitted (defaults to 80)\n"
 				 "\t--vulkan-std <1.3|1.4>: sets the supported Vulkan version (defaults to 1.3)\n"
 				 "\t--warnings: if set, enables a wide range of compiler warnings\n"
 				 "\t--workarounds: if set, enable all possible workarounds (Metal and SPIR-V only)\n"
@@ -153,6 +157,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--32-bit-float-atomics: explicitly enables native support for basic 32-bit float atomic operations (only Vulkan/SPIR-V, always enabled on PTX)\n"
 				 "\t--sub-groups: explicitly enables sub-group support\n"
 				 "\t--simd-width <N>: if sub-group support is available and the target has a variable SIMD-width, sets an explicit width\n"
+				 "\t--mesh-shading: explicitly enables mesh shading support\n"
 				 "\t--depth-compare <sw|hw>: select between software and hardware depth compare code generation (only PTX)\n"
 				 "\t--image-rw <sw|hw>: sets the image r/w support mode (if unspecified, will use the target default)\n"
 				 "\t--cuda-sdk <path>: path to the CUDA SDK that should be used when calling ptxas/cuobjdump (only PTX)\n"
@@ -179,10 +184,13 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--debug-preprocess-preserve-comments: when '--debug-preprocess-condense' is set, disable stripping of comments (only Metal)\n"
 				 "\t--error-on-alloca: emit an error when there still is an alloca at the end of all optimizations\n"
 				 "\t--error-on-ptr-type-alloca: emit an error when there still is an alloca with a pointer type at the end of all optimizations\n"
+				 "\t--error-on-ptr-int-casts: emit an error when there is any inttoptr or ptrtoint instruction\n"
 				 "\t--assert: enables assert support\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--fubar-dis-filter <name>: only prints and dumps functions starting with <name>\n"
+				 "\t--fubar-dis-index <index>: only prints and dumps the target at the specified index\n"
+				 "\t--fubar-dis-backend <backend>: only prints and dumps the targets of the specified backend [cuda|host|metal|opencl|vulkan]\n"
 				 "\t--fubar-dis-load: tries to load the specified universal binary in the default compute context\n"
 				 "\t--version: prints the occ/floor version\n"
 				 "\t--config <path>: the path where config.json is located (defaults to \"../../data/\")\n"
@@ -315,7 +323,8 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 		if (ctx.ptx_version != 80 && ctx.ptx_version != 81 && ctx.ptx_version != 82 &&
 			ctx.ptx_version != 83 && ctx.ptx_version != 84 && ctx.ptx_version != 85 &&
 			ctx.ptx_version != 86 && ctx.ptx_version != 87 && ctx.ptx_version != 88 &&
-			ctx.ptx_version != 90 && ctx.ptx_version != 91 && ctx.ptx_version != 92) {
+			ctx.ptx_version != 90 && ctx.ptx_version != 91 && ctx.ptx_version != 92 &&
+			ctx.ptx_version != 93) {
 			cerr << "invalid --ptx-version argument" << endl;
 			return;
 		}
@@ -365,6 +374,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.simd_width = stou(*arg_ptr);
+	}},
+	{ "--mesh-shading", [](option_context& ctx, char**&) {
+		ctx.mesh_shading = true;
 	}},
 	{ "--depth-compare", [](option_context& ctx, char**& arg_ptr) {
 		++arg_ptr;
@@ -525,6 +537,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--error-on-ptr-type-alloca", [](option_context& ctx, char**&) {
 		ctx.error_on_ptr_type_alloca = true;
 	}},
+	{ "--error-on-ptr-int-casts", [](option_context& ctx, char**&) {
+		ctx.error_on_ptr_int_casts = true;
+	}},
 	{ "--assert", [](option_context& ctx, char**&) {
 		ctx.assert_support = true;
 	}},
@@ -541,6 +556,36 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 			return;
 		}
 		ctx.fubar_dis_filter = *arg_ptr;
+	}},
+	{ "--fubar-dis-index", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		ctx.fubar_dis_index = stou(*arg_ptr, nullptr, 10);
+	}},
+	{ "--fubar-dis-backend", [](option_context& ctx, char**& arg_ptr) {
+		++arg_ptr;
+		if (*arg_ptr == nullptr) {
+			cerr << "invalid argument!" << endl;
+			return;
+		}
+		const string_view backend = *arg_ptr;
+		if (backend == "cuda") {
+			ctx.fubar_dis_backend = PLATFORM_TYPE::CUDA;
+		} else if (backend == "host") {
+			ctx.fubar_dis_backend = PLATFORM_TYPE::HOST;
+		} else if (backend == "metal") {
+			ctx.fubar_dis_backend = PLATFORM_TYPE::METAL;
+		} else if (backend == "opencl") {
+			ctx.fubar_dis_backend = PLATFORM_TYPE::OPENCL;
+		} else if (backend == "vulkan") {
+			ctx.fubar_dis_backend = PLATFORM_TYPE::VULKAN;
+		} else {
+			cerr << "invalid backend " << *arg_ptr << endl;
+			return;
+		}
 	}},
 	{ "--fubar-dis-load", [](option_context& ctx, char**&) {
 		ctx.fubar_dis_load = true;
@@ -691,6 +736,9 @@ static int run_normal_build(option_context& option_ctx) {
 				if (!dev->barycentric_coord_support && option_ctx.barycentric_coord_support) {
 					dev->barycentric_coord_support = true;
 				}
+				if (dev->metal_language_version >= METAL_VERSION::METAL_4_0 || option_ctx.mesh_shading) {
+					dev->mesh_shading_support = true;
+				}
 				log_debug("compiling to AIR (type: $, platform: $, tier: $) ...",
 						  metal_device::family_type_to_string(dev->family_type),
 						  metal_device::platform_type_to_string(dev->platform_type), dev->family_tier);
@@ -728,6 +776,10 @@ static int run_normal_build(option_context& option_ctx) {
 												 vulkan_device::min_required_high_bound_descriptor_sets);
 				
 				dev->untyped_pointers_support = option_ctx.vulkan_untyped_pointers.value_or(false);
+				
+				if (option_ctx.mesh_shading) {
+					dev->mesh_shading_support = true;
+				}
 				
 				// handle version
 				dev->vulkan_version = option_ctx.vulkan_std;
@@ -822,6 +874,10 @@ static int run_normal_build(option_context& option_ctx) {
 				
 				device->double_support = (option_ctx.double_support == 1); // disabled by default
 				
+				if (option_ctx.mesh_shading) {
+					device->mesh_shading_support = true;
+				}
+				
 				log_debug("compiling to Host-Compute (tier: $) ...", dev->cpu_tier);
 				break;
 			}
@@ -839,6 +895,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
 			.debug.error_on_alloca = option_ctx.error_on_alloca,
 			.debug.error_on_ptr_type_alloca = option_ctx.error_on_ptr_type_alloca,
+			.debug.error_on_ptr_int_casts = option_ctx.error_on_ptr_int_casts,
 			.cuda.ptx_version = option_ctx.ptx_version,
 			.cuda.max_registers = option_ctx.cuda_max_registers.value_or(0u),
 			.cuda.short_ptr = !option_ctx.cuda_no_short_ptr.value_or(false),
@@ -1274,7 +1331,7 @@ int main(int, char* argv[]) {
 			log_error("failed to build FUBAR");
 		}
 	} else if (option_ctx.is_fubar_disassemble) {
-		fubar::disassemble(option_ctx.fubar_dis_file_name, option_ctx.fubar_dis_filter, option_ctx.fubar_dis_load);
+		fubar::disassemble(option_ctx.fubar_dis_file_name, option_ctx.fubar_dis_filter, option_ctx.fubar_dis_index, option_ctx.fubar_dis_backend, option_ctx.fubar_dis_load);
 	} else {
 		ret_code = run_normal_build(option_ctx);
 	}

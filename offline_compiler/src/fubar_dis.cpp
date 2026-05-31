@@ -27,7 +27,9 @@ using namespace std;
 
 namespace fl::fubar {
 
-void disassemble(const string& archive_file_name, const optional<string> filter, const bool load_fubar_in_ctx) {
+void disassemble(const string& archive_file_name, const optional<string> filter,
+				 const std::optional<uint32_t> filter_index, const std::optional<PLATFORM_TYPE> filter_backend,
+				 const bool load_fubar_in_ctx) {
 	// load FUBAR if specified
 	if (load_fubar_in_ctx) {
 		auto ctx = floor::get_device_context();
@@ -51,7 +53,15 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 	
 	log_undecorated("target overview:");
 	for (size_t tidx = 0, target_count = ar.header.static_header.binary_count; tidx < target_count; ++tidx) {
+		if (filter_index && *filter_index != tidx) {
+			continue;
+		}
+		
 		const auto& target = ar.header.targets.at(tidx);
+		if (filter_backend && *filter_backend != target.common.type) {
+			continue;
+		}
+		
 		const auto offset = ar.header.offsets.at(tidx);
 		const auto toolchain_version = ar.header.toolchain_versions.at(tidx);
 		const auto hash = ar.header.hashes.at(tidx);
@@ -225,7 +235,15 @@ void disassemble(const string& archive_file_name, const optional<string> filter,
 	
 	log_undecorated("binaries:");
 	for (size_t tidx = 0, target_count = ar.header.static_header.binary_count; tidx < target_count; ++tidx) {
+		if (filter_index && *filter_index != tidx) {
+			continue;
+		}
+		
 		const auto& target = ar.header.targets.at(tidx);
+		if (filter_backend && *filter_backend != target.common.type) {
+			continue;
+		}
+		
 		const auto& bin = ar.binaries.at(tidx);
 		
 		toolchain::TARGET toolchain_target {};

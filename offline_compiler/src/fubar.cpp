@@ -183,6 +183,7 @@ namespace fl::fubar {
 				.simd_width = simd_width,
 				.soft_printf = target_obj.at("soft_printf").get_or_throw<bool>(),
 				.barycentric_coord_support = target_obj.at("barycentric_coord_support").get_or_throw<bool>(),
+				.mesh_shading_support = target_obj.at("mesh_shading_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -310,6 +311,7 @@ namespace fl::fubar {
 				.low_iub_count = target_obj.at("low_iub_count").get_or_throw<bool>(),
 				.low_desc_set_count = target_obj.at("low_desc_set_count").get_or_throw<bool>(),
 				.untyped_pointers_support = target_obj.at("untyped_pointers_support").get_or_throw<bool>(),
+				.mesh_shading_support = target_obj.at("mesh_shading_support").get_or_throw<bool>(),
 				._unused = 0,
 			}
 		};
@@ -627,6 +629,7 @@ namespace fl::fubar {
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
+					.mesh_shading_support = 0,
 					._unused = 0,
 				}
 			},
@@ -640,7 +643,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -654,7 +658,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -669,6 +674,7 @@ namespace fl::fubar {
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -682,7 +688,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -696,7 +703,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -773,6 +781,7 @@ namespace fl::fubar {
 					.low_iub_count = 0,
 					.low_desc_set_count = 0,
 					.untyped_pointers_support = 0,
+					.mesh_shading_support = 0,
 					._unused = 0,
 				}
 			},
@@ -892,6 +901,7 @@ namespace fl::fubar {
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
+					.mesh_shading_support = 0,
 					._unused = 0,
 				}
 			},
@@ -905,7 +915,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -919,7 +930,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -934,6 +946,7 @@ namespace fl::fubar {
 					.simd_width = 32,
 					.soft_printf = 0,
 					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -947,7 +960,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -961,7 +975,8 @@ namespace fl::fubar {
 					.device_target = decltype(universal_binary::target_v7::metal)::APPLE,
 					.simd_width = 32,
 					.soft_printf = 0,
-					.barycentric_coord_support = 0,
+					.barycentric_coord_support = 1,
+					.mesh_shading_support = 1,
 					._unused = 0,
 				}
 			},
@@ -991,6 +1006,7 @@ namespace fl::fubar {
 					.low_iub_count = 0,
 					.low_desc_set_count = 0,
 					.untyped_pointers_support = 0,
+					.mesh_shading_support = 0,
 					._unused = 0,
 				}
 			},
@@ -1051,6 +1067,8 @@ namespace fl::fubar {
 							options.debug.error_on_alloca = dbg_entry.second.get_or_throw<bool>();
 						} else if (dbg_entry.first == "error_on_ptr_type_alloca") {
 							options.debug.error_on_ptr_type_alloca = dbg_entry.second.get_or_throw<bool>();
+						} else if (dbg_entry.first == "error_on_ptr_int_casts") {
+							options.debug.error_on_ptr_int_casts = dbg_entry.second.get_or_throw<bool>();
 						} else {
 							log_warn("ignoring unknown debug option: $", dbg_entry.first);
 						}

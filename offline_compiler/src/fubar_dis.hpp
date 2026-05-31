@@ -23,6 +23,8 @@
 
 namespace fl::fubar {
 
-void disassemble(const std::string& archive_file_name, const std::optional<std::string> filter, const bool load_fubar_in_ctx);
+void disassemble(const std::string& archive_file_name, const std::optional<std::string> filter,
+				 const std::optional<uint32_t> filter_index, const std::optional<PLATFORM_TYPE> filter_backend,
+				 const bool load_fubar_in_ctx);
 
 } // namespace fl::fubar
