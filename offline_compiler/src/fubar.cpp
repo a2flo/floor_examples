@@ -577,6 +577,20 @@ namespace fl::fubar {
 				.cuda = {
 					.version = universal_binary::target_format_version,
 					.type = PLATFORM_TYPE::CUDA,
+					.sm_major = 10,
+					.sm_minor = 7,
+					.sm_aa = 1,
+					.ptx_isa_major = 9,
+					.ptx_isa_minor = 4,
+					.is_ptx = 1,
+					.image_depth_compare_support = 0,
+					._unused = 0,
+				}
+			},
+			{
+				.cuda = {
+					.version = universal_binary::target_format_version,
+					.type = PLATFORM_TYPE::CUDA,
 					.sm_major = 11,
 					.sm_minor = 0,
 					.sm_aa = 1,

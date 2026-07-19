@@ -10,6 +10,9 @@ option(WITH_ASAN "build with address sanitizer" OFF)
 option(WITH_LIBCXX "build with libc++" OFF)
 option(BUILD_STANDALONE "build as a standalone binary (requires toolchain)" OFF)
 
+## compile flags
+add_compile_options(-march=corei7-avx -mf16c)
+
 ## build output
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -44,5 +47,5 @@ if (BUILD_STANDALONE)
 	#  * similarly, can we get rid of whole-archive linking and use a per-library export symbol list instead?
 	target_compile_options(${PROJECT_NAME} PUBLIC -fPIC)
 	set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -L${sysroot}/lib")
-	set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> -static --pie --eh-frame-hdr -E -L/opt/floor/lib -v -e _dlstart ${sysroot}/lib/ldso_rcrt1.o ${sysroot}/lib/crti.o <OBJECTS> ${sysroot}/lib/crtn.o -o <TARGET> -Bstatic --whole-archive -llzma -lc++ -lc++abi -lunwind --no-whole-archive -Bdynamic <LINK_LIBRARIES> --whole-archive -Bstatic -lxcb-dri2 -lxcb-dri3 -lxcb-glx -lxcb-present -lxcb-randr -lxcb-shm -lxcb-sync -lxcb-xfixes -lX11 -lX11-xcb -lXext -lXcursor -lXfixes -lXi -lXrender -lXrandr -lXss -Bdynamic --no-whole-archive --whole-archive -Bstatic -lc -lc_ldso -Bdynamic --no-whole-archive -L ${clang_rt_lib_path} --whole-archive -Bstatic -l:${clang_rt_lib_name} -Bdynamic --no-whole-archive")
+	set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_LINKER> <LINK_FLAGS> -static --pie --eh-frame-hdr -E -L/opt/floor/lib -v -e _dlstart ${sysroot}/lib/ldso_rcrt1.o ${sysroot}/lib/crti.o <OBJECTS> ${sysroot}/lib/crtn.o -o <TARGET> -Bstatic --whole-archive -llzma -lc++ -lc++abi -lunwind --no-whole-archive -Bdynamic <LINK_LIBRARIES> -Bstatic -lpng -lz -lbz2 -lffi -Bdynamic --whole-archive -Bstatic -lxcb-dri2 -lxcb-dri3 -lxcb-glx -lxcb-present -lxcb-randr -lxcb-shm -lxcb-sync -lxcb-xfixes -lX11 -lX11-xcb -lXext -lXcursor -lXfixes -lXi -lXtst -lXrender -lXrandr -lXss -Bdynamic --no-whole-archive --whole-archive -Bstatic -lwayland-client -lwayland-egl -lwayland-cursor -lxkbcommon -lc -lc_ldso -Bdynamic --no-whole-archive -L ${clang_rt_lib_path} --whole-archive -Bstatic -l:${clang_rt_lib_name} -Bdynamic --no-whole-archive")
 endif (BUILD_STANDALONE)

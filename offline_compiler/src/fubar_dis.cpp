@@ -23,6 +23,7 @@
 #include <floor/core/file_io.hpp>
 #include <floor/core/core.hpp>
 #include <floor/floor.hpp>
+#include <filesystem>
 using namespace std;
 
 namespace fl::fubar {
