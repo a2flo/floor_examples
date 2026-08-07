@@ -110,6 +110,7 @@ struct option_context {
 	bool error_on_ptr_type_alloca { false };
 	bool error_on_ptr_int_casts { false };
 	optional<bool> assert_support;
+	optional<bool> assert_is_assume;
 	
 	bool is_fubar_build { false };
 	bool is_fubar_disassemble { false };
@@ -188,6 +189,7 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 				 "\t--error-on-ptr-type-alloca: emit an error when there still is an alloca with a pointer type at the end of all optimizations\n"
 				 "\t--error-on-ptr-int-casts: emit an error when there is any inttoptr or ptrtoint instruction\n"
 				 "\t--assert: enables assert support\n"
+				 "\t--assert-is-assume: transforms all assert(expr) into compiler assumptions (ignored if --assert is specified)\n"
 				 "\t-v: verbose output (DBG level)\n"
 				 "\t-vv: very verbose output (MSG level)\n"
 				 "\t--fubar-dis-filter <name>: only prints and dumps functions starting with <name>\n"
@@ -546,6 +548,9 @@ template<> vector<pair<string, occ_opt_handler::option_function>> occ_opt_handle
 	{ "--assert", [](option_context& ctx, char**&) {
 		ctx.assert_support = true;
 	}},
+	{ "--assert-is-assume", [](option_context& ctx, char**&) {
+		ctx.assert_is_assume = true;
+	}},
 	{ "-v", [](option_context& ctx, char**&) {
 		ctx.verbosity = (size_t)logger::LOG_TYPE::DEBUG_MSG;
 	}},
@@ -893,6 +898,7 @@ static int run_normal_build(option_context& option_ctx) {
 			.enable_warnings = option_ctx.warnings.value_or(false),
 			.ignore_runtime_info = true,
 			.enable_assert = option_ctx.assert_support.value_or(false),
+			.assert_is_assume = option_ctx.assert_is_assume.value_or(false),
 			.debug.emit_debug_info = option_ctx.emit_debug_info.value_or(false),
 			.debug.preprocess_condense = option_ctx.preprocess_condense.value_or(false),
 			.debug.preprocess_preserve_comments = option_ctx.preprocess_preserve_comments.value_or(false),
@@ -1327,6 +1333,9 @@ int main(int, char* argv[]) {
 		}
 		if (option_ctx.assert_support) {
 			options.enable_assert = option_ctx.assert_support;
+		}
+		if (option_ctx.assert_is_assume) {
+			options.assert_is_assume = option_ctx.assert_is_assume;
 		}
 		if (!fubar::build(option_ctx.fubar_target_set, option_ctx.fubar_target_set_file_name, option_ctx.fubar_options_file_name,
 						  option_ctx.filename, dst_archive_file_name, options)) {

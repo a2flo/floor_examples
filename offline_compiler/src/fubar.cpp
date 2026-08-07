@@ -1158,6 +1158,8 @@ namespace fl::fubar {
 					options.compress_binaries = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "enable_assert") {
 					options.enable_assert = opt_entry.second.get_or_throw<bool>();
+				} else if (opt_entry.first == "assert_is_assume") {
+					options.assert_is_assume = opt_entry.second.get_or_throw<bool>();
 				} else if (opt_entry.first == "debug") {
 					auto dbg_obj = opt_entry.second.get_or_throw<json_object>();
 					for (auto&& dbg_entry : dbg_obj) {
@@ -1274,6 +1276,9 @@ namespace fl::fubar {
 		}
 		if (options.enable_assert) {
 			toolchain_options.enable_assert = *options.enable_assert;
+		}
+		if (options.assert_is_assume) {
+			toolchain_options.assert_is_assume = *options.assert_is_assume;
 		}
 		
 		const auto targets = get_targets(target_set, targets_json_file_name, toolchain_options);

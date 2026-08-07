@@ -4,6 +4,7 @@
 	"silence_debug_output": false,
 	"compress_binaries": false,
 	"enable_assert": false,
+	"assert_is_assume": false,
 	"debug": {
 		"emit_debug_info": false,
 		"preprocess_condense": false,

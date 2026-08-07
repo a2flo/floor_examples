@@ -38,6 +38,7 @@ struct options_t {
 	std::optional<bool> use_precompiled_header;
 	std::optional<bool> compress_binaries;
 	std::optional<bool> enable_assert;
+	std::optional<bool> assert_is_assume;
 
 	std::optional<uint32_t> cuda_max_registers;
 	std::optional<bool> cuda_short_ptr;
