@@ -693,6 +693,7 @@ static int run_normal_build(option_context& option_ctx) {
 						((cuda_device*)device.get())->sm.x = (uint32_t)sm_version_int / 10u;
 						((cuda_device*)device.get())->sm.y = (uint32_t)sm_version_int % 10u;
 						((cuda_device*)device.get())->sm_aa = sm_version.ends_with('a');
+						((cuda_device*)device.get())->sub_group_match_any_native_support = (((cuda_device*)device.get())->sm.x >= 7);
 					}
 				} else {
 					option_ctx.sub_target = "sm_50";
