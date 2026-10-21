@@ -565,7 +565,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = true,
+			.options.support_indirect_rendering = true,
 			.debug_label = "scatter_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -621,7 +621,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_depth_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = true,
+			.options.support_indirect_rendering = true,
 			.debug_label = "gather_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -675,7 +675,7 @@ bool unified_renderer::create_pipelines() {
 				{ .format = motion_format, },
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = true,
+			.options.support_indirect_rendering = true,
 			.debug_label = "gather_fwd_pipeline",
 		};
 		if (warp_state.use_tessellation) {
@@ -726,7 +726,7 @@ bool unified_renderer::create_pipelines() {
 				.compare = WARP_DEPTH_COMPARE,
 			},
 			.depth_attachment = { .format = depth_format },
-			.support_indirect_rendering = true,
+			.options.support_indirect_rendering = true,
 			.debug_label = "shadow_pipeline",
 		};
 		shadow_pipeline = warp_state.rctx->create_graphics_pipeline(pipeline_desc);
